@@ -10,6 +10,12 @@ import jwtPlugin from './plugins/jwt.js'
 import authRoutes from './routes/auth.js'
 import articleRoutes from './routes/articles.js'
 import userRoutes from './routes/users.js'
+import certifyRoutes from './routes/certify.js'
+import animationRoutes from './routes/animations.js'
+import productRoutes from './routes/products.js'
+
+
+
 // 创建 Fastify 实例
 // logger: true 会在终端打印每次请求的日志，方便开发调试
 const fastify = Fastify({ logger: true })
@@ -34,6 +40,9 @@ async function start() {
     await fastify.register(authRoutes, { prefix: '/api/auth' })
     await fastify.register(articleRoutes, { prefix: '/api/articles' })
     await fastify.register(userRoutes, { prefix: '/api/users' })
+    await fastify.register(certifyRoutes, { prefix: '/api/certify' })
+    await fastify.register(animationRoutes, { prefix: '/api/animations' })
+    await fastify.register(productRoutes, { prefix: '/api/products' })
     // 根路径健康检查，用来确认服务是否正常运行
     fastify.get('/', async () => {
       return { success: true, message: '哞屋 MOWO API 服务运行中 🐄' }

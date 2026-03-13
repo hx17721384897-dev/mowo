@@ -28,7 +28,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmNGU2Y
 ### 发布文章
 POST http://localhost:3001/api/articles
 Content-Type: application/json
-Authorization: Bearer 把你之前登录拿到的token粘贴在这里
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmNGU2YjE2NS01MWNmLTRlYmYtYjZjNi01MzBlMWFhZDUxYmMiLCJwaG9uZSI6IjEzODAwMTM4MDAwIiwiY2VydGlmeVN0YXR1cyI6MCwiaWF0IjoxNzczMzk2NzI3LCJleHAiOjE3NzQwMDE1Mjd9.tBjmLQnSWBYJGEwRx7tu0-Pl7wJmSfrCGCGRM3Z4B0E
 
 {
   "title": "我的第一篇测试文章",
@@ -41,3 +41,18 @@ GET http://localhost:3001/api/articles
 
 ### 按标签筛选
 GET http://localhost:3001/api/articles?tag=治愈
+
+
+
+### 点赞文章
+POST http://localhost:3001/api/articles/fafb1987-5cd7-463b-b4ca-fba232db1d4f/like
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmNGU2YjE2NS01MWNmLTRlYmYtYjZjNi01MzBlMWFhZDUxYmMiLCJwaG9uZSI6IjEzODAwMTM4MDAwIiwiY2VydGlmeVN0YXR1cyI6MCwiaWF0IjoxNzczMzk2NzI3LCJleHAiOjE3NzQwMDE1Mjd9.tBjmLQnSWBYJGEwRx7tu0-Pl7wJmSfrCGCGRM3Z4B0E
+
+### 发评论
+POST http://localhost:3001/api/articles/fafb1987-5cd7-463b-b4ca-fba232db1d4f/comments
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmNGU2YjE2NS01MWNmLTRlYmYtYjZjNi01MzBlMWFhZDUxYmMiLCJwaG9uZSI6IjEzODAwMTM4MDAwIiwiY2VydGlmeVN0YXR1cyI6MCwiaWF0IjoxNzczMzk2NzI3LCJleHAiOjE3NzQwMDE1Mjd9.tBjmLQnSWBYJGEwRx7tu0-Pl7wJmSfrCGCGRM3Z4B0E
+
+{
+  "content": "这篇文章写得真好！"
+}
