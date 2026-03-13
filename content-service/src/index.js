@@ -13,7 +13,7 @@ import userRoutes from './routes/users.js'
 import certifyRoutes from './routes/certify.js'
 import animationRoutes from './routes/animations.js'
 import productRoutes from './routes/products.js'
-
+import earningRoutes from './routes/earnings.js'
 
 
 // 创建 Fastify 实例
@@ -43,6 +43,11 @@ async function start() {
     await fastify.register(certifyRoutes, { prefix: '/api/certify' })
     await fastify.register(animationRoutes, { prefix: '/api/animations' })
     await fastify.register(productRoutes, { prefix: '/api/products' })
+    await fastify.register(earningRoutes, { prefix: '/api/earnings' })
+
+
+
+    
     // 根路径健康检查，用来确认服务是否正常运行
     fastify.get('/', async () => {
       return { success: true, message: '哞屋 MOWO API 服务运行中 🐄' }

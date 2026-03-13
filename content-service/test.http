@@ -56,3 +56,81 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmNGU2Y
 {
   "content": "这篇文章写得真好！"
 }
+
+
+
+### 提交认证申请
+POST http://localhost:3001/api/certify
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmNGU2YjE2NS01MWNmLTRlYmYtYjZjNi01MzBlMWFhZDUxYmMiLCJwaG9uZSI6IjEzODAwMTM4MDAwIiwiY2VydGlmeVN0YXR1cyI6MCwiaWF0IjoxNzczMzk2NzI3LCJleHAiOjE3NzQwMDE1Mjd9.tBjmLQnSWBYJGEwRx7tu0-Pl7wJmSfrCGCGRM3Z4B0E
+
+{
+  "creatorName": "测试创作者",
+  "creatorType": "personal",
+  "mainStyle": ["治愈", "手绘"],
+  "portfolioUrls": ["https://example.com/portfolio"],
+  "realName": "张三",
+  "idNumberLast4": "1234",
+  "certifyPassed": true,
+  "copyrightConfirmed": true,
+  "agreementConfirmed": true
+}
+
+### 查看认证状态
+GET http://localhost:3001/api/certify/status
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmNGU2YjE2NS01MWNmLTRlYmYtYjZjNi01MzBlMWFhZDUxYmMiLCJwaG9uZSI6IjEzODAwMTM4MDAwIiwiY2VydGlmeVN0YXR1cyI6MCwiaWF0IjoxNzczMzk2NzI3LCJleHAiOjE3NzQwMDE1Mjd9.tBjmLQnSWBYJGEwRx7tu0-Pl7wJmSfrCGCGRM3Z4B0E
+
+
+
+
+### 上传动画
+POST http://localhost:3001/api/animations
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmNGU2YjE2NS01MWNmLTRlYmYtYjZjNi01MzBlMWFhZDUxYmMiLCJwaG9uZSI6IjEzODAwMTM4MDAwIiwiY2VydGlmeVN0YXR1cyI6MiwiaWF0IjoxNzczNDA0OTA2LCJleHAiOjE3NzQwMDk3MDZ9.JMREbLJ3V_ZlydexRA548oK0TY_N10hQI6qGz20Xclc
+
+{
+  "title": "小猫动画",
+  "description": "一只可爱的小猫走路动画",
+  "frameCount": 12,
+  "copyrightType": "original"
+}
+
+
+
+### 上传第1帧
+POST http://localhost:3001/api/animations/d532a5d9-2658-45f1-83c7-d34e72c0884b/frames
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmNGU2YjE2NS01MWNmLTRlYmYtYjZjNi01MzBlMWFhZDUxYmMiLCJwaG9uZSI6IjEzODAwMTM4MDAwIiwiY2VydGlmeVN0YXR1cyI6MiwiaWF0IjoxNzczNDA0OTA2LCJleHAiOjE3NzQwMDk3MDZ9.JMREbLJ3V_ZlydexRA548oK0TY_N10hQI6qGz20Xclc
+
+{
+  "frameIndex": 1,
+  "imageUrl": "https://example.com/frames/cat_01.png"
+}
+
+
+
+### 上架商品
+POST http://localhost:3001/api/products
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmNGU2YjE2NS01MWNmLTRlYmYtYjZjNi01MzBlMWFhZDUxYmMiLCJwaG9uZSI6IjEzODAwMTM4MDAwIiwiY2VydGlmeVN0YXR1cyI6MiwiaWF0IjoxNzczNDA0OTA2LCJleHAiOjE3NzQwMDk3MDZ9.JMREbLJ3V_ZlydexRA548oK0TY_N10hQI6qGz20Xclc
+
+{
+  "animationId": "d532a5d9-2658-45f1-83c7-d34e72c0884b",
+  "title": "小猫走路·圆筒12帧",
+  "description": "可爱的小猫走路动画，适合摆在桌上",
+  "machineType": "cylinder",
+  "frameCount": 12,
+  "markupPrice": 30,
+  "stockType": "limited",
+  "stockLimit": 50
+}
+
+
+
+### 查看账户余额
+GET http://localhost:3001/api/earnings/balance
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmNGU2YjE2NS01MWNmLTRlYmYtYjZjNi01MzBlMWFhZDUxYmMiLCJwaG9uZSI6IjEzODAwMTM4MDAwIiwiY2VydGlmeVN0YXR1cyI6MiwiaWF0IjoxNzczNDA0OTA2LCJleHAiOjE3NzQwMDk3MDZ9.JMREbLJ3V_ZlydexRA548oK0TY_N10hQI6qGz20Xclc
+
+### 收益明细
+GET http://localhost:3001/api/earnings
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmNGU2YjE2NS01MWNmLTRlYmYtYjZjNi01MzBlMWFhZDUxYmMiLCJwaG9uZSI6IjEzODAwMTM4MDAwIiwiY2VydGlmeVN0YXR1cyI6MiwiaWF0IjoxNzczNDA0OTA2LCJleHAiOjE3NzQwMDk3MDZ9.JMREbLJ3V_ZlydexRA548oK0TY_N10hQI6qGz20Xclc
