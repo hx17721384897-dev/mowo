@@ -1,0 +1,43 @@
+### 健康检查
+GET http://localhost:3001
+
+### 注册
+POST http://localhost:3001/api/auth/register
+Content-Type: application/json
+
+{
+  "phone": "13800138000",
+  "password": "123456",
+  "nickname": "测试用户"
+}
+
+### 登录
+POST http://localhost:3001/api/auth/login
+Content-Type: application/json
+
+{
+  "phone": "13800138000",
+  "password": "123456"
+}
+
+### 获取当前用户信息
+GET http://localhost:3001/api/auth/me
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmNGU2YjE2NS01MWNmLTRlYmYtYjZjNi01MzBlMWFhZDUxYmMiLCJwaG9uZSI6IjEzODAwMTM4MDAwIiwiY2VydGlmeVN0YXR1cyI6MCwiaWF0IjoxNzczMzk1MTk3LCJleHAiOjE3NzM5OTk5OTd9.96lHM6XZp54I8YntyB5QH58EKq4ZIw18BaNjvVY3MEA
+
+
+### 发布文章
+POST http://localhost:3001/api/articles
+Content-Type: application/json
+Authorization: Bearer 把你之前登录拿到的token粘贴在这里
+
+{
+  "title": "我的第一篇测试文章",
+  "content": "这是文章正文内容，分享一下我的动画机制作心得。",
+  "tags": ["治愈", "动画机", "手绘"]
+}
+
+### 获取文章列表
+GET http://localhost:3001/api/articles
+
+### 按标签筛选
+GET http://localhost:3001/api/articles?tag=治愈
