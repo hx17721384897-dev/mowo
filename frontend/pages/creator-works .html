@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的作品 — 哞屋创作者中心</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Noto+Sans+SC:wght@300;400;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --white:    #FFFFFF;
+  --cream:    #F5F3EF;
+  --black:    #111110;
+  --gray1:    #EBEBEA;
+  --gray2:    #C4C3BF;
+  --gray3:    #787874;
+  --accent-y: #F5E642;
+  --accent-o: #FF6B35;
+  --accent-g: #8FD694;
+  --accent-b: #7EC8E3;
+  --red:      #E03030;
+  --font:     'Nunito','Noto Sans SC',sans-serif;
+  --ease:     cubic-bezier(0.22,1,0.36,1);
+  --sidebar-w: 240px;
+  --sidebar-w-collapsed: 64px;
+  --topbar-h: 60px;
+}
+
+*,*::before,*::after { margin:0;padding:0;box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body { font-family:var(--font);background:var(--cream);color:var(--black);overflow-x:hidden;-webkit-font-smoothing:antialiased; }
+a { text-decoration:none;color:inherit; }
+button { font-family:var(--font);cursor:pointer;border:none;background:none; }
+
+/* ══════════════════════════════
+   后台整体布局
+══════════════════════════════ */
+.dashboard {
+  display:flex; min-height:100vh;
+}
+
+/* ══════════════════════════════
+   左侧导航
+══════════════════════════════ */
+.sidebar {
+  width:var(--sidebar-w);
+  background:var(--black);
+  position:fixed; top:0; left:0; bottom:0;
+  display:flex; flex-direction:column;
+  z-index:800;
+  transition:transform .35s var(--ease), width .3s var(--ease);
+  overflow:hidden;
+}
+/* 移动端默认隐藏 */
+@media(max-width:1023px) {
+  .sidebar { transform:translateX(-100%); }
+  .sidebar.mobile-open { transform:none; }
+}
+
+.sidebar-logo {
+  padding:20px 20px 16px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+  display:flex; align-items:center; gap:12px;
+  flex-shrink:0;
+}
+.sidebar-logo-mark {
+  width:36px;height:36px;border-radius:10px;
+  background:var(--accent-y);
+  display:flex;align-items:center;justify-content:center;
+  font-weight:900;font-size:16px;color:var(--black);
+  flex-shrink:0;
+}
+.sidebar-logo-text { line-height:1.2; }
+.sidebar-logo-cn { font-weight:900;font-size:16px;color:var(--white); }
+.sidebar-logo-sub { font-weight:700;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:rgba(255,255,255,.35); }
+
+/* 用户卡片 */
+.sidebar-user {
+  padding:16px 20px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+  display:flex; align-items:center; gap:12px;
+  flex-shrink:0;
+}
+.sidebar-avatar {
+  width:36px;height:36px;border-radius:50%;
+  background:var(--accent-y);
+  display:flex;align-items:center;justify-content:center;
+  font-weight:900;font-size:14px;color:var(--black);
+  flex-shrink:0;overflow:hidden;border:2px solid rgba(255,255,255,.1);
+}
+.sidebar-user-info { flex:1;min-width:0; }
+.sidebar-user-name { font-weight:800;font-size:13px;color:var(--white);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.sidebar-user-badge {
+  display:inline-flex;align-items:center;gap:3px;
+  margin-top:2px;font-weight:800;font-size:10px;letter-spacing:.06em;
+  padding:1px 7px;border-radius:999px;
+}
+.sidebar-user-badge.creator { background:rgba(143,214,148,.15);color:var(--accent-g); }
+.sidebar-user-badge.user    { background:rgba(255,255,255,.08);color:rgba(255,255,255,.4); }
+
+/* 导航列表 */
+.sidebar-nav { flex:1; overflow-y:auto; padding:12px 10px; }
+.sidebar-nav::-webkit-scrollbar { width:0; }
+
+.nav-section-label {
+  font-weight:800;font-size:9px;letter-spacing:.2em;text-transform:uppercase;
+  color:rgba(255,255,255,.25);
+  padding:8px 10px 4px;
+}
+
+.nav-item {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 10px;border-radius:12px;
+  font-weight:800;font-size:13px;color:rgba(255,255,255,.55);
+  transition:background .15s, color .15s;
+  position:relative; white-space:nowrap;
+  margin-bottom:2px;
+}
+.nav-item:hover { background:rgba(255,255,255,.07);color:rgba(255,255,255,.85); }
+.nav-item.active { background:rgba(255,255,255,.1);color:var(--white); }
+.nav-item.active::before {
+  content:''; position:absolute; left:0; top:50%;transform:translateY(-50%);
+  width:3px;height:20px;border-radius:0 3px 3px 0;
+  background:var(--accent-y);
+}
+.nav-icon {
+  width:30px;height:30px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;flex-shrink:0;
+  background:rgba(255,255,255,.05);
+  transition:background .15s;
+}
+.nav-item.active .nav-icon { background:rgba(245,230,66,.15); }
+.nav-item-lock {
+  margin-left:auto;font-size:10px;opacity:.35;flex-shrink:0;
+}
+
+/* 锁定项（未认证） */
+.nav-item.locked { opacity:.45;cursor:not-allowed; }
+.nav-item.locked:hover { background:transparent;color:rgba(255,255,255,.55); }
+
+/* 底部认证区 */
+.sidebar-bottom {
+  padding:12px 10px 20px;
+  border-top:1px solid rgba(255,255,255,.08);
+  flex-shrink:0;
+}
+.cert-card {
+  background:rgba(255,255,255,.05);
+  border-radius:14px;padding:12px 14px;
+}
+.cert-card.verified { background:rgba(143,214,148,.1); }
+.cert-title { font-weight:900;font-size:12px;color:rgba(255,255,255,.7);margin-bottom:4px;display:flex;align-items:center;gap:6px; }
+.cert-card.verified .cert-title { color:var(--accent-g); }
+.cert-desc { font-weight:700;font-size:11px;color:rgba(255,255,255,.3);line-height:1.5;margin-bottom:10px; }
+.cert-card.verified .cert-desc { color:rgba(143,214,148,.6); }
+.cert-btn {
+  width:100%;padding:8px;border-radius:9px;
+  font-family:var(--font);font-weight:800;font-size:12px;
+  background:var(--accent-y);color:var(--black);
+  transition:opacity .2s;
+}
+.cert-btn:hover { opacity:.85; }
+.cert-btn.done {
+  background:rgba(143,214,148,.2);color:var(--accent-g);cursor:default;
+}
+.cert-btn.done:hover { opacity:1; }
+
+/* ══════════════════════════════
+   移动端遮罩
+══════════════════════════════ */
+.sidebar-backdrop {
+  display:none; position:fixed; inset:0; z-index:799;
+  background:rgba(0,0,0,.5);backdrop-filter:blur(4px);
+}
+.sidebar-backdrop.show { display:block; }
+
+/* ══════════════════════════════
+   顶部栏
+══════════════════════════════ */
+.topbar {
+  position:fixed; top:0; right:0; left:var(--sidebar-w); z-index:700;
+  height:var(--topbar-h);
+  background:rgba(245,243,239,.95);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--gray1);
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 32px;
+  transition:left .3s var(--ease);
+}
+@media(max-width:1023px) { .topbar { left:0;padding:0 20px; } }
+
+.topbar-left { display:flex;align-items:center;gap:14px; }
+.topbar-menu-btn {
+  width:36px;height:36px;border-radius:10px;
+  background:var(--gray1);
+  display:none;align-items:center;justify-content:center;
+  font-size:16px;transition:background .2s;
+}
+@media(max-width:1023px) { .topbar-menu-btn { display:flex; } }
+.topbar-menu-btn:hover { background:var(--gray2); }
+
+.topbar-breadcrumb { display:flex;align-items:center;gap:8px; }
+.breadcrumb-home { font-weight:700;font-size:13px;color:var(--gray3);transition:color .2s; }
+.breadcrumb-home:hover { color:var(--black); }
+.breadcrumb-sep { color:var(--gray2);font-size:12px; }
+.breadcrumb-cur { font-weight:900;font-size:14px;color:var(--black); }
+
+.topbar-right { display:flex;align-items:center;gap:10px; }
+.topbar-avatar {
+  width:34px;height:34px;border-radius:50%;
+  background:var(--accent-y);
+  display:flex;align-items:center;justify-content:center;
+  font-weight:900;font-size:13px;color:var(--black);
+  border:2px solid var(--gray1);cursor:pointer;
+  transition:border-color .2s;
+}
+.topbar-avatar:hover { border-color:var(--black); }
+.topbar-back {
+  font-weight:800;font-size:12px;color:var(--gray3);
+  display:flex;align-items:center;gap:5px;
+  padding:7px 14px;border-radius:999px;border:1.5px solid var(--gray1);
+  background:var(--white);transition:all .2s;
+}
+.topbar-back:hover { border-color:var(--black);color:var(--black); }
+
+/* ══════════════════════════════
+   主内容区
+══════════════════════════════ */
+.main {
+  margin-left:var(--sidebar-w);
+  padding-top:var(--topbar-h);
+  flex:1; min-width:0;
+  transition:margin-left .3s var(--ease);
+}
+@media(max-width:1023px) { .main { margin-left:0; } }
+
+.main-inner {
+  padding:32px;
+  max-width:1100px;
+}
+@media(max-width:640px) { .main-inner { padding:20px 16px; } }
+
+/* ══════════════════════════════
+   页面标题区
+══════════════════════════════ */
+.page-header {
+  display:flex;align-items:flex-start;justify-content:space-between;
+  gap:16px;margin-bottom:28px;
+  flex-wrap:wrap;
+}
+.page-title { font-weight:900;font-size:26px;letter-spacing:-.02em; }
+.page-subtitle { font-weight:700;font-size:13px;color:var(--gray3);margin-top:4px; }
+
+/* ══════════════════════════════
+   Tab 切换（文章 / 动画机）
+══════════════════════════════ */
+.tab-bar {
+  display:flex;gap:4px;
+  background:var(--white);border-radius:16px;padding:5px;
+  border:1.5px solid var(--gray1);
+  margin-bottom:24px;
+  width:fit-content;
+}
+.tab-btn {
+  padding:8px 20px;border-radius:12px;
+  font-weight:800;font-size:13px;color:var(--gray3);
+  transition:all .2s;display:flex;align-items:center;gap:6px;
+}
+.tab-btn:hover { color:var(--black); }
+.tab-btn.active { background:var(--black);color:var(--white); }
+.tab-count {
+  font-size:10px;padding:1px 6px;border-radius:999px;
+  background:rgba(255,255,255,.2);color:inherit;font-weight:900;
+}
+.tab-btn:not(.active) .tab-count { background:var(--gray1);color:var(--gray3); }
+
+/* ══════════════════════════════
+   工具栏（筛选 + 新建）
+══════════════════════════════ */
+.toolbar {
+  display:flex;align-items:center;justify-content:space-between;
+  gap:12px;margin-bottom:20px;flex-wrap:wrap;
+}
+.filter-group { display:flex;align-items:center;gap:8px;flex-wrap:wrap; }
+.filter-btn {
+  padding:7px 16px;border-radius:999px;
+  font-weight:800;font-size:12px;color:var(--gray3);
+  border:1.5px solid var(--gray1);background:var(--white);
+  transition:all .2s;
+}
+.filter-btn:hover { border-color:var(--gray2);color:var(--black); }
+.filter-btn.active { background:var(--black);color:var(--white);border-color:var(--black); }
+
+.btn-new {
+  display:flex;align-items:center;gap:6px;
+  padding:9px 20px;border-radius:999px;
+  font-weight:800;font-size:13px;
+  background:var(--accent-y);color:var(--black);
+  transition:opacity .2s, transform .2s;
+  white-space:nowrap;flex-shrink:0;
+}
+.btn-new:hover { opacity:.85;transform:translateY(-1px); }
+
+/* ══════════════════════════════
+   文章列表
+══════════════════════════════ */
+#panelArticles { display:block; }
+#panelAnimations { display:none; }
+
+.article-list { display:flex;flex-direction:column;gap:12px; }
+
+.article-card {
+  background:var(--white);border-radius:20px;
+  border:1.5px solid var(--gray1);
+  display:flex;align-items:stretch;gap:0;
+  overflow:hidden;
+  transition:border-color .2s, box-shadow .2s;
+}
+.article-card:hover { border-color:var(--gray2);box-shadow:0 4px 20px rgba(0,0,0,.06); }
+
+.article-cover {
+  width:100px;flex-shrink:0;
+  background:var(--cream);
+  display:flex;align-items:center;justify-content:center;
+  font-size:28px;position:relative;overflow:hidden;
+}
+@media(max-width:640px) { .article-cover { width:72px;font-size:22px; } }
+.article-cover img { width:100%;height:100%;object-fit:cover; }
+
+.article-body {
+  flex:1;min-width:0;
+  padding:16px 20px;
+  display:flex;flex-direction:column;gap:8px;
+}
+.article-title-row { display:flex;align-items:flex-start;gap:10px;justify-content:space-between; }
+.article-title {
+  font-weight:900;font-size:15px;letter-spacing:-.01em;
+  overflow:hidden;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;
+}
+.article-meta { font-weight:700;font-size:12px;color:var(--gray3); }
+
+.status-badge {
+  display:inline-flex;align-items:center;gap:4px;
+  padding:3px 10px;border-radius:999px;
+  font-weight:800;font-size:10px;letter-spacing:.06em;
+  white-space:nowrap;flex-shrink:0;
+}
+.status-badge.published { background:#EBF9F0;color:#287030; }
+.status-badge.draft     { background:var(--gray1);color:var(--gray3); }
+.status-badge.reviewing { background:#FFF8E0;color:#8A6500; }
+.status-badge.rejected  { background:#FFF0F0;color:var(--red); }
+
+.article-stats {
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+}
+.stat-item {
+  display:flex;align-items:center;gap:5px;
+  font-weight:700;font-size:12px;color:var(--gray3);
+}
+.stat-icon { font-size:13px; }
+
+.article-actions { display:flex;align-items:center;gap:6px;flex-shrink:0;padding:0 16px;justify-content:flex-end; }
+@media(max-width:640px) {
+  .article-card { flex-wrap:wrap; }
+  .article-actions { width:100%;padding:0 16px 14px;border-top:1px solid var(--gray1);margin-top:-4px; }
+}
+.action-btn {
+  padding:6px 14px;border-radius:999px;
+  font-weight:800;font-size:12px;color:var(--gray3);
+  border:1.5px solid var(--gray1);background:var(--white);
+  transition:all .2s;
+}
+.action-btn:hover { border-color:var(--black);color:var(--black); }
+.action-btn.danger:hover { border-color:var(--red);color:var(--red); }
+
+/* ══════════════════════════════
+   动画机列表
+══════════════════════════════ */
+.anim-grid {
+  display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px,1fr));
+  gap:16px;
+}
+
+.anim-card {
+  background:var(--white);border-radius:20px;
+  border:1.5px solid var(--gray1);
+  overflow:hidden;
+  transition:border-color .2s, box-shadow .2s, transform .2s;
+}
+.anim-card:hover { border-color:var(--gray2);box-shadow:0 8px 28px rgba(0,0,0,.08);transform:translateY(-3px); }
+
+.anim-preview {
+  aspect-ratio:4/3;
+  display:flex;align-items:center;justify-content:center;
+  font-size:36px;position:relative;overflow:hidden;
+  transition:background .4s;
+}
+.anim-preview-ring {
+  width:48px;height:48px;border-radius:50%;
+  border:3px solid rgba(0,0,0,.08);
+  animation:spin 2s steps(8) infinite;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+.anim-status-overlay {
+  position:absolute;top:10px;right:10px;
+}
+
+.anim-body { padding:14px 16px; }
+.anim-title { font-weight:900;font-size:14px;letter-spacing:-.01em;margin-bottom:4px; }
+.anim-sub { font-weight:700;font-size:12px;color:var(--gray3);margin-bottom:10px; }
+.anim-tags { display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px; }
+.anim-tag {
+  font-weight:800;font-size:10px;letter-spacing:.06em;
+  padding:3px 9px;border-radius:999px;
+  background:var(--gray1);color:var(--gray3);
+}
+.anim-tag.creator-tag { background:rgba(143,214,148,.15);color:#287030; }
+
+.anim-footer {
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding-top:10px;border-top:1px solid var(--gray1);
+}
+.anim-price { font-weight:900;font-size:15px; }
+.anim-price small { font-weight:700;font-size:11px;color:var(--gray3); }
+.anim-actions { display:flex;gap:6px; }
+.anim-btn {
+  padding:5px 12px;border-radius:999px;
+  font-weight:800;font-size:11px;
+  border:1.5px solid var(--gray1);
+  background:var(--white);color:var(--gray3);
+  transition:all .2s;
+}
+.anim-btn:hover { border-color:var(--black);color:var(--black); }
+.anim-btn.primary { background:var(--black);color:var(--white);border-color:var(--black); }
+.anim-btn.primary:hover { opacity:.8; }
+
+/* 上架引导卡 */
+.publish-cta {
+  background:linear-gradient(135deg,#FFF9DB,#FFF3EC);
+  border:1.5px solid rgba(245,230,66,.4);
+  border-radius:16px;padding:14px 16px;
+  display:flex;align-items:center;gap:12px;margin-bottom:12px;
+}
+.publish-cta-text { flex:1;min-width:0; }
+.publish-cta-title { font-weight:900;font-size:13px;color:var(--black);margin-bottom:2px; }
+.publish-cta-desc { font-weight:700;font-size:11px;color:var(--gray3); }
+.publish-cta-btn {
+  flex-shrink:0;padding:8px 16px;border-radius:999px;
+  font-weight:800;font-size:12px;
+  background:var(--black);color:var(--white);
+  transition:opacity .2s;
+}
+.publish-cta-btn:hover { opacity:.8; }
+
+/* ══════════════════════════════
+   空状态
+══════════════════════════════ */
+.empty-state {
+  display:flex;flex-direction:column;align-items:center;
+  padding:64px 24px;text-align:center;gap:16px;
+}
+.empty-icon { font-size:52px;opacity:.25; }
+.empty-title { font-weight:900;font-size:18px; }
+.empty-desc { font-weight:700;font-size:13px;color:var(--gray3);line-height:1.7; }
+.empty-action {
+  margin-top:8px;padding:11px 28px;border-radius:999px;
+  font-weight:800;font-size:14px;
+  background:var(--black);color:var(--white);
+  transition:opacity .2s;
+}
+.empty-action:hover { opacity:.8; }
+
+/* ══════════════════════════════
+   确认删除弹窗
+══════════════════════════════ */
+.modal-overlay {
+  position:fixed;inset:0;z-index:1000;
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;
+  background:rgba(17,17,16,.5);backdrop-filter:blur(6px);
+  opacity:0;pointer-events:none;
+  transition:opacity .25s var(--ease);
+}
+.modal-overlay.open { opacity:1;pointer-events:all; }
+.confirm-modal {
+  background:var(--white);border-radius:24px;
+  border:1.5px solid var(--gray1);
+  box-shadow:0 24px 80px rgba(0,0,0,.18);
+  padding:28px;max-width:380px;width:100%;
+  transform:translateY(20px) scale(.97);
+  transition:transform .3s var(--ease);
+}
+.modal-overlay.open .confirm-modal { transform:none; }
+.confirm-title { font-weight:900;font-size:18px;margin-bottom:8px; }
+.confirm-desc { font-weight:700;font-size:13px;color:var(--gray3);line-height:1.7;margin-bottom:24px; }
+.confirm-btns { display:flex;gap:10px; }
+.confirm-btns button { flex:1;padding:12px;border-radius:14px;font-family:var(--font);font-weight:800;font-size:14px;transition:all .2s; }
+.btn-cancel { background:var(--gray1);color:var(--black); }
+.btn-cancel:hover { background:var(--gray2); }
+.btn-delete { background:var(--red);color:var(--white); }
+.btn-delete:hover { opacity:.85; }
+
+/* ══════════════════════════════
+   Toast
+══════════════════════════════ */
+.toast {
+  position:fixed;bottom:28px;left:50%;
+  transform:translateX(-50%) translateY(12px);
+  background:var(--black);color:var(--white);
+  font-weight:800;font-size:13px;
+  padding:10px 22px;border-radius:999px;
+  opacity:0;pointer-events:none;
+  transition:all .3s var(--ease);z-index:9000;white-space:nowrap;
+}
+.toast.show { opacity:1;transform:translateX(-50%) translateY(0); }
+
+/* ══════════════════════════════
+   reveal
+══════════════════════════════ */
+.reveal { opacity:0;transform:translateY(16px);transition:opacity .5s var(--ease),transform .5s var(--ease); }
+.reveal.on { opacity:1;transform:none; }
+.d1{transition-delay:.05s}.d2{transition-delay:.1s}.d3{transition-delay:.15s}
+.d4{transition-delay:.2s}.d5{transition-delay:.25s}.d6{transition-delay:.3s}
+</style>
+</head>
+<body>
+
+<!-- 移动端遮罩 -->
+<div class="sidebar-backdrop" id="backdrop" onclick="closeSidebar()"></div>
+
+<!-- ══ 左侧导航 ══ -->
+<aside class="sidebar" id="sidebar">
+
+  <div class="sidebar-logo">
+    <div class="sidebar-logo-mark">哞</div>
+    <div class="sidebar-logo-text">
+      <p class="sidebar-logo-cn">创作者中心</p>
+      <p class="sidebar-logo-sub">MOWO Studio</p>
+    </div>
+  </div>
+
+  <div class="sidebar-user">
+    <div class="sidebar-avatar" id="sidebarAvatar">橘</div>
+    <div class="sidebar-user-info">
+      <p class="sidebar-user-name" id="sidebarName">小橘酱</p>
+      <span class="sidebar-user-badge user" id="sidebarBadge">普通用户</span>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+
+    <p class="nav-section-label">内容管理</p>
+
+    <a href="creator-works.html" class="nav-item active">
+      <span class="nav-icon">📁</span>
+      我的作品
+    </a>
+
+    <a href="creator-article-stats.html" class="nav-item">
+      <span class="nav-icon">📊</span>
+      文章数据
+    </a>
+
+    <p class="nav-section-label" style="margin-top:12px;">创作者专属</p>
+
+    <a href="#" class="nav-item locked" id="navProductStats" onclick="handleLockedNav(event)">
+      <span class="nav-icon">🛍️</span>
+      商品数据
+      <span class="nav-item-lock">🔒</span>
+    </a>
+
+    <a href="#" class="nav-item locked" id="navProductEdit" onclick="handleLockedNav(event)">
+      <span class="nav-icon">✏️</span>
+      商品编辑
+      <span class="nav-item-lock">🔒</span>
+    </a>
+
+    <a href="#" class="nav-item locked" id="navEarnings" onclick="handleLockedNav(event)">
+      <span class="nav-icon">💰</span>
+      收益与提现
+      <span class="nav-item-lock">🔒</span>
+    </a>
+
+  </nav>
+
+  <div class="sidebar-bottom">
+    <div class="cert-card" id="certCard">
+      <p class="cert-title">🎨 创作者认证</p>
+      <p class="cert-desc">认证后可上架商品、查看销售数据、获得收益分成</p>
+      <button class="cert-btn" id="certBtn" onclick="goCertify()">申请认证 →</button>
+    </div>
+  </div>
+
+</aside>
+
+<!-- ══ 顶部栏 ══ -->
+<header class="topbar">
+  <div class="topbar-left">
+    <button class="topbar-menu-btn" onclick="openSidebar()">☰</button>
+    <div class="topbar-breadcrumb">
+      <a href="index.html" class="breadcrumb-home">哞屋</a>
+      <span class="breadcrumb-sep">›</span>
+      <span class="breadcrumb-cur">我的作品</span>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <a href="index.html" class="topbar-back">← 回到主站</a>
+    <div class="topbar-avatar" id="topbarAvatar">橘</div>
+  </div>
+</header>
+
+<!-- ══ 主内容 ══ -->
+<main class="main">
+  <div class="main-inner">
+
+    <!-- 页面标题 -->
+    <div class="page-header reveal">
+      <div>
+        <h1 class="page-title">我的作品</h1>
+        <p class="page-subtitle">管理你发布的文章和定制动画机</p>
+      </div>
+      <button class="btn-new" onclick="openNewMenu()">＋ 新建内容</button>
+    </div>
+
+    <!-- Tab 切换 -->
+    <div class="tab-bar reveal d1">
+      <button class="tab-btn active" id="tabArticles" onclick="switchTab('articles')">
+        ✍️ 文章 / 帖子
+        <span class="tab-count" id="countArticles">0</span>
+      </button>
+      <button class="tab-btn" id="tabAnimations" onclick="switchTab('animations')">
+        🎡 动画机
+        <span class="tab-count" id="countAnimations">0</span>
+      </button>
+    </div>
+
+    <!-- ── 文章面板 ── -->
+    <div id="panelArticles">
+
+      <div class="toolbar reveal d2">
+        <div class="filter-group">
+          <button class="filter-btn active" onclick="filterArticles('all',this)">全部</button>
+          <button class="filter-btn" onclick="filterArticles('published',this)">已发布</button>
+          <button class="filter-btn" onclick="filterArticles('draft',this)">草稿</button>
+          <button class="filter-btn" onclick="filterArticles('reviewing',this)">审核中</button>
+        </div>
+      </div>
+
+      <div class="article-list reveal d3" id="articleList">
+        <!-- 由 JS 渲染 -->
+      </div>
+
+    </div>
+
+    <!-- ── 动画机面板 ── -->
+    <div id="panelAnimations" style="display:none;">
+
+      <div class="toolbar reveal d2">
+        <div class="filter-group">
+          <button class="filter-btn active" onclick="filterAnims('all',this)">全部</button>
+          <button class="filter-btn" onclick="filterAnims('draft',this)">草稿</button>
+          <button class="filter-btn" onclick="filterAnims('published',this)">已上架</button>
+          <button class="filter-btn" onclick="filterAnims('unlisted',this)">已下架</button>
+        </div>
+      </div>
+
+      <div id="publishCta" style="display:none;" class="reveal d2">
+        <!-- 非创作者引导 -->
+      </div>
+
+      <div class="anim-grid reveal d3" id="animGrid">
+        <!-- 由 JS 渲染 -->
+      </div>
+
+    </div>
+
+  </div>
+</main>
+
+<!-- 确认删除弹窗 -->
+<div class="modal-overlay" id="deleteModal" onclick="if(event.target===this)closeDeleteModal()">
+  <div class="confirm-modal">
+    <p class="confirm-title">确认删除？</p>
+    <p class="confirm-desc" id="deleteDesc">删除后无法恢复，相关数据也将清除。</p>
+    <div class="confirm-btns">
+      <button class="btn-cancel" onclick="closeDeleteModal()">取消</button>
+      <button class="btn-delete" onclick="confirmDelete()">确认删除</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ══════════════════════════════
+   演示数据
+══════════════════════════════ */
+const DEMO_USER = {
+  name: '小橘酱', initial: '橘', isCreator: false,
+};
+
+const ARTICLES = [
+  { id:1, title:'用12帧动画讲一个完整的故事——我的创作方法论', cover:'📝', status:'published', date:'2025-12-18', views:4820, likes:312, comments:47, saves:189 },
+  { id:2, title:'【开箱】收到了朋友送的哞屋亚克力款，光影效果绝了', cover:'📦', status:'published', date:'2025-12-10', views:2103, likes:198, comments:23, saves:76 },
+  { id:3, title:'在家制作逐帧动画的5个小技巧（持续更新中）', cover:'🎨', status:'draft', date:'2025-12-05', views:0, likes:0, comments:0, saves:0 },
+  { id:4, title:'哞屋动画机和普通音乐盒有什么区别？详细对比', cover:'🔍', status:'reviewing', date:'2025-12-20', views:0, likes:0, comments:0, saves:0 },
+  { id:5, title:'被平台拒稿的一篇文章，附退稿原因', cover:'😅', status:'rejected', date:'2025-11-28', views:0, likes:0, comments:0, saves:0 },
+];
+
+const ANIMATIONS = [
+  { id:1, title:'小猫奔跑循环', machine:'经典圆筒款', frames:16, mat:'亚克力', color:'透明', colorHex:'#E8F4F8', status:'draft', price:null, sales:0, createdAt:'2025-12-15' },
+  { id:2, title:'海浪摇曳', machine:'手提灯笼款', frames:12, mat:'椴木板', color:'原木色', colorHex:'#D4B896', status:'draft', price:null, sales:0, createdAt:'2025-12-10' },
+  { id:3, title:'星空旋转', machine:'六棱柱款', frames:12, mat:'铝合金', color:'哑光黑', colorHex:'#2A2A2A', status:'draft', price:null, sales:0, createdAt:'2025-11-30' },
+];
+
+const STATUS_LABEL = {
+  published: ['published', '已发布'],
+  draft:     ['draft',     '草稿'],
+  reviewing: ['reviewing', '审核中'],
+  rejected:  ['rejected',  '已退稿'],
+};
+
+/* ══════════════════════════════
+   状态
+══════════════════════════════ */
+let currentTab    = 'articles';
+let articleFilter = 'all';
+let animFilter    = 'all';
+let deleteTarget  = null; /* { type, id } */
+
+/* ══════════════════════════════
+   初始化
+══════════════════════════════ */
+(function init() {
+  /* 读取用户信息 */
+  try {
+    const token = JSON.parse(localStorage.getItem('mowo_token') || 'null');
+    if (token) {
+      DEMO_USER.name      = token.name      || DEMO_USER.name;
+      DEMO_USER.initial   = (token.name||'U')[0].toUpperCase();
+      DEMO_USER.isCreator = !!token.is_creator;
+    }
+  } catch(e) {}
+
+  /* 更新侧栏用户信息 */
+  document.getElementById('sidebarAvatar').textContent = DEMO_USER.initial;
+  document.getElementById('sidebarName').textContent   = DEMO_USER.name;
+  document.getElementById('topbarAvatar').textContent  = DEMO_USER.initial;
+
+  if (DEMO_USER.isCreator) {
+    unlockCreatorNav();
+  }
+
+  /* 更新 Tab 计数 */
+  document.getElementById('countArticles').textContent  = ARTICLES.length;
+  document.getElementById('countAnimations').textContent = ANIMATIONS.length;
+
+  renderArticles();
+  renderAnimations();
+})();
+
+/* ══════════════════════════════
+   创作者解锁
+══════════════════════════════ */
+function unlockCreatorNav() {
+  const badge = document.getElementById('sidebarBadge');
+  badge.textContent = '✦ 认证创作者';
+  badge.className   = 'sidebar-user-badge creator';
+
+  ['navProductStats','navProductEdit','navEarnings'].forEach(id => {
+    const el = document.getElementById(id);
+    el.classList.remove('locked');
+    el.querySelector('.nav-item-lock')?.remove();
+  });
+
+  const certCard = document.getElementById('certCard');
+  certCard.className = 'cert-card verified';
+  certCard.innerHTML = `
+    <p class="cert-title">✦ 已认证创作者</p>
+    <p class="cert-desc">版权认证有效期至 2026-12-31</p>
+    <button class="cert-btn done">认证有效 ✓</button>
+  `;
+}
+
+function handleLockedNav(e) {
+  e.preventDefault();
+  showToast('该功能需要创作者认证，请前往申请');
+  /* 可在此打开认证引导弹窗 */
+}
+
+function goCertify() {
+  location.href = 'creator-certify.html';
+}
+
+/* ══════════════════════════════
+   Tab 切换
+══════════════════════════════ */
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('panelArticles').style.display  = tab === 'articles'  ? 'block' : 'none';
+  document.getElementById('panelAnimations').style.display = tab === 'animations' ? 'block' : 'none';
+  document.getElementById('tabArticles').classList.toggle('active',  tab === 'articles');
+  document.getElementById('tabAnimations').classList.toggle('active', tab === 'animations');
+}
+
+/* ══════════════════════════════
+   文章渲染
+══════════════════════════════ */
+
+function renderArticles() {
+  const list = document.getElementById('articleList');
+  let data   = ARTICLES;
+  if (articleFilter !== 'all') data = data.filter(a => a.status === articleFilter);
+
+  if (!data.length) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <span class="empty-icon">✍️</span>
+        <p class="empty-title">${articleFilter === 'all' ? '还没有文章' : '暂无此类文章'}</p>
+        <p class="empty-desc">写下你对动画、创作的想法，分享给社区</p>
+        ${articleFilter === 'all' ? `<a href="article-editor.html" class="empty-action">写第一篇文章 →</a>` : ''}
+      </div>`;
+    return;
+  }
+
+  list.innerHTML = data.map((a, i) => {
+    const [cls, label] = STATUS_LABEL[a.status] || ['draft','草稿'];
+    const statsHtml = a.status === 'published' ? `
+      <div class="article-stats">
+        <span class="stat-item"><span class="stat-icon">👁</span>${fmtNum(a.views)}</span>
+        <span class="stat-item"><span class="stat-icon">❤️</span>${fmtNum(a.likes)}</span>
+        <span class="stat-item"><span class="stat-icon">💬</span>${fmtNum(a.comments)}</span>
+        <span class="stat-item"><span class="stat-icon">⭐</span>${fmtNum(a.saves)}</span>
+      </div>` : `<p style="font-weight:700;font-size:12px;color:var(--gray3);">${a.status === 'reviewing' ? '正在审核，预计24小时内完成' : a.status === 'rejected' ? '内容未通过审核，请修改后重新提交' : '草稿，未发布'}</p>`;
+
+    return `
+      <div class="article-card reveal" style="transition-delay:${i*0.04}s">
+        <div class="article-cover">${a.cover}</div>
+        <div class="article-body">
+          <div class="article-title-row">
+            <p class="article-title">${a.title}</p>
+            <span class="status-badge ${cls}">${label}</span>
+          </div>
+          <p class="article-meta">${a.date}</p>
+          ${statsHtml}
+        </div>
+        <div class="article-actions">
+          <button class="action-btn" onclick="editArticle(${a.id})">编辑</button>
+          ${a.status === 'published' ? `<button class="action-btn" onclick="viewArticle(${a.id})">查看</button>` : ''}
+          <button class="action-btn danger" onclick="openDeleteModal('article',${a.id},'《${a.title}》')">删除</button>
+        </div>
+      </div>`;
+  }).join('');
+
+  /* 触发新渲染的元素reveal */
+  requestAnimationFrame(() => {
+    list.querySelectorAll('.reveal:not(.on)').forEach(el => {
+      const obs = new IntersectionObserver(entries => {
+        entries.forEach(e => { if(e.isIntersecting){ e.target.classList.add('on'); obs.unobserve(e.target); } });
+      }, { threshold:0.05 });
+      obs.observe(el);
+    });
+  });
+}
+
+function filterArticles(filter, btn) {
+  articleFilter = filter;
+  document.querySelectorAll('#panelArticles .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderArticles();
+}
+
+function editArticle(id)  { showToast(`跳转到文章编辑（id: ${id}）`); }
+function viewArticle(id)  { showToast(`跳转到文章详情（id: ${id}）`); }
+
+/* ══════════════════════════════
+   动画机渲染
+══════════════════════════════ */
+function renderAnimations() {
+  const grid = document.getElementById('animGrid');
+  const cta  = document.getElementById('publishCta');
+  let data   = ANIMATIONS;
+  if (animFilter !== 'all') data = data.filter(a => a.status === animFilter);
+
+  /* 非创作者显示引导 */
+  if (!DEMO_USER.isCreator && animFilter === 'all') {
+    cta.style.display = 'block';
+    cta.innerHTML = `
+      <div class="publish-cta">
+        <div class="publish-cta-text">
+          <p class="publish-cta-title">🔒 想把动画机上架销售？</p>
+          <p class="publish-cta-desc">完成创作者认证后，可以将动画机发布到商城，获得销售收益</p>
+        </div>
+        <button class="publish-cta-btn" onclick="goCertify()">去认证</button>
+      </div>`;
+  } else {
+    cta.style.display = 'none';
+  }
+
+  if (!data.length) {
+    grid.innerHTML = `
+      <div class="empty-state" style="grid-column:1/-1;">
+        <span class="empty-icon">🎡</span>
+        <p class="empty-title">${animFilter === 'all' ? '还没有动画机' : '暂无此状态的动画机'}</p>
+        <p class="empty-desc">完成定制流程后，动画机草稿会出现在这里</p>
+        ${animFilter === 'all' ? `<a href="customize-start.html" class="empty-action">开始定制 →</a>` : ''}
+      </div>`;
+    return;
+  }
+
+  const bgMap = { draft:'var(--cream)', published:'#EBF9F0', unlisted:'var(--gray1)' };
+  grid.innerHTML = data.map((a, i) => {
+    const [cls, label] = STATUS_LABEL[a.status] || ['draft','草稿'];
+    const canPublish = DEMO_USER.isCreator && a.status === 'draft';
+    return `
+      <div class="anim-card reveal" style="transition-delay:${i*0.06}s">
+        <div class="anim-preview" style="background:${bgMap[a.status]||'var(--cream)'}">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+            <div class="anim-preview-ring" style="border-color:${a.colorHex};border-top-color:transparent;"></div>
+            <span style="font-weight:800;font-size:11px;letter-spacing:.1em;color:var(--gray3);">${a.frames}F</span>
+          </div>
+          <div class="anim-status-overlay">
+            <span class="status-badge ${cls}">${label}</span>
+          </div>
+        </div>
+        <div class="anim-body">
+          <p class="anim-title">${a.title}</p>
+          <p class="anim-sub">${a.machine} · ${a.mat} · ${a.color}</p>
+          <div class="anim-tags">
+            <span class="anim-tag">${a.frames}帧</span>
+            ${a.status === 'published' ? `<span class="anim-tag creator-tag">已上架</span>` : ''}
+          </div>
+          <div class="anim-footer">
+            <p class="anim-price">
+              ${a.price ? `¥${a.price}` : '<small>未定价</small>'}
+            </p>
+            <div class="anim-actions">
+              ${canPublish
+                ? `<button class="anim-btn primary" onclick="publishAnim(${a.id})">上架</button>`
+                : a.status === 'published'
+                  ? `<button class="anim-btn" onclick="editAnim(${a.id})">编辑</button>`
+                  : ''}
+              <button class="anim-btn" onclick="openDeleteModal('anim',${a.id},'「${a.title}」')">删除</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  requestAnimationFrame(() => {
+    grid.querySelectorAll('.reveal:not(.on)').forEach(el => {
+      const o = new IntersectionObserver(entries => {
+        entries.forEach(e => { if(e.isIntersecting){ e.target.classList.add('on'); o.unobserve(e.target); }});
+      }, { threshold:0.05 });
+      o.observe(el);
+    });
+  });
+}
+
+function filterAnims(filter, btn) {
+  animFilter = filter;
+  document.querySelectorAll('#panelAnimations .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAnimations();
+}
+
+function publishAnim(id) {
+  showToast('跳转到商品编辑页，填写上架信息');
+  setTimeout(() => { location.href = `creator-product-edit.html?animId=${id}`; }, 800);
+}
+function editAnim(id) { showToast(`编辑动画机（id: ${id}）`); }
+
+/* ══════════════════════════════
+   新建内容
+══════════════════════════════ */
+function openNewMenu() {
+  /* 简单 toast 提示两个选项，实际可做下拉菜单 */
+  showToast('写新文章 or 开始定制动画机？');
+}
+
+/* ══════════════════════════════
+   删除弹窗
+══════════════════════════════ */
+function openDeleteModal(type, id, name) {
+  deleteTarget = { type, id };
+  document.getElementById('deleteDesc').textContent =
+    `即将删除 ${name}，删除后无法恢复。`;
+  document.getElementById('deleteModal').classList.add('open');
+}
+function closeDeleteModal() {
+  document.getElementById('deleteModal').classList.remove('open');
+  deleteTarget = null;
+}
+function confirmDelete() {
+  if (!deleteTarget) return;
+  if (deleteTarget.type === 'article') {
+    const idx = ARTICLES.findIndex(a => a.id === deleteTarget.id);
+    if (idx > -1) ARTICLES.splice(idx, 1);
+    document.getElementById('countArticles').textContent = ARTICLES.length;
+    renderArticles();
+  } else {
+    const idx = ANIMATIONS.findIndex(a => a.id === deleteTarget.id);
+    if (idx > -1) ANIMATIONS.splice(idx, 1);
+    document.getElementById('countAnimations').textContent = ANIMATIONS.length;
+    renderAnimations();
+  }
+  closeDeleteModal();
+  showToast('已删除');
+}
+
+/* ══════════════════════════════
+   侧栏移动端
+══════════════════════════════ */
+function openSidebar() {
+  document.getElementById('sidebar').classList.add('mobile-open');
+  document.getElementById('backdrop').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('mobile-open');
+  document.getElementById('backdrop').classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+/* ══════════════════════════════
+   工具函数
+══════════════════════════════ */
+function fmtNum(n) {
+  if (n >= 10000) return (n/10000).toFixed(1) + 'w';
+  if (n >= 1000)  return (n/1000).toFixed(1)  + 'k';
+  return n;
+}
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+/* ══════════════════════════════
+   Reveal
+══════════════════════════════ */
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if(e.isIntersecting){ e.target.classList.add('on'); obs.unobserve(e.target); }});
+}, { threshold:0.05 });
+document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+
+/* ══════════════════════════════
+   自定义光标
+══════════════════════════════ */
+if (window.matchMedia('(pointer:fine)').matches) {
+  const c=document.createElement('div'), r=document.createElement('div');
+  const cs='position:fixed;border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%)';
+  c.style.cssText=cs+';width:8px;height:8px;background:#111';
+  r.style.cssText=cs+';width:32px;height:32px;border:1.5px solid rgba(17,17,16,.3);transition:width .3s,height .3s,opacity .3s';
+  document.body.append(c,r);
+  document.body.style.cursor='none';
+  let mx=0,my=0,rx=0,ry=0;
+  document.addEventListener('mousemove',e=>{ mx=e.clientX;my=e.clientY;c.style.left=mx+'px';c.style.top=my+'px'; });
+  (function tick(){ rx+=(mx-rx)*.12;ry+=(my-ry)*.12;r.style.left=rx+'px';r.style.top=ry+'px';requestAnimationFrame(tick); })();
+  document.querySelectorAll('a,button,.anim-card,.article-card,.nav-item').forEach(el => {
+    el.addEventListener('mouseenter',()=>{ r.style.width='44px';r.style.height='44px';r.style.opacity='.4'; });
+    el.addEventListener('mouseleave',()=>{ r.style.width='32px';r.style.height='32px';r.style.opacity='1'; });
+  });
+}
+</script>
+</body>
+</html>

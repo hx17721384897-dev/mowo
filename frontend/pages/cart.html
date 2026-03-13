@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>购物车 — 哞屋 MOWO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --white:#FFFFFF;--cream:#F5F3EF;--black:#111110;
+  --gray1:#EBEBEA;--gray2:#C4C3BF;--gray3:#787874;
+  --accent-y:#F5E642;--accent-o:#FF6B35;--accent-g:#8FD694;
+  --red:#E03030;--font:'Nunito','Noto Sans SC',sans-serif;
+  --ease:cubic-bezier(0.22,1,0.36,1);--nav-h:65px;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:var(--font);background:var(--cream);color:var(--black);-webkit-font-smoothing:antialiased;overflow-x:hidden;}
+button{font-family:var(--font);cursor:pointer;border:none;background:none;}
+a{text-decoration:none;}
+
+/* NAV — same as favorites */
+.nav{position:fixed;top:0;left:0;right:0;z-index:600;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:var(--nav-h);background:rgba(245,243,239,.96);backdrop-filter:blur(20px);border-bottom:1.5px solid var(--gray1);}
+@media(min-width:1024px){.nav{padding:0 48px;}}
+.nav-logo{line-height:1;}
+.nav-logo-cn{font-weight:900;font-size:22px;color:var(--black);display:block;}
+.nav-logo-en{font-weight:700;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--gray3);display:block;margin-top:1px;}
+.nav-links{display:none;list-style:none;gap:32px;}
+@media(min-width:1024px){.nav-links{display:flex;}}
+.nav-links a{font-weight:800;font-size:14px;color:var(--gray3);transition:color .2s;}
+.nav-links a:hover{color:var(--black);}
+.nav-right{display:flex;align-items:center;gap:8px;}
+.nav-user{position:relative;}
+.nav-avatar-btn{display:flex;align-items:center;gap:8px;padding:5px 12px 5px 5px;border-radius:999px;border:2px solid transparent;transition:border-color .2s,background .2s;min-height:44px;}
+.nav-avatar-btn:hover,.nav-avatar-btn.open{border-color:var(--gray1);background:var(--white);}
+.nav-avatar{width:34px;height:34px;border-radius:50%;background:var(--accent-y);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:var(--black);border:1.5px solid rgba(0,0,0,.08);flex-shrink:0;}
+.nav-uname{font-weight:800;font-size:13px;display:none;}
+@media(min-width:640px){.nav-uname{display:block;}}
+.nav-chevron{font-size:10px;color:var(--gray3);transition:transform .25s var(--ease);}
+.nav-avatar-btn.open .nav-chevron{transform:rotate(180deg);}
+.user-dropdown{position:absolute;top:calc(100% + 10px);right:0;width:232px;background:var(--white);border-radius:20px;border:1.5px solid var(--gray1);box-shadow:0 8px 40px rgba(0,0,0,.12);padding:8px;opacity:0;pointer-events:none;transform:translateY(-8px) scale(.97);transform-origin:top right;transition:opacity .25s var(--ease),transform .25s var(--ease);z-index:100;}
+.user-dropdown.open{opacity:1;pointer-events:all;transform:none;}
+.dropdown-head{padding:12px 14px 14px;border-bottom:1px solid var(--gray1);margin-bottom:6px;display:flex;align-items:center;gap:12px;}
+.dh-av{width:38px;height:38px;border-radius:50%;background:var(--accent-y);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;color:var(--black);border:2px solid var(--gray1);}
+.dh-name{font-weight:900;font-size:14px;}
+.dh-role{font-size:11px;font-weight:700;color:var(--gray3);margin-top:2px;}
+.di{display:flex;align-items:center;gap:11px;padding:10px 14px;border-radius:12px;font-weight:800;font-size:13px;color:var(--black);transition:background .15s;width:100%;text-align:left;}
+.di:hover{background:var(--cream);}
+.di-ic{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.di.cart .di-ic{background:#FFF3EC;}
+.di.fav .di-ic{background:#FFFBE6;}
+.di.orders .di-ic{background:#EDFBEE;}
+.di.works .di-ic{background:#EBF5FF;}
+.di.dashboard .di-ic{background:#F0EBFF;}
+.di.settings .di-ic,.di.help .di-ic{background:var(--gray1);}
+.di.danger{color:var(--red);}
+.di.danger:hover{background:#FFF5F5;}
+.di.danger .di-ic{background:#FFF5F5;}
+.dd-divider{height:1px;background:var(--gray1);margin:6px 0;}
+.cart-bdg{margin-left:auto;background:var(--accent-o);color:var(--white);font-weight:900;font-size:10px;padding:2px 7px;border-radius:999px;min-width:20px;text-align:center;}
+.cart-bdg.zero{display:none;}
+
+/* PAGE */
+.page{max-width:1100px;margin:0 auto;padding:calc(var(--nav-h) + 52px) 24px 120px;}
+@media(min-width:1024px){.page{padding:calc(var(--nav-h) + 64px) 48px 120px;}}
+
+.page-header{margin-bottom:36px;}
+.page-title{font-weight:900;font-size:clamp(26px,5vw,42px);letter-spacing:-.03em;line-height:1.1;margin-bottom:6px;}
+.page-title em{font-style:normal;background:var(--accent-o);color:var(--white);padding:1px 10px;border-radius:8px;}
+.page-sub{font-weight:700;font-size:14px;color:var(--gray3);}
+
+/* LAYOUT */
+.cart-layout{display:grid;gap:24px;align-items:start;}
+@media(min-width:1024px){.cart-layout{grid-template-columns:1fr 340px;}}
+
+/* TOOLBAR */
+.toolbar{display:flex;align-items:center;gap:14px;padding:0 0 16px;border-bottom:1.5px solid var(--gray1);margin-bottom:16px;}
+.chk{width:22px;height:22px;border-radius:7px;border:2px solid var(--gray2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .18s;}
+.chk.on{background:var(--black);border-color:var(--black);}
+.chk.on::after{content:'✓';font-size:12px;font-weight:900;color:var(--white);}
+.chk.partial::after{content:'–';font-size:14px;font-weight:900;color:var(--white);}
+.chk.partial{background:var(--black);border-color:var(--black);}
+.sel-all-label{font-weight:800;font-size:14px;cursor:pointer;}
+.sel-info{font-weight:700;font-size:13px;color:var(--gray3);margin-left:auto;}
+.btn-batch-del{font-weight:800;font-size:13px;color:var(--gray3);padding:6px 0;transition:color .18s;}
+.btn-batch-del:hover{color:var(--red);}
+.btn-batch-del:disabled{opacity:.3;cursor:not-allowed;}
+
+/* CART ITEMS */
+.cart-list{display:flex;flex-direction:column;gap:12px;}
+
+.cart-item{
+  background:var(--white);border-radius:20px;
+  border:1.5px solid var(--gray1);
+  padding:16px;
+  display:flex;align-items:center;gap:14px;
+  transition:border-color .2s,box-shadow .2s;
+}
+.cart-item.sel{border-color:var(--black);box-shadow:0 0 0 1px var(--black);}
+
+.item-chk{width:22px;height:22px;border-radius:7px;border:2px solid var(--gray2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .18s;}
+.item-chk.on{background:var(--black);border-color:var(--black);}
+.item-chk.on::after{content:'✓';font-size:12px;font-weight:900;color:var(--white);}
+
+/* Clickable cover → work detail */
+.item-cover{
+  width:76px;height:76px;border-radius:14px;overflow:hidden;
+  flex-shrink:0;cursor:pointer;
+  transition:transform .22s var(--ease),box-shadow .22s;
+  position:relative;
+}
+.item-cover:hover{transform:scale(1.04);box-shadow:0 4px 14px rgba(0,0,0,.12);}
+.item-cover-inner{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:32px;}
+.item-cover-hint{
+  position:absolute;inset:0;background:rgba(17,17,16,.45);
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:900;color:var(--white);letter-spacing:.04em;
+  opacity:0;transition:opacity .2s;border-radius:14px;
+}
+.item-cover:hover .item-cover-hint{opacity:1;}
+
+.item-info{flex:1;min-width:0;}
+.item-title{
+  font-weight:900;font-size:14px;line-height:1.4;margin-bottom:5px;
+  cursor:pointer;transition:color .18s;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.item-title:hover{color:var(--accent-o);}
+.item-machine{display:inline-flex;align-items:center;gap:5px;background:var(--cream);border:1px solid var(--gray1);border-radius:999px;padding:3px 10px;font-weight:800;font-size:11px;color:var(--gray3);margin-bottom:10px;}
+.item-prices{display:flex;align-items:baseline;gap:10px;}
+.item-unit{font-weight:700;font-size:12px;color:var(--gray3);}
+.item-sub{font-weight:900;font-size:16px;}
+
+.item-right{display:flex;flex-direction:column;align-items:flex-end;gap:10px;flex-shrink:0;}
+.qty-row{display:flex;align-items:center;gap:10px;}
+.qty-btn{width:32px;height:32px;border-radius:50%;border:1.5px solid var(--gray1);font-weight:900;font-size:16px;display:flex;align-items:center;justify-content:center;transition:border-color .18s,background .18s;}
+.qty-btn:hover{border-color:var(--black);}
+.qty-btn:disabled{opacity:.3;cursor:not-allowed;}
+.qty-n{font-weight:900;font-size:16px;min-width:22px;text-align:center;}
+.btn-del{font-weight:800;font-size:12px;color:var(--gray3);transition:color .18s;}
+.btn-del:hover{color:var(--red);}
+
+/* SUMMARY (sticky) */
+.summary{background:var(--white);border-radius:24px;border:1.5px solid var(--gray1);padding:24px;position:sticky;top:calc(var(--nav-h)+20px);}
+.sum-title{font-weight:900;font-size:16px;margin-bottom:20px;}
+.sum-items{max-height:180px;overflow-y:auto;margin-bottom:18px;}
+.sum-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--gray1);}
+.sum-item:last-child{border-bottom:none;}
+.sum-ic{width:38px;height:38px;border-radius:10px;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;}
+.sum-name{font-weight:800;font-size:12px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sum-price{font-weight:900;font-size:12px;flex-shrink:0;}
+.sum-hint{font-weight:700;font-size:13px;color:var(--gray3);text-align:center;padding:16px 0;}
+.sum-row{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:14px;color:var(--gray3);margin-bottom:10px;}
+.sum-row.total{border-top:1.5px solid var(--gray1);padding-top:14px;margin-top:4px;font-weight:900;font-size:20px;color:var(--black);margin-bottom:0;}
+.sum-row.total span:last-child{color:var(--accent-o);}
+
+.btn-checkout{width:100%;height:56px;border-radius:16px;font-weight:900;font-size:15px;background:var(--black);color:var(--white);margin-top:18px;transition:opacity .2s,transform .15s;display:flex;align-items:center;justify-content:center;gap:8px;}
+.btn-checkout:hover{opacity:.86;}
+.btn-checkout:active{transform:scale(.98);}
+.btn-checkout:disabled{opacity:.3;cursor:not-allowed;}
+.btn-back-fav{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-top:12px;font-weight:800;font-size:13px;color:var(--gray3);padding:8px;border-radius:12px;transition:background .18s,color .18s;}
+.btn-back-fav:hover{background:var(--cream);color:var(--black);}
+
+/* CHECKOUT CONFIRM MODAL */
+.modal-bg{position:fixed;inset:0;z-index:900;background:rgba(17,17,16,.55);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:24px;opacity:0;pointer-events:none;transition:opacity .35s var(--ease);}
+.modal-bg.open{opacity:1;pointer-events:all;}
+.confirm-box{width:100%;max-width:400px;background:var(--white);border-radius:28px;padding:32px;border:1.5px solid var(--gray1);box-shadow:0 24px 80px rgba(0,0,0,.18);transform:translateY(16px) scale(.97);transition:transform .38s var(--ease);}
+.modal-bg.open .confirm-box{transform:none;}
+.cfm-icon{font-size:42px;margin-bottom:16px;}
+.cfm-title{font-weight:900;font-size:21px;letter-spacing:-.02em;margin-bottom:8px;}
+.cfm-desc{font-weight:700;font-size:14px;color:var(--gray3);line-height:1.8;margin-bottom:20px;}
+.cfm-sum{background:var(--cream);border-radius:16px;padding:16px;margin-bottom:24px;}
+.cfm-row{display:flex;justify-content:space-between;font-weight:800;font-size:13px;color:var(--gray3);margin-bottom:9px;}
+.cfm-row:last-child{margin-bottom:0;padding-top:11px;border-top:1px solid var(--gray2);font-weight:900;font-size:17px;color:var(--black);}
+.cfm-btns{display:flex;gap:10px;}
+.btn-cfm-cancel{flex:1;height:52px;border-radius:14px;border:2px solid var(--gray1);font-weight:800;font-size:14px;color:var(--gray3);transition:all .18s;}
+.btn-cfm-cancel:hover{border-color:var(--black);color:var(--black);}
+.btn-cfm-go{flex:2;height:52px;border-radius:14px;background:var(--black);color:var(--white);font-weight:900;font-size:14px;transition:opacity .18s;}
+.btn-cfm-go:hover{opacity:.85;}
+
+/* EMPTY */
+.empty-state{text-align:center;padding:88px 24px;}
+.empty-icon{font-size:64px;margin-bottom:18px;opacity:.4;}
+.empty-title{font-weight:900;font-size:20px;margin-bottom:8px;}
+.empty-desc{font-weight:700;font-size:14px;color:var(--gray3);line-height:1.9;margin-bottom:26px;}
+.btn-go{display:inline-flex;align-items:center;gap:7px;padding:13px 26px;border-radius:999px;font-weight:900;font-size:13px;background:var(--black);color:var(--white);transition:opacity .2s;}
+.btn-go:hover{opacity:.82;}
+
+/* REVEAL */
+.reveal{opacity:0;transform:translateY(16px);transition:opacity .55s var(--ease),transform .55s var(--ease);}
+.reveal.on{opacity:1;transform:none;}
+.d1{transition-delay:.06s}.d2{transition-delay:.12s}
+
+/* TOAST */
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--black);color:var(--white);font-weight:800;font-size:13px;padding:12px 22px;border-radius:999px;opacity:0;pointer-events:none;transition:opacity .3s,transform .3s var(--ease);z-index:9500;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* CURSOR */
+#cdot,#cring{position:fixed;border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);}
+#cdot{width:8px;height:8px;background:var(--black);}
+#cring{width:32px;height:32px;border:1.5px solid rgba(17,17,16,.25);transition:width .3s,height .3s;}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="#" class="nav-logo">
+    <span class="nav-logo-cn">哞屋</span>
+    <span class="nav-logo-en">MOWO</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="#">关于我们</a></li>
+    <li><a href="#">产品介绍</a></li>
+    <li><a href="#">社区分享</a></li>
+    <li><a href="#">创作中心</a></li>
+    <li><a href="#">联络我们</a></li>
+  </ul>
+  <div class="nav-right">
+    <div class="nav-user">
+      <button class="nav-avatar-btn" id="navBtn" onclick="toggleDD()">
+        <div class="nav-avatar">橘</div>
+        <span class="nav-uname">小橘酱</span>
+        <span class="nav-chevron">▾</span>
+      </button>
+      <div class="user-dropdown" id="userDD">
+        <div class="dropdown-head">
+          <div class="dh-av">橘</div>
+          <div><div class="dh-name">小橘酱</div><div class="dh-role">普通用户</div></div>
+        </div>
+        <button class="di cart" onclick="closeDD()">
+          <div class="di-ic">🛒</div><span>购物车</span>
+          <span class="cart-bdg" id="cartBdg">3</span>
+        </button>
+        <button class="di fav" onclick="goFav()"><div class="di-ic">❤</div><span>我的收藏</span></button>
+        <button class="di orders"><div class="di-ic">📦</div><span>我的订单</span></button>
+        <button class="di works"><div class="di-ic">🎨</div><span>我的作品</span></button>
+        <button class="di dashboard"><div class="di-ic">📊</div><span>创作者数据台</span></button>
+        <div class="dd-divider"></div>
+        <button class="di settings"><div class="di-ic">⚙️</div><span>账号设置</span></button>
+        <button class="di help"><div class="di-ic">💬</div><span>帮助与反馈</span></button>
+        <div class="dd-divider"></div>
+        <button class="di danger"><div class="di-ic">🚪</div><span>退出登录</span></button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- PAGE -->
+<main class="page">
+  <div class="page-header reveal">
+    <h1 class="page-title">购物车 <em>🛒</em></h1>
+    <p class="page-sub">勾选商品，确认机型，随时结算</p>
+  </div>
+
+  <!-- Cart content (shown when non-empty) -->
+  <div id="cartContent">
+    <div class="cart-layout">
+      <!-- Left: items -->
+      <div>
+        <div class="toolbar reveal d1">
+          <div class="chk" id="selectAllChk" onclick="toggleSelectAll()"></div>
+          <span class="sel-all-label" onclick="toggleSelectAll()">全选</span>
+          <span class="sel-info" id="selInfo">已选 0 件</span>
+          <button class="btn-batch-del" id="batchDelBtn" onclick="batchDelete()" disabled>删除所选</button>
+        </div>
+        <div class="cart-list reveal d2" id="cartList"></div>
+      </div>
+      <!-- Right: summary -->
+      <div class="summary reveal d1">
+        <div class="sum-title">订单摘要</div>
+        <div class="sum-items" id="sumItems"></div>
+        <div class="sum-row"><span>商品合计</span><span id="sumSubtotal">¥0</span></div>
+        <div class="sum-row"><span>件数</span><span id="sumQty">0 件</span></div>
+        <div class="sum-row total"><span>总计</span><span id="sumTotal">¥0</span></div>
+        <button class="btn-checkout" id="checkoutBtn" onclick="openConfirm()" disabled>去结算</button>
+        <button class="btn-back-fav" onclick="goFav()">← 继续逛收藏夹</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty state -->
+  <div class="empty-state" id="cartEmpty" style="display:none">
+    <div class="empty-icon">🛒</div>
+    <div class="empty-title">购物车还是空的</div>
+    <div class="empty-desc">在社区或收藏夹选好作品和机型<br>加入购物车后就可以在这里结算</div>
+    <a href="mowo-favorites.html" class="btn-go">去收藏夹看看 →</a>
+  </div>
+</main>
+
+<!-- CHECKOUT CONFIRM MODAL -->
+<div class="modal-bg" id="confirmBg" onclick="handleConfirmBg(event)">
+  <div class="confirm-box" onclick="event.stopPropagation()">
+    <div class="cfm-icon">🛍️</div>
+    <div class="cfm-title">确认前往结算</div>
+    <div class="cfm-desc">以下商品即将进入结算流程，<br>请确认数量和机型无误。</div>
+    <div class="cfm-sum" id="cfmSumBox"></div>
+    <div class="cfm-btns">
+      <button class="btn-cfm-cancel" onclick="closeConfirm()">再想想</button>
+      <button class="btn-cfm-go" onclick="goCheckout()">确认结算 →</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ─── DATA ─── */
+let cartItems=[
+  {id:'ci1',workId:'w1',title:'奔跑的橘猫 · 12帧循环',bg:'#FFF3EC',em:'🐈',machine:'经典圆筒款',unitPrice:288,qty:1},
+  {id:'ci2',workId:'w2',title:'夏日海浪 · 8帧',bg:'#EBF5FF',em:'🌊',machine:'扁圆盒款',unitPrice:258,qty:2},
+  {id:'ci3',workId:'w1',title:'奔跑的橘猫 · 12帧循环',bg:'#FFF3EC',em:'🐈',machine:'木质方框款',unitPrice:318,qty:1},
+];
+let selected=new Set();
+
+/* ─── RENDER ─── */
+function render(){
+  const list=document.getElementById('cartList');
+  const empty=document.getElementById('cartEmpty');
+  const content=document.getElementById('cartContent');
+  const badge=document.getElementById('cartBdg');
+  const totalQty=cartItems.reduce((s,c)=>s+c.qty,0);
+  badge.textContent=totalQty;
+  badge.classList.toggle('zero',totalQty===0);
+
+  if(!cartItems.length){content.style.display='none';empty.style.display='block';return;}
+  content.style.display='';empty.style.display='none';
+
+  list.innerHTML=cartItems.map(item=>`
+    <div class="cart-item${selected.has(item.id)?' sel':''}" id="item-${item.id}">
+      <div class="item-chk${selected.has(item.id)?' on':''}" onclick="toggleItem('${item.id}')"></div>
+      <div class="item-cover" style="background:${item.bg}" onclick="goWork('${item.workId}')">
+        <div class="item-cover-inner">${item.em}</div>
+        <div class="item-cover-hint">查看详情</div>
+      </div>
+      <div class="item-info">
+        <div class="item-title" onclick="goWork('${item.workId}')">${item.title}</div>
+        <div class="item-machine">⚙ ${item.machine}</div>
+        <div class="item-prices">
+          <span class="item-unit">¥${item.unitPrice}/件</span>
+          <span class="item-sub">¥${item.unitPrice*item.qty}</span>
+        </div>
+      </div>
+      <div class="item-right">
+        <div class="qty-row">
+          <button class="qty-btn" onclick="changeQty('${item.id}',-1)" ${item.qty<=1?'disabled':''}>−</button>
+          <span class="qty-n">${item.qty}</span>
+          <button class="qty-btn" onclick="changeQty('${item.id}',1)">+</button>
+        </div>
+        <button class="btn-del" onclick="deleteItem('${item.id}')">删除</button>
+      </div>
+    </div>`).join('');
+
+  updateSummary();
+}
+
+function toggleItem(id){
+  if(selected.has(id))selected.delete(id); else selected.add(id);
+  render();
+}
+
+function toggleSelectAll(){
+  const allIds=cartItems.map(c=>c.id);
+  const allSel=allIds.every(id=>selected.has(id));
+  if(allSel)selected.clear(); else allIds.forEach(id=>selected.add(id));
+  render();
+}
+
+function batchDelete(){
+  cartItems=cartItems.filter(c=>!selected.has(c.id));
+  selected.clear(); render(); toast('已删除所选商品');
+}
+
+function deleteItem(id){
+  cartItems=cartItems.filter(c=>c.id!==id);
+  selected.delete(id); render();
+}
+
+function changeQty(id,d){
+  const item=cartItems.find(c=>c.id===id);
+  if(item){item.qty=Math.max(1,item.qty+d); render();}
+}
+
+function updateSummary(){
+  const sel=cartItems.filter(c=>selected.has(c.id));
+  const total=sel.reduce((s,c)=>s+c.unitPrice*c.qty,0);
+  const qty=sel.reduce((s,c)=>s+c.qty,0);
+  const allIds=cartItems.map(c=>c.id);
+  const allOn=allIds.length>0&&allIds.every(id=>selected.has(id));
+  const partOn=allIds.some(id=>selected.has(id))&&!allOn;
+
+  // Select all checkbox state
+  const sac=document.getElementById('selectAllChk');
+  sac.className='chk'+(allOn?' on':partOn?' partial':'');
+
+  document.getElementById('selInfo').textContent=`已选 ${selected.size} 件商品`;
+  document.getElementById('batchDelBtn').disabled=selected.size===0;
+  document.getElementById('sumSubtotal').textContent=`¥${total}`;
+  document.getElementById('sumQty').textContent=`${qty} 件`;
+  document.getElementById('sumTotal').textContent=`¥${total}`;
+  document.getElementById('checkoutBtn').disabled=sel.length===0;
+
+  document.getElementById('sumItems').innerHTML=sel.length
+    ? sel.map(c=>`
+        <div class="sum-item">
+          <div class="sum-ic" style="background:${c.bg}">${c.em}</div>
+          <span class="sum-name">${c.title} · ${c.machine} ×${c.qty}</span>
+          <span class="sum-price">¥${c.unitPrice*c.qty}</span>
+        </div>`).join('')
+    : '<div class="sum-hint">勾选左侧商品后显示</div>';
+}
+
+function goWork(workId){
+  toast(`跳转至作品详情页 work-detail?id=${workId}`);
+  // 实际：window.location.href = `mowo-work-detail.html?id=${workId}`;
+}
+
+/* ─── CHECKOUT CONFIRM ─── */
+function openConfirm(){
+  const sel=cartItems.filter(c=>selected.has(c.id));
+  const total=sel.reduce((s,c)=>s+c.unitPrice*c.qty,0);
+  const qty=sel.reduce((s,c)=>s+c.qty,0);
+  document.getElementById('cfmSumBox').innerHTML=`
+    <div class="cfm-row"><span>商品件数</span><span>${qty} 件</span></div>
+    <div class="cfm-row"><span>配送方式</span><span>快递包邮</span></div>
+    <div class="cfm-row"><span>应付总额</span><span>¥${total}</span></div>`;
+  document.getElementById('confirmBg').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeConfirm(){
+  document.getElementById('confirmBg').classList.remove('open');
+  document.body.style.overflow='';
+}
+function handleConfirmBg(e){if(e.target.id==='confirmBg')closeConfirm();}
+function goCheckout(){closeConfirm();toast('跳转结算页（后端对接后实现）');}
+
+/* ─── NAV ─── */
+function goFav(){toast('前往 mowo-favorites.html');}
+function toggleDD(){
+  const dd=document.getElementById('userDD'),btn=document.getElementById('navBtn');
+  const o=dd.classList.toggle('open');
+  btn.classList.toggle('open',o);
+  if(o)setTimeout(()=>document.addEventListener('click',outsideDD),0);
+}
+function closeDD(){
+  document.getElementById('userDD').classList.remove('open');
+  document.getElementById('navBtn').classList.remove('open');
+  document.removeEventListener('click',outsideDD);
+}
+function outsideDD(e){
+  if(!document.getElementById('navBtn').contains(e.target)&&!document.getElementById('userDD').contains(e.target))closeDD();
+}
+
+/* ─── TOAST ─── */
+let tT;
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(tT); tT=setTimeout(()=>t.classList.remove('show'),2600);
+}
+
+/* ─── REVEAL ─── */
+const revObs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('on');revObs.unobserve(e.target);}});
+},{threshold:0.06});
+document.querySelectorAll('.reveal').forEach(el=>revObs.observe(el));
+
+/* ─── CURSOR ─── */
+if(window.matchMedia('(pointer:fine)').matches){
+  const dot=document.createElement('div');dot.id='cdot';
+  const ring=document.createElement('div');ring.id='cring';
+  document.body.append(dot,ring);
+  document.body.style.cursor='none';
+  let mx=0,my=0,rx=0,ry=0;
+  document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;dot.style.left=mx+'px';dot.style.top=my+'px';});
+  (function tick(){rx+=(mx-rx)*.12;ry+=(my-ry)*.12;ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(tick);})();
+  document.querySelectorAll('a,button,.item-cover,.item-title').forEach(el=>{
+    el.addEventListener('mouseenter',()=>{ring.style.width='48px';ring.style.height='48px';});
+    el.addEventListener('mouseleave',()=>{ring.style.width='32px';ring.style.height='32px';});
+  });
+}
+
+/* ─── INIT ─── */
+render();
+</script>
+</body>
+</html>

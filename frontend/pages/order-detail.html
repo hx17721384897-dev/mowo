@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>订单详情 — 哞屋 MOWO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --white:#FFFFFF;--cream:#F5F3EF;--black:#111110;
+  --gray1:#EBEBEA;--gray2:#C4C3BF;--gray3:#787874;
+  --accent-y:#F5E642;--accent-o:#FF6B35;--accent-g:#8FD694;--accent-b:#7EC8E3;
+  --red:#E03030;--font:'Nunito','Noto Sans SC',sans-serif;
+  --ease:cubic-bezier(0.22,1,0.36,1);--nav-h:65px;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:var(--font);background:var(--cream);color:var(--black);-webkit-font-smoothing:antialiased;overflow-x:hidden;}
+button{font-family:var(--font);cursor:pointer;border:none;background:none;}
+a{text-decoration:none;}
+
+/* NAV — identical */
+.nav{position:fixed;top:0;left:0;right:0;z-index:600;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:var(--nav-h);background:rgba(245,243,239,.96);backdrop-filter:blur(20px);border-bottom:1.5px solid var(--gray1);}
+@media(min-width:1024px){.nav{padding:0 48px;}}
+.nav-logo{line-height:1;}
+.nav-logo-cn{font-weight:900;font-size:22px;color:var(--black);display:block;}
+.nav-logo-en{font-weight:700;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--gray3);display:block;margin-top:1px;}
+.nav-links{display:none;list-style:none;gap:32px;}
+@media(min-width:1024px){.nav-links{display:flex;}}
+.nav-links a{font-weight:800;font-size:14px;color:var(--gray3);transition:color .2s;}
+.nav-links a:hover{color:var(--black);}
+.nav-right{display:flex;align-items:center;}
+.nav-user{position:relative;}
+.nav-avatar-btn{display:flex;align-items:center;gap:8px;padding:5px 12px 5px 5px;border-radius:999px;border:2px solid transparent;transition:border-color .2s,background .2s;min-height:44px;}
+.nav-avatar-btn:hover,.nav-avatar-btn.open{border-color:var(--gray1);background:var(--white);}
+.nav-avatar{width:34px;height:34px;border-radius:50%;background:var(--accent-y);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:var(--black);border:1.5px solid rgba(0,0,0,.08);flex-shrink:0;}
+.nav-uname{font-weight:800;font-size:13px;display:none;}
+@media(min-width:640px){.nav-uname{display:block;}}
+.nav-chevron{font-size:10px;color:var(--gray3);transition:transform .25s var(--ease);}
+.nav-avatar-btn.open .nav-chevron{transform:rotate(180deg);}
+.user-dropdown{position:absolute;top:calc(100% + 10px);right:0;width:232px;background:var(--white);border-radius:20px;border:1.5px solid var(--gray1);box-shadow:0 8px 40px rgba(0,0,0,.12);padding:8px;opacity:0;pointer-events:none;transform:translateY(-8px) scale(.97);transform-origin:top right;transition:opacity .25s var(--ease),transform .25s var(--ease);z-index:100;}
+.user-dropdown.open{opacity:1;pointer-events:all;transform:none;}
+.dropdown-head{padding:12px 14px 14px;border-bottom:1px solid var(--gray1);margin-bottom:6px;display:flex;align-items:center;gap:12px;}
+.dh-av{width:38px;height:38px;border-radius:50%;background:var(--accent-y);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;color:var(--black);border:2px solid var(--gray1);}
+.dh-name{font-weight:900;font-size:14px;}.dh-role{font-size:11px;font-weight:700;color:var(--gray3);margin-top:2px;}
+.di{display:flex;align-items:center;gap:11px;padding:10px 14px;border-radius:12px;font-weight:800;font-size:13px;color:var(--black);transition:background .15s;width:100%;text-align:left;}
+.di:hover{background:var(--cream);}
+.di-ic{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.di.cart .di-ic{background:#FFF3EC;}.di.fav .di-ic{background:#FFFBE6;}.di.orders .di-ic{background:#EDFBEE;}.di.works .di-ic{background:#EBF5FF;}.di.dashboard .di-ic{background:#F0EBFF;}.di.settings .di-ic,.di.help .di-ic{background:var(--gray1);}
+.di.danger{color:var(--red);}.di.danger:hover{background:#FFF5F5;}.di.danger .di-ic{background:#FFF5F5;}
+.dd-sep{height:1px;background:var(--gray1);margin:6px 0;}
+.cart-bdg{margin-left:auto;background:var(--accent-o);color:var(--white);font-weight:900;font-size:10px;padding:2px 7px;border-radius:999px;}
+
+/* ── PAGE ── */
+.page{max-width:720px;margin:0 auto;padding:calc(var(--nav-h) + 40px) 24px 100px;}
+@media(min-width:1024px){.page{padding:calc(var(--nav-h) + 52px) 48px 100px;}}
+
+/* Back link */
+.back-link{display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:13px;color:var(--gray3);margin-bottom:28px;padding:8px 0;transition:color .18s;cursor:pointer;}
+.back-link:hover{color:var(--black);}
+
+/* ── STATUS HERO ── */
+.status-hero{
+  background:var(--black);border-radius:24px;padding:28px 28px 24px;
+  margin-bottom:20px;color:var(--white);
+}
+.hero-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;}
+.hero-status-label{font-weight:900;font-size:13px;letter-spacing:.08em;text-transform:uppercase;opacity:.55;margin-bottom:4px;}
+.hero-status-val{font-weight:900;font-size:24px;letter-spacing:-.02em;}
+.hero-order-no{font-weight:700;font-size:11px;opacity:.4;margin-top:4px;}
+.hero-icon{font-size:44px;line-height:1;}
+
+/* Progress in hero */
+.hero-progress{margin-bottom:20px;}
+.hero-steps{display:flex;align-items:center;position:relative;margin-bottom:12px;}
+.hero-line{position:absolute;top:14px;left:14px;right:14px;height:2px;background:rgba(255,255,255,.15);z-index:0;}
+.hero-line-fill{position:absolute;top:14px;left:14px;height:2px;background:var(--accent-y);z-index:1;transition:width .7s var(--ease);}
+.h-step{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;position:relative;z-index:2;}
+.h-dot{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:11px;transition:all .3s var(--ease);}
+.h-dot.done{background:var(--accent-y);border-color:var(--accent-y);font-weight:900;color:var(--black);}
+.h-dot.done::after{content:'✓';font-size:11px;font-weight:900;}
+.h-dot.current{background:var(--white);border-color:var(--white);}
+.h-dot.current .h-dot-inner{width:10px;height:10px;border-radius:50%;background:var(--black);}
+.h-label{font-weight:800;font-size:10px;opacity:.5;text-align:center;line-height:1.3;}
+.h-label.cur{opacity:1;color:var(--accent-y);}
+
+/* ETA */
+.hero-eta{
+  background:rgba(255,255,255,.08);border-radius:14px;
+  padding:12px 16px;display:flex;align-items:center;gap:10px;
+}
+.hero-eta-icon{font-size:18px;}
+.hero-eta-text{font-weight:800;font-size:13px;}
+.hero-eta-text span{color:var(--accent-y);}
+.hero-tracking{font-weight:700;font-size:12px;opacity:.5;margin-top:4px;}
+
+/* ── SECTIONS ── */
+.section{background:var(--white);border-radius:20px;border:1.5px solid var(--gray1);margin-bottom:14px;overflow:hidden;}
+.sec-head{padding:16px 20px;border-bottom:1px solid var(--gray1);display:flex;align-items:center;justify-content:space-between;}
+.sec-title{font-weight:900;font-size:14px;display:flex;align-items:center;gap:8px;}
+.sec-title-icon{font-size:16px;}
+.sec-action{font-weight:800;font-size:12px;color:var(--gray3);padding:6px 0;transition:color .18s;}
+.sec-action:hover{color:var(--black);}
+
+/* Items */
+.order-item{display:flex;align-items:center;gap:14px;padding:16px 20px;border-bottom:1px solid var(--gray1);}
+.order-item:last-child{border-bottom:none;}
+.oi-cover{width:68px;height:68px;border-radius:14px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:30px;flex-shrink:0;cursor:pointer;transition:transform .2s var(--ease);}
+.oi-cover:hover{transform:scale(1.04);}
+.oi-info{flex:1;min-width:0;}
+.oi-title{font-weight:900;font-size:14px;margin-bottom:3px;cursor:pointer;transition:color .18s;}
+.oi-title:hover{color:var(--accent-o);}
+.oi-machine{font-weight:700;font-size:12px;color:var(--gray3);margin-bottom:6px;}
+.oi-qty{font-weight:800;font-size:12px;color:var(--gray3);}
+.oi-price{font-weight:900;font-size:16px;flex-shrink:0;}
+
+/* Payment info */
+.info-rows{padding:4px 0;}
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:11px 20px;}
+.info-row + .info-row{border-top:1px solid var(--gray1);}
+.info-k{font-weight:700;font-size:13px;color:var(--gray3);}
+.info-v{font-weight:800;font-size:13px;color:var(--black);}
+.info-v.total{font-weight:900;font-size:17px;color:var(--accent-o);}
+
+/* Address */
+.address-block{padding:16px 20px;}
+.addr-name{font-weight:900;font-size:15px;margin-bottom:4px;}
+.addr-phone{font-weight:700;font-size:13px;color:var(--gray3);margin-bottom:6px;}
+.addr-full{font-weight:700;font-size:13px;color:var(--black);line-height:1.7;}
+
+/* ── REVIEW SECTION ── */
+.review-section{background:var(--white);border-radius:20px;border:1.5px solid var(--gray1);padding:24px;margin-bottom:14px;}
+.review-title{font-weight:900;font-size:14px;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.stars-row{display:flex;gap:8px;margin-bottom:16px;}
+.star-btn{font-size:28px;opacity:.3;transition:opacity .15s,transform .15s;cursor:pointer;line-height:1;}
+.star-btn.lit{opacity:1;}
+.star-btn:hover{transform:scale(1.15);}
+.review-textarea{
+  width:100%;border:1.5px solid var(--gray1);border-radius:14px;
+  padding:14px 16px;font-family:var(--font);font-weight:700;font-size:13px;
+  color:var(--black);resize:none;height:90px;
+  transition:border-color .2s;outline:none;background:var(--cream);
+}
+.review-textarea:focus{border-color:var(--black);}
+.review-textarea::placeholder{color:var(--gray2);}
+.btn-submit-review{
+  width:100%;height:50px;border-radius:14px;margin-top:14px;
+  background:var(--black);color:var(--white);
+  font-weight:900;font-size:14px;transition:opacity .2s;
+}
+.btn-submit-review:hover{opacity:.85;}
+.review-done{
+  background:var(--cream);border-radius:14px;padding:16px;
+  display:flex;align-items:center;gap:12px;
+  font-weight:800;font-size:13px;color:var(--gray3);
+}
+
+/* ── ACTION BAR ── */
+.action-bar{
+  background:var(--white);border-radius:20px;border:1.5px solid var(--gray1);
+  padding:20px;margin-bottom:14px;
+}
+.action-bar-title{font-weight:900;font-size:13px;letter-spacing:.05em;color:var(--gray3);text-transform:uppercase;margin-bottom:14px;}
+.action-btns{display:flex;gap:10px;flex-wrap:wrap;}
+.btn-action{padding:11px 20px;border-radius:999px;font-weight:900;font-size:13px;transition:all .18s;min-height:44px;}
+.btn-action.primary{background:var(--black);color:var(--white);}
+.btn-action.primary:hover{opacity:.82;}
+.btn-action.yellow{background:var(--accent-y);color:var(--black);}
+.btn-action.yellow:hover{opacity:.85;}
+.btn-action.outline{border:2px solid var(--gray1);color:var(--black);}
+.btn-action.outline:hover{border-color:var(--black);}
+.btn-action.danger{border:2px solid rgba(224,48,48,.25);color:var(--red);}
+.btn-action.danger:hover{background:#FFF5F5;border-color:var(--red);}
+
+/* ── REFUND MODAL ── */
+.modal-bg{position:fixed;inset:0;z-index:900;background:rgba(17,17,16,.55);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:24px;opacity:0;pointer-events:none;transition:opacity .35s var(--ease);}
+.modal-bg.open{opacity:1;pointer-events:all;}
+.modal-box{width:100%;max-width:420px;background:var(--white);border-radius:28px;padding:32px;border:1.5px solid var(--gray1);box-shadow:0 24px 80px rgba(0,0,0,.18);transform:translateY(16px) scale(.97);transition:transform .38s var(--ease);}
+.modal-bg.open .modal-box{transform:none;}
+.modal-icon{font-size:40px;margin-bottom:16px;}
+.modal-title{font-weight:900;font-size:20px;letter-spacing:-.02em;margin-bottom:8px;}
+.modal-desc{font-weight:700;font-size:13px;color:var(--gray3);line-height:1.85;margin-bottom:20px;}
+.refund-reasons{display:flex;flex-direction:column;gap:8px;margin-bottom:22px;}
+.reason-opt{
+  display:flex;align-items:center;gap:12px;
+  border:2px solid var(--gray1);border-radius:14px;padding:12px 16px;
+  cursor:pointer;transition:all .18s;font-weight:800;font-size:13px;
+}
+.reason-opt:hover{border-color:var(--gray2);}
+.reason-opt.sel{border-color:var(--black);background:var(--cream);}
+.reason-radio{width:18px;height:18px;border-radius:50%;border:2px solid var(--gray2);flex-shrink:0;transition:all .18s;display:flex;align-items:center;justify-content:center;}
+.reason-opt.sel .reason-radio{border-color:var(--black);background:var(--black);}
+.reason-opt.sel .reason-radio::after{content:'';width:7px;height:7px;border-radius:50%;background:var(--white);}
+.modal-btns{display:flex;gap:10px;}
+.btn-modal-cancel{flex:1;height:50px;border-radius:14px;border:2px solid var(--gray1);font-weight:800;font-size:14px;color:var(--gray3);transition:all .18s;}
+.btn-modal-cancel:hover{border-color:var(--black);color:var(--black);}
+.btn-modal-confirm{flex:1;height:50px;border-radius:14px;background:var(--red);color:var(--white);font-weight:900;font-size:14px;transition:opacity .18s;}
+.btn-modal-confirm:hover{opacity:.85;}
+
+/* REVEAL */
+.reveal{opacity:0;transform:translateY(14px);transition:opacity .5s var(--ease),transform .5s var(--ease);}
+.reveal.on{opacity:1;transform:none;}
+.d1{transition-delay:.06s}.d2{transition-delay:.12s}.d3{transition-delay:.18s}.d4{transition-delay:.24s}.d5{transition-delay:.3s}
+
+/* TOAST */
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--black);color:var(--white);font-weight:800;font-size:13px;padding:12px 22px;border-radius:999px;opacity:0;pointer-events:none;transition:opacity .3s,transform .3s var(--ease);z-index:9500;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* CURSOR */
+#cdot,#cring{position:fixed;border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);}
+#cdot{width:8px;height:8px;background:var(--black);}
+#cring{width:32px;height:32px;border:1.5px solid rgba(17,17,16,.25);transition:width .3s,height .3s;}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="#" class="nav-logo">
+    <span class="nav-logo-cn">哞屋</span>
+    <span class="nav-logo-en">MOWO</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="#">关于我们</a></li><li><a href="#">产品介绍</a></li>
+    <li><a href="#">社区分享</a></li><li><a href="#">创作中心</a></li>
+    <li><a href="#">联络我们</a></li>
+  </ul>
+  <div class="nav-right">
+    <div class="nav-user">
+      <button class="nav-avatar-btn" id="navBtn" onclick="toggleDD()">
+        <div class="nav-avatar">橘</div>
+        <span class="nav-uname">小橘酱</span>
+        <span class="nav-chevron">▾</span>
+      </button>
+      <div class="user-dropdown" id="userDD">
+        <div class="dropdown-head">
+          <div class="dh-av">橘</div>
+          <div><div class="dh-name">小橘酱</div><div class="dh-role">普通用户</div></div>
+        </div>
+        <button class="di cart"><div class="di-ic">🛒</div><span>购物车</span><span class="cart-bdg">3</span></button>
+        <button class="di fav"><div class="di-ic">❤</div><span>我的收藏</span></button>
+        <button class="di orders" onclick="closeDD()"><div class="di-ic">📦</div><span>我的订单</span></button>
+        <button class="di works"><div class="di-ic">🎨</div><span>我的作品</span></button>
+        <button class="di dashboard"><div class="di-ic">📊</div><span>创作者数据台</span></button>
+        <div class="dd-sep"></div>
+        <button class="di settings"><div class="di-ic">⚙️</div><span>账号设置</span></button>
+        <button class="di help"><div class="di-ic">💬</div><span>帮助与反馈</span></button>
+        <div class="dd-sep"></div>
+        <button class="di danger"><div class="di-ic">🚪</div><span>退出登录</span></button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- PAGE -->
+<main class="page">
+  <div class="back-link reveal" onclick="goBack()">← 返回我的订单</div>
+
+  <!-- Status Hero -->
+  <div class="status-hero reveal d1" id="statusHero"></div>
+
+  <!-- Items -->
+  <div class="section reveal d2">
+    <div class="sec-head">
+      <span class="sec-title"><span class="sec-title-icon">🎨</span> 商品明细</span>
+    </div>
+    <div id="itemsList"></div>
+  </div>
+
+  <!-- Address -->
+  <div class="section reveal d3">
+    <div class="sec-head">
+      <span class="sec-title"><span class="sec-title-icon">📍</span> 收货地址</span>
+      <button class="sec-action" onclick="toast('地址修改（仅制作前可修改）')">修改</button>
+    </div>
+    <div class="address-block">
+      <div class="addr-name">小橘酱</div>
+      <div class="addr-phone">138 **** 8888</div>
+      <div class="addr-full">广东省广州市天河区天河路385号太古汇T1栋 2203室</div>
+    </div>
+  </div>
+
+  <!-- Payment -->
+  <div class="section reveal d3">
+    <div class="sec-head">
+      <span class="sec-title"><span class="sec-title-icon">💳</span> 支付信息</span>
+    </div>
+    <div class="info-rows" id="paymentRows"></div>
+  </div>
+
+  <!-- Review section (only for completed, not yet reviewed) -->
+  <div id="reviewSection"></div>
+
+  <!-- Action bar -->
+  <div class="action-bar reveal d4" id="actionBar"></div>
+</main>
+
+<!-- REFUND MODAL -->
+<div class="modal-bg" id="refundModal" onclick="handleModalBg(event)">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-icon">↩️</div>
+    <div class="modal-title">申请退款</div>
+    <div class="modal-desc">请选择退款原因，我们会在 1-3 个工作日内处理并与您联系。</div>
+    <div class="refund-reasons" id="refundReasons"></div>
+    <div class="modal-btns">
+      <button class="btn-modal-cancel" onclick="closeRefund()">取消</button>
+      <button class="btn-modal-confirm" onclick="submitRefund()">提交申请</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ─── MOCK ORDER ─── */
+// In production, read ?id= from URL and fetch from API
+const ORDER = {
+  id: 'ORD-20240318-001',
+  date: '2024年3月18日 14:32',
+  status: 'shipped', // pending | making | shipped | done
+  reviewed: false,
+  items: [
+    { workId:'w1', title:'奔跑的橘猫 · 12帧循环', machine:'经典圆筒款', bg:'#FFF3EC', em:'🐈', unitPrice:288, qty:1 },
+  ],
+  subtotal: 288,
+  shipping: 0,
+  total: 288,
+  payment: '支付宝',
+  paidAt: '2024年3月18日 14:33',
+  eta: '预计 3月21日（明天）送达',
+  trackingNo: 'SF1234567890',
+  trackingCo: '顺丰速运',
+};
+
+const STATUS_STEPS = ['待付款','制作中','运输中','已完成'];
+const STATUS_IDX = { pending:0, making:1, shipped:2, done:3 };
+const STATUS_NAME = { pending:'等待付款', making:'正在制作', shipped:'快递运输中', done:'订单已完成' };
+const STATUS_ICON = { pending:'⏳', making:'🎨', shipped:'🚚', done:'✅' };
+const FILL_PCT = { pending:'0%', making:'33%', shipped:'66%', done:'100%' };
+
+const REFUND_REASONS = ['不想要了','拍错了','价格有变动','质量问题（收货后）','其他原因'];
+
+let selectedReason = null;
+let rating = 0;
+
+/* ─── BUILD PAGE ─── */
+function buildPage() {
+  const o = ORDER;
+  const stepIdx = STATUS_IDX[o.status];
+  const isActive = o.status !== 'done';
+
+  // ── Status Hero
+  document.getElementById('statusHero').innerHTML = `
+    <div class="hero-top">
+      <div>
+        <div class="hero-status-label">订单状态</div>
+        <div class="hero-status-val">${STATUS_NAME[o.status]}</div>
+        <div class="hero-order-no">NO. ${o.id}</div>
+      </div>
+      <div class="hero-icon">${STATUS_ICON[o.status]}</div>
+    </div>
+    <div class="hero-progress">
+      <div class="hero-steps">
+        <div class="hero-line"></div>
+        <div class="hero-line-fill" style="width:${FILL_PCT[o.status]}"></div>
+        ${STATUS_STEPS.map((s, si) => `
+          <div class="h-step">
+            <div class="h-dot${si < stepIdx ? ' done' : si === stepIdx ? ' current' : ''}">
+              ${si === stepIdx ? '<div class="h-dot-inner"></div>' : ''}
+            </div>
+            <span class="h-label${si === stepIdx ? ' cur' : ''}">${s}</span>
+          </div>`).join('')}
+      </div>
+    </div>
+    ${o.eta ? `
+      <div class="hero-eta">
+        <span class="hero-eta-icon">🚚</span>
+        <div>
+          <div class="hero-eta-text"><span>${o.eta}</span></div>
+          ${o.trackingNo ? `<div class="hero-tracking">${o.trackingCo} · ${o.trackingNo}</div>` : ''}
+        </div>
+      </div>` : ''}`;
+
+  // ── Items
+  document.getElementById('itemsList').innerHTML = o.items.map(item => `
+    <div class="order-item">
+      <div class="oi-cover" style="background:${item.bg}" onclick="goWork('${item.workId}')">${item.em}</div>
+      <div class="oi-info">
+        <div class="oi-title" onclick="goWork('${item.workId}')">${item.title}</div>
+        <div class="oi-machine">⚙ ${item.machine}</div>
+        <div class="oi-qty">数量：${item.qty}</div>
+      </div>
+      <div class="oi-price">¥${item.unitPrice * item.qty}</div>
+    </div>`).join('');
+
+  // ── Payment
+  document.getElementById('paymentRows').innerHTML = `
+    <div class="info-row"><span class="info-k">商品合计</span><span class="info-v">¥${o.subtotal}</span></div>
+    <div class="info-row"><span class="info-k">运费</span><span class="info-v">${o.shipping === 0 ? '包邮' : '¥' + o.shipping}</span></div>
+    <div class="info-row"><span class="info-k">支付方式</span><span class="info-v">${o.payment}</span></div>
+    <div class="info-row"><span class="info-k">付款时间</span><span class="info-v">${o.paidAt}</span></div>
+    <div class="info-row"><span class="info-k">实付金额</span><span class="info-v total">¥${o.total}</span></div>`;
+
+  // ── Review
+  const rs = document.getElementById('reviewSection');
+  if (o.status === 'done') {
+    if (o.reviewed) {
+      rs.innerHTML = `
+        <div class="section reveal d4">
+          <div class="sec-head"><span class="sec-title"><span class="sec-title-icon">⭐</span> 我的评价</span></div>
+          <div style="padding:16px 20px;">
+            <div class="review-done"><span style="font-size:20px">✓</span>已评价，感谢你的反馈！</div>
+          </div>
+        </div>`;
+    } else {
+      rs.innerHTML = `
+        <div class="review-section reveal d4">
+          <div class="review-title"><span style="font-size:16px">⭐</span> 写一条评价</div>
+          <div class="stars-row" id="starsRow">
+            ${[1,2,3,4,5].map(n => `<span class="star-btn" data-n="${n}" onclick="setRating(${n})">★</span>`).join('')}
+          </div>
+          <textarea class="review-textarea" id="reviewText" placeholder="分享你对这件作品和机型的感受……"></textarea>
+          <button class="btn-submit-review" onclick="submitReview()">提交评价</button>
+        </div>`;
+    }
+  }
+
+  // ── Action bar
+  const ab = document.getElementById('actionBar');
+  ab.innerHTML = `<div class="action-bar-title">操作</div><div class="action-btns" id="actionBtns"></div>`;
+  const btns = document.getElementById('actionBtns');
+
+  if (o.status === 'pending') {
+    btns.innerHTML = `
+      <button class="btn-action primary" onclick="toast('跳转支付页')">去付款</button>
+      <button class="btn-action danger" onclick="openRefund()">取消订单</button>`;
+  } else if (o.status === 'making' || o.status === 'shipped') {
+    btns.innerHTML = `
+      <button class="btn-action outline" onclick="toast('联系客服')">联系客服</button>
+      <button class="btn-action danger" onclick="openRefund()">申请退款</button>`;
+  } else if (o.status === 'done') {
+    btns.innerHTML = `
+      <button class="btn-action primary" onclick="rebuy()">再次购买</button>
+      <button class="btn-action outline" onclick="toast('联系客服')">联系客服</button>
+      <button class="btn-action danger" onclick="openRefund()">申请退款</button>`;
+  }
+
+  // re-observe reveals
+  document.querySelectorAll('.reveal').forEach(el => revObs.observe(el));
+}
+
+/* ─── STARS ─── */
+function setRating(n) {
+  rating = n;
+  document.querySelectorAll('.star-btn').forEach(s => {
+    s.classList.toggle('lit', parseInt(s.dataset.n) <= n);
+  });
+}
+
+function submitReview() {
+  if (!rating) { toast('请先选择星级评分'); return; }
+  ORDER.reviewed = true;
+  toast('✓ 评价提交成功，谢谢你！');
+  buildPage();
+}
+
+/* ─── REBUY ─── */
+function rebuy() {
+  toast(`✓ 已将 ${ORDER.items[0].title} 加入购物车`);
+}
+
+function goWork(id) {
+  toast(`跳转作品详情 · ${id}`);
+}
+
+/* ─── REFUND ─── */
+function openRefund() {
+  selectedReason = null;
+  document.getElementById('refundReasons').innerHTML = REFUND_REASONS.map((r, i) => `
+    <div class="reason-opt" id="reason-${i}" onclick="pickReason(${i})">
+      <div class="reason-radio"></div>
+      <span>${r}</span>
+    </div>`).join('');
+  document.getElementById('refundModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function pickReason(i) {
+  selectedReason = i;
+  document.querySelectorAll('.reason-opt').forEach((el, idx) => el.classList.toggle('sel', idx === i));
+}
+
+function closeRefund() {
+  document.getElementById('refundModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function submitRefund() {
+  if (selectedReason === null) { toast('请选择退款原因'); return; }
+  closeRefund();
+  toast('✓ 退款申请已提交，1-3 个工作日内处理');
+}
+
+function handleModalBg(e) {
+  if (e.target.id === 'refundModal') closeRefund();
+}
+
+/* ─── NAV ─── */
+function goBack() { toast('返回 mowo-orders.html'); }
+function toggleDD() {
+  const dd = document.getElementById('userDD'), btn = document.getElementById('navBtn');
+  const o = dd.classList.toggle('open');
+  btn.classList.toggle('open', o);
+  if (o) setTimeout(() => document.addEventListener('click', outsideDD), 0);
+}
+function closeDD() {
+  document.getElementById('userDD').classList.remove('open');
+  document.getElementById('navBtn').classList.remove('open');
+  document.removeEventListener('click', outsideDD);
+}
+function outsideDD(e) {
+  if (!document.getElementById('navBtn').contains(e.target) && !document.getElementById('userDD').contains(e.target)) closeDD();
+}
+
+/* ─── TOAST ─── */
+let tT;
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(tT); tT = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+/* ─── REVEAL ─── */
+const revObs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('on'); revObs.unobserve(e.target); } });
+}, { threshold: 0.04 });
+document.querySelectorAll('.reveal').forEach(el => revObs.observe(el));
+
+/* ─── CURSOR ─── */
+if (window.matchMedia('(pointer:fine)').matches) {
+  const dot = document.createElement('div'); dot.id = 'cdot';
+  const ring = document.createElement('div'); ring.id = 'cring';
+  document.body.append(dot, ring);
+  document.body.style.cursor = 'none';
+  let mx=0,my=0,rx=0,ry=0;
+  document.addEventListener('mousemove', e => { mx=e.clientX; my=e.clientY; dot.style.left=mx+'px'; dot.style.top=my+'px'; });
+  (function tick() { rx+=(mx-rx)*.12; ry+=(my-ry)*.12; ring.style.left=rx+'px'; ring.style.top=ry+'px'; requestAnimationFrame(tick); })();
+  document.querySelectorAll('a,button,.oi-cover,.oi-title,.reason-opt,.star-btn').forEach(el => {
+    el.addEventListener('mouseenter', () => { ring.style.width='48px'; ring.style.height='48px'; });
+    el.addEventListener('mouseleave', () => { ring.style.width='32px'; ring.style.height='32px'; });
+  });
+}
+
+/* ─── INIT ─── */
+buildPage();
+</script>
+</body>
+</html>

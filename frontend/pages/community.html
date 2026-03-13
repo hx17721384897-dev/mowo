@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>社区分享 — 哞屋 MOWO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Noto+Sans+SC:wght@300;400;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --white:    #FFFFFF;
+  --cream:    #F5F3EF;
+  --black:    #111110;
+  --gray1:    #EBEBEA;
+  --gray2:    #C4C3BF;
+  --gray3:    #787874;
+  --accent-y: #F5E642;
+  --accent-o: #FF6B35;
+  --accent-g: #8FD694;
+  --accent-b: #7EC8E3;
+  --font:     'Nunito', 'Noto Sans SC', sans-serif;
+  --ease:     cubic-bezier(0.22, 1, 0.36, 1);
+  --pad-mob:  16px;
+  --pad-desk: 48px;
+  --filter-h: 120px;
+  --nav-h:    65px;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:var(--font);background:var(--cream);color:var(--black);overflow-x:hidden;-webkit-font-smoothing:antialiased;}
+a{text-decoration:none;color:inherit;}
+button{font-family:var(--font);cursor:pointer;border:none;background:none;}
+
+/* ── NAV ── */
+.nav{position:fixed;top:0;left:0;right:0;z-index:900;display:flex;align-items:center;justify-content:space-between;padding:14px var(--pad-mob);background:rgba(245,243,239,.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid rgba(0,0,0,.06);height:var(--nav-h);}
+@media(min-width:1024px){.nav{padding:0 var(--pad-desk);}}
+.nav-logo{line-height:1;}
+.nav-logo-cn{font-weight:900;font-size:22px;letter-spacing:-.01em;color:var(--black);display:block;}
+.nav-logo-en{font-weight:700;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--gray3);display:block;margin-top:1px;}
+.nav-links{display:none;list-style:none;gap:36px;}
+@media(min-width:1024px){.nav-links{display:flex;}}
+.nav-links a{font-weight:800;font-size:14px;color:var(--gray3);transition:color .2s;position:relative;padding-bottom:3px;}
+.nav-links a::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--accent-y);border-radius:2px;transform:scaleX(0);transition:transform .25s var(--ease);}
+.nav-links a:hover{color:var(--black);}
+.nav-links a:hover::after,.nav-links a.active::after{transform:scaleX(1);}
+.nav-links a.active{color:var(--black);}
+.nav-right{display:flex;align-items:center;gap:12px;}
+.nav-login{font-weight:800;font-size:13px;padding:10px 22px;background:var(--black);color:var(--white);border-radius:999px;min-height:44px;display:flex;align-items:center;transition:opacity .2s;}
+.nav-login:hover{opacity:.8;}
+.burger{display:flex;flex-direction:column;gap:5px;cursor:pointer;padding:8px;min-width:44px;min-height:44px;justify-content:center;align-items:center;}
+@media(min-width:1024px){.burger{display:none;}}
+.burger span{display:block;width:22px;height:2px;background:var(--black);border-radius:2px;transition:transform .3s,opacity .3s;}
+.burger.open span:nth-child(1){transform:translateY(7px) rotate(45deg);}
+.burger.open span:nth-child(2){opacity:0;}
+.burger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg);}
+.mobile-menu{position:fixed;inset:0;background:var(--black);z-index:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:36px;opacity:0;pointer-events:none;transition:opacity .35s var(--ease);}
+.mobile-menu.open{opacity:1;pointer-events:all;}
+.mobile-menu a{font-weight:900;font-size:clamp(28px,8vw,48px);color:var(--white);transition:color .2s;}
+.mobile-menu a:hover{color:var(--accent-y);}
+
+/* ══════════════════════
+   FILTER BAR — sticky
+══════════════════════ */
+.filter-bar{
+  position:sticky;
+  top:var(--nav-h);
+  z-index:700;
+  background:rgba(245,243,239,.96);
+  backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--gray1);
+  padding:12px var(--pad-mob) 0;
+}
+@media(min-width:1024px){.filter-bar{padding:14px var(--pad-desk) 0;}}
+
+.filter-top{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-bottom:12px;
+  flex-wrap:wrap;
+}
+
+/* Search */
+.search-wrap{
+  flex:1;min-width:200px;max-width:360px;
+  position:relative;
+}
+.search-icon{
+  position:absolute;left:14px;top:50%;transform:translateY(-50%);
+  font-size:14px;color:var(--gray3);pointer-events:none;
+}
+.search-input{
+  width:100%;height:44px;
+  padding:0 16px 0 40px;
+  font-family:var(--font);font-weight:700;font-size:14px;
+  color:var(--black);
+  background:var(--white);
+  border:2px solid var(--gray1);
+  border-radius:999px;
+  outline:none;
+  transition:border-color .2s,box-shadow .2s;
+}
+.search-input::placeholder{color:var(--gray2);}
+.search-input:focus{border-color:var(--black);box-shadow:0 0 0 4px rgba(17,17,16,.05);}
+
+/* Sort tabs */
+.sort-tabs{
+  display:flex;
+  background:var(--white);
+  border:2px solid var(--gray1);
+  border-radius:999px;
+  padding:3px;
+  gap:2px;
+  flex-shrink:0;
+}
+.sort-tab{
+  font-weight:800;font-size:13px;
+  padding:8px 18px;border-radius:999px;
+  color:var(--gray3);
+  transition:background .2s,color .2s;
+  min-height:36px;display:flex;align-items:center;
+}
+.sort-tab.active{background:var(--black);color:var(--white);}
+.sort-tab:hover:not(.active){color:var(--black);}
+
+/* Sale toggle */
+.sale-toggle{
+  display:flex;align-items:center;gap:8px;
+  font-weight:800;font-size:13px;color:var(--gray3);
+  cursor:pointer;flex-shrink:0;
+  padding:10px 16px;
+  border:2px solid var(--gray1);
+  border-radius:999px;
+  background:var(--white);
+  transition:all .2s;
+  min-height:44px;
+}
+.sale-toggle.active{border-color:var(--accent-g);color:#287030;background:#EDFBEE;}
+.toggle-dot{
+  width:18px;height:18px;border-radius:50%;
+  background:var(--gray1);
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;
+  transition:background .2s;
+}
+.sale-toggle.active .toggle-dot{background:var(--accent-g);}
+
+/* Tags row */
+.tags-row{
+  display:flex;gap:8px;overflow-x:auto;
+  padding-bottom:12px;
+  scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;
+}
+.tags-row::-webkit-scrollbar{display:none;}
+
+.tag-pill{
+  flex-shrink:0;
+  font-weight:800;font-size:12px;letter-spacing:.04em;
+  padding:7px 16px;border-radius:999px;
+  background:var(--white);color:var(--gray3);
+  border:2px solid var(--gray1);
+  transition:all .2s;
+  min-height:36px;display:flex;align-items:center;
+  white-space:nowrap;
+}
+.tag-pill:hover{border-color:var(--gray2);color:var(--black);}
+.tag-pill.active{background:var(--black);color:var(--white);border-color:var(--black);}
+
+/* ══════════════════════
+   MAIN LAYOUT
+══════════════════════ */
+.main{
+  padding:24px var(--pad-mob) 60px;
+  max-width:1600px;
+  margin:0 auto;
+}
+@media(min-width:1024px){.main{padding:28px var(--pad-desk) 80px;}}
+
+/* Result count */
+.result-info{
+  font-weight:800;font-size:12px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--gray3);
+  margin-bottom:20px;
+}
+
+/* ══════════════════════
+   MASONRY GRID
+══════════════════════ */
+.masonry{
+  columns:2;
+  column-gap:12px;
+}
+@media(min-width:640px){.masonry{columns:3;column-gap:14px;}}
+@media(min-width:1024px){.masonry{columns:4;column-gap:16px;}}
+@media(min-width:1400px){.masonry{columns:5;column-gap:18px;}}
+
+/* ══════════════════════
+   WORK CARD
+══════════════════════ */
+.work-card{
+  break-inside:avoid;
+  margin-bottom:12px;
+  background:var(--white);
+  border-radius:20px;
+  overflow:hidden;
+  border:1.5px solid var(--gray1);
+  cursor:pointer;
+  position:relative;
+  transition:transform .3s var(--ease),box-shadow .3s;
+}
+@media(min-width:1024px){.work-card{margin-bottom:16px;}}
+.work-card:hover{
+  transform:translateY(-4px);
+  box-shadow:0 16px 40px rgba(0,0,0,.1);
+  border-color:var(--gray2);
+}
+
+/* Media area */
+.card-media{
+  width:100%;
+  position:relative;
+  overflow:hidden;
+  background:var(--cream);
+}
+/* Variable heights for masonry feel */
+.work-card:nth-child(3n+1) .card-media{aspect-ratio:3/4;}
+.work-card:nth-child(3n+2) .card-media{aspect-ratio:1/1;}
+.work-card:nth-child(3n)   .card-media{aspect-ratio:4/5;}
+.work-card:nth-child(5n+4) .card-media{aspect-ratio:2/3;}
+.work-card:nth-child(7n+2) .card-media{aspect-ratio:3/5;}
+
+.card-cover{
+  width:100%;height:100%;
+  object-fit:cover;
+  display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:8px;
+}
+/* Placeholder colors */
+.work-card:nth-child(1)  .card-media{background:#EDE8E3;}
+.work-card:nth-child(2)  .card-media{background:#E3EBF0;}
+.work-card:nth-child(3)  .card-media{background:#EDE3ED;}
+.work-card:nth-child(4)  .card-media{background:#E3EDE5;}
+.work-card:nth-child(5)  .card-media{background:#F0EBE3;}
+.work-card:nth-child(6)  .card-media{background:#E3E8F0;}
+.work-card:nth-child(7)  .card-media{background:#F0E3E8;}
+.work-card:nth-child(8)  .card-media{background:#E8F0E3;}
+.work-card:nth-child(9)  .card-media{background:#EBE3F0;}
+.work-card:nth-child(10) .card-media{background:#F0EDE3;}
+.work-card:nth-child(11) .card-media{background:#E3F0EC;}
+.work-card:nth-child(12) .card-media{background:#F0E8E3;}
+
+.card-placeholder-icon{font-size:32px;opacity:.3;}
+.card-placeholder-text{font-weight:700;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:rgba(0,0,0,.2);}
+
+/* Video overlay — shown on hover */
+.card-video-wrap{
+  position:absolute;inset:0;
+  opacity:0;
+  transition:opacity .4s var(--ease);
+  background:var(--black);
+}
+.work-card:hover .card-video-wrap{opacity:1;}
+.card-video{
+  width:100%;height:100%;object-fit:cover;
+}
+/* Play hint */
+.card-play-hint{
+  position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;transition:opacity .3s;
+  pointer-events:none;
+}
+.work-card:hover .card-play-hint{opacity:1;}
+.play-ring{
+  width:44px;height:44px;border-radius:50%;
+  background:rgba(255,255,255,.15);
+  backdrop-filter:blur(8px);
+  border:1.5px solid rgba(255,255,255,.3);
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;
+}
+
+/* Badges */
+.card-badges{
+  position:absolute;top:10px;left:10px;
+  display:flex;gap:6px;flex-wrap:wrap;
+}
+.badge-sale{
+  font-weight:900;font-size:10px;letter-spacing:.06em;
+  padding:4px 10px;border-radius:999px;
+  background:var(--accent-y);color:var(--black);
+}
+.badge-new{
+  font-weight:900;font-size:10px;letter-spacing:.06em;
+  padding:4px 10px;border-radius:999px;
+  background:var(--accent-g);color:#1A5020;
+}
+
+/* Card body */
+.card-body{
+  padding:12px 14px 14px;
+}
+.card-title{
+  font-weight:900;font-size:13px;
+  letter-spacing:-.01em;color:var(--black);
+  margin-bottom:8px;line-height:1.4;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.card-footer{
+  display:flex;align-items:center;justify-content:space-between;
+}
+.card-author{
+  display:flex;align-items:center;gap:7px;
+}
+.author-avatar{
+  width:24px;height:24px;border-radius:50%;
+  background:var(--gray1);
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;flex-shrink:0;overflow:hidden;
+  border:1.5px solid var(--gray1);
+}
+.author-name{
+  font-weight:800;font-size:11px;color:var(--gray3);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  max-width:80px;
+}
+.card-like{
+  display:flex;align-items:center;gap:5px;
+  font-weight:800;font-size:11px;color:var(--gray3);
+  padding:4px 8px;border-radius:999px;
+  transition:all .2s;
+  min-height:28px;
+}
+.card-like:hover{background:var(--cream);color:#C03030;}
+.card-like.liked{color:#C03030;}
+.like-icon{font-size:12px;transition:transform .2s var(--ease);}
+.card-like:hover .like-icon,.card-like.liked .like-icon{transform:scale(1.25);}
+
+/* ══════════════════════
+   LOAD MORE
+══════════════════════ */
+.load-more-wrap{
+  display:flex;justify-content:center;
+  padding:40px 0 20px;
+}
+.load-more-btn{
+  font-weight:900;font-size:14px;letter-spacing:.04em;
+  padding:16px 40px;border-radius:999px;min-height:52px;
+  background:var(--white);color:var(--black);
+  border:2px solid var(--gray1);
+  transition:all .25s var(--ease);
+  display:flex;align-items:center;gap:10px;
+}
+.load-more-btn:hover{border-color:var(--black);box-shadow:0 4px 0 var(--gray1);}
+.load-more-btn.loading .load-spinner{animation:spin-slow .8s linear infinite;}
+@keyframes spin-slow{to{transform:rotate(360deg);}}
+
+/* ══════════════════════
+   EMPTY STATE
+══════════════════════ */
+.empty-state{
+  display:none;
+  flex-direction:column;align-items:center;justify-content:center;
+  padding:80px 20px;text-align:center;gap:12px;
+}
+.empty-state.show{display:flex;}
+.empty-icon{font-size:52px;opacity:.4;}
+.empty-title{font-weight:900;font-size:20px;color:var(--black);}
+.empty-desc{font-weight:700;font-size:14px;color:var(--gray3);}
+
+/* FOOTER */
+footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad-mob) 36px;border-top:1px solid #1E1E1C;}
+@media(min-width:1024px){footer{padding:48px var(--pad-desk) 36px;}}
+.foot-row{display:flex;flex-direction:column;gap:16px;}
+@media(min-width:640px){.foot-row{flex-direction:row;align-items:center;justify-content:space-between;}}
+.foot-logo{font-weight:900;font-size:20px;color:var(--white);}
+.foot-links{display:flex;gap:24px;flex-wrap:wrap;}
+.foot-links a{font-weight:700;font-size:13px;color:rgba(255,255,255,.35);transition:color .2s;}
+.foot-links a:hover{color:var(--white);}
+.foot-copy{font-weight:700;font-size:12px;color:rgba(255,255,255,.18);margin-top:24px;}
+
+/* REVEAL */
+.reveal{opacity:0;transform:translateY(20px);transition:opacity .6s var(--ease),transform .6s var(--ease);}
+.reveal.on{opacity:1;transform:none;}
+</style>
+</head>
+<body>
+
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#" onclick="closeMenu()">关于我们</a>
+  <a href="#" onclick="closeMenu()">产品介绍</a>
+  <a href="#" class="active" onclick="closeMenu()">社区分享</a>
+  <a href="#" onclick="closeMenu()">创作中心</a>
+  <a href="#" onclick="closeMenu()">联络我们</a>
+</div>
+
+<nav class="nav">
+  <a href="#" class="nav-logo">
+    <span class="nav-logo-cn">哞屋</span>
+    <span class="nav-logo-en">MOWO</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="#">关于我们</a></li>
+    <li><a href="#">产品介绍</a></li>
+    <li><a href="#" class="active">社区分享</a></li>
+    <li><a href="#">创作中心</a></li>
+    <li><a href="#">联络我们</a></li>
+  </ul>
+  <div class="nav-right">
+    <a href="#" class="nav-login">登录</a>
+    <div class="burger" id="burger" onclick="toggleMenu()">
+      <span></span><span></span><span></span>
+    </div>
+  </div>
+</nav>
+
+<!-- ══ FILTER BAR ══ -->
+<div class="filter-bar" id="filterBar">
+  <div class="filter-top">
+    <!-- Search -->
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input class="search-input" type="text" placeholder="搜索作品、标签、作者…" id="searchInput" oninput="handleSearch()">
+    </div>
+    <!-- Sort tabs -->
+    <div class="sort-tabs">
+      <button class="sort-tab active" onclick="setSort('latest',this)">最新</button>
+      <button class="sort-tab" onclick="setSort('hot',this)">热门</button>
+    </div>
+    <!-- Sale toggle -->
+    <button class="sale-toggle" id="saleToggle" onclick="toggleSale()">
+      <span class="toggle-dot">✦</span>
+      <span>只看可购买</span>
+    </button>
+  </div>
+  <!-- Tags -->
+  <div class="tags-row" id="tagsRow">
+    <button class="tag-pill active" onclick="setTag('all',this)"># 全部</button>
+    <button class="tag-pill" onclick="setTag('funny',this)"># 搞笑</button>
+    <button class="tag-pill" onclick="setTag('cute',this)"># 可爱</button>
+    <button class="tag-pill" onclick="setTag('healing',this)"># 治愈</button>
+    <button class="tag-pill" onclick="setTag('art',this)"># 艺术</button>
+    <button class="tag-pill" onclick="setTag('cat',this)"># 猫咪</button>
+    <button class="tag-pill" onclick="setTag('pixel',this)"># 像素</button>
+    <button class="tag-pill" onclick="setTag('anime',this)"># 动漫</button>
+    <button class="tag-pill" onclick="setTag('original',this)"># 原创</button>
+    <button class="tag-pill" onclick="setTag('ai',this)"># AI生成</button>
+    <button class="tag-pill" onclick="setTag('loop',this)"># 循环动画</button>
+    <button class="tag-pill" onclick="setTag('gift',this)"># 送礼</button>
+  </div>
+</div>
+
+<!-- ══ MAIN ══ -->
+<main class="main">
+  <p class="result-info" id="resultInfo">共 24 件作品</p>
+
+  <div class="masonry" id="masonryGrid">
+
+    <!-- Card 1 -->
+    <div class="work-card reveal" data-tags="cute,cat" data-sale="true" onclick="goDetail(1)">
+      <div class="card-media">
+        <div class="card-cover">
+          <div class="card-placeholder-icon">🐱</div>
+          <div class="card-placeholder-text">动画封面占位</div>
+        </div>
+        <div class="card-video-wrap">
+          <div class="card-play-hint"><div class="play-ring">▶</div></div>
+        </div>
+        <div class="card-badges">
+          <span class="badge-sale">可购买</span>
+          <span class="badge-new">新上架</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-title">奔跑的橘猫 · 12帧循环</p>
+        <div class="card-footer">
+          <div class="card-author">
+            <div class="author-avatar">🐱</div>
+            <span class="author-name">@小橘工作室</span>
+          </div>
+          <button class="card-like" onclick="toggleLike(event,this)">
+            <span class="like-icon">♡</span>
+            <span class="like-count">2.4k</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2 -->
+    <div class="work-card reveal" data-tags="pixel,anime" data-sale="false" onclick="goDetail(2)">
+      <div class="card-media">
+        <div class="card-cover">
+          <div class="card-placeholder-icon">⚔️</div>
+          <div class="card-placeholder-text">动画封面占位</div>
+        </div>
+        <div class="card-video-wrap">
+          <div class="card-play-hint"><div class="play-ring">▶</div></div>
+        </div>
+        <div class="card-badges"></div>
+      </div>
+      <div class="card-body">
+        <p class="card-title">像素骑士出击</p>
+        <div class="card-footer">
+          <div class="card-author">
+            <div class="author-avatar">⚔️</div>
+            <span class="author-name">@云起像素</span>
+          </div>
+          <button class="card-like" onclick="toggleLike(event,this)">
+            <span class="like-icon">♡</span>
+            <span class="like-count">1.8k</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3 -->
+    <div class="work-card reveal" data-tags="healing,original" data-sale="true" onclick="goDetail(3)">
+      <div class="card-media">
+        <div class="card-cover">
+          <div class="card-placeholder-icon">🌸</div>
+          <div class="card-placeholder-text">动画封面占位</div>
+        </div>
+        <div class="card-video-wrap">
+          <div class="card-play-hint"><div class="play-ring">▶</div></div>
+        </div>
+        <div class="card-badges">
+          <span class="badge-sale">可购买</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-title">花开一瞬间 · 治愈向</p>
+        <div class="card-footer">
+          <div class="card-author">
+            <div class="author-avatar">🌸</div>
+            <span class="author-name">@花开系列</span>
+          </div>
+          <button class="card-like" onclick="toggleLike(event,this)">
+            <span class="like-icon">♡</span>
+            <span class="like-count">3.1k</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 4 -->
+    <div class="work-card reveal" data-tags="funny,original" data-sale="true" onclick="goDetail(4)">
+      <div class="card-media">
+        <div class="card-cover">
+          <div class="card-placeholder-icon">🐸</div>
+          <div class="card-placeholder-text">动画封面占位</div>
+        </div>
+        <div class="card-video-wrap">
+          <div class="card-play-hint"><div class="play-ring">▶</div></div>
+        </div>
+        <div class="card-badges">
+          <span class="badge-sale">可购买</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-title">呱呱跳水记</p>
+        <div class="card-footer">
+          <div class="card-author">
+            <div class="author-avatar">🐸</div>
+            <span class="author-name">@呱太</span>
+          </div>
+          <button class="card-like" onclick="toggleLike(event,this)">
+            <span class="like-icon">♡</span>
+            <span class="like-count">956</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 5 -->
+    <div class="work-card reveal" data-tags="ai,loop" data-sale="false" onclick="goDetail(5)">
+      <div class="card-media">
+        <div class="card-cover">
+          <div class="card-placeholder-icon">🌊</div>
+          <div class="card-placeholder-text">动画封面占位</div>
+        </div>
+        <div class="card-video-wrap">
+          <div class="card-play-hint"><div class="play-ring">▶</div></div>
+        </div>
+        <div class="card-badges"></div>
+      </div>
+      <div class="card-body">
+        <p class="card-title">AI生成 · 海浪无限循环</p>
+        <div class="card-footer">
+          <div class="card-author">
+            <div class="author-avatar">🤖</div>
+            <span class="author-name">@未来实验室</span>
+          </div>
+          <button class="card-like" onclick="toggleLike(event,this)">
+            <span class="like-icon">♡</span>
+            <span class="like-count">724</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 6 -->
+    <div class="work-card reveal" data-tags="art,original" data-sale="true" onclick="goDetail(6)">
+      <div class="card-media">
+        <div class="card-cover">
+          <div class="card-placeholder-icon">🐉</div>
+          <div class="card-placeholder-text">动画封面占位</div>
+        </div>
+        <div class="card-video-wrap">
+          <div class="card-play-hint"><div class="play-ring">▶</div></div>
+        </div>
+        <div class="card-badges">
+          <span class="badge-sale">可购买</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-title">东方龙 · 云间飞翔</p>
+        <div class="card-footer">
+          <div class="card-author">
+            <div class="author-avatar">🐉</div>
+            <span class="author-name">@龙鳞绘</span>
+          </div>
+          <button class="card-like" onclick="toggleLike(event,this)">
+            <span class="like-icon">♡</span>
+            <span class="like-count">4.2k</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 7 -->
+    <div class="work-card reveal" data-tags="cute,gift" data-sale="true" onclick="goDetail(7)">
+      <div class="card-media">
+        <div class="card-cover">
+          <div class="card-placeholder-icon">🐰</div>
+          <div class="card-placeholder-text">动画封面占位</div>
+        </div>
+        <div class="card-video-wrap">
+          <div class="card-play-hint"><div class="play-ring">▶</div></div>
+        </div>
+        <div class="card-badges">
+          <span class="badge-sale">可购买</span>
+          <span class="badge-new">新上架</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-title">小兔奔跑 · 限定礼盒款</p>
+        <div class="card-footer">
+          <div class="card-author">
+            <div class="author-avatar">🐰</div>
+            <span class="author-name">@阿离</span>
+          </div>
+          <button class="card-like" onclick="toggleLike(event,this)">
+            <span class="like-icon">♡</span>
+            <span class="like-count">5.6k</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 8 -->
+    <div class="work-card reveal" data-tags="pixel,loop" data-sale="false" onclick="goDetail(8)">
+      <div class="card-media">
+        <div class="card-cover">
+          <div class="card-placeholder-icon">🏙️</div>
+          <div class="card-placeholder-text">动画封面占位</div>
+        </div>
+        <div class="card-video-wrap">
+          <div class="card-play-hint"><div class="play-ring">▶</div></div>
+        </div>
+        <div class="card-badges"></div>
+      </div>
+      <div class="card-body">
+        <p class="card-title">像素城市 · 夜雨版</p>
+        <div class="card-footer">
+          <div class="card-author">
+            <div class="author-avatar">🌃</div>
+            <span class="author-name">@云起</span>
+          </div>
+          <button class="card-like" onclick="toggleLike(event,this)">
+            <span class="like-icon">♡</span>
+            <span class="like-count">2.9k</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 9 -->
+    <div class="work-card reveal" data-tags="funny,cat" data-sale="true" onclick="goDetail(9)">
+      <div class="card-media">
+        <div class="card-cover">
+          <div class="card-placeholder-icon">😺</div>
+          <div class="card-placeholder-text">动画封面占位</div>
+        </div>
+        <div class="card-video-wrap">
+          <div class="card-play-hint"><div class="play-ring">▶</div></div>
+        </div>
+        <div class="card-badges">
+          <span class="badge-sale">可购买</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-title">猫咪蹦迪现场</p>
+        <div class="card-footer">
+          <div class="card-author">
+            <div class="author-avatar">😺</div>
+            <span class="author-name">@喵星人</span>
+          </div>
+          <button class="card-like" onclick="toggleLike(event,this)">
+            <span class="like-icon">♡</span>
+            <span class="like-count">8.3k</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 10 -->
+    <div class="work-card reveal" data-tags="healing,art" data-sale="false" onclick="goDetail(10)">
+      <div class="card-media">
+        <div class="card-cover">
+          <div class="card-placeholder-icon">🍃</div>
+          <div class="card-placeholder-text">动画封面占位</div>
+        </div>
+        <div class="card-video-wrap">
+          <div class="card-play-hint"><div class="play-ring">▶</div></div>
+        </div>
+        <div class="card-badges"></div>
+      </div>
+      <div class="card-body">
+        <p class="card-title">风吹过竹林</p>
+        <div class="card-footer">
+          <div class="card-author">
+            <div class="author-avatar">🎋</div>
+            <span class="author-name">@竹林系列</span>
+          </div>
+          <button class="card-like" onclick="toggleLike(event,this)">
+            <span class="like-icon">♡</span>
+            <span class="like-count">1.2k</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 11 -->
+    <div class="work-card reveal" data-tags="anime,original" data-sale="true" onclick="goDetail(11)">
+      <div class="card-media">
+        <div class="card-cover">
+          <div class="card-placeholder-icon">⭐</div>
+          <div class="card-placeholder-text">动画封面占位</div>
+        </div>
+        <div class="card-video-wrap">
+          <div class="card-play-hint"><div class="play-ring">▶</div></div>
+        </div>
+        <div class="card-badges">
+          <span class="badge-sale">可购买</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <p class="card-title">星空下的少女</p>
+        <div class="card-footer">
+          <div class="card-author">
+            <div class="author-avatar">⭐</div>
+            <span class="author-name">@Yuri_draw</span>
+          </div>
+          <button class="card-like" onclick="toggleLike(event,this)">
+            <span class="like-icon">♡</span>
+            <span class="like-count">6.7k</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 12 -->
+    <div class="work-card reveal" data-tags="funny,loop" data-sale="false" onclick="goDetail(12)">
+      <div class="card-media">
+        <div class="card-cover">
+          <div class="card-placeholder-icon">🦆</div>
+          <div class="card-placeholder-text">动画封面占位</div>
+        </div>
+        <div class="card-video-wrap">
+          <div class="card-play-hint"><div class="play-ring">▶</div></div>
+        </div>
+        <div class="card-badges"></div>
+      </div>
+      <div class="card-body">
+        <p class="card-title">鸭鸭走路循环 · 超治愈</p>
+        <div class="card-footer">
+          <div class="card-author">
+            <div class="author-avatar">🦆</div>
+            <span class="author-name">@嘎嘎工坊</span>
+          </div>
+          <button class="card-like" onclick="toggleLike(event,this)">
+            <span class="like-icon">♡</span>
+            <span class="like-count">3.4k</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end masonry -->
+
+  <!-- Empty state -->
+  <div class="empty-state" id="emptyState">
+    <div class="empty-icon">🔍</div>
+    <p class="empty-title">没有找到相关作品</p>
+    <p class="empty-desc">换个标签或搜索词试试</p>
+  </div>
+
+  <!-- Load more -->
+  <div class="load-more-wrap">
+    <button class="load-more-btn" id="loadMoreBtn" onclick="loadMore()">
+      <span class="load-spinner">↻</span>
+      <span>加载更多</span>
+    </button>
+  </div>
+</main>
+
+<footer>
+  <div class="foot-row">
+    <span class="foot-logo">哞屋 MOWO</span>
+    <div class="foot-links">
+      <a href="#">关于我们</a><a href="#">产品介绍</a>
+      <a href="#">社区分享</a><a href="#">创作中心</a><a href="#">联络我们</a>
+    </div>
+  </div>
+  <p class="foot-copy">© 2025 哞屋 MOWO. All rights reserved.</p>
+</footer>
+
+<script>
+/* ── Mobile menu ── */
+function toggleMenu(){
+  const m=document.getElementById('mobileMenu'),b=document.getElementById('burger');
+  const o=m.classList.toggle('open');
+  b.classList.toggle('open',o);
+  document.body.style.overflow=o?'hidden':'';
+}
+function closeMenu(){
+  document.getElementById('mobileMenu').classList.remove('open');
+  document.getElementById('burger').classList.remove('open');
+  document.body.style.overflow='';
+}
+
+/* ── State ── */
+let currentTag = 'all';
+let currentSort = 'latest';
+let saleOnly = false;
+let searchQuery = '';
+
+/* ── Sort ── */
+function setSort(sort, btn){
+  currentSort = sort;
+  document.querySelectorAll('.sort-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilters();
+}
+
+/* ── Tag ── */
+function setTag(tag, btn){
+  currentTag = tag;
+  document.querySelectorAll('.tag-pill').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilters();
+}
+
+/* ── Sale toggle ── */
+function toggleSale(){
+  saleOnly = !saleOnly;
+  const el = document.getElementById('saleToggle');
+  el.classList.toggle('active', saleOnly);
+  applyFilters();
+}
+
+/* ── Search ── */
+function handleSearch(){
+  searchQuery = document.getElementById('searchInput').value.toLowerCase().trim();
+  applyFilters();
+}
+
+/* ── Apply filters ── */
+function applyFilters(){
+  const cards = document.querySelectorAll('.work-card');
+  let visible = 0;
+
+  cards.forEach(card => {
+    const tags = card.dataset.tags || '';
+    const sale = card.dataset.sale === 'true';
+    const title = card.querySelector('.card-title')?.textContent.toLowerCase() || '';
+    const author = card.querySelector('.author-name')?.textContent.toLowerCase() || '';
+
+    const tagMatch = currentTag === 'all' || tags.includes(currentTag);
+    const saleMatch = !saleOnly || sale;
+    const searchMatch = !searchQuery || title.includes(searchQuery) || author.includes(searchQuery) || tags.includes(searchQuery);
+
+    const show = tagMatch && saleMatch && searchMatch;
+    card.style.display = show ? '' : 'none';
+    if(show) visible++;
+  });
+
+  document.getElementById('resultInfo').textContent = `共 ${visible} 件作品`;
+  document.getElementById('emptyState').classList.toggle('show', visible === 0);
+}
+
+/* ── Like ── */
+function toggleLike(e, btn){
+  e.stopPropagation();
+  const liked = btn.classList.toggle('liked');
+  const icon = btn.querySelector('.like-icon');
+  const countEl = btn.querySelector('.like-count');
+  icon.textContent = liked ? '♥' : '♡';
+
+  // Parse and update count
+  let raw = countEl.textContent;
+  let num = raw.includes('k')
+    ? parseFloat(raw) * 1000
+    : parseInt(raw);
+  num = liked ? num + 1 : num - 1;
+  countEl.textContent = num >= 1000
+    ? (num/1000).toFixed(1).replace(/\.0$/,'') + 'k'
+    : num;
+}
+
+/* ── Load more (mock) ── */
+function loadMore(){
+  const btn = document.getElementById('loadMoreBtn');
+  btn.classList.add('loading');
+  btn.querySelector('span:last-child').textContent = '加载中…';
+
+  setTimeout(()=>{
+    // Append 4 new mock cards
+    const grid = document.getElementById('masonryGrid');
+    const extras = [
+      {icon:'🦋',title:'蝴蝶破茧而出',author:'@蝴蝶谷',likes:'1.1k',tags:'healing,art',sale:false},
+      {icon:'🎠',title:'旋转木马不停歇',author:'@童年记忆',likes:'2.7k',tags:'cute,loop',sale:true},
+      {icon:'🌙',title:'月亮升起来了',author:'@夜观星象',likes:'3.8k',tags:'healing,ai',sale:false},
+      {icon:'🦊',title:'狐狸跑过雪地',author:'@小狐狸',likes:'4.4k',tags:'cute,original',sale:true},
+    ];
+    extras.forEach(d=>{
+      const el=document.createElement('div');
+      el.className='work-card reveal on';
+      el.dataset.tags=d.tags;
+      el.dataset.sale=d.sale;
+      el.onclick=()=>goDetail(99);
+      el.innerHTML=`
+        <div class="card-media">
+          <div class="card-cover">
+            <div class="card-placeholder-icon">${d.icon}</div>
+            <div class="card-placeholder-text">动画封面占位</div>
+          </div>
+          <div class="card-video-wrap"><div class="card-play-hint"><div class="play-ring">▶</div></div></div>
+          <div class="card-badges">${d.sale?'<span class="badge-sale">可购买</span>':''}</div>
+        </div>
+        <div class="card-body">
+          <p class="card-title">${d.title}</p>
+          <div class="card-footer">
+            <div class="card-author">
+              <div class="author-avatar">${d.icon}</div>
+              <span class="author-name">${d.author}</span>
+            </div>
+            <button class="card-like" onclick="toggleLike(event,this)">
+              <span class="like-icon">♡</span>
+              <span class="like-count">${d.likes}</span>
+            </button>
+          </div>
+        </div>`;
+      grid.appendChild(el);
+    });
+
+    // Update count
+    const info = document.getElementById('resultInfo');
+    const cur = parseInt(info.textContent) || 12;
+    info.textContent = `共 ${cur+4} 件作品`;
+
+    btn.classList.remove('loading');
+    btn.querySelector('span:last-child').textContent = '加载更多';
+    applyFilters();
+  }, 900);
+}
+
+/* ── Detail navigation ── */
+function goDetail(id){
+  window.location.href = `mowo-work-detail.html?id=${id}`;
+}
+
+/* ── Scroll reveal ── */
+const obs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('on');obs.unobserve(e.target);}});
+},{threshold:.08,rootMargin:'0px 0px -20px 0px'});
+document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+
+/* ── Desktop cursor ── */
+if(window.matchMedia('(pointer:fine)').matches){
+  const c=document.createElement('div'),r=document.createElement('div');
+  const cs='position:fixed;border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%)';
+  c.style.cssText=cs+';width:8px;height:8px;background:#111';
+  r.style.cssText=cs+';width:32px;height:32px;border:1.5px solid rgba(17,17,16,.3);transition:width .3s,height .3s,opacity .3s';
+  document.body.append(c,r);
+  document.body.style.cursor='none';
+  let mx=0,my=0,rx=0,ry=0;
+  document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;c.style.left=mx+'px';c.style.top=my+'px';});
+  (function tick(){rx+=(mx-rx)*.12;ry+=(my-ry)*.12;r.style.left=rx+'px';r.style.top=ry+'px';requestAnimationFrame(tick);})();
+  document.querySelectorAll('a,button,.work-card').forEach(el=>{
+    el.addEventListener('mouseenter',()=>{r.style.width='48px';r.style.height='48px';r.style.opacity='.4';});
+    el.addEventListener('mouseleave',()=>{r.style.width='32px';r.style.height='32px';r.style.opacity='1';});
+  });
+}
+</script>
+</body>
+</html>

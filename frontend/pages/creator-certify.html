@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>创作者认证 — 哞屋创作者中心</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Noto+Sans+SC:wght@300;400;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --white:#FFFFFF;--cream:#F5F3EF;--black:#111110;
+  --gray1:#EBEBEA;--gray2:#C4C3BF;--gray3:#787874;
+  --accent-y:#F5E642;--accent-o:#FF6B35;--accent-g:#8FD694;--accent-b:#7EC8E3;
+  --red:#E03030;
+  --font:'Nunito','Noto Sans SC',sans-serif;
+  --ease:cubic-bezier(0.22,1,0.36,1);
+  --sidebar-w:240px;--topbar-h:60px;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:var(--font);background:var(--cream);color:var(--black);overflow-x:hidden;-webkit-font-smoothing:antialiased;}
+a{text-decoration:none;color:inherit;}
+button{font-family:var(--font);cursor:pointer;border:none;background:none;}
+input,textarea,select{font-family:var(--font);}
+
+/* ── 侧栏 ── */
+.sidebar{width:var(--sidebar-w);background:var(--black);position:fixed;top:0;left:0;bottom:0;display:flex;flex-direction:column;z-index:800;transition:transform .35s var(--ease);}
+@media(max-width:1023px){.sidebar{transform:translateX(-100%);}.sidebar.open{transform:none;}}
+.sidebar-logo{padding:20px 20px 16px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:12px;flex-shrink:0;}
+.sidebar-logo-mark{width:36px;height:36px;border-radius:10px;background:var(--accent-y);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;color:var(--black);flex-shrink:0;}
+.sidebar-logo-cn{font-weight:900;font-size:16px;color:var(--white);}
+.sidebar-logo-sub{font-weight:700;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:rgba(255,255,255,.35);}
+.sidebar-user{padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:12px;flex-shrink:0;}
+.sidebar-avatar{width:36px;height:36px;border-radius:50%;background:var(--accent-y);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:var(--black);flex-shrink:0;}
+.sidebar-user-name{font-weight:800;font-size:13px;color:var(--white);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sidebar-user-badge{display:inline-flex;align-items:center;gap:3px;margin-top:2px;font-weight:800;font-size:10px;padding:1px 7px;border-radius:999px;background:rgba(196,195,191,.15);color:rgba(255,255,255,.45);}
+.sidebar-user-badge.certified{background:rgba(143,214,148,.15);color:var(--accent-g);}
+.sidebar-nav{flex:1;overflow-y:auto;padding:12px 10px;}
+.sidebar-nav::-webkit-scrollbar{width:0;}
+.nav-sec{font-weight:800;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.25);padding:8px 10px 4px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;font-weight:800;font-size:13px;color:rgba(255,255,255,.55);transition:background .15s,color .15s;position:relative;white-space:nowrap;margin-bottom:2px;}
+.nav-item:hover{background:rgba(255,255,255,.07);color:rgba(255,255,255,.85);}
+.nav-item.active{background:rgba(255,255,255,.1);color:var(--white);}
+.nav-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:20px;border-radius:0 3px 3px 0;background:var(--accent-y);}
+.nav-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;background:rgba(255,255,255,.05);}
+.nav-item.active .nav-icon{background:rgba(245,230,66,.15);}
+.sidebar-bottom{padding:12px 10px 20px;border-top:1px solid rgba(255,255,255,.08);flex-shrink:0;}
+/* 认证状态卡（侧栏底部） */
+.cert-card{border-radius:14px;padding:12px 14px;}
+.cert-card.pending{background:rgba(245,230,66,.1);}
+.cert-card.none{background:rgba(255,255,255,.06);}
+.cert-card-title{font-weight:900;font-size:12px;margin-bottom:3px;}
+.cert-card.pending .cert-card-title{color:var(--accent-y);}
+.cert-card.none .cert-card-title{color:rgba(255,255,255,.5);}
+.cert-card-desc{font-weight:700;font-size:11px;line-height:1.5;margin-bottom:10px;}
+.cert-card.pending .cert-card-desc{color:rgba(245,230,66,.5);}
+.cert-card.none .cert-card-desc{color:rgba(255,255,255,.25);}
+.cert-card-btn{width:100%;padding:8px;border-radius:9px;font-family:var(--font);font-weight:800;font-size:12px;cursor:pointer;transition:all .2s;}
+.cert-card.pending .cert-card-btn{background:rgba(245,230,66,.15);color:var(--accent-y);border:none;}
+.cert-card.none .cert-card-btn{background:rgba(255,255,255,.08);color:rgba(255,255,255,.5);border:none;}
+.backdrop{display:none;position:fixed;inset:0;z-index:799;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);}
+.backdrop.show{display:block;}
+
+/* ── 顶栏 ── */
+.topbar{position:fixed;top:0;right:0;left:var(--sidebar-w);z-index:700;height:var(--topbar-h);background:rgba(245,243,239,.95);backdrop-filter:blur(20px);border-bottom:1px solid var(--gray1);display:flex;align-items:center;justify-content:space-between;padding:0 32px;}
+@media(max-width:1023px){.topbar{left:0;padding:0 20px;}}
+.topbar-left{display:flex;align-items:center;gap:14px;}
+.menu-btn{width:36px;height:36px;border-radius:10px;background:var(--gray1);display:none;align-items:center;justify-content:center;font-size:16px;}
+@media(max-width:1023px){.menu-btn{display:flex;}}
+.bc-home{font-weight:700;font-size:13px;color:var(--gray3);transition:color .2s;}
+.bc-home:hover{color:var(--black);}
+.bc-sep{color:var(--gray2);font-size:12px;margin:0 6px;}
+.bc-cur{font-weight:900;font-size:14px;color:var(--black);}
+.topbar-avatar{width:34px;height:34px;border-radius:50%;background:var(--accent-y);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:var(--black);border:2px solid var(--gray1);}
+
+/* ── 主区 ── */
+.main{margin-left:var(--sidebar-w);padding-top:var(--topbar-h);}
+@media(max-width:1023px){.main{margin-left:0;}}
+.inner{padding:40px 32px 80px;max-width:760px;margin:0 auto;}
+@media(max-width:640px){.inner{padding:24px 16px 80px;}}
+
+/* ══════════════════════════════
+   步骤条
+══════════════════════════════ */
+.steps-nav{display:flex;align-items:flex-start;gap:0;margin-bottom:48px;position:relative;}
+.steps-nav::before{content:'';position:absolute;top:18px;left:18px;right:18px;height:2px;background:var(--gray1);z-index:0;}
+.step-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;position:relative;z-index:1;cursor:default;}
+.step-dot{width:36px;height:36px;border-radius:50%;background:var(--white);border:2px solid var(--gray1);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:var(--gray3);transition:all .35s var(--ease);position:relative;}
+.step-dot::before{content:'';position:absolute;inset:-4px;border-radius:50%;background:transparent;transition:background .35s;}
+.step-item.active .step-dot{background:var(--black);border-color:var(--black);color:var(--white);box-shadow:0 0 0 4px rgba(17,17,16,.1);}
+.step-item.done .step-dot{background:var(--accent-g);border-color:var(--accent-g);color:var(--black);}
+.step-item.done .step-dot::after{content:'✓';font-size:14px;}
+.step-item.done .step-num{display:none;}
+.step-label{font-weight:800;font-size:11px;color:var(--gray3);text-align:center;transition:color .3s;white-space:nowrap;}
+.step-item.active .step-label{color:var(--black);}
+.step-item.done .step-label{color:var(--accent-g);}
+/* 步骤间连线进度 */
+.step-line{position:absolute;top:18px;left:calc(50% + 18px);right:calc(-50% + 18px);height:2px;background:var(--gray1);z-index:0;transition:background .5s;}
+.step-item.done .step-line{background:var(--accent-g);}
+.step-item:last-child .step-line{display:none;}
+
+/* ══════════════════════════════
+   步骤内容卡片
+══════════════════════════════ */
+.step-panel{display:none;}
+.step-panel.active{display:block;animation:fadeUp .45s var(--ease) both;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:none;}}
+
+.step-header{margin-bottom:32px;}
+.step-num-label{font-weight:800;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--gray3);margin-bottom:8px;}
+.step-title{font-weight:900;font-size:28px;letter-spacing:-.02em;margin-bottom:8px;}
+.step-desc{font-weight:700;font-size:14px;color:var(--gray3);line-height:1.7;}
+
+/* ── 表单 ── */
+.card{background:var(--white);border-radius:24px;border:1.5px solid var(--gray1);padding:28px;margin-bottom:20px;}
+.card-title{font-weight:900;font-size:15px;margin-bottom:20px;display:flex;align-items:center;gap:8px;}
+.card-icon{width:28px;height:28px;border-radius:8px;background:var(--black);color:var(--white);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px;}
+@media(max-width:600px){.form-row{grid-template-columns:1fr;}}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:18px;}
+.form-group:last-child,.form-row .form-group{margin-bottom:0;}
+.form-label{font-weight:800;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--gray3);}
+.req{color:var(--accent-o);}
+.form-hint{font-weight:700;font-size:11px;color:var(--gray2);}
+.form-input{font-family:var(--font);font-weight:700;font-size:14px;color:var(--black);padding:11px 14px;border-radius:14px;border:1.5px solid var(--gray1);background:var(--white);outline:none;transition:border-color .2s;width:100%;}
+.form-input:focus{border-color:var(--black);}
+.form-input::placeholder{color:var(--gray2);}
+.form-textarea{resize:vertical;min-height:90px;line-height:1.7;}
+.form-counter{text-align:right;font-weight:700;font-size:11px;color:var(--gray2);margin-top:4px;}
+/* 风格标签选择 */
+.style-grid{display:flex;flex-wrap:wrap;gap:8px;}
+.style-tag{padding:7px 16px;border-radius:999px;border:1.5px solid var(--gray1);font-family:var(--font);font-weight:800;font-size:12px;color:var(--gray3);cursor:pointer;transition:all .2s;background:var(--white);}
+.style-tag:hover{border-color:var(--gray2);color:var(--black);}
+.style-tag.sel{border-color:var(--black);background:var(--black);color:var(--white);}
+/* 社交链接 */
+.social-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.social-row:last-child{margin-bottom:0;}
+.social-icon{width:32px;height:32px;border-radius:8px;background:var(--gray1);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+
+/* ── Step 2：实名认证 ── */
+.id-verify-area{border:2px solid var(--gray1);border-radius:20px;padding:24px;transition:border-color .3s;}
+.id-verify-area.verified{border-color:var(--accent-g);background:#F2FBF3;}
+.id-verify-area.verifying{border-color:var(--accent-y);}
+.id-status-row{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
+.id-status-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;background:var(--gray1);transition:all .35s;}
+.id-status-icon.verified{background:#E6F9E9;}
+.id-status-icon.verifying{background:rgba(245,230,66,.15);animation:pulse 1.2s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+.id-status-text{flex:1;}
+.id-status-title{font-weight:900;font-size:14px;margin-bottom:2px;}
+.id-status-desc{font-weight:700;font-size:12px;color:var(--gray3);}
+.id-verify-form{display:flex;flex-direction:column;gap:14px;}
+.id-verify-btn{width:100%;height:48px;border-radius:14px;background:var(--black);color:var(--white);font-family:var(--font);font-weight:900;font-size:14px;cursor:pointer;border:none;transition:all .2s;margin-top:6px;}
+.id-verify-btn:hover{opacity:.85;}
+.id-verify-btn:disabled{opacity:.4;cursor:not-allowed;}
+.id-verified-badge{display:flex;align-items:center;gap:8px;padding:10px 14px;background:#E6F9E9;border-radius:12px;font-weight:800;font-size:13px;color:#287030;}
+/* 第三方认证提示 */
+.third-party-note{display:flex;gap:10px;padding:12px 14px;background:rgba(127,200,227,.1);border-radius:14px;border:1px solid rgba(127,200,227,.25);margin-top:14px;}
+.third-party-note-icon{font-size:16px;flex-shrink:0;margin-top:1px;}
+.third-party-note-text{font-weight:700;font-size:12px;color:var(--gray3);line-height:1.7;}
+.third-party-note-text strong{color:var(--black);font-weight:800;}
+
+/* ── Step 3：版权声明 ── */
+.copyright-pledge{background:var(--cream);border-radius:16px;padding:20px;margin-bottom:20px;}
+.pledge-title{font-weight:900;font-size:13px;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.pledge-item{display:flex;gap:10px;margin-bottom:12px;cursor:pointer;}
+.pledge-item:last-child{margin-bottom:0;}
+.pledge-checkbox{width:20px;height:20px;border-radius:6px;border:2px solid var(--gray2);flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;transition:all .2s;background:var(--white);}
+.pledge-item.checked .pledge-checkbox{background:var(--black);border-color:var(--black);color:var(--white);}
+.pledge-text{font-weight:700;font-size:13px;color:var(--gray3);line-height:1.7;}
+.pledge-item.checked .pledge-text{color:var(--black);}
+/* 代表作上传 */
+.works-upload{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px;}
+.work-upload-slot{aspect-ratio:1;border-radius:16px;border:2px dashed var(--gray2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;transition:all .2s;background:var(--white);overflow:hidden;position:relative;}
+.work-upload-slot:hover{border-color:var(--black);background:var(--cream);}
+.work-upload-slot.filled{border-style:solid;border-color:var(--gray1);}
+.work-upload-icon{font-size:24px;opacity:.3;}
+.work-upload-text{font-weight:800;font-size:11px;color:var(--gray3);text-align:center;}
+.work-upload-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.work-upload-remove{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.5);color:var(--white);font-size:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:opacity .2s;}
+.work-upload-slot:hover .work-upload-remove{opacity:1;}
+
+/* ── Step 4：协议 ── */
+.agreement-box{background:var(--white);border:1.5px solid var(--gray1);border-radius:18px;padding:24px;max-height:280px;overflow-y:auto;font-weight:700;font-size:13px;color:var(--gray3);line-height:1.9;margin-bottom:20px;}
+.agreement-box::-webkit-scrollbar{width:4px;}
+.agreement-box::-webkit-scrollbar-track{background:transparent;}
+.agreement-box::-webkit-scrollbar-thumb{background:var(--gray2);border-radius:2px;}
+.agreement-box h3{font-weight:900;font-size:14px;color:var(--black);margin-bottom:8px;margin-top:20px;}
+.agreement-box h3:first-child{margin-top:0;}
+.agreement-box p{margin-bottom:10px;}
+.agreement-check-row{display:flex;gap:12px;align-items:flex-start;cursor:pointer;padding:14px;border-radius:14px;border:1.5px solid var(--gray1);transition:border-color .2s;margin-bottom:10px;}
+.agreement-check-row:hover{border-color:var(--gray2);}
+.agreement-check-row.checked{border-color:var(--black);background:var(--cream);}
+.ag-checkbox{width:22px;height:22px;border-radius:6px;border:2px solid var(--gray2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;transition:all .2s;background:var(--white);}
+.agreement-check-row.checked .ag-checkbox{background:var(--black);border-color:var(--black);color:var(--white);}
+.ag-text{font-weight:700;font-size:13px;color:var(--gray3);line-height:1.6;}
+.ag-text strong{color:var(--black);font-weight:800;}
+
+/* ── 提交结果页 ── */
+.success-panel{display:none;text-align:center;padding:40px 20px;}
+.success-panel.active{display:block;animation:fadeUp .5s var(--ease) both;}
+.success-anim{width:96px;height:96px;border-radius:50%;background:var(--black);display:flex;align-items:center;justify-content:center;margin:0 auto 24px;font-size:40px;animation:scaleIn .5s var(--ease) .1s both;}
+@keyframes scaleIn{from{transform:scale(0.5);opacity:0;}to{transform:scale(1);opacity:1;}}
+.success-title{font-weight:900;font-size:28px;letter-spacing:-.02em;margin-bottom:12px;}
+.success-desc{font-weight:700;font-size:14px;color:var(--gray3);line-height:1.8;max-width:440px;margin:0 auto 32px;}
+.success-timeline{background:var(--white);border:1.5px solid var(--gray1);border-radius:20px;padding:24px;text-align:left;max-width:440px;margin:0 auto 32px;}
+.tl-item{display:flex;gap:14px;padding:10px 0;position:relative;}
+.tl-item:not(:last-child)::after{content:'';position:absolute;left:15px;top:34px;bottom:-10px;width:2px;background:var(--gray1);}
+.tl-dot{width:32px;height:32px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;}
+.tl-dot.done{background:var(--accent-g);color:var(--black);}
+.tl-dot.wait{background:var(--gray1);color:var(--gray3);}
+.tl-info{}
+.tl-title{font-weight:900;font-size:13px;margin-bottom:2px;}
+.tl-desc{font-weight:700;font-size:11px;color:var(--gray3);}
+
+/* ── 底部导航栏 ── */
+.bottom-bar{position:fixed;bottom:0;left:var(--sidebar-w);right:0;z-index:600;background:rgba(245,243,239,.95);backdrop-filter:blur(20px);border-top:1px solid var(--gray1);padding:14px 32px calc(14px + env(safe-area-inset-bottom));display:flex;align-items:center;justify-content:space-between;gap:12px;}
+@media(max-width:1023px){.bottom-bar{left:0;padding:14px 20px calc(14px + env(safe-area-inset-bottom));}}
+.bottom-bar-info{font-weight:700;font-size:12px;color:var(--gray3);}
+.bottom-bar-btns{display:flex;gap:10px;}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;font-family:var(--font);font-weight:800;font-size:13px;padding:10px 22px;border-radius:999px;min-height:44px;transition:all .2s;cursor:pointer;border:none;white-space:nowrap;}
+.btn:active{transform:scale(.97);}
+.btn-ghost{background:var(--white);color:var(--black);border:1.5px solid var(--gray1);}
+.btn-ghost:hover{border-color:var(--black);}
+.btn-yellow{background:var(--accent-y);color:var(--black);box-shadow:0 3px 0 #C8BB00;}
+.btn-yellow:hover{box-shadow:0 5px 0 #C8BB00;transform:translateY(-1px);}
+.btn:disabled{opacity:.4;cursor:not-allowed;pointer-events:none;}
+
+/* toast */
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--black);color:var(--white);font-weight:800;font-size:13px;padding:10px 22px;border-radius:999px;opacity:0;pointer-events:none;transition:all .3s var(--ease);z-index:9000;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<div class="backdrop" id="backdrop" onclick="closeSidebar()"></div>
+
+<!-- ══ 侧栏 ══ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="sidebar-logo-mark">哞</div>
+    <div style="line-height:1.2;"><p class="sidebar-logo-cn">创作者中心</p><p class="sidebar-logo-sub">MOWO Studio</p></div>
+  </div>
+  <div class="sidebar-user">
+    <div class="sidebar-avatar" id="sidebarAvatar">我</div>
+    <div style="flex:1;min-width:0;">
+      <p class="sidebar-user-name" id="sidebarName">哞屋用户</p>
+      <span class="sidebar-user-badge" id="sidebarBadge">未认证</span>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <p class="nav-sec">内容管理</p>
+    <a href="creator-works.html"         class="nav-item"><span class="nav-icon">📁</span>我的作品</a>
+    <a href="creator-article-stats.html" class="nav-item"><span class="nav-icon">📊</span>文章数据</a>
+    <p class="nav-sec" style="margin-top:12px;">创作者专属</p>
+    <a href="creator-product-stats.html" class="nav-item"><span class="nav-icon">🛍️</span>商品数据</a>
+    <a href="creator-product-edit.html"  class="nav-item"><span class="nav-icon">✏️</span>商品编辑</a>
+    <a href="creator-earnings.html"      class="nav-item"><span class="nav-icon">💰</span>收益与提现</a>
+    <a href="creator-certify.html"       class="nav-item active"><span class="nav-icon">✦</span>创作者认证</a>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="cert-card none" id="sidebarCertCard">
+      <p class="cert-card-title">申请创作者认证</p>
+      <p class="cert-card-desc">认证通过后可上架商品、获得收益分成</p>
+      <button class="cert-card-btn" onclick="scrollTop()">立即申请 →</button>
+    </div>
+  </div>
+</aside>
+
+<!-- ══ 顶栏 ══ -->
+<header class="topbar">
+  <div class="topbar-left">
+    <button class="menu-btn" onclick="openSidebar()">☰</button>
+    <div style="display:flex;align-items:center;">
+      <a href="index.html" class="bc-home">哞屋</a>
+      <span class="bc-sep">›</span>
+      <span class="bc-cur">创作者认证</span>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <a href="index.html" style="font-weight:800;font-size:12px;color:var(--gray3);display:flex;align-items:center;gap:5px;padding:7px 14px;border-radius:999px;border:1.5px solid var(--gray1);background:var(--white);transition:all .2s;" onmouseover="this.style.borderColor='var(--black)';this.style.color='var(--black)'" onmouseout="this.style.borderColor='var(--gray1)';this.style.color='var(--gray3)'">← 回到主站</a>
+    <div class="topbar-avatar" id="topbarAvatar">我</div>
+  </div>
+</header>
+
+<!-- ══ 主内容 ══ -->
+<main class="main">
+  <div class="inner">
+
+    <!-- ── 步骤条 ── -->
+    <div class="steps-nav" id="stepsNav">
+      <div class="step-item active" id="stepItem0">
+        <div class="step-dot"><span class="step-num">1</span></div>
+        <span class="step-label">创作者信息</span>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-item" id="stepItem1">
+        <div class="step-dot"><span class="step-num">2</span></div>
+        <span class="step-label">实名认证</span>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-item" id="stepItem2">
+        <div class="step-dot"><span class="step-num">3</span></div>
+        <span class="step-label">版权声明</span>
+        <div class="step-line"></div>
+      </div>
+      <div class="step-item" id="stepItem3">
+        <div class="step-dot"><span class="step-num">4</span></div>
+        <span class="step-label">协议提交</span>
+      </div>
+    </div>
+
+    <!-- ══ Step 1：创作者信息 ══ -->
+    <div class="step-panel active" id="panel0">
+      <div class="step-header">
+        <p class="step-num-label">Step 01 / 04</p>
+        <h1 class="step-title">告诉我们你是谁</h1>
+        <p class="step-desc">填写你的创作者信息，这些内容将展示在你的公开主页上，让买家了解你的风格和故事。</p>
+      </div>
+
+      <!-- 基础信息 -->
+      <div class="card">
+        <p class="card-title"><span class="card-icon">✦</span>创作者身份</p>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">创作者昵称 <span class="req">*</span></label>
+            <input class="form-input" id="inpNickname" type="text" maxlength="20" placeholder="在哞屋的专属名字" oninput="syncCnt(this,'cntNickname',20);validate1()">
+            <div class="form-counter"><span id="cntNickname">0</span> / 20</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">所在地区</label>
+            <input class="form-input" id="inpCity" type="text" placeholder="城市（选填）">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">个人简介 <span class="req">*</span></label>
+          <p class="form-hint">介绍你的创作风格、灵感来源，或者你和动画的故事</p>
+          <textarea class="form-input form-textarea" id="inpBio" maxlength="200" placeholder="我是一个……" oninput="syncCnt(this,'cntBio',200);validate1()"></textarea>
+          <div class="form-counter"><span id="cntBio">0</span> / 200</div>
+        </div>
+      </div>
+
+      <!-- 擅长风格 -->
+      <div class="card">
+        <p class="card-title"><span class="card-icon">🎨</span>擅长风格 <span style="font-weight:700;font-size:12px;color:var(--gray3);margin-left:4px;">最多选 5 个</span></p>
+        <div class="style-grid" id="styleGrid">
+          <!-- JS渲染 -->
+        </div>
+      </div>
+
+      <!-- 社交主页（选填） -->
+      <div class="card">
+        <p class="card-title"><span class="card-icon">🔗</span>社交主页 <span style="font-weight:700;font-size:12px;color:var(--gray3);margin-left:4px;">选填</span></p>
+        <div class="social-row">
+          <div class="social-icon">🐦</div>
+          <input class="form-input" type="url" placeholder="微博主页链接" style="flex:1;">
+        </div>
+        <div class="social-row">
+          <div class="social-icon">📕</div>
+          <input class="form-input" type="url" placeholder="小红书主页链接" style="flex:1;">
+        </div>
+        <div class="social-row">
+          <div class="social-icon">🎨</div>
+          <input class="form-input" type="url" placeholder="Bilibili 主页链接" style="flex:1;">
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ Step 2：实名认证 ══ -->
+    <div class="step-panel" id="panel1">
+      <div class="step-header">
+        <p class="step-num-label">Step 02 / 04</p>
+        <h1 class="step-title">实名认证</h1>
+        <p class="step-desc">为了保障平台交易安全和版权合规，需要对你的真实身份进行核验。认证由第三方机构处理，哞屋不存储你的证件照片。</p>
+      </div>
+
+      <div class="card">
+        <p class="card-title"><span class="card-icon">🪪</span>身份核验</p>
+        <div class="id-verify-area" id="idVerifyArea">
+          <div class="id-status-row">
+            <div class="id-status-icon" id="idStatusIcon">🪪</div>
+            <div class="id-status-text">
+              <p class="id-status-title" id="idStatusTitle">填写身份信息</p>
+              <p class="id-status-desc" id="idStatusDesc">请如实填写，用于第三方实名核验</p>
+            </div>
+          </div>
+          <div class="id-verify-form" id="idVerifyForm">
+            <div class="form-row" style="margin-bottom:0;">
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">真实姓名 <span class="req">*</span></label>
+                <input class="form-input" id="inpRealName" type="text" placeholder="与证件一致">
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label">证件类型</label>
+                <select class="form-input" id="inpIdType">
+                  <option value="id">中国居民身份证</option>
+                  <option value="passport">护照</option>
+                  <option value="hk">港澳居民来往内地通行证</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">证件号码 <span class="req">*</span></label>
+              <input class="form-input" id="inpIdNum" type="text" placeholder="请输入证件号码" oninput="validateIdInput()">
+            </div>
+            <button class="id-verify-btn" id="idVerifyBtn" onclick="startVerify()" disabled>
+              发起实名核验 →
+            </button>
+          </div>
+          <div class="id-verified-badge" id="idVerifiedBadge" style="display:none;">
+            ✓ 实名核验通过 · <span id="idVerifiedName">—</span>
+          </div>
+        </div>
+        <div class="third-party-note">
+          <span class="third-party-note-icon">ℹ️</span>
+          <p class="third-party-note-text">
+            核验服务由 <strong>腾讯云实名认证</strong> 提供，你的证件信息将通过加密传输，<strong>哞屋不留存任何证件原始数据</strong>。核验结果仅用于创作者资质审核，符合《个人信息保护法》相关规定。
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ Step 3：版权声明 ══ -->
+    <div class="step-panel" id="panel2">
+      <div class="step-header">
+        <p class="step-num-label">Step 03 / 04</p>
+        <h1 class="step-title">版权声明</h1>
+        <p class="step-desc">哞屋是一个尊重原创的平台。请确认你拥有上传内容的完整版权，并上传 1-3 件代表作。</p>
+      </div>
+
+      <!-- 版权承诺 -->
+      <div class="card">
+        <p class="card-title"><span class="card-icon">📜</span>版权承诺</p>
+        <div class="copyright-pledge" id="pledgeBox">
+          <p class="pledge-title">✦ 请逐条阅读并勾选确认</p>
+          <div class="pledge-item" onclick="togglePledge(this)" data-idx="0">
+            <div class="pledge-checkbox"></div>
+            <p class="pledge-text">我上传至哞屋的所有动画内容均为<strong>本人原创</strong>，享有完整的著作权，未侵犯任何第三方知识产权。</p>
+          </div>
+          <div class="pledge-item" onclick="togglePledge(this)" data-idx="1">
+            <div class="pledge-checkbox"></div>
+            <p class="pledge-text">我的动画内容<strong>非 AI 生成</strong>，系本人逐帧手工创作完成，并能提供创作过程说明。</p>
+          </div>
+          <div class="pledge-item" onclick="togglePledge(this)" data-idx="2">
+            <div class="pledge-checkbox"></div>
+            <p class="pledge-text">若内容涉及真实角色参考（如动物、人物），已取得必要授权，或属于合理使用范畴，<strong>不包含受版权保护的第三方 IP</strong>。</p>
+          </div>
+          <div class="pledge-item" onclick="togglePledge(this)" data-idx="3">
+            <div class="pledge-checkbox"></div>
+            <p class="pledge-text">我理解并同意：若经核实存在侵权，哞屋有权立即下架相关商品，并依法追究相应责任，<strong>已售订单的损失由本人承担</strong>。</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 代表作上传 -->
+      <div class="card">
+        <p class="card-title"><span class="card-icon">🖼</span>代表作 <span style="font-weight:700;font-size:12px;color:var(--gray3);margin-left:4px;">上传 1-3 件原创动画截图</span></p>
+        <p style="font-weight:700;font-size:12px;color:var(--gray3);margin-bottom:16px;line-height:1.7;">上传你最满意的原创动画帧图或成品效果图，帮助审核团队了解你的创作水平。支持 JPG/PNG，每张不超过 10MB。</p>
+        <div class="works-upload">
+          <div class="work-upload-slot" id="slot0" onclick="triggerUpload(0)">
+            <span class="work-upload-icon">＋</span>
+            <span class="work-upload-text">上传代表作</span>
+            <button class="work-upload-remove" onclick="removeWork(event,0)">✕</button>
+          </div>
+          <div class="work-upload-slot" id="slot1" onclick="triggerUpload(1)">
+            <span class="work-upload-icon">＋</span>
+            <span class="work-upload-text">上传代表作</span>
+            <button class="work-upload-remove" onclick="removeWork(event,1)">✕</button>
+          </div>
+          <div class="work-upload-slot" id="slot2" onclick="triggerUpload(2)">
+            <span class="work-upload-icon">＋</span>
+            <span class="work-upload-text">上传代表作</span>
+            <button class="work-upload-remove" onclick="removeWork(event,2)">✕</button>
+          </div>
+        </div>
+        <input type="file" id="uploadInp" accept="image/*" style="display:none" onchange="handleUpload(event)">
+      </div>
+    </div>
+
+    <!-- ══ Step 4：协议与提交 ══ -->
+    <div class="step-panel" id="panel3">
+      <div class="step-header">
+        <p class="step-num-label">Step 04 / 04</p>
+        <h1 class="step-title">最后一步</h1>
+        <p class="step-desc">请阅读创作者协议，确认无误后提交申请。审核团队将在 1-3 个工作日内完成审核并通过系统通知你。</p>
+      </div>
+
+      <!-- 协议全文 -->
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div style="padding:20px 28px 16px;border-bottom:1px solid var(--gray1);">
+          <p class="card-title" style="margin-bottom:0;"><span class="card-icon">📄</span>哞屋创作者平台协议</p>
+        </div>
+        <div class="agreement-box" id="agreementBox" onscroll="checkScroll(this)">
+          <h3>第一条 · 定义与适用范围</h3>
+          <p>本协议适用于所有在哞屋（MOWO）平台申请或已取得创作者认证资质的用户（以下简称「创作者」）。创作者通过平台上架、销售基于个人原创动画内容的实体动画机商品。</p>
+          <h3>第二条 · 创作者权利</h3>
+          <p>2.1 创作者享有其原创动画内容的完整著作权，哞屋不主张对创作内容的所有权。</p>
+          <p>2.2 创作者有权在平台底价基础上自由设定加价金额，加价收益在扣除 15% 平台服务费后全额结算至创作者账户。</p>
+          <p>2.3 创作者有权随时申请下架商品，已下单的订单将继续履约。</p>
+          <h3>第三条 · 创作者义务</h3>
+          <p>3.1 创作者保证上传内容的原创性和合法性，不得侵犯任何第三方版权、商标权或其他知识产权。</p>
+          <p>3.2 创作者不得上传包含违法、违规、色情、暴力或其他违反公序良俗内容的动画。</p>
+          <p>3.3 创作者应保持联系方式有效，及时响应平台及买家的合理沟通请求。</p>
+          <h3>第四条 · 平台职责</h3>
+          <p>4.1 哞屋负责商品的生产、质检、包装与发货，对实体商品质量承担责任。</p>
+          <p>4.2 哞屋对上架商品进行内容审核，有权拒绝或下架违规内容，并说明原因。</p>
+          <p>4.3 哞屋按月结算创作者收益，结算周期为每月 1 日至月底，次月 10 日前完成打款。</p>
+          <h3>第五条 · 违规处理</h3>
+          <p>5.1 若创作者存在侵权、欺诈或其他违规行为，哞屋有权暂停或永久注销其创作者资质。</p>
+          <p>5.2 因创作者侵权导致的第三方索赔，由创作者独立承担，哞屋不承担连带责任。</p>
+          <h3>第六条 · 协议变更</h3>
+          <p>哞屋保留修改本协议的权利，变更将提前 15 日通过站内通知告知。继续使用平台视为接受新协议。</p>
+          <h3>第七条 · 适用法律</h3>
+          <p>本协议受中华人民共和国法律管辖。争议应首先通过友好协商解决，协商不成的提交哞屋注册地有管辖权的法院处理。</p>
+        </div>
+        <div style="padding:0 28px 20px;display:flex;flex-direction:column;gap:10px;">
+          <div class="agreement-check-row" id="agCheck0" onclick="toggleAgree(0)">
+            <div class="ag-checkbox" id="agBox0"></div>
+            <p class="ag-text">我已阅读并同意 <strong>《哞屋创作者平台协议》</strong>，承诺遵守平台规则</p>
+          </div>
+          <div class="agreement-check-row" id="agCheck1" onclick="toggleAgree(1)">
+            <div class="ag-checkbox" id="agBox1"></div>
+            <p class="ag-text">我已满 <strong>18 周岁</strong>，具有完全民事行为能力，本人信息真实有效</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ 提交成功页 ══ -->
+    <div class="success-panel" id="successPanel">
+      <div class="success-anim">✦</div>
+      <h2 class="success-title">申请已提交！</h2>
+      <p class="success-desc">你的创作者认证申请已成功提交，审核团队将在 <strong>1-3 个工作日</strong> 内完成审核，结果将通过站内消息和预留手机号通知你。</p>
+      <div class="success-timeline">
+        <div class="tl-item">
+          <div class="tl-dot done">✓</div>
+          <div class="tl-info">
+            <p class="tl-title">申请已提交</p>
+            <p class="tl-desc">刚刚</p>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot wait">2</div>
+          <div class="tl-info">
+            <p class="tl-title">平台审核中</p>
+            <p class="tl-desc">预计 1-3 个工作日</p>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot wait">3</div>
+          <div class="tl-info">
+            <p class="tl-title">审核结果通知</p>
+            <p class="tl-desc">站内消息 + 短信通知</p>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot wait">✦</div>
+          <div class="tl-info">
+            <p class="tl-title">创作者后台激活</p>
+            <p class="tl-desc">通过后自动开启商品编辑等功能</p>
+          </div>
+        </div>
+      </div>
+      <a href="creator-works.html" style="display:inline-flex;align-items:center;gap:8px;font-weight:900;font-size:14px;padding:14px 32px;border-radius:999px;background:var(--black);color:var(--white);">去查看我的作品 →</a>
+    </div>
+
+  </div>
+</main>
+
+<!-- ══ 底部导航栏 ══ -->
+<div class="bottom-bar" id="bottomBar">
+  <p class="bottom-bar-info" id="bottomInfo">填写完整信息后继续</p>
+  <div class="bottom-bar-btns">
+    <button class="btn btn-ghost" id="btnPrev" onclick="goPrev()" style="display:none;">← 上一步</button>
+    <button class="btn btn-yellow" id="btnNext" onclick="goNext()" disabled>下一步 →</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ══════════════════════════════
+   全局常量（统一最顶部）
+══════════════════════════════ */
+const STYLE_TAGS = [
+  '手绘插画','像素风','极简线条','复古卡通','写实风格',
+  '奇幻世界','日系动漫','欧美卡通','机械科幻','自然生态',
+  '文字动态','抽象几何','国潮风','治愈系','恐怖悬疑',
+];
+
+const TOTAL_STEPS = 4;
+
+/* ══════════════════════════════
+   运行时状态
+══════════════════════════════ */
+let currentStep   = 0;
+let idVerified    = false;
+let pledgeChecked = [false, false, false, false];
+let agreeChecked  = [false, false];
+let uploadSlots   = [null, null, null]; /* 各槽位的 dataURL */
+let currentUploadSlot = 0;
+let selectedStyles = new Set();
+
+/* ══════════════════════════════
+   初始化
+══════════════════════════════ */
+(function init() {
+  loadUser();
+  renderStyleGrid();
+  updateStepUI();
+})();
+
+function loadUser() {
+  try {
+    const t = JSON.parse(localStorage.getItem('mowo_token') || 'null');
+    if (!t) return;
+    const i = (t.name || '我')[0].toUpperCase();
+    ['sidebarAvatar','topbarAvatar'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = i;
+    });
+    const nameEl = document.getElementById('sidebarName');
+    if (nameEl) nameEl.textContent = t.name || '哞屋用户';
+  } catch(e) {}
+}
+
+function renderStyleGrid() {
+  document.getElementById('styleGrid').innerHTML = STYLE_TAGS.map(t =>
+    `<button class="style-tag" onclick="toggleStyle('${t}',this)">${t}</button>`
+  ).join('');
+}
+
+/* ══════════════════════════════
+   步骤导航
+══════════════════════════════ */
+function goNext() {
+  if (!validateStep(currentStep)) return;
+  markStepDone(currentStep);
+  currentStep++;
+  showStep(currentStep);
+}
+
+function goPrev() {
+  if (currentStep === 0) return;
+  currentStep--;
+  showStep(currentStep);
+}
+
+function showStep(step) {
+  document.querySelectorAll('.step-panel').forEach((p, i) => {
+    p.classList.toggle('active', i === step);
+  });
+  updateStepUI();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function updateStepUI() {
+  /* 步骤条 */
+  document.querySelectorAll('.step-item').forEach((item, i) => {
+    item.classList.toggle('active', i === currentStep);
+  });
+  /* 上一步按钮 */
+  document.getElementById('btnPrev').style.display = currentStep > 0 ? 'inline-flex' : 'none';
+  /* 下一步/提交按钮 */
+  const btn = document.getElementById('btnNext');
+  const isLast = currentStep === TOTAL_STEPS - 1;
+  btn.textContent = isLast ? '提交申请 ✦' : '下一步 →';
+  btn.disabled = !canProceed();
+  /* 底部提示 */
+  const infos = [
+    '昵称和简介为必填项',
+    idVerified ? '已完成实名核验' : '完成实名核验后继续',
+    `已勾选 ${pledgeChecked.filter(Boolean).length} / 4 项，上传 ${uploadSlots.filter(Boolean).length} / 3 件代表作`,
+    '勾选同意协议后提交',
+  ];
+  document.getElementById('bottomInfo').textContent = infos[currentStep] || '';
+}
+
+function markStepDone(step) {
+  const item = document.getElementById(`stepItem${step}`);
+  if (!item) return;
+  item.classList.remove('active');
+  item.classList.add('done');
+}
+
+/* ══════════════════════════════
+   各步骤校验
+══════════════════════════════ */
+function canProceed() {
+  if (currentStep === 0) return canProceed0();
+  if (currentStep === 1) return idVerified;
+  if (currentStep === 2) return canProceed2();
+  if (currentStep === 3) return agreeChecked.every(Boolean);
+  return false;
+}
+
+function canProceed0() {
+  const nick = document.getElementById('inpNickname')?.value.trim();
+  const bio  = document.getElementById('inpBio')?.value.trim();
+  return !!(nick && bio);
+}
+
+function canProceed2() {
+  return pledgeChecked.every(Boolean) && uploadSlots.some(Boolean);
+}
+
+function validateStep(step) {
+  if (step === 0 && !canProceed0()) {
+    showToast('请填写创作者昵称和个人简介');
+    return false;
+  }
+  if (step === 1 && !idVerified) {
+    showToast('请先完成实名核验');
+    return false;
+  }
+  if (step === 2 && !canProceed2()) {
+    if (!pledgeChecked.every(Boolean)) { showToast('请逐条勾选全部版权承诺'); return false; }
+    if (!uploadSlots.some(Boolean))    { showToast('请至少上传一件代表作'); return false; }
+  }
+  if (step === 3 && !agreeChecked.every(Boolean)) {
+    showToast('请勾选同意所有协议条款');
+    return false;
+  }
+  return true;
+}
+
+function validate1() { updateStepUI(); }
+
+/* ══════════════════════════════
+   Step 1：风格标签
+══════════════════════════════ */
+function toggleStyle(tag, el) {
+  if (selectedStyles.has(tag)) {
+    selectedStyles.delete(tag);
+    el.classList.remove('sel');
+  } else {
+    if (selectedStyles.size >= 5) { showToast('最多选择 5 个风格标签'); return; }
+    selectedStyles.add(tag);
+    el.classList.add('sel');
+  }
+}
+
+/* ══════════════════════════════
+   Step 2：实名核验
+══════════════════════════════ */
+function validateIdInput() {
+  const name = document.getElementById('inpRealName')?.value.trim();
+  const num  = document.getElementById('inpIdNum')?.value.trim();
+  const btn  = document.getElementById('idVerifyBtn');
+  if (btn) btn.disabled = !(name && num.length >= 8);
+}
+
+function startVerify() {
+  const name = document.getElementById('inpRealName')?.value.trim();
+  if (!name) return;
+
+  /* 进入核验中状态 */
+  const area = document.getElementById('idVerifyArea');
+  area.classList.add('verifying');
+  const icon  = document.getElementById('idStatusIcon');
+  const title = document.getElementById('idStatusTitle');
+  const desc  = document.getElementById('idStatusDesc');
+  const btn   = document.getElementById('idVerifyBtn');
+  icon.classList.add('verifying');
+  icon.textContent  = '⏳';
+  title.textContent = '核验中…';
+  desc.textContent  = '正在通过腾讯云实名认证接口核验，请稍候';
+  btn.disabled      = true;
+  btn.textContent   = '核验中…';
+
+  /* 模拟 2 秒后返回结果 */
+  setTimeout(() => {
+    area.classList.remove('verifying');
+    area.classList.add('verified');
+    icon.classList.remove('verifying');
+    icon.classList.add('verified');
+    icon.textContent = '✅';
+    title.textContent = '实名核验通过';
+    desc.textContent  = '你的身份信息已通过第三方核验';
+
+    /* 隐藏表单，显示通过标识 */
+    document.getElementById('idVerifyForm').style.display = 'none';
+    const badge = document.getElementById('idVerifiedBadge');
+    badge.style.display = 'flex';
+    document.getElementById('idVerifiedName').textContent = name;
+
+    idVerified = true;
+    updateStepUI();
+    showToast('✓ 实名核验通过');
+  }, 2000);
+}
+
+/* ══════════════════════════════
+   Step 3：版权承诺 + 代表作
+══════════════════════════════ */
+function togglePledge(el) {
+  const idx = parseInt(el.dataset.idx);
+  pledgeChecked[idx] = !pledgeChecked[idx];
+  el.classList.toggle('checked', pledgeChecked[idx]);
+  el.querySelector('.pledge-checkbox').textContent = pledgeChecked[idx] ? '✓' : '';
+  updateStepUI();
+}
+
+function triggerUpload(slot) {
+  currentUploadSlot = slot;
+  document.getElementById('uploadInp').click();
+}
+
+function handleUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    uploadSlots[currentUploadSlot] = ev.target.result;
+    const slot = document.getElementById(`slot${currentUploadSlot}`);
+    slot.classList.add('filled');
+    slot.innerHTML = `
+      <img class="work-upload-img" src="${ev.target.result}">
+      <button class="work-upload-remove" onclick="removeWork(event,${currentUploadSlot})">✕</button>`;
+    e.target.value = '';
+    updateStepUI();
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeWork(e, slot) {
+  e.stopPropagation();
+  uploadSlots[slot] = null;
+  const el = document.getElementById(`slot${slot}`);
+  el.classList.remove('filled');
+  el.innerHTML = `
+    <span class="work-upload-icon">＋</span>
+    <span class="work-upload-text">上传代表作</span>
+    <button class="work-upload-remove" onclick="removeWork(event,${slot})">✕</button>`;
+  updateStepUI();
+}
+
+/* ══════════════════════════════
+   Step 4：协议
+══════════════════════════════ */
+function toggleAgree(idx) {
+  agreeChecked[idx] = !agreeChecked[idx];
+  const row = document.getElementById(`agCheck${idx}`);
+  const box = document.getElementById(`agBox${idx}`);
+  row.classList.toggle('checked', agreeChecked[idx]);
+  box.textContent = agreeChecked[idx] ? '✓' : '';
+  updateStepUI();
+}
+
+function checkScroll(el) {
+  /* 滚动到底才解锁（可选，这里不强制） */
+}
+
+/* ══════════════════════════════
+   提交
+══════════════════════════════ */
+function goNext_original() {}
+
+/* 覆盖 goNext 以处理最后一步提交 */
+const _goNext = goNext;
+window.goNext = function() {
+  if (currentStep === TOTAL_STEPS - 1) {
+    submitApplication();
+  } else {
+    _goNext();
+  }
+};
+
+function submitApplication() {
+  if (!validateStep(currentStep)) return;
+  const btn = document.getElementById('btnNext');
+  btn.textContent = '提交中…';
+  btn.disabled    = true;
+
+  setTimeout(() => {
+    /* 隐藏步骤内容和底部栏 */
+    document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('stepsNav').style.display    = 'none';
+    document.getElementById('bottomBar').style.display   = 'none';
+    document.getElementById('successPanel').classList.add('active');
+
+    /* 更新侧栏认证卡为「审核中」 */
+    const certCard = document.getElementById('sidebarCertCard');
+    certCard.className = 'cert-card pending';
+    certCard.innerHTML = `
+      <p class="cert-card-title">⏳ 审核中</p>
+      <p class="cert-card-desc">预计 1-3 个工作日，请耐心等待</p>
+      <button class="cert-card-btn">查看申请状态</button>`;
+    const badge = document.getElementById('sidebarBadge');
+    badge.textContent = '认证审核中';
+    badge.style.background = 'rgba(245,230,66,.15)';
+    badge.style.color = 'rgba(245,230,66,.8)';
+  }, 1200);
+}
+
+/* ══════════════════════════════
+   辅助
+══════════════════════════════ */
+function syncCnt(input, cntId, max) {
+  const n  = input.value.length;
+  const el = document.getElementById(cntId);
+  if (el) { el.textContent = n; el.style.color = n >= max * .9 ? 'var(--accent-o)' : 'var(--gray2)'; }
+}
+
+function scrollTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+function openSidebar()  { document.getElementById('sidebar').classList.add('open');  document.getElementById('backdrop').classList.add('show');  document.body.style.overflow = 'hidden'; }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('backdrop').classList.remove('show'); document.body.style.overflow = ''; }
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+/* 自定义光标 */
+if (window.matchMedia('(pointer:fine)').matches) {
+  const c = document.createElement('div'), r = document.createElement('div');
+  const cs = 'position:fixed;border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%)';
+  c.style.cssText = cs + ';width:8px;height:8px;background:#111';
+  r.style.cssText = cs + ';width:32px;height:32px;border:1.5px solid rgba(17,17,16,.3);transition:width .3s,height .3s,opacity .3s';
+  document.body.append(c, r);
+  document.body.style.cursor = 'none';
+  let mx = 0, my = 0, rx = 0, ry = 0;
+  document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; c.style.left = mx + 'px'; c.style.top = my + 'px'; });
+  (function tick() { rx += (mx - rx) * .12; ry += (my - ry) * .12; r.style.left = rx + 'px'; r.style.top = ry + 'px'; requestAnimationFrame(tick); })();
+  document.querySelectorAll('a,button,.style-tag,.pledge-item,.agreement-check-row,.work-upload-slot').forEach(el => {
+    el.addEventListener('mouseenter', () => { r.style.width = '44px'; r.style.height = '44px'; r.style.opacity = '.4'; });
+    el.addEventListener('mouseleave', () => { r.style.width = '32px'; r.style.height = '32px'; r.style.opacity = '1'; });
+  });
+}
+</script>
+</body>
+</html>

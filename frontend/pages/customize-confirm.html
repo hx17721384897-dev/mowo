@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>选择款式 — 哞屋 MOWO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Noto+Sans+SC:wght@300;400;700;900&display=swap" rel="stylesheet">
+<style>
+/* 最后修改：2025-01-01 */
+:root {
+  --white:    #FFFFFF;
+  --cream:    #F5F3EF;
+  --black:    #111110;
+  --gray1:    #EBEBEA;
+  --gray2:    #C4C3BF;
+  --gray3:    #787874;
+  --accent-y: #F5E642;
+  --accent-o: #FF6B35;
+  --accent-g: #8FD694;
+  --accent-b: #7EC8E3;
+  --font:     'Nunito', 'Noto Sans SC', sans-serif;
+  --ease:     cubic-bezier(0.22, 1, 0.36, 1);
+  --pad-mobile: 24px;
+  --pad-desk:   72px;
+  --nav-h: 61px;
+  --prog-h: 43px;
+  --top-offset: calc(var(--nav-h) + var(--prog-h) + 3px);
+}
+@media (min-width:1024px) { :root { --nav-h: 73px; } }
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body { font-family:var(--font); background:var(--white); color:var(--black); overflow-x:hidden; -webkit-font-smoothing:antialiased; }
+a { text-decoration:none; color:inherit; }
+button { font-family:var(--font); }
+
+/* ══════════════════════════════
+   NAV
+══════════════════════════════ */
+.nav {
+  position:fixed; top:0; left:0; right:0; z-index:900;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px var(--pad-mobile);
+  background:rgba(255,255,255,.92); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid rgba(0,0,0,.06); height:var(--nav-h);
+}
+@media (min-width:1024px) { .nav { padding:20px var(--pad-desk); } }
+.nav-logo { line-height:1; }
+.nav-logo-cn { font-weight:900; font-size:22px; letter-spacing:-.01em; color:var(--black); }
+.nav-logo-en { font-weight:700; font-size:10px; letter-spacing:.22em; text-transform:uppercase; color:var(--gray3); display:block; margin-top:1px; }
+.nav-links { display:none; list-style:none; gap:36px; }
+@media (min-width:1024px) { .nav-links { display:flex; } }
+.nav-links a { font-weight:800; font-size:14px; letter-spacing:.03em; color:var(--gray3); transition:color .2s; position:relative; padding-bottom:3px; }
+.nav-links a::after { content:''; position:absolute; bottom:0; left:0; right:0; height:2px; background:var(--accent-y); border-radius:2px; transform:scaleX(0); transition:transform .25s var(--ease); }
+.nav-links a:hover { color:var(--black); }
+.nav-links a:hover::after { transform:scaleX(1); }
+.nav-login { font-weight:800; font-size:13px; padding:10px 22px; background:var(--black); color:var(--white); border-radius:999px; min-height:44px; display:flex; align-items:center; transition:opacity .2s; }
+.nav-login:hover { opacity:.8; }
+.burger { display:flex; flex-direction:column; gap:5px; cursor:pointer; padding:8px; min-width:44px; min-height:44px; justify-content:center; align-items:center; }
+@media (min-width:1024px) { .burger { display:none; } }
+.burger span { display:block; width:22px; height:2px; background:var(--black); border-radius:2px; transition:transform .3s, opacity .3s; }
+.burger.open span:nth-child(1) { transform:translateY(7px) rotate(45deg); }
+.burger.open span:nth-child(2) { opacity:0; }
+.burger.open span:nth-child(3) { transform:translateY(-7px) rotate(-45deg); }
+.mobile-menu { position:fixed; inset:0; background:var(--black); z-index:800; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:36px; opacity:0; pointer-events:none; transition:opacity .35s var(--ease); }
+.mobile-menu.open { opacity:1; pointer-events:all; }
+.mobile-menu a { font-weight:900; font-size:clamp(28px,8vw,48px); color:var(--white); letter-spacing:-.01em; transition:color .2s; }
+.mobile-menu a:hover { color:var(--accent-y); }
+
+/* ══════════════════════════════
+   进度条 & 步骤
+══════════════════════════════ */
+.progress-bar { position:fixed; top:var(--nav-h); left:0; right:0; z-index:800; background:var(--gray1); height:3px; }
+.progress-fill { height:100%; width:75%; background:var(--accent-y); border-radius:0 2px 2px 0; }
+.progress-steps {
+  position:fixed; top:calc(var(--nav-h) + 3px); left:0; right:0; z-index:799;
+  background:rgba(255,255,255,.95); backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--gray1);
+  padding:10px var(--pad-mobile); display:flex; align-items:center; gap:8px;
+  height:var(--prog-h);
+}
+@media (min-width:1024px) { .progress-steps { padding:10px var(--pad-desk); } }
+.step-item { display:flex; align-items:center; gap:6px; font-weight:800; font-size:11px; letter-spacing:.08em; color:var(--gray2); white-space:nowrap; }
+.step-item.active { color:var(--black); }
+.step-item.done { color:var(--accent-g); }
+.step-num { width:20px; height:20px; border-radius:50%; border:2px solid currentColor; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:900; flex-shrink:0; }
+.step-item.active .step-num { background:var(--black); color:var(--white); border-color:var(--black); }
+.step-item.done .step-num { background:var(--accent-g); color:var(--black); border-color:var(--accent-g); }
+.step-divider { width:20px; height:1px; background:var(--gray1); flex-shrink:0; }
+@media (max-width:480px) { .step-label { display:none; } }
+
+/* ══════════════════════════════
+   页面主体布局
+══════════════════════════════ */
+.page-wrap {
+  padding-top: var(--top-offset);
+  min-height: 100vh;
+}
+
+.confirm-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px var(--pad-mobile) 120px;
+}
+@media (min-width:1024px) {
+  .confirm-layout {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 48px;
+    padding: 48px var(--pad-desk) 80px;
+  }
+}
+
+/* ══════════════════════════════
+   左栏：预览 + 选配
+══════════════════════════════ */
+.left-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* 产品预览图 */
+.product-preview {
+  width: 100%;
+  aspect-ratio: 4/3;
+  border-radius: 28px;
+  background: var(--cream);
+  border: 2px solid var(--gray1);
+  display: flex; align-items:center; justify-content:center;
+  position: relative; overflow: hidden;
+  transition: background .4s var(--ease);
+}
+.product-preview-mock {
+  display: flex; flex-direction:column; align-items:center; gap:16px;
+}
+.product-mock-shape {
+  transition: all .4s var(--ease);
+  display: flex; align-items:center; justify-content:center;
+  box-shadow: 0 16px 48px rgba(0,0,0,.12);
+}
+/* 形状默认：圆筒 */
+.mock-cylinder { width:80px; height:108px; border-radius:40px; border:2px solid rgba(0,0,0,.1); background:rgba(255,255,255,.9); }
+.mock-lantern  { width:72px; height:96px; border-radius:36px 36px 46px 46px; border:2px solid rgba(0,0,0,.1); background:rgba(255,255,255,.9); }
+.mock-hexagon  { width:80px; height:88px; clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%); border:2px solid rgba(0,0,0,.1); background:rgba(255,255,255,.9); }
+.mock-flat     { width:112px; height:64px; border-radius:999px; border:2px solid rgba(0,0,0,.1); background:rgba(255,255,255,.9); }
+.mock-mini     { width:48px; height:60px; border-radius:24px; border:2px solid rgba(0,0,0,.1); background:rgba(255,255,255,.9); }
+.mock-ring     { width:32px; height:32px; border-radius:50%; border:2px solid rgba(0,0,0,.15); animation:spin 2s steps(8) infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+.preview-badge-row {
+  display: flex; gap:8px; flex-wrap:wrap; justify-content:center;
+}
+.preview-badge {
+  font-weight:800; font-size:11px; letter-spacing:.08em;
+  padding:5px 12px; border-radius:999px;
+  background:rgba(255,255,255,.85); color:var(--black);
+  border:1.5px solid rgba(0,0,0,.08);
+  backdrop-filter: blur(8px);
+}
+.preview-img-placeholder {
+  font-weight:700; font-size:11px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--gray2);
+  position:absolute; bottom:16px; left:50%; transform:translateX(-50%);
+  white-space:nowrap;
+}
+
+/* 选配区 */
+.config-block {
+  display: flex; flex-direction:column; gap:24px;
+}
+.config-section { display:flex; flex-direction:column; gap:12px; }
+.config-label {
+  display: flex; align-items:center; gap:8px;
+  font-weight:900; font-size:14px; letter-spacing:-.01em; color:var(--black);
+}
+.config-label-num {
+  width:22px; height:22px; border-radius:50%;
+  background:var(--black); color:var(--white);
+  font-size:11px; font-weight:900;
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0;
+}
+.config-desc { font-weight:700; font-size:12px; color:var(--gray3); margin-left:30px; line-height:1.6; }
+
+/* 选项行 */
+.option-row { display:flex; flex-wrap:wrap; gap:8px; margin-left:30px; }
+
+/* 通用选项按钮 */
+.opt-btn {
+  position:relative; cursor:pointer;
+  border-radius:14px; border:2px solid var(--gray1);
+  background:var(--white); transition:all .2s var(--ease);
+  padding:10px 16px;
+  display:flex; flex-direction:column; gap:3px;
+  min-width:80px; text-align:left;
+}
+.opt-btn:hover { border-color:var(--gray2); transform:translateY(-2px); box-shadow:0 6px 20px rgba(0,0,0,.07); }
+.opt-btn.selected {
+  border-color:var(--black);
+  box-shadow:0 0 0 2px var(--black), 0 8px 24px rgba(0,0,0,.1);
+  background:var(--black); color:var(--white);
+}
+.opt-btn.disabled { opacity:.35; cursor:not-allowed; pointer-events:none; }
+.opt-name { font-weight:900; font-size:13px; letter-spacing:-.01em; }
+.opt-price { font-weight:800; font-size:11px; color:var(--gray3); }
+.opt-btn.selected .opt-price { color:rgba(255,255,255,.55); }
+.opt-price.plus { color:var(--accent-o); }
+.opt-btn.selected .opt-price.plus { color:#FFB899; }
+.opt-check {
+  position:absolute; top:-7px; right:-7px;
+  width:18px; height:18px; border-radius:50%;
+  background:var(--accent-y); color:var(--black);
+  font-size:10px; font-weight:900;
+  display:none; align-items:center; justify-content:center;
+  box-shadow:0 2px 6px rgba(0,0,0,.2);
+}
+.opt-btn.selected .opt-check { display:flex; }
+
+/* 颜色选项（方块） */
+.color-opt {
+  width:44px; height:44px; border-radius:12px;
+  border:2px solid var(--gray1); cursor:pointer;
+  transition:all .2s var(--ease); position:relative; flex-shrink:0;
+}
+.color-opt:hover { transform:scale(1.1); border-color:var(--gray2); }
+.color-opt.selected { border-color:var(--black); box-shadow:0 0 0 2px var(--black); transform:scale(1.08); }
+.color-opt .opt-check { display:none; }
+.color-opt.selected .opt-check { display:flex; }
+
+/* 颜色名称标签 */
+.color-label {
+  font-weight:700; font-size:11px; color:var(--gray3); text-align:center; width:44px;
+}
+.color-item { display:flex; flex-direction:column; align-items:center; gap:4px; }
+
+/* 材质未选时颜色区禁用提示 */
+.color-locked {
+  margin-left:30px;
+  font-weight:700; font-size:12px; color:var(--gray3);
+  padding:12px 16px; border-radius:12px; background:var(--gray1);
+  display:flex; align-items:center; gap:8px;
+}
+
+/* ══════════════════════════════
+   右栏：价格卡（桌面固定，移动端底部）
+══════════════════════════════ */
+.right-col {
+  width:100%;
+  order: 2; /* 移动端在选配下面 */
+}
+@media (min-width:1024px) {
+  .right-col {
+    width: 320px;
+    flex-shrink: 0;
+    position: sticky;
+    top: calc(var(--top-offset) + 24px);
+    order: 0;
+  }
+}
+
+.price-card {
+  background:var(--white);
+  border:2px solid var(--gray1);
+  border-radius:28px;
+  overflow:hidden;
+}
+
+/* 价格卡头部 */
+.price-card-head {
+  padding:24px 24px 20px;
+  border-bottom:1px solid var(--gray1);
+}
+.price-card-machine {
+  font-weight:800; font-size:11px; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--gray3); margin-bottom:6px;
+}
+.price-card-title {
+  font-weight:900; font-size:22px; letter-spacing:-.02em; color:var(--black);
+  margin-bottom:4px; min-height:28px;
+}
+.price-card-sub {
+  font-weight:700; font-size:12px; color:var(--gray3); line-height:1.6;
+  min-height:18px;
+}
+
+/* 实时大价格 */
+.price-display {
+  padding:20px 24px;
+  border-bottom:1px solid var(--gray1);
+  display:flex; align-items:flex-end; gap:6px;
+}
+.price-big {
+  font-weight:900; font-size:40px; letter-spacing:-.03em; color:var(--black);
+  line-height:1; transition:all .3s var(--ease);
+}
+.price-unit { font-weight:800; font-size:16px; color:var(--gray3); margin-bottom:4px; }
+
+/* 费用拆分 */
+.price-breakdown {
+  padding:16px 24px;
+  border-bottom:1px solid var(--gray1);
+  display:flex; flex-direction:column; gap:10px;
+}
+.breakdown-row {
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+}
+.breakdown-label { font-weight:700; font-size:13px; color:var(--gray3); }
+.breakdown-val { font-weight:800; font-size:13px; color:var(--black); white-space:nowrap; }
+.breakdown-val.plus { color:var(--accent-o); }
+.breakdown-val.free { color:var(--accent-g); }
+.breakdown-divider { height:1px; background:var(--gray1); }
+.breakdown-total { font-weight:900; }
+.breakdown-total .breakdown-label { color:var(--black); font-weight:900; font-size:14px; }
+.breakdown-total .breakdown-val { font-size:16px; }
+
+/* 物流 & 生产信息 */
+.price-info {
+  padding:16px 24px;
+  border-bottom:1px solid var(--gray1);
+  display:flex; flex-direction:column; gap:10px;
+}
+.info-row {
+  display:flex; align-items:flex-start; gap:10px;
+}
+.info-icon { font-size:14px; flex-shrink:0; margin-top:1px; }
+.info-text { font-weight:700; font-size:12px; color:var(--gray3); line-height:1.6; }
+.info-text strong { color:var(--black); font-weight:800; }
+
+/* 按钮区 */
+.price-card-btns {
+  padding:20px 24px;
+  display:flex; flex-direction:column; gap:10px;
+}
+.btn {
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  font-family:var(--font); font-weight:800; font-size:15px; letter-spacing:.02em;
+  padding:14px 28px; border-radius:999px; min-height:52px;
+  transition:transform .2s, box-shadow .2s, opacity .2s; cursor:pointer; border:none;
+  width:100%; text-align:center;
+}
+.btn:active { transform:scale(.97); }
+.btn-primary { background:var(--black); color:var(--white); box-shadow:0 4px 0 rgba(0,0,0,.25); }
+.btn-primary:hover { box-shadow:0 6px 0 rgba(0,0,0,.25); transform:translateY(-2px); }
+.btn-secondary { background:var(--white); color:var(--black); border:2px solid var(--gray1); box-shadow:0 4px 0 var(--gray1); }
+.btn-secondary:hover { border-color:var(--gray2); box-shadow:0 6px 0 var(--gray2); transform:translateY(-2px); }
+.btn-yellow { background:var(--accent-y); color:var(--black); box-shadow:0 4px 0 #C8BB00; }
+.btn-yellow:hover { box-shadow:0 6px 0 #C8BB00; transform:translateY(-2px); }
+.btn:disabled { opacity:.4; cursor:not-allowed; pointer-events:none; }
+.btn-creator-tag {
+  display:flex; align-items:center; justify-content:center; gap:6px;
+  font-weight:800; font-size:11px; color:var(--gray3); letter-spacing:.06em;
+}
+.creator-dot { width:6px; height:6px; border-radius:50%; background:var(--accent-g); }
+
+/* 未完成选配提示 */
+.config-incomplete {
+  font-weight:700; font-size:12px; color:var(--gray3);
+  text-align:center; padding:4px 0;
+}
+
+/* ══════════════════════════════
+   移动端底部浮动价格栏
+══════════════════════════════ */
+.mobile-price-bar {
+  position:fixed; bottom:0; left:0; right:0; z-index:700;
+  background:var(--white); border-top:1px solid var(--gray1);
+  padding:14px var(--pad-mobile) calc(14px + env(safe-area-inset-bottom));
+  display:flex; align-items:center; justify-content:space-between; gap:16px;
+}
+@media (min-width:1024px) { .mobile-price-bar { display:none; } }
+.mob-price-info { min-width:0; }
+.mob-price-label { font-weight:700; font-size:10px; letter-spacing:.15em; text-transform:uppercase; color:var(--gray3); margin-bottom:3px; }
+.mob-price-val { font-weight:900; font-size:24px; letter-spacing:-.02em; color:var(--black); }
+.mob-price-btns { display:flex; gap:8px; flex-shrink:0; }
+.mob-price-btns .btn { min-height:44px; padding:10px 20px; font-size:14px; width:auto; }
+
+/* ══════════════════════════════
+   已选款式列表
+══════════════════════════════ */
+.added-list {
+  display:none; flex-direction:column; gap:0;
+  border-top:1px solid var(--gray1);
+  padding:16px 24px;
+}
+.added-list.has-items { display:flex; }
+.added-list-label {
+  font-weight:800; font-size:10px; letter-spacing:.18em;
+  text-transform:uppercase; color:var(--gray3); margin-bottom:12px;
+}
+.added-item {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 0; border-bottom:1px solid var(--gray1);
+}
+.added-item:last-child { border-bottom:none; }
+.added-item-swatch {
+  width:28px; height:28px; border-radius:8px;
+  border:1.5px solid rgba(0,0,0,.08); flex-shrink:0;
+}
+.added-item-info { flex:1; min-width:0; }
+.added-item-name {
+  font-weight:800; font-size:12px; color:var(--black);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.added-item-price { font-weight:700; font-size:11px; color:var(--gray3); margin-top:2px; }
+.added-item-remove {
+  width:28px; height:28px; border-radius:50%;
+  background:var(--gray1); border:none; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  font-size:12px; flex-shrink:0; transition:background .2s; color:var(--gray3);
+}
+.added-item-remove:hover { background:var(--accent-o); color:var(--white); }
+
+/* 已选列表总计行 */
+.added-subtotal {
+  padding:12px 0 0;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.added-subtotal-label { font-weight:700; font-size:12px; color:var(--gray3); }
+.added-subtotal-val   { font-weight:900; font-size:16px; color:var(--black); }
+
+/* ══════════════════════════════
+   reveal 动画
+══════════════════════════════ */
+.reveal { opacity:0; transform:translateY(24px); transition:opacity .6s var(--ease), transform .6s var(--ease); }
+.reveal.on { opacity:1; transform:none; }
+.d1{transition-delay:.08s} .d2{transition-delay:.16s} .d3{transition-delay:.24s}
+</style>
+</head>
+<body>
+
+<!-- 移动菜单 -->
+<div class="mobile-menu" id="mobileMenu">
+  <a href="about.html"           onclick="closeMenu()">关于我们</a>
+  <a href="products.html"        onclick="closeMenu()">产品介绍</a>
+  <a href="community.html"       onclick="closeMenu()">社区分享</a>
+  <a href="customize-start.html" onclick="closeMenu()">创作中心</a>
+  <a href="contact.html"         onclick="closeMenu()">联络我们</a>
+</div>
+
+<!-- 导航 -->
+<nav class="nav">
+  <a href="index.html" class="nav-logo">
+    <span class="nav-logo-cn">哞屋</span>
+    <span class="nav-logo-en">MOWO</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="about.html">关于我们</a></li>
+    <li><a href="products.html">产品介绍</a></li>
+    <li><a href="community.html">社区分享</a></li>
+    <li><a href="customize-start.html">创作中心</a></li>
+    <li><a href="contact.html">联络我们</a></li>
+  </ul>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <a href="auth.html" class="nav-login">登录</a>
+    <div class="burger" id="burger" onclick="toggleMenu()">
+      <span></span><span></span><span></span>
+    </div>
+  </div>
+</nav>
+
+<!-- 进度条 -->
+<div class="progress-bar"><div class="progress-fill"></div></div>
+
+<!-- 步骤指示 -->
+<div class="progress-steps">
+  <div class="step-item done"><div class="step-num">✓</div><span class="step-label">选型号</span></div>
+  <div class="step-divider"></div>
+  <div class="step-item done"><div class="step-num">✓</div><span class="step-label">上传 &amp; 筛帧</span></div>
+  <div class="step-divider"></div>
+  <div class="step-item active"><div class="step-num">3</div><span class="step-label">选款式</span></div>
+  <div class="step-divider"></div>
+  <div class="step-item"><div class="step-num">4</div><span class="step-label">确认 &amp; 购买</span></div>
+</div>
+
+<!-- 主体 -->
+<div class="page-wrap">
+  <div class="confirm-layout">
+
+    <!-- 左栏 -->
+    <div class="left-col">
+
+      <!-- 产品预览 -->
+      <div class="product-preview reveal" id="productPreview">
+        <div class="product-preview-mock">
+          <div class="product-mock-shape" id="mockShape">
+            <div class="mock-ring"></div>
+          </div>
+          <div class="preview-badge-row" id="previewBadges"></div>
+        </div>
+        <p class="preview-img-placeholder">产品图片占位 · 上线前替换为实物照片</p>
+      </div>
+
+      <!-- 选配区 -->
+      <div class="config-block">
+
+        <!-- 第一组：帧数规格 -->
+        <div class="config-section reveal d1">
+          <div class="config-label">
+            <span class="config-label-num">1</span>
+            选择帧数规格
+          </div>
+          <p class="config-desc" id="frameDesc">根据你上传的动画，以下规格可用。帧数越多动画越流畅。</p>
+          <div class="option-row" id="frameOptions">
+            <!-- 由 JS 渲染 -->
+          </div>
+        </div>
+
+        <!-- 第二组：材质 -->
+        <div class="config-section reveal d2">
+          <div class="config-label">
+            <span class="config-label-num">2</span>
+            选择材质
+          </div>
+          <p class="config-desc">不同材质影响重量、手感和价格。</p>
+          <div class="option-row" id="materialOptions">
+            <!-- 由 JS 渲染 -->
+          </div>
+        </div>
+
+        <!-- 第三组：颜色 -->
+        <div class="config-section reveal d3">
+          <div class="config-label">
+            <span class="config-label-num">3</span>
+            选择颜色
+          </div>
+          <p class="config-desc">颜色选项根据所选材质自动更新。</p>
+          <div id="colorArea">
+            <div class="color-locked" id="colorLocked">
+              <span>🎨</span>
+              <span>请先选择材质，颜色选项将在此显示</span>
+            </div>
+            <div class="option-row" id="colorOptions" style="display:none;"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 右栏：价格卡 -->
+    <div class="right-col">
+      <div class="price-card reveal">
+
+        <!-- 头部 -->
+        <div class="price-card-head">
+          <p class="price-card-machine" id="cardMachineName">— 机器型号 —</p>
+          <p class="price-card-title" id="cardConfigSummary">请完成选配</p>
+          <p class="price-card-sub" id="cardFrameInfo">—</p>
+        </div>
+
+        <!-- 大价格 -->
+        <div class="price-display">
+          <span class="price-unit">¥</span>
+          <span class="price-big" id="priceTotal">—</span>
+        </div>
+
+        <!-- 费用拆分 -->
+        <div class="price-breakdown">
+          <div class="breakdown-row">
+            <span class="breakdown-label">基础价格</span>
+            <span class="breakdown-val" id="breakBase">—</span>
+          </div>
+          <div class="breakdown-row">
+            <span class="breakdown-label">材质升级</span>
+            <span class="breakdown-val" id="breakMaterial">—</span>
+          </div>
+          <div class="breakdown-row">
+            <span class="breakdown-label">颜色定制</span>
+            <span class="breakdown-val" id="breakColor">—</span>
+          </div>
+          <div class="breakdown-divider"></div>
+          <div class="breakdown-row breakdown-total">
+            <span class="breakdown-label">合计</span>
+            <span class="breakdown-val" id="breakTotal">—</span>
+          </div>
+        </div>
+
+        <!-- 物流 & 生产 -->
+        <div class="price-info">
+          <div class="info-row">
+            <span class="info-icon">📦</span>
+            <span class="info-text"><strong>顺丰快递</strong> · 全国包邮，偏远地区补运费差价</span>
+          </div>
+          <div class="info-row">
+            <span class="info-icon">⏱</span>
+            <span class="info-text">生产周期 <strong>7—14 个工作日</strong>，节假日顺延</span>
+          </div>
+          <div class="info-row">
+            <span class="info-icon">🔒</span>
+            <span class="info-text">按需生产，支持 <strong>7天无理由退换</strong>（定制品除外）</span>
+          </div>
+        </div>
+
+        <!-- 已选款式列表 -->
+        <div class="added-list" id="addedList">
+          <p class="added-list-label">已选款式</p>
+          <div id="addedItems"><!-- 由JS渲染 --></div>
+          <div class="added-subtotal">
+            <span class="added-subtotal-label">已选合计</span>
+            <span class="added-subtotal-val">¥<span id="addedSubtotal">0</span></span>
+          </div>
+        </div>
+
+        <!-- 按钮区 -->
+        <div class="price-card-btns">
+          <p class="config-incomplete" id="incompleteHint">请完成全部选配后继续</p>
+          <button class="btn btn-secondary" id="btnAddMore" disabled onclick="addVariant()">
+            + 继续添加款式
+          </button>
+          <button class="btn btn-primary" id="btnBuy" disabled onclick="goBuy()">
+            立即购买 →
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- 移动端底部价格栏 -->
+<div class="mobile-price-bar" id="mobilePriceBar">
+  <div class="mob-price-info">
+    <p class="mob-price-label">当前选配 / 已选 <span id="mobAddedCount">0</span> 款</p>
+    <p class="mob-price-val">¥<span id="mobPriceVal">—</span></p>
+  </div>
+  <div class="mob-price-btns">
+    <button class="btn btn-secondary" id="mobBtnAddMore" disabled onclick="addVariant()">+ 添加</button>
+    <button class="btn btn-primary" id="mobBtnBuy" disabled onclick="goBuy()">购买 →</button>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════
+   数据：机型 + 选配数据
+   后端接入后替换为 API 请求
+══════════════════════════════ */
+const MACHINE_DATA = {
+  cylinder: {
+    name:  '经典圆筒款',
+    shape: 'mock-cylinder',
+    basePrice: { 12:199, 16:239, 24:289 },
+  },
+  lantern: {
+    name:  '手提灯笼款',
+    shape: 'mock-lantern',
+    basePrice: { 12:259, 16:319 },
+  },
+  hexagon: {
+    name:  '六棱柱款',
+    shape: 'mock-hexagon',
+    basePrice: { 6:189, 12:229 },
+  },
+  'flat-round': {
+    name:  '扁圆盒款',
+    shape: 'mock-flat',
+    basePrice: { 12:279, 24:339 },
+  },
+  'mini-pendant': {
+    name:  '迷你挂件款',
+    shape: 'mock-mini',
+    basePrice: { 12:149 },
+  },
+};
+
+/* 材质数据 */
+const MATERIAL_DATA = [
+  {
+    id: 'basswood',
+    name: '椴木板',
+    desc: '基础款 · 轻盈自然',
+    priceAdd: 0,
+    colors: [
+      { id:'natural', name:'原木色',  hex:'#D4B896' },
+      { id:'walnut',  name:'胡桃棕',  hex:'#7B5B3A' },
+    ],
+  },
+  {
+    id: 'acrylic',
+    name: '亚克力',
+    desc: '透明通透 · 光影效果',
+    priceAdd: 15,
+    colors: [
+      { id:'clear',   name:'透明',    hex:'#E8F4F8', border:true },
+      { id:'black',   name:'哑光黑',  hex:'#1A1A1A' },
+      { id:'blush',   name:'藕粉',    hex:'#F2C4CE' },
+      { id:'mint',    name:'薄荷绿',  hex:'#A8D8C8' },
+    ],
+  },
+  {
+    id: 'aluminum',
+    name: '铝合金',
+    desc: '金属质感 · 沉稳耐用',
+    priceAdd: 35,
+    colors: [
+      { id:'silver',  name:'银色',    hex:'#C0C0C0' },
+      { id:'black',   name:'哑光黑',  hex:'#2A2A2A' },
+      { id:'gold',    name:'香槟金',  hex:'#C8A96E' },
+      { id:'rose',    name:'玫瑰金',  hex:'#C5956A' },
+    ],
+  },
+  {
+    id: 'brass',
+    name: '黄铜铸造',
+    desc: '复古厚重 · 限量质感',
+    priceAdd: 60,
+    colors: [
+      { id:'brass',   name:'黄铜原色', hex:'#B8963E' },
+      { id:'antique', name:'做旧铜',   hex:'#7A6040' },
+    ],
+  },
+];
+
+/* 颜色加价（特殊颜色） */
+const COLOR_PRICE_ADD = {
+  rose: 5, antique: 10,
+};
+
+/* ══════════════════════════════
+   运行时状态
+══════════════════════════════ */
+let SEL = {
+  machineType:   null,
+  machineName:   null,
+  frameCount:    null,
+  validTargets:  [],
+  selectedFrame: null,
+  selectedMat:   null,
+  selectedColor: null,
+};
+
+/* 已选款式列表 */
+let CART = []; /* [{ frame, mat, matName, color, colorName, colorHex, price, summary }] */
+
+/* ══════════════════════════════
+   初始化
+══════════════════════════════ */
+(function init() {
+  /* 从 URL 和 localStorage 读取上一步的数据 */
+  const params = new URLSearchParams(location.search);
+  SEL.machineType  = params.get('type')    || 'cylinder';
+  SEL.frameCount   = parseInt(params.get('frames')) || 0;
+  const targetsStr = params.get('targets') || '';
+  SEL.validTargets = targetsStr ? targetsStr.split(',').map(Number).filter(Boolean) : [12];
+
+  try {
+    const meta = JSON.parse(localStorage.getItem('mowo_customize_meta') || '{}');
+    SEL.machineName = meta.name || MACHINE_DATA[SEL.machineType]?.name || '动画机';
+    if (meta.validTargets?.length) SEL.validTargets = meta.validTargets;
+  } catch(e) {}
+
+  const machine = MACHINE_DATA[SEL.machineType];
+  if (!machine) return;
+
+  /* 更新机型外观 */
+  const shape = document.getElementById('mockShape');
+  shape.className = 'product-mock-shape ' + machine.shape;
+  shape.innerHTML = '<div class="mock-ring"></div>';
+
+  /* 更新预览区顶部机型名 */
+  document.getElementById('cardMachineName').textContent = machine.name;
+  document.getElementById('previewBadges').innerHTML =
+    `<span class="preview-badge">${machine.name}</span>`;
+
+  /* 渲染帧数选项 */
+  renderFrameOptions(machine);
+
+  /* 渲染材质选项 */
+  renderMaterialOptions();
+
+  /* 判断创作者身份（从 token 读，这里用 localStorage 模拟） */
+  try {
+    const isCreator = JSON.parse(localStorage.getItem('mowo_token') || '{}').is_creator;
+    if (isCreator) {
+      document.getElementById('creatorBtns').style.display = 'block';
+      document.getElementById('mobBtnPublish').style.display = 'flex';
+    }
+  } catch(e) {}
+})();
+
+/* ══════════════════════════════
+   渲染帧数选项
+══════════════════════════════ */
+function renderFrameOptions(machine) {
+  const container = document.getElementById('frameOptions');
+  const desc      = document.getElementById('frameDesc');
+
+  /* validTargets 是可以被 frameCount 整除的目标帧数 */
+  if (!SEL.validTargets.length) {
+    desc.textContent = '未检测到可用帧数规格，请返回上一步重新筛帧。';
+    return;
+  }
+
+  desc.textContent = `你上传了 ${SEL.frameCount} 帧，系统将循环补齐至所选规格。帧数越多动画越流畅。`;
+
+  container.innerHTML = SEL.validTargets.map(f => {
+    const base     = machine.basePrice[f] || 0;
+    const loopInfo = f > SEL.frameCount
+      ? `循环 ×${f / SEL.frameCount}`
+      : '原始帧数';
+    return `
+      <div class="opt-btn" data-type="frame" data-val="${f}" data-base="${base}" onclick="selectOption(this,'frame')">
+        <span class="opt-check">✓</span>
+        <span class="opt-name">${f} 帧</span>
+        <span class="opt-price">${loopInfo} · ¥${base}</span>
+      </div>`;
+  }).join('');
+}
+
+/* ══════════════════════════════
+   渲染材质选项
+══════════════════════════════ */
+function renderMaterialOptions() {
+  const container = document.getElementById('materialOptions');
+  container.innerHTML = MATERIAL_DATA.map(m => {
+    const priceLabel = m.priceAdd === 0 ? '基础款' : `+¥${m.priceAdd}`;
+    const priceClass = m.priceAdd > 0 ? 'plus' : '';
+    return `
+      <div class="opt-btn" data-type="material" data-val="${m.id}" data-price-add="${m.priceAdd}" onclick="selectOption(this,'material')">
+        <span class="opt-check">✓</span>
+        <span class="opt-name">${m.name}</span>
+        <span class="opt-price ${priceClass}">${priceLabel} · ${m.desc}</span>
+      </div>`;
+  }).join('');
+}
+
+/* ══════════════════════════════
+   渲染颜色选项
+══════════════════════════════ */
+function renderColorOptions(materialId) {
+  const mat      = MATERIAL_DATA.find(m => m.id === materialId);
+  const locked   = document.getElementById('colorLocked');
+  const optArea  = document.getElementById('colorOptions');
+  if (!mat) { locked.style.display = 'flex'; optArea.style.display = 'none'; return; }
+
+  locked.style.display  = 'none';
+  optArea.style.display = 'flex';
+
+  optArea.innerHTML = mat.colors.map(c => {
+    const add   = COLOR_PRICE_ADD[c.id] || 0;
+    const label = add > 0 ? `+¥${add}` : c.name;
+    const borderStyle = c.border ? 'border:2px solid var(--gray2);' : '';
+    return `
+      <div class="color-item">
+        <div class="color-opt" data-type="color" data-val="${c.id}" data-price-add="${add}"
+             style="background:${c.hex};${borderStyle}" onclick="selectOption(this,'color')" title="${c.name}">
+          <span class="opt-check" style="top:-6px;right:-6px;">✓</span>
+        </div>
+        <span class="color-label">${label}</span>
+      </div>`;
+  }).join('');
+}
+
+/* ══════════════════════════════
+   统一选项选中处理
+══════════════════════════════ */
+function selectOption(el, type) {
+  /* 同组取消旧选中 */
+  document.querySelectorAll(`.opt-btn[data-type="${type}"], .color-opt[data-type="${type}"]`)
+    .forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+
+  if (type === 'frame') {
+    SEL.selectedFrame = parseInt(el.dataset.val);
+  } else if (type === 'material') {
+    SEL.selectedMat   = el.dataset.val;
+    SEL.selectedColor = null; /* 重置颜色 */
+    renderColorOptions(SEL.selectedMat);
+    /* 更新预览背景色 */
+    updatePreviewColor();
+  } else if (type === 'color') {
+    SEL.selectedColor = el.dataset.val;
+    updatePreviewColor();
+  }
+
+  updatePriceCard();
+}
+
+/* ══════════════════════════════
+   预览图颜色跟随
+══════════════════════════════ */
+function updatePreviewColor() {
+  const preview = document.getElementById('productPreview');
+  const shape   = document.getElementById('mockShape');
+  const colorEl = document.querySelector('.color-opt.selected');
+
+  if (colorEl) {
+    const hex = colorEl.style.background;
+    /* 预览区背景根据颜色变化 */
+    const rgb = hexToRgb(hex) || {r:235,g:234,b:231};
+    preview.style.background = `rgb(${Math.min(rgb.r+40,255)},${Math.min(rgb.g+40,255)},${Math.min(rgb.b+40,255)})`;
+    shape.style.background   = hex;
+  } else if (SEL.selectedMat) {
+    /* 只选了材质，用材质对应的默认背景 */
+    const matBg = {
+      basswood:'#E8DDD0', acrylic:'#D8EEF5', aluminum:'#D8D8D8', brass:'#E0CFA0'
+    };
+    preview.style.background = matBg[SEL.selectedMat] || '#F5F3EF';
+    shape.style.background   = '';
+  }
+
+  /* 更新徽章 */
+  const badges = [];
+  if (SEL.selectedFrame) badges.push(`${SEL.selectedFrame} 帧`);
+  if (SEL.selectedMat)   badges.push(MATERIAL_DATA.find(m=>m.id===SEL.selectedMat)?.name || '');
+  if (SEL.selectedColor) {
+    const mat = MATERIAL_DATA.find(m=>m.id===SEL.selectedMat);
+    const col = mat?.colors.find(c=>c.id===SEL.selectedColor);
+    if (col) badges.push(col.name);
+  }
+  document.getElementById('previewBadges').innerHTML =
+    badges.map(b=>`<span class="preview-badge">${b}</span>`).join('');
+}
+
+function hexToRgb(hex) {
+  /* 处理 rgb() 格式 */
+  const rgb = hex.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+  if (rgb) return { r:parseInt(rgb[1]), g:parseInt(rgb[2]), b:parseInt(rgb[3]) };
+  /* 处理 #hex 格式 */
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? { r:parseInt(result[1],16), g:parseInt(result[2],16), b:parseInt(result[3],16) } : null;
+}
+
+/* ══════════════════════════════
+   实时价格更新
+══════════════════════════════ */
+function updatePriceCard() {
+  const machine   = MACHINE_DATA[SEL.machineType];
+  const basePrice = SEL.selectedFrame ? (machine?.basePrice[SEL.selectedFrame] || 0) : 0;
+  const matAdd    = SEL.selectedMat
+    ? (MATERIAL_DATA.find(m=>m.id===SEL.selectedMat)?.priceAdd || 0) : 0;
+  const colorAdd  = SEL.selectedColor ? (COLOR_PRICE_ADD[SEL.selectedColor] || 0) : 0;
+  const total     = basePrice + matAdd + colorAdd;
+
+  const isComplete = !!(SEL.selectedFrame && SEL.selectedMat && SEL.selectedColor);
+
+  /* 大价格：显示当前选配价，有已选列表时显示合计 */
+  const cartTotal = CART.reduce((s, v) => s + v.price, 0);
+  const displayTotal = CART.length > 0 ? cartTotal + (isComplete ? total : 0) : (isComplete ? total : null);
+  document.getElementById('priceTotal').textContent  = displayTotal !== null ? displayTotal : '—';
+  document.getElementById('mobPriceVal').textContent = isComplete ? total : (cartTotal > 0 ? cartTotal : '—');
+
+  /* 拆分（显示当前正在配置的这一款） */
+  document.getElementById('breakBase').textContent     = basePrice ? `¥${basePrice}` : '—';
+  document.getElementById('breakMaterial').textContent = SEL.selectedMat
+    ? (matAdd > 0 ? `+¥${matAdd}` : '免费') : '—';
+  document.getElementById('breakColor').textContent    = SEL.selectedColor
+    ? (colorAdd > 0 ? `+¥${colorAdd}` : '免费') : '—';
+  document.getElementById('breakTotal').textContent    = isComplete ? `¥${total}` : '—';
+
+  /* 颜色样式 */
+  document.getElementById('breakMaterial').className =
+    'breakdown-val' + (matAdd > 0 ? ' plus' : matAdd === 0 && SEL.selectedMat ? ' free' : '');
+  document.getElementById('breakColor').className =
+    'breakdown-val' + (colorAdd > 0 ? ' plus' : colorAdd === 0 && SEL.selectedColor ? ' free' : '');
+
+  /* 配置摘要 */
+  if (isComplete) {
+    const mat = MATERIAL_DATA.find(m=>m.id===SEL.selectedMat);
+    const col = mat?.colors.find(c=>c.id===SEL.selectedColor);
+    document.getElementById('cardConfigSummary').textContent =
+      `${mat.name} · ${col?.name || ''} · ${SEL.selectedFrame}帧`;
+    document.getElementById('cardFrameInfo').textContent =
+      SEL.frameCount < SEL.selectedFrame
+        ? `你的 ${SEL.frameCount} 帧将循环补齐至 ${SEL.selectedFrame} 帧`
+        : `${SEL.selectedFrame} 帧动画`;
+  } else {
+    document.getElementById('cardConfigSummary').textContent =
+      CART.length > 0 ? `已选 ${CART.length} 款，继续配置新款式` : '请完成选配';
+    document.getElementById('cardFrameInfo').textContent = '—';
+  }
+
+  /* 按钮状态 */
+  const canAdd = isComplete;
+  const canBuy = isComplete || CART.length > 0;
+  document.getElementById('btnAddMore').disabled   = !canAdd;
+  document.getElementById('btnBuy').disabled       = !canBuy;
+  document.getElementById('mobBtnAddMore').disabled = !canAdd;
+  document.getElementById('mobBtnBuy').disabled    = !canBuy;
+
+  /* 移动端件数 */
+  document.getElementById('mobAddedCount').textContent = CART.length;
+
+  /* 提示文字 */
+  const hint = document.getElementById('incompleteHint');
+  if (isComplete || CART.length > 0) {
+    hint.style.display = 'none';
+  } else {
+    hint.style.display = 'block';
+    const missing = [];
+    if (!SEL.selectedFrame) missing.push('帧数规格');
+    if (!SEL.selectedMat)   missing.push('材质');
+    if (!SEL.selectedColor) missing.push('颜色');
+    hint.textContent = `还需选择：${missing.join('、')}`;
+  }
+
+  /* 已选列表 */
+  renderAddedList();
+}
+
+/* ══════════════════════════════
+   已选款式列表管理
+══════════════════════════════ */
+function addVariant() {
+  if (!SEL.selectedFrame || !SEL.selectedMat || !SEL.selectedColor) return;
+  const machine  = MACHINE_DATA[SEL.machineType];
+  const mat      = MATERIAL_DATA.find(m => m.id === SEL.selectedMat);
+  const col      = mat?.colors.find(c => c.id === SEL.selectedColor);
+  const base     = machine?.basePrice[SEL.selectedFrame] || 0;
+  const matAdd   = mat?.priceAdd || 0;
+  const colorAdd = COLOR_PRICE_ADD[SEL.selectedColor] || 0;
+
+  CART.push({
+    id:        Date.now(),
+    frame:     SEL.selectedFrame,
+    mat:       SEL.selectedMat,
+    matName:   mat?.name,
+    color:     SEL.selectedColor,
+    colorName: col?.name,
+    colorHex:  col ? getColorHex(SEL.selectedMat, SEL.selectedColor) : '#eee',
+    price:     base + matAdd + colorAdd,
+    summary:   `${SEL.selectedFrame}帧 · ${mat?.name} · ${col?.name}`,
+  });
+
+  /* 重置当前选配（但保留帧数，方便继续选其他款） */
+  SEL.selectedMat   = null;
+  SEL.selectedColor = null;
+  document.querySelectorAll('.opt-btn[data-type="material"], .opt-btn[data-type="frame"]')
+    .forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('.color-opt').forEach(b => b.classList.remove('selected'));
+  document.getElementById('colorLocked').style.display = 'flex';
+  document.getElementById('colorOptions').style.display = 'none';
+
+  updatePriceCard();
+}
+
+function removeVariant(id) {
+  CART = CART.filter(v => v.id !== id);
+  updatePriceCard();
+}
+
+function getColorHex(matId, colorId) {
+  const mat = MATERIAL_DATA.find(m => m.id === matId);
+  return mat?.colors.find(c => c.id === colorId)?.hex || '#eee';
+}
+
+function renderAddedList() {
+  const list  = document.getElementById('addedList');
+  const items = document.getElementById('addedItems');
+  const sub   = document.getElementById('addedSubtotal');
+
+  if (!CART.length) {
+    list.classList.remove('has-items');
+    return;
+  }
+  list.classList.add('has-items');
+
+  items.innerHTML = CART.map(v => `
+    <div class="added-item">
+      <div class="added-item-swatch" style="background:${v.colorHex}"></div>
+      <div class="added-item-info">
+        <p class="added-item-name">${v.summary}</p>
+        <p class="added-item-price">¥${v.price}</p>
+      </div>
+      <button class="added-item-remove" onclick="removeVariant(${v.id})" title="移除">✕</button>
+    </div>
+  `).join('');
+
+  const total = CART.reduce((s, v) => s + v.price, 0);
+  document.getElementById('addedSubtotal').textContent = total;
+}
+
+/* ══════════════════════════════
+   跳转
+══════════════════════════════ */
+function goBuy() {
+  /* 如果当前还有未加入列表的完整选配，先自动加入 */
+  if (SEL.selectedFrame && SEL.selectedMat && SEL.selectedColor && CART.length === 0) {
+    addVariantSilent();
+  } else if (SEL.selectedFrame && SEL.selectedMat && SEL.selectedColor) {
+    addVariantSilent();
+  }
+  if (!CART.length) return;
+  saveToStorage();
+  location.href = `checkout.html?type=${SEL.machineType}&frames=${SEL.validTargets.join(',')}`;
+}
+
+/* 静默加入（不重置选配界面，仅用于结算前最后一次） */
+function addVariantSilent() {
+  const machine  = MACHINE_DATA[SEL.machineType];
+  const mat      = MATERIAL_DATA.find(m => m.id === SEL.selectedMat);
+  const col      = mat?.colors.find(c => c.id === SEL.selectedColor);
+  const base     = machine?.basePrice[SEL.selectedFrame] || 0;
+  const matAdd   = mat?.priceAdd || 0;
+  const colorAdd = COLOR_PRICE_ADD[SEL.selectedColor] || 0;
+  /* 避免重复加入 */
+  const dup = CART.find(v =>
+    v.frame === SEL.selectedFrame &&
+    v.mat   === SEL.selectedMat   &&
+    v.color === SEL.selectedColor
+  );
+  if (dup) return;
+  CART.push({
+    id: Date.now(), frame: SEL.selectedFrame,
+    mat: SEL.selectedMat, matName: mat?.name,
+    color: SEL.selectedColor, colorName: col?.name,
+    colorHex: getColorHex(SEL.selectedMat, SEL.selectedColor),
+    price: base + matAdd + colorAdd,
+    summary: `${SEL.selectedFrame}帧 · ${mat?.name} · ${col?.name}`,
+  });
+}
+
+function saveToStorage() {
+  try {
+    const meta = JSON.parse(localStorage.getItem('mowo_customize_meta') || '{}');
+    meta.cart        = CART;
+    meta.cartTotal   = CART.reduce((s, v) => s + v.price, 0);
+    meta.machineType = SEL.machineType;
+    meta.frameCount  = SEL.frameCount;
+    localStorage.setItem('mowo_customize_meta', JSON.stringify(meta));
+  } catch(e) {}
+}
+
+/* ══════════════════════════════
+   导航菜单
+══════════════════════════════ */
+function toggleMenu() {
+  const m = document.getElementById('mobileMenu');
+  const b = document.getElementById('burger');
+  const open = m.classList.toggle('open');
+  b.classList.toggle('open', open);
+  document.body.style.overflow = open ? 'hidden' : '';
+}
+function closeMenu() {
+  document.getElementById('mobileMenu').classList.remove('open');
+  document.getElementById('burger').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+/* ══════════════════════════════
+   滚动 reveal
+══════════════════════════════ */
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('on'); obs.unobserve(e.target); } });
+}, { threshold:0.06 });
+document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+
+/* ══════════════════════════════
+   自定义光标
+══════════════════════════════ */
+if (window.matchMedia('(pointer:fine)').matches) {
+  const c = document.createElement('div');
+  const r = document.createElement('div');
+  const cs = 'position:fixed;border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%)';
+  c.style.cssText = cs + ';width:8px;height:8px;background:#111';
+  r.style.cssText = cs + ';width:32px;height:32px;border:1.5px solid rgba(17,17,16,.3);transition:width .3s,height .3s,opacity .3s';
+  document.body.append(c, r);
+  document.body.style.cursor = 'none';
+  let mx=0,my=0,rx=0,ry=0;
+  document.addEventListener('mousemove', e => { mx=e.clientX; my=e.clientY; c.style.left=mx+'px'; c.style.top=my+'px'; });
+  (function tick(){ rx+=(mx-rx)*.12; ry+=(my-ry)*.12; r.style.left=rx+'px'; r.style.top=ry+'px'; requestAnimationFrame(tick); })();
+  document.querySelectorAll('a,button,.opt-btn,.color-opt').forEach(el => {
+    el.addEventListener('mouseenter',()=>{ r.style.width='44px';r.style.height='44px';r.style.opacity='.4'; });
+    el.addEventListener('mouseleave',()=>{ r.style.width='32px';r.style.height='32px';r.style.opacity='1'; });
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,429 @@
+// ================================================================
+// 哞屋 MOWO 平台 — Prisma Schema
+// 数据库：PostgreSQL
+// 共22张表，分四组 + 平台规则
+// ================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+// ================================================================
+// 第一组：用户与身份（7张表）
+// ================================================================
+
+// 账号主表，只存登录鉴权相关字段
+model User {
+  id             String    @id @default(uuid())
+  phone          String    @unique
+  passwordHash   String    @map("password_hash")
+  certifyStatus  Int       @default(0) @map("certify_status") // 0未申请 1审核中 2通过 3拒绝
+  isBanned       Boolean   @default(false) @map("is_banned")
+  lastLoginAt    DateTime? @map("last_login_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  // 关联
+  profile              UserProfile?
+  creatorProfile       CreatorProfile?
+  certifyApplications  CertifyApplication[]
+  creditScore          CreditScore?
+  creditLogs           CreditLog[]
+  reportsMade          Report[]             @relation("ReporterRelation")
+  articles             Article[]
+  comments             Comment[]
+  likes                Like[]
+  collects             Collect[]
+  following            Follow[]             @relation("FollowerRelation")
+  followers            Follow[]             @relation("FollowingRelation")
+  animations           Animation[]
+  products             Product[]
+  earnings             Earning[]
+  balance              Balance?
+  withdrawalRequests   WithdrawalRequest[]
+
+  @@map("users")
+}
+
+// 所有用户的主页展示信息，注册时自动创建
+model UserProfile {
+  id             String    @id @default(uuid())
+  userId         String    @unique @map("user_id")
+  nickname       String?   @db.VarChar(50)
+  avatarUrl      String?   @map("avatar_url") @db.VarChar(500)
+  bio            String?   @db.Text
+  gender         Int       @default(0)  // 0保密 1男 2女
+  birthday       DateTime? @db.Date
+  city           String?   @db.VarChar(50)
+  mbti           String?   @db.VarChar(4)
+  email          String?   @db.VarChar(100)
+  followerCount  Int       @default(0) @map("follower_count")
+  followingCount Int       @default(0) @map("following_count")
+  articleCount   Int       @default(0) @map("article_count")
+  likedCount     Int       @default(0) @map("liked_count")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("user_profiles")
+}
+
+// 创作者专属主页信息，认证通过后自动创建
+model CreatorProfile {
+  id               String   @id @default(uuid())
+  userId           String   @unique @map("user_id")
+  styleTags        String?  @map("style_tags") @db.VarChar(500) // JSON数组，如["治愈","复古"]
+  weiboUrl         String?  @map("weibo_url") @db.VarChar(500)
+  xiaohongshuUrl   String?  @map("xiaohongshu_url") @db.VarChar(500)
+  bilibiliUrl      String?  @map("bilibili_url") @db.VarChar(500)
+  totalSales       Int      @default(0) @map("total_sales")
+  productCount     Int      @default(0) @map("product_count")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("creator_profiles")
+}
+
+// 创作者认证申请记录，每次申请新增一行，历史保留
+model CertifyApplication {
+  id                   String    @id @default(uuid())
+  userId               String    @map("user_id")
+  creatorName          String    @map("creator_name") @db.VarChar(100)
+  creatorType          String    @map("creator_type") @db.VarChar(20) // personal/studio/brand
+  mainStyle            String?   @map("main_style") @db.VarChar(500)  // JSON数组
+  portfolioUrls        String?   @map("portfolio_urls") @db.Text      // JSON数组
+  realName             String    @map("real_name") @db.VarChar(50)
+  idNumberLast4        String    @map("id_number_last4") @db.VarChar(4)
+  certifyPassed        Boolean   @default(false) @map("certify_passed") // 第三方实名结果
+  copyrightConfirmed   Boolean   @default(false) @map("copyright_confirmed")
+  agreementConfirmed   Boolean   @default(false) @map("agreement_confirmed")
+  status               String    @default("pending") @db.VarChar(20)  // pending/approved/rejected
+  rejectReason         String?   @map("reject_reason") @db.VarChar(500)
+  appliedAt            DateTime  @default(now()) @map("applied_at")
+  reviewedAt           DateTime? @map("reviewed_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("certify_applications")
+}
+
+// 信用分主表，每个用户一条记录
+model CreditScore {
+  id        String   @id @default(uuid())
+  userId    String   @unique @map("user_id")
+  score     Int      @default(100)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("credit_scores")
+}
+
+// 信用分变动记录，每次加减分记一行，用于追溯和申诉
+model CreditLog {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  delta      Int      // 正数加分，负数扣分
+  reason     String   @db.VarChar(100) // 如"举报成立"/"内容被下架"
+  relatedId  String?  @map("related_id") // 关联的内容ID或举报ID
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("credit_logs")
+}
+
+// 举报记录
+model Report {
+  id          String    @id @default(uuid())
+  reporterId  String    @map("reporter_id")
+  targetType  String    @map("target_type") @db.VarChar(20) // article/product/user
+  targetId    String    @map("target_id")
+  reason      String    @db.VarChar(50)   // 抄袭/色情/虚假信息
+  description String?   @db.Text
+  status      String    @default("pending") @db.VarChar(20) // pending/valid/invalid
+  reviewedBy  String?   @map("reviewed_by")
+  reviewedAt  DateTime? @map("reviewed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  reporter User @relation("ReporterRelation", fields: [reporterId], references: [id])
+
+  @@map("reports")
+}
+
+// ================================================================
+// 第二组：文章与社区（6张表）
+// ================================================================
+
+// 文章主表，普通用户和创作者都可以发
+model Article {
+  id           String    @id @default(uuid())
+  userId       String    @map("user_id")
+  title        String    @db.VarChar(200)
+  content      String    @db.Text          // 富文本HTML
+  coverUrl     String?   @map("cover_url") @db.VarChar(500)
+  tags         String?   @db.VarChar(500)  // JSON数组，如["治愈","动画机"]
+  status       String    @default("pending") @db.VarChar(20)
+  // draft草稿/pending待审核/published已发布/rejected拒绝/removed下架
+  // 信用分>=80直接published，否则进pending
+  rejectReason String?   @map("reject_reason") @db.VarChar(500)
+  viewCount    Int       @default(0) @map("view_count")
+  likeCount    Int       @default(0) @map("like_count")
+  collectCount Int       @default(0) @map("collect_count")
+  commentCount Int       @default(0) @map("comment_count")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  user            User             @relation(fields: [userId], references: [id])
+  articleProducts ArticleProduct[]
+  comments        Comment[]
+  collects        Collect[]
+
+  @@map("articles")
+}
+
+// 文章关联商品，解决文章和商品多对多关系
+model ArticleProduct {
+  id        String   @id @default(uuid())
+  articleId String   @map("article_id")
+  productId String   @map("product_id")
+  position  Int      // 商品卡片在文章中的顺序，从1开始
+  createdAt DateTime @default(now()) @map("created_at")
+
+  article Article @relation(fields: [articleId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@unique([articleId, productId])
+  @@map("article_products")
+}
+
+// 评论表，支持二级回复
+model Comment {
+  id             String    @id @default(uuid())
+  articleId      String    @map("article_id")
+  userId         String    @map("user_id")
+  parentId       String?   @map("parent_id")       // 顶级评论为null
+  replyToUserId  String?   @map("reply_to_user_id") // 被回复的人，显示"回复@xxx"
+  content        String    @db.Text
+  likeCount      Int       @default(0) @map("like_count")
+  status         String    @default("published") @db.VarChar(20) // published/removed
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  article  Article   @relation(fields: [articleId], references: [id])
+  user     User      @relation(fields: [userId], references: [id])
+  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies  Comment[] @relation("CommentReplies")
+
+  @@map("comments")
+}
+
+// 点赞表，文章点赞和评论点赞合并
+model Like {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  targetType String   @map("target_type") @db.VarChar(20) // article/comment
+  targetId   String   @map("target_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, targetType, targetId]) // 防止重复点赞
+  @@map("likes")
+}
+
+// 收藏表，目前只收藏文章
+model Collect {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  articleId String   @map("article_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User    @relation(fields: [userId], references: [id])
+  article Article @relation(fields: [articleId], references: [id])
+
+  @@unique([userId, articleId]) // 防止重复收藏
+  @@map("collects")
+}
+
+// 关注关系表
+model Follow {
+  id          String   @id @default(uuid())
+  followerId  String   @map("follower_id")  // 关注人（我）
+  followingId String   @map("following_id") // 被关注人
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  follower  User @relation("FollowerRelation", fields: [followerId], references: [id])
+  following User @relation("FollowingRelation", fields: [followingId], references: [id])
+
+  @@unique([followerId, followingId]) // 防止重复关注
+  @@map("follows")
+}
+
+// ================================================================
+// 第三组：动画内容与商品（5张表）
+// ================================================================
+
+// 动画内容本体，和商品分开存，同一套动画可以开多个机型商品
+model Animation {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  title          String   @db.VarChar(200)
+  description    String?  @db.Text
+  previewUrl     String?  @map("preview_url") @db.VarChar(500) // 预览GIF/视频
+  frameCount     Int      @map("frame_count") // 帧数，决定能配哪些机型
+  copyrightType  String   @map("copyright_type") @db.VarChar(20) // original/licensed/buyout
+  copyrightNote  String?  @map("copyright_note") @db.Text
+  status         String   @default("draft") @db.VarChar(20) // draft/published/removed
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user     User             @relation(fields: [userId], references: [id])
+  frames   AnimationFrame[]
+  products Product[]
+
+  @@map("animations")
+}
+
+// 动画帧图，单独一张表方便替换单帧
+model AnimationFrame {
+  id          String   @id @default(uuid())
+  animationId String   @map("animation_id")
+  frameIndex  Int      @map("frame_index") // 帧序号，从1开始
+  imageUrl    String   @map("image_url") @db.VarChar(500)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  animation Animation @relation(fields: [animationId], references: [id])
+
+  @@unique([animationId, frameIndex]) // 同一动画不能有重复序号
+  @@map("animation_frames")
+}
+
+// 商品表，创作者基于动画内容开的商品
+model Product {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  animationId    String   @map("animation_id")
+  crmebProductId String?  @map("crmeb_product_id") @db.VarChar(100) // CRMEB对应SKU
+  title          String   @db.VarChar(200)
+  description    String?  @db.Text
+  machineType    String   @map("machine_type") @db.VarChar(20)
+  // cylinder/lantern/hexagon/flat-round/mini
+  frameCount     Int      @map("frame_count")
+  basePrice      Decimal  @map("base_price") @db.Decimal(10, 2)   // 平台底价
+  markupPrice    Decimal  @map("markup_price") @db.Decimal(10, 2) // 创作者加价
+  finalPrice     Decimal  @map("final_price") @db.Decimal(10, 2)  // 底价+加价
+  stockType      String   @default("unlimited") @map("stock_type") @db.VarChar(20) // unlimited/limited
+  stockLimit     Int?     @map("stock_limit")   // 限量数量，unlimited时为null
+  status         String   @default("pending") @db.VarChar(20)
+  // draft/pending/published/rejected/removed/soldout
+  rejectReason   String?  @map("reject_reason") @db.VarChar(500)
+  salesCount     Int      @default(0) @map("sales_count")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user            User             @relation(fields: [userId], references: [id])
+  animation       Animation        @relation(fields: [animationId], references: [id])
+  articleProducts ArticleProduct[]
+  orderExts       OrderExt[]
+  earnings        Earning[]
+
+  @@map("products")
+}
+
+// 订单扩展表，连接CRMEB订单和我们的动画数据
+model OrderExt {
+  id               String   @id @default(uuid())
+  crmebOrderId     String   @map("crmeb_order_id") @db.VarChar(100)
+  productId        String   @map("product_id")
+  animationId      String   @map("animation_id") // 冗余，方便生产部门直接拿
+  buyerId          String   @map("buyer_id")
+  creatorId        String   @map("creator_id")
+  finalPrice       Decimal  @map("final_price") @db.Decimal(10, 2)      // 成交价快照
+  platformFeeRate  Decimal  @map("platform_fee_rate") @db.Decimal(5, 2) // 抽成比例快照
+  platformFee      Decimal  @map("platform_fee") @db.Decimal(10, 2)     // 平台抽成金额
+  creatorIncome    Decimal  @map("creator_income") @db.Decimal(10, 2)   // 创作者实得
+  productionStatus String   @default("waiting") @map("production_status") @db.VarChar(20)
+  // waiting等待生产/producing生产中/done已完成
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("orders_ext")
+}
+
+// 平台规则表，存费率等可调整的平台参数
+model PlatformRule {
+  id          String   @id @default(uuid())
+  ruleKey     String   @unique @map("rule_key") @db.VarChar(50)
+  // fee_rate_default默认费率/fee_rate_vip优质创作者费率
+  ruleValue   Decimal  @map("rule_value") @db.Decimal(10, 2)
+  description String?  @db.VarChar(200)
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("platform_rules")
+}
+
+// ================================================================
+// 第四组：收益与提现（3张表）
+// ================================================================
+
+// 每笔订单成交后自动生成的收益记录
+model Earning {
+  id              String    @id @default(uuid())
+  creatorId       String    @map("creator_id")
+  orderExtId      String    @map("order_ext_id")
+  productId       String    @map("product_id") // 冗余，方便查
+  grossAmount     Decimal   @map("gross_amount") @db.Decimal(10, 2)     // 订单总价
+  platformFeeRate Decimal   @map("platform_fee_rate") @db.Decimal(5, 2) // 抽成比例快照
+  platformFee     Decimal   @map("platform_fee") @db.Decimal(10, 2)     // 平台抽成
+  netAmount       Decimal   @map("net_amount") @db.Decimal(10, 2)       // 创作者实得
+  status          String    @default("pending") @db.VarChar(20)
+  // pending待结算/available可提现/withdrawn已提现
+  availableAt     DateTime? @map("available_at") // 到期自动变available
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  creator User    @relation(fields: [creatorId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("earnings")
+}
+
+// 创作者账户余额，冗余表，避免每次打开收益页都去统计
+model Balance {
+  id              String   @id @default(uuid())
+  creatorId       String   @unique @map("creator_id")
+  pendingAmount   Decimal  @default(0) @map("pending_amount") @db.Decimal(10, 2)   // 待结算
+  availableAmount Decimal  @default(0) @map("available_amount") @db.Decimal(10, 2) // 可提现
+  withdrawnAmount Decimal  @default(0) @map("withdrawn_amount") @db.Decimal(10, 2) // 累计已提现
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  creator User @relation(fields: [creatorId], references: [id])
+
+  @@map("balances")
+}
+
+// 提现申请记录
+model WithdrawalRequest {
+  id            String    @id @default(uuid())
+  creatorId     String    @map("creator_id")
+  amount        Decimal   @db.Decimal(10, 2)
+  method        String    @db.VarChar(20)      // alipay/bankcard
+  accountName   String    @map("account_name") @db.VarChar(50)
+  accountNumber String    @map("account_number") @db.VarChar(100)
+  bankName      String?   @map("bank_name") @db.VarChar(100) // method为bankcard时填
+  status        String    @default("pending") @db.VarChar(20) // pending/approved/rejected
+  rejectReason  String?   @map("reject_reason") @db.VarChar(500)
+  reviewedBy    String?   @map("reviewed_by")
+  reviewedAt    DateTime? @map("reviewed_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  creator User @relation(fields: [creatorId], references: [id])
+
+  @@map("withdrawal_requests")
+}

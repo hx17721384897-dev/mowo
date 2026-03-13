@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>关于我们 — 哞屋 MOWO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Noto+Sans+SC:wght@300;400;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --white:    #FFFFFF;
+  --cream:    #F5F3EF;
+  --black:    #111110;
+  --gray1:    #EBEBEA;
+  --gray2:    #C4C3BF;
+  --gray3:    #787874;
+  --accent-y: #F5E642;
+  --accent-o: #FF6B35;
+  --accent-g: #8FD694;
+  --accent-b: #7EC8E3;
+  --font:     'Nunito', 'Noto Sans SC', sans-serif;
+  --ease:     cubic-bezier(0.22, 1, 0.36, 1);
+  --pad-mob:  24px;
+  --pad-desk: 72px;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:var(--font);background:var(--white);color:var(--black);overflow-x:hidden;-webkit-font-smoothing:antialiased;}
+a{text-decoration:none;color:inherit;}
+button{font-family:var(--font);cursor:pointer;border:none;}
+
+/* ── NAV ── */
+.nav{position:fixed;top:0;left:0;right:0;z-index:800;display:flex;align-items:center;justify-content:space-between;padding:14px var(--pad-mob);background:rgba(255,255,255,.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid rgba(0,0,0,.06);}
+@media(min-width:1024px){.nav{padding:20px var(--pad-desk);}}
+.nav-logo{line-height:1;}
+.nav-logo-cn{font-weight:900;font-size:22px;letter-spacing:-.01em;color:var(--black);display:block;}
+.nav-logo-en{font-weight:700;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--gray3);display:block;margin-top:1px;}
+.nav-links{display:none;list-style:none;gap:36px;}
+@media(min-width:1024px){.nav-links{display:flex;}}
+.nav-links a{font-weight:800;font-size:14px;color:var(--gray3);transition:color .2s;position:relative;padding-bottom:3px;}
+.nav-links a::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--accent-y);border-radius:2px;transform:scaleX(0);transition:transform .25s var(--ease);}
+.nav-links a:hover{color:var(--black);}
+.nav-links a:hover::after,.nav-links a.active::after{transform:scaleX(1);}
+.nav-links a.active{color:var(--black);}
+.nav-login{font-weight:800;font-size:13px;padding:10px 22px;background:var(--black);color:var(--white);border-radius:999px;min-height:44px;display:flex;align-items:center;transition:opacity .2s;}
+.nav-login:hover{opacity:.8;}
+.burger{display:flex;flex-direction:column;gap:5px;cursor:pointer;padding:8px;min-width:44px;min-height:44px;justify-content:center;align-items:center;}
+@media(min-width:1024px){.burger{display:none;}}
+.burger span{display:block;width:22px;height:2px;background:var(--black);border-radius:2px;transition:transform .3s,opacity .3s;}
+.burger.open span:nth-child(1){transform:translateY(7px) rotate(45deg);}
+.burger.open span:nth-child(2){opacity:0;}
+.burger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg);}
+.mobile-menu{position:fixed;inset:0;background:var(--black);z-index:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:36px;opacity:0;pointer-events:none;transition:opacity .35s var(--ease);}
+.mobile-menu.open{opacity:1;pointer-events:all;}
+.mobile-menu a{font-weight:900;font-size:clamp(28px,8vw,48px);color:var(--white);transition:color .2s;}
+.mobile-menu a:hover{color:var(--accent-y);}
+
+/* ══════════════════════
+   HERO — 宣言
+══════════════════════ */
+#hero{
+  min-height:100vh;
+  background:var(--cream);
+  display:flex;align-items:center;
+  padding:120px var(--pad-mob) 80px;
+  position:relative;overflow:hidden;
+}
+@media(min-width:1024px){#hero{padding:120px var(--pad-desk) 80px;}}
+
+/* Yellow blob decoration */
+.hero-blob{
+  position:absolute;
+  border-radius:50%;
+  pointer-events:none;
+  filter:blur(60px);
+}
+.hero-blob-1{
+  width:min(500px,100vw);height:min(500px,100vw);
+  background:var(--accent-y);opacity:.22;
+  top:-10%;right:-10%;
+  animation:blob-float 8s ease-in-out infinite;
+}
+.hero-blob-2{
+  width:min(300px,70vw);height:min(300px,70vw);
+  background:var(--accent-g);opacity:.14;
+  bottom:5%;left:-5%;
+  animation:blob-float 10s ease-in-out 2s infinite reverse;
+}
+@keyframes blob-float{
+  0%,100%{transform:translate(0,0) scale(1);}
+  50%{transform:translate(20px,-20px) scale(1.05);}
+}
+
+/* Large decorative number */
+.hero-bg-num{
+  position:absolute;
+  right:-20px;bottom:-60px;
+  font-weight:900;font-size:min(400px,60vw);
+  line-height:1;letter-spacing:-.06em;
+  color:rgba(0,0,0,.04);
+  pointer-events:none;user-select:none;
+}
+
+.hero-inner{
+  position:relative;z-index:2;
+  max-width:900px;
+}
+.hero-eyebrow{
+  font-weight:800;font-size:11px;letter-spacing:.25em;
+  text-transform:uppercase;color:var(--gray3);
+  margin-bottom:28px;
+  opacity:0;animation:fup .8s var(--ease) .2s forwards;
+}
+.hero-statement{
+  font-weight:900;
+  font-size:clamp(38px,7.5vw,88px);
+  line-height:1.08;letter-spacing:-.03em;
+  color:var(--black);
+  margin-bottom:36px;
+  opacity:0;animation:fup .9s var(--ease) .4s forwards;
+}
+.hero-statement .hl{
+  display:inline-block;
+  position:relative;
+  z-index:1;
+}
+.hero-statement .hl::after{
+  content:'';
+  position:absolute;bottom:4px;left:-4px;right:-4px;
+  height:14px;background:var(--accent-y);
+  border-radius:4px;z-index:-1;
+}
+.hero-desc{
+  font-weight:700;font-size:clamp(15px,2vw,19px);
+  color:var(--gray3);line-height:1.9;
+  max-width:560px;
+  opacity:0;animation:fup .9s var(--ease) .65s forwards;
+}
+
+@keyframes fup{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:none;}}
+
+/* ══════════════════════
+   STORY — 时间轴
+══════════════════════ */
+#story{
+  padding:120px var(--pad-mob);
+  background:var(--white);
+}
+@media(min-width:1024px){#story{padding:140px var(--pad-desk);}}
+
+.story-header{
+  margin-bottom:80px;
+}
+.sec-eyebrow{font-weight:800;font-size:11px;letter-spacing:.25em;text-transform:uppercase;color:var(--gray3);margin-bottom:16px;}
+.sec-title{font-weight:900;font-size:clamp(30px,6vw,60px);line-height:1.1;letter-spacing:-.02em;color:var(--black);}
+
+/* Timeline */
+.timeline{
+  position:relative;
+  max-width:800px;
+}
+/* Vertical line */
+.timeline::before{
+  content:'';
+  position:absolute;
+  top:0;bottom:0;left:19px;
+  width:2px;
+  background:linear-gradient(to bottom,var(--gray1),var(--gray2),var(--gray1));
+  border-radius:2px;
+}
+@media(min-width:640px){
+  .timeline::before{left:23px;}
+}
+
+.tl-item{
+  display:flex;gap:28px;
+  margin-bottom:64px;
+  position:relative;
+}
+.tl-item:last-child{margin-bottom:0;}
+
+.tl-dot-wrap{
+  flex-shrink:0;
+  display:flex;flex-direction:column;align-items:center;
+  position:relative;z-index:1;
+}
+.tl-dot{
+  width:40px;height:40px;
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;
+  flex-shrink:0;
+  border:2px solid var(--gray1);
+  background:var(--cream);
+  transition:transform .3s var(--ease);
+}
+.tl-item:hover .tl-dot{transform:scale(1.15);}
+.tl-item:nth-child(1) .tl-dot{background:#F5F3EF;border-color:var(--gray2);}
+.tl-item:nth-child(2) .tl-dot{background:var(--accent-y);border-color:var(--accent-y);}
+.tl-item:nth-child(3) .tl-dot{background:#2A1E18;border-color:#3A2E28;}
+.tl-item:nth-child(4) .tl-dot{background:var(--black);border-color:var(--black);}
+
+.tl-body{padding-top:8px;}
+.tl-time{
+  font-weight:800;font-size:11px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--gray3);
+  margin-bottom:10px;
+}
+.tl-title{
+  font-weight:900;font-size:clamp(20px,3vw,26px);
+  letter-spacing:-.01em;color:var(--black);
+  margin-bottom:12px;line-height:1.2;
+}
+.tl-item:nth-child(3) .tl-title{color:var(--black);}
+.tl-desc{
+  font-weight:700;font-size:15px;line-height:1.9;
+  color:var(--gray3);max-width:580px;
+}
+
+/* Quote callout */
+.tl-quote{
+  margin-top:20px;
+  padding:20px 24px;
+  background:var(--white);
+  border-radius:16px;
+  border-left:4px solid var(--accent-y);
+  max-width:520px;
+}
+.tl-quote p{
+  font-weight:800;font-size:15px;line-height:1.8;
+  color:var(--black);font-style:italic;
+}
+
+/* Warm callout for hardship node — light not dark */
+.tl-hardship{
+  margin-top:20px;
+  padding:20px 24px;
+  background:#FFF3EC;
+  border-radius:16px;
+  border-left:4px solid var(--accent-o);
+  max-width:520px;
+}
+.tl-hardship p{
+  font-weight:700;font-size:14px;line-height:1.85;
+  color:#6B3A20;
+}
+
+/* ══════════════════════
+   BELIEFS — 我们相信
+══════════════════════ */
+#beliefs{
+  background:var(--cream);
+  padding:120px var(--pad-mob);
+}
+@media(min-width:1024px){#beliefs{padding:140px var(--pad-desk);}}
+
+.beliefs-header{
+  text-align:center;
+  margin-bottom:72px;
+}
+.beliefs-header .sec-eyebrow{color:var(--gray3);}
+.beliefs-header .sec-title{color:var(--black);}
+
+.beliefs-grid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:16px;
+  max-width:1100px;
+  margin:0 auto;
+}
+@media(min-width:640px){.beliefs-grid{grid-template-columns:1fr 1fr 1fr;}}
+
+.belief-card{
+  padding:40px 32px;
+  border-radius:28px;
+  position:relative;
+  overflow:hidden;
+  transition:transform .3s var(--ease), box-shadow .3s;
+  border:2px solid transparent;
+}
+.belief-card:hover{
+  transform:translateY(-6px);
+  box-shadow:0 20px 48px rgba(0,0,0,.1);
+}
+.belief-card:nth-child(1){ background:#FFFBE6; border-color:#F0DC30; }
+.belief-card:nth-child(2){ background:#FFF2EC; border-color:#FFB899; }
+.belief-card:nth-child(3){ background:#EDFBEE; border-color:#A8E6AC; }
+
+.belief-num{
+  font-weight:900;font-size:52px;letter-spacing:-.04em;
+  line-height:1;margin-bottom:20px;
+}
+.belief-card:nth-child(1) .belief-num{ color:rgba(180,150,0,.2); }
+.belief-card:nth-child(2) .belief-num{ color:rgba(200,90,30,.15); }
+.belief-card:nth-child(3) .belief-num{ color:rgba(40,140,60,.15); }
+
+.belief-title{
+  font-weight:900;font-size:clamp(17px,2.5vw,21px);
+  letter-spacing:-.01em;line-height:1.3;
+  color:var(--black);margin-bottom:14px;
+}
+.belief-desc{
+  font-weight:700;font-size:14px;line-height:1.9;
+  color:var(--gray3);
+}
+
+.belief-card::after{
+  content:'';
+  position:absolute;
+  bottom:0;left:0;right:0;height:4px;
+  transform:scaleX(0);
+  transition:transform .35s var(--ease);
+  border-radius:0 0 4px 4px;
+}
+.belief-card:hover::after{transform:scaleX(1);}
+.belief-card:nth-child(1)::after{background:var(--accent-y);}
+.belief-card:nth-child(2)::after{background:var(--accent-o);}
+.belief-card:nth-child(3)::after{background:var(--accent-g);}
+
+/* ══════════════════════
+   NOW — 现在的哞屋
+══════════════════════ */
+#now{
+  padding:120px var(--pad-mob);
+  background:var(--cream);
+}
+@media(min-width:1024px){#now{padding:140px var(--pad-desk);}}
+
+.now-inner{
+  display:grid;grid-template-columns:1fr;gap:64px;
+  max-width:1100px;
+  align-items:center;
+}
+@media(min-width:1024px){.now-inner{grid-template-columns:1fr 1fr;gap:100px;}}
+
+.now-text .sec-eyebrow{margin-bottom:16px;}
+.now-text .sec-title{margin-bottom:24px;}
+.now-text p{
+  font-weight:700;font-size:clamp(15px,2vw,17px);
+  line-height:1.95;color:var(--gray3);margin-bottom:16px;
+}
+.now-text p:last-of-type{margin-bottom:32px;}
+
+.now-highlight{
+  display:inline-block;
+  background:var(--accent-y);
+  color:var(--black);
+  font-weight:900;font-size:13px;
+  letter-spacing:.04em;
+  padding:4px 12px;border-radius:6px;
+}
+
+/* Status cards */
+.now-cards{
+  display:flex;flex-direction:column;gap:16px;
+}
+.now-card{
+  background:var(--white);
+  border-radius:20px;border:2px solid var(--gray1);
+  padding:24px 28px;
+  display:flex;align-items:flex-start;gap:16px;
+  transition:transform .3s var(--ease),box-shadow .3s;
+}
+.now-card:hover{transform:translateY(-4px);box-shadow:0 12px 36px rgba(0,0,0,.07);}
+.now-card-icon{
+  font-size:28px;flex-shrink:0;
+  width:48px;height:48px;
+  background:var(--white);border-radius:12px;border:1px solid var(--gray1);
+  display:flex;align-items:center;justify-content:center;
+}
+.now-card-body{}
+.now-card-title{font-weight:900;font-size:15px;color:var(--black);margin-bottom:4px;}
+.now-card-desc{font-weight:700;font-size:13px;color:var(--gray3);line-height:1.7;}
+
+/* ══════════════════════
+   CTA FINAL
+══════════════════════ */
+#cta-final{
+  background:var(--white);
+  padding:120px var(--pad-mob);
+  text-align:center;
+  border-top:1px solid var(--gray1);
+}
+@media(min-width:1024px){#cta-final{padding:140px var(--pad-desk);}}
+.cta-eyebrow{font-weight:800;font-size:11px;letter-spacing:.25em;text-transform:uppercase;color:var(--gray3);margin-bottom:20px;}
+.cta-title{font-weight:900;font-size:clamp(28px,6vw,60px);line-height:1.1;letter-spacing:-.02em;color:var(--black);margin-bottom:20px;}
+.cta-desc{font-weight:700;font-size:clamp(15px,2vw,18px);color:var(--gray3);line-height:1.8;max-width:480px;margin:0 auto 48px;}
+.cta-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--font);font-weight:800;font-size:15px;letter-spacing:.02em;padding:16px 32px;border-radius:999px;min-height:56px;transition:transform .2s,box-shadow .2s,opacity .2s;-webkit-tap-highlight-color:transparent;cursor:pointer;border:none;}
+.btn:active{transform:scale(.97);}
+.btn-black{background:var(--black);color:var(--white);box-shadow:0 4px 0 rgba(0,0,0,.2);}
+.btn-black:hover{box-shadow:0 6px 0 rgba(0,0,0,.2);transform:translateY(-2px);}
+.btn-yellow{background:var(--accent-y);color:var(--black);box-shadow:0 4px 0 #C8BB00;}
+.btn-yellow:hover{box-shadow:0 6px 0 #C8BB00;transform:translateY(-2px);}
+.btn-ghost{background:transparent;color:var(--gray3);border:2px solid var(--gray1);}
+.btn-ghost:hover{border-color:var(--gray2);color:var(--black);}
+
+/* FOOTER */
+footer{background:#0A2918;color:rgba(255,255,255,.4);padding:48px var(--pad-mob) 36px;border-top:1px solid rgba(255,255,255,.08);}
+@media(min-width:1024px){footer{padding:48px var(--pad-desk) 36px;}}
+.foot-row{display:flex;flex-direction:column;gap:16px;}
+@media(min-width:640px){.foot-row{flex-direction:row;align-items:center;justify-content:space-between;}}
+.foot-logo{font-weight:900;font-size:20px;color:var(--white);}
+.foot-links{display:flex;gap:24px;flex-wrap:wrap;}
+.foot-links a{font-weight:700;font-size:13px;color:rgba(255,255,255,.35);transition:color .2s;}
+.foot-links a:hover{color:var(--white);}
+.foot-copy{font-weight:700;font-size:12px;color:rgba(255,255,255,.18);margin-top:24px;}
+
+/* REVEAL */
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .75s var(--ease),transform .75s var(--ease);}
+.reveal.on{opacity:1;transform:none;}
+.d1{transition-delay:.1s}.d2{transition-delay:.2s}.d3{transition-delay:.3s}.d4{transition-delay:.4s}
+</style>
+</head>
+<body>
+
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#" class="active" onclick="closeMenu()">关于我们</a>
+  <a href="#" onclick="closeMenu()">产品介绍</a>
+  <a href="#" onclick="closeMenu()">社区分享</a>
+  <a href="#" onclick="closeMenu()">创作中心</a>
+  <a href="#" onclick="closeMenu()">联络我们</a>
+</div>
+
+<nav class="nav">
+  <a href="#" class="nav-logo">
+    <span class="nav-logo-cn">哞屋</span>
+    <span class="nav-logo-en">MOWO</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="#" class="active">关于我们</a></li>
+    <li><a href="#">产品介绍</a></li>
+    <li><a href="#">社区分享</a></li>
+    <li><a href="#">创作中心</a></li>
+    <li><a href="#">联络我们</a></li>
+  </ul>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <a href="#" class="nav-login">登录</a>
+    <div class="burger" id="burger" onclick="toggleMenu()">
+      <span></span><span></span><span></span>
+    </div>
+  </div>
+</nav>
+
+<!-- ══ HERO ══ -->
+<section id="hero">
+  <div class="hero-blob hero-blob-1"></div>
+  <div class="hero-blob hero-blob-2"></div>
+  <div class="hero-bg-num">哞</div>
+  <div class="hero-inner">
+    <p class="hero-eyebrow">关于哞屋 · ABOUT MOWO</p>
+    <h1 class="hero-statement">
+      让每一个<br>
+      动态创意，<br>
+      都能被<span class="hl">保护</span>。
+    </h1>
+    <p class="hero-desc">
+      哞屋是一个动态文创品牌与创作者平台。我们让动画作品变成真实可触摸的产品，同时为每一位创作者提供品牌保护的庇护所——让热爱被看见，让原创被尊重。
+    </p>
+  </div>
+</section>
+
+<!-- ══ STORY ══ -->
+<section id="story">
+  <div class="story-header reveal">
+    <p class="sec-eyebrow">我们的故事</p>
+    <h2 class="sec-title">从一次市集，<br>到一个决定</h2>
+  </div>
+
+  <div class="timeline">
+
+    <!-- Node 1 -->
+    <div class="tl-item reveal">
+      <div class="tl-dot-wrap">
+        <div class="tl-dot">📚</div>
+      </div>
+      <div class="tl-body">
+        <p class="tl-time">起点</p>
+        <h3 class="tl-title">一门课，让我们开始认真看待文创</h3>
+        <p class="tl-desc">
+          一切从一门通识课开始。老师要求我们为世界遗产设计文创产品，那是我们第一次认真思考：一件文创到底可以是什么样的东西？它应该有多少种可能？
+        </p>
+      </div>
+    </div>
+
+    <!-- Node 2 -->
+    <div class="tl-item reveal">
+      <div class="tl-dot-wrap">
+        <div class="tl-dot">✨</div>
+      </div>
+      <div class="tl-body">
+        <p class="tl-time">发现</p>
+        <h3 class="tl-title">在市集里，看见了一台会动的东西</h3>
+        <p class="tl-desc">
+          我们在一次青年艺术家市集里，看见一个摊位前围满了人。那是一位艺术家自己做的动画机——他亲手画了动画，装进去，会动。人们停下来，是因为它和旁边所有东西都不一样：它活着。
+        </p>
+        <p class="tl-desc" style="margin-top:12px;">
+          但它很贵，没人买。我们当时就在想：如果这个东西能便宜一点，种类多一点，会是什么样？
+        </p>
+        <div class="tl-quote">
+          <p>动态的东西天生比静态的更吸引人。这不是设计技巧，这是人的本能。</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Node 3 -->
+    <div class="tl-item reveal">
+      <div class="tl-dot-wrap">
+        <div class="tl-dot" style="font-size:14px;">💥</div>
+      </div>
+      <div class="tl-body">
+        <p class="tl-time">受伤</p>
+        <h3 class="tl-title">产品火了，然后盗版来了</h3>
+        <p class="tl-desc">
+          我们用零花钱，在宿舍里做出了第一批动画机。联系了动画创作者，做了联名，发出去，百万播放，订单源源不断。我们一边上课，一边打包发货，不敢停。
+        </p>
+        <div class="tl-hardship">
+          <p>
+            然后义乌的盗版商盯上了我们。他们复制了产品，用更低的价格卖出去。购买了盗版的用户找来投诉质量——他们甚至不知道自己买的不是我们的东西。我们应接不暇，根本没有精力去应对。那段时间，我们的精神状态很糟糕。
+          </p>
+        </div>
+        <p class="tl-desc" style="margin-top:20px;">
+          我们第一时间暂停了销售，停下来，认真想清楚这件事该怎么继续。
+        </p>
+      </div>
+    </div>
+
+    <!-- Node 4 -->
+    <div class="tl-item reveal">
+      <div class="tl-dot-wrap">
+        <div class="tl-dot" style="font-size:16px;">🏠</div>
+      </div>
+      <div class="tl-body">
+        <p class="tl-time">决定</p>
+        <h3 class="tl-title">哞屋，因此诞生</h3>
+        <p class="tl-desc">
+          我们调查发现，有很多创作者都有一样的经历。在中国，维权成本极高，对小型创作者来说几乎是不可能的事。他们光是创作、打样、发货、售后就已经精疲力竭，根本无暇保护自己的作品。
+        </p>
+        <p class="tl-desc" style="margin-top:12px;">
+          我们得出了一个结论：<span class="now-highlight">保护的力量来自品牌</span>。当一个品牌有足够的社会关注度、法务能力和话题讨论度，盗版者就没那么容易下手了。
+        </p>
+        <div class="tl-quote">
+          <p>哞屋是一个庇护所。在这里，创作者只需要专注创作，其他的，我们来。</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══ BELIEFS ══ -->
+<section id="beliefs">
+  <div class="beliefs-header">
+    <p class="sec-eyebrow reveal">我们相信</p>
+    <h2 class="sec-title reveal d1" style="color:var(--white);">三件我们<br>坚持在做的事</h2>
+  </div>
+
+  <div class="beliefs-grid">
+    <div class="belief-card reveal">
+      <div class="belief-num">01</div>
+      <h3 class="belief-title">创作者不应该为盗版买单</h3>
+      <p class="belief-desc">原创需要时间和心血。用爱发电已经够难了，不应该还要花精力对抗复制粘贴。我们的品牌力量，就是给创作者的盾牌。</p>
+    </div>
+    <div class="belief-card reveal d1">
+      <div class="belief-num">02</div>
+      <h3 class="belief-title">动态文创应该是人人买得起的东西</h3>
+      <p class="belief-desc">会动的东西不应该是少数人才能拥有的奢侈品。我们用标准化生产和平台规模，让动态文创的价格回到它应该在的地方。</p>
+    </div>
+    <div class="belief-card reveal d2">
+      <div class="belief-num">03</div>
+      <h3 class="belief-title">每一帧热爱都值得被看见</h3>
+      <p class="belief-desc">有太多好的动画作品只活在手机里，被算法决定命运。我们让它变成实体，变成礼物，变成某个人桌上转动的东西——那样的被看见，是不会消失的。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══ NOW ══ -->
+<section id="now">
+  <div class="now-inner">
+    <div class="now-text reveal">
+      <p class="sec-eyebrow">现在的哞屋</p>
+      <h2 class="sec-title" style="margin-bottom:28px;">还在路上，<br>但方向很清楚</h2>
+      <p>哞屋目前正在重建——更完善的平台、更健全的创作者保护机制、更多元的产品系列。我们暂停过，但我们想清楚了再出发，这一次，我们做的是一件更大的事。</p>
+      <p>我们正在寻找认同这件事的创作者、合作伙伴、和同路人。如果你和我们一样相信原创的价值，相信动态文创应该被更多人看见，欢迎来找我们。</p>
+      <a href="#" class="btn btn-black" style="width:fit-content;">联络我们 →</a>
+    </div>
+
+    <div class="now-cards reveal d1">
+      <div class="now-card">
+        <div class="now-card-icon">🎨</div>
+        <div class="now-card-body">
+          <p class="now-card-title">创作者平台</p>
+          <p class="now-card-desc">创作者只需上传动画，哞屋负责生产、发货、售后，收益直接返还创作者。</p>
+        </div>
+      </div>
+      <div class="now-card">
+        <div class="now-card-icon">🛡️</div>
+        <div class="now-card-body">
+          <p class="now-card-title">品牌保护机制</p>
+          <p class="now-card-desc">以品牌力量和法务支持打击盗版，让创作者的原创作品真正受到保护。</p>
+        </div>
+      </div>
+      <div class="now-card">
+        <div class="now-card-icon">🌱</div>
+        <div class="now-card-body">
+          <p class="now-card-title">正在生长</p>
+          <p class="now-card-desc">我们还在建设中。每一个环节都在变得更好，感谢你在这个时候看见我们。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ CTA ══ -->
+<section id="cta-final">
+  <p class="cta-eyebrow reveal">加入我们</p>
+  <h2 class="cta-title reveal d1">你也相信这件事吗？</h2>
+  <p class="cta-desc reveal d2">无论你是创作者、合作伙伴，还是只是觉得这件事值得支持——我们很想认识你。</p>
+  <div class="cta-btns reveal d3">
+    <a href="#" class="btn btn-yellow">我是创作者，想合作 →</a>
+    <a href="#" class="btn btn-black">联络我们</a>
+    <a href="#" class="btn btn-ghost">查看产品</a>
+  </div>
+</section>
+
+<footer>
+  <div class="foot-row">
+    <span class="foot-logo">哞屋 MOWO</span>
+    <div class="foot-links">
+      <a href="#">关于我们</a>
+      <a href="#">产品介绍</a>
+      <a href="#">社区分享</a>
+      <a href="#">创作中心</a>
+      <a href="#">联络我们</a>
+    </div>
+  </div>
+  <p class="foot-copy">© 2025 哞屋 MOWO. All rights reserved.</p>
+</footer>
+
+<script>
+function toggleMenu(){
+  const m=document.getElementById('mobileMenu'),b=document.getElementById('burger');
+  const o=m.classList.toggle('open');
+  b.classList.toggle('open',o);
+  document.body.style.overflow=o?'hidden':'';
+}
+function closeMenu(){
+  document.getElementById('mobileMenu').classList.remove('open');
+  document.getElementById('burger').classList.remove('open');
+  document.body.style.overflow='';
+}
+
+const obs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('on');obs.unobserve(e.target);}});
+},{threshold:.1,rootMargin:'0px 0px -40px 0px'});
+document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+
+if(window.matchMedia('(pointer:fine)').matches){
+  const c=document.createElement('div'),r=document.createElement('div');
+  const cs='position:fixed;border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%)';
+  c.style.cssText=cs+';width:8px;height:8px;background:#111';
+  r.style.cssText=cs+';width:32px;height:32px;border:1.5px solid rgba(17,17,16,.3);transition:width .3s,height .3s,opacity .3s';
+  document.body.append(c,r);
+  document.body.style.cursor='none';
+  let mx=0,my=0,rx=0,ry=0;
+  document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;c.style.left=mx+'px';c.style.top=my+'px';});
+  (function tick(){rx+=(mx-rx)*.12;ry+=(my-ry)*.12;r.style.left=rx+'px';r.style.top=ry+'px';requestAnimationFrame(tick);})();
+  document.querySelectorAll('a,button,.now-card,.belief-card').forEach(el=>{
+    el.addEventListener('mouseenter',()=>{r.style.width='52px';r.style.height='52px';r.style.opacity='.4';});
+    el.addEventListener('mouseleave',()=>{r.style.width='32px';r.style.height='32px';r.style.opacity='1';});
+  });
+}
+</script>
+</body>
+</html>

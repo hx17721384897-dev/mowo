@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>联络我们 — 哞屋 MOWO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Noto+Sans+SC:wght@300;400;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --white:    #FFFFFF;
+  --cream:    #F5F3EF;
+  --black:    #111110;
+  --gray1:    #EBEBEA;
+  --gray2:    #C4C3BF;
+  --gray3:    #787874;
+  --accent-y: #F5E642;
+  --accent-o: #FF6B35;
+  --accent-g: #8FD694;
+  --accent-b: #7EC8E3;
+  --accent-p: #C8A8E8;
+  --font:     'Nunito', 'Noto Sans SC', sans-serif;
+  --ease:     cubic-bezier(0.22, 1, 0.36, 1);
+  --pad-mob:  24px;
+  --pad-desk: 72px;
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body {
+  font-family: var(--font);
+  background: var(--cream);
+  color: var(--black);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+a { text-decoration:none; color:inherit; }
+button { font-family:var(--font); cursor:pointer; border:none; }
+input, textarea, select { font-family:var(--font); }
+
+/* ── NAV (same as homepage) ── */
+.nav {
+  position: fixed; top:0; left:0; right:0; z-index:800;
+  display:flex; align-items:center; justify-content:space-between;
+  padding: 14px var(--pad-mob);
+  background: rgba(245,243,239,0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+@media(min-width:1024px){ .nav{ padding:20px var(--pad-desk); } }
+.nav-logo { line-height:1; }
+.nav-logo-cn { font-weight:900; font-size:22px; letter-spacing:-.01em; color:var(--black); display:block; }
+.nav-logo-en { font-weight:700; font-size:10px; letter-spacing:.22em; text-transform:uppercase; color:var(--gray3); display:block; margin-top:1px; }
+.nav-links { display:none; list-style:none; gap:36px; }
+@media(min-width:1024px){ .nav-links{ display:flex; } }
+.nav-links a { font-weight:800; font-size:14px; color:var(--gray3); transition:color .2s; position:relative; padding-bottom:3px; }
+.nav-links a::after { content:''; position:absolute; bottom:0; left:0; right:0; height:2px; background:var(--accent-y); border-radius:2px; transform:scaleX(0); transition:transform .25s var(--ease); }
+.nav-links a:hover { color:var(--black); }
+.nav-links a:hover::after { transform:scaleX(1); }
+.nav-links a.active { color:var(--black); }
+.nav-links a.active::after { transform:scaleX(1); }
+.nav-login { font-weight:800; font-size:13px; padding:10px 22px; background:var(--black); color:var(--white); border-radius:999px; min-height:44px; display:flex; align-items:center; transition:opacity .2s; }
+.nav-login:hover { opacity:.8; }
+.burger { display:flex; flex-direction:column; gap:5px; cursor:pointer; padding:8px; min-width:44px; min-height:44px; justify-content:center; align-items:center; }
+@media(min-width:1024px){ .burger{ display:none; } }
+.burger span { display:block; width:22px; height:2px; background:var(--black); border-radius:2px; transition:transform .3s, opacity .3s; }
+.burger.open span:nth-child(1){ transform:translateY(7px) rotate(45deg); }
+.burger.open span:nth-child(2){ opacity:0; }
+.burger.open span:nth-child(3){ transform:translateY(-7px) rotate(-45deg); }
+.mobile-menu { position:fixed; inset:0; background:var(--black); z-index:700; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:36px; opacity:0; pointer-events:none; transition:opacity .35s var(--ease); }
+.mobile-menu.open { opacity:1; pointer-events:all; }
+.mobile-menu a { font-weight:900; font-size:clamp(28px,8vw,48px); color:var(--white); transition:color .2s; }
+.mobile-menu a:hover { color:var(--accent-y); }
+
+/* ══════════════════════════
+   HERO
+══════════════════════════ */
+.page-hero {
+  padding: 140px var(--pad-mob) 80px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+@media(min-width:1024px){ .page-hero{ padding:160px var(--pad-desk) 100px; } }
+
+/* Decorative floating dots */
+.hero-dot {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: dot-float 6s ease-in-out infinite;
+}
+.dot1 { width:180px; height:180px; background:var(--accent-y); opacity:.18; top:-40px; left:-60px; animation-delay:0s; }
+.dot2 { width:120px; height:120px; background:var(--accent-o); opacity:.15; top:20px; right:-30px; animation-delay:1.2s; }
+.dot3 { width:80px;  height:80px;  background:var(--accent-g); opacity:.2;  bottom:0;  left:30%; animation-delay:2.4s; }
+@keyframes dot-float {
+  0%,100%{ transform:translateY(0) scale(1); }
+  50%     { transform:translateY(-20px) scale(1.05); }
+}
+
+.hero-eyebrow {
+  font-weight:800; font-size:11px; letter-spacing:.25em;
+  text-transform:uppercase; color:var(--gray3); margin-bottom:20px;
+  opacity:0; animation:fup .8s var(--ease) .2s forwards;
+}
+.hero-title {
+  font-weight:900; font-size:clamp(36px,7vw,80px);
+  line-height:1.08; letter-spacing:-.03em; color:var(--black);
+  margin-bottom:20px;
+  opacity:0; animation:fup .8s var(--ease) .4s forwards;
+}
+.hero-title em {
+  font-style:normal; position:relative; display:inline-block;
+}
+.hero-title em::after {
+  content:''; position:absolute; bottom:4px; left:0; right:0;
+  height:8px; background:var(--accent-y); z-index:-1; border-radius:4px;
+}
+.hero-sub {
+  font-weight:700; font-size:clamp(15px,2vw,18px);
+  color:var(--gray3); line-height:1.8; max-width:480px; margin:0 auto;
+  opacity:0; animation:fup .8s var(--ease) .6s forwards;
+}
+
+@keyframes fup {
+  from{ opacity:0; transform:translateY(20px); }
+  to  { opacity:1; transform:none; }
+}
+
+/* ══════════════════════════
+   IDENTITY CARDS
+══════════════════════════ */
+.cards-section {
+  padding: 0 var(--pad-mob) 120px;
+}
+@media(min-width:1024px){ .cards-section{ padding:0 var(--pad-desk) 140px; } }
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+@media(min-width:560px){ .cards-grid{ grid-template-columns:1fr 1fr; } }
+@media(min-width:1024px){ .cards-grid{ grid-template-columns:repeat(3,1fr); } }
+
+/* Big card for top row (col-span on desktop) */
+.card-wide {
+  grid-column: 1;
+}
+@media(min-width:1024px){
+  .card-wide { grid-column: span 2; }
+}
+
+.contact-card {
+  background: var(--white);
+  border: 2px solid var(--gray1);
+  border-radius: 28px;
+  padding: 36px 32px 32px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: transform .3s var(--ease), box-shadow .3s, border-color .3s;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  -webkit-tap-highlight-color: transparent;
+}
+.contact-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 24px 64px rgba(0,0,0,.1);
+  border-color: var(--gray2);
+}
+.contact-card:active { transform:scale(.98); }
+
+/* Color accent strip on left */
+.contact-card::before {
+  content:'';
+  position:absolute; top:0; left:0; bottom:0;
+  width:5px;
+  border-radius:4px 0 0 4px;
+  transition:width .3s var(--ease);
+}
+.contact-card:hover::before { width:8px; }
+.card-artist::before  { background:var(--accent-y); }
+.card-channel::before { background:var(--accent-o); }
+.card-media::before   { background:var(--accent-b); }
+.card-join::before    { background:var(--accent-g); }
+.card-feedback::before{ background:var(--accent-p); }
+
+/* Hover background tint */
+.contact-card::after {
+  content:'';
+  position:absolute; inset:0;
+  opacity:0; transition:opacity .3s;
+  pointer-events:none;
+}
+.card-artist::after  { background:rgba(245,230,66,.04); }
+.card-channel::after { background:rgba(255,107,53,.04); }
+.card-media::after   { background:rgba(126,200,227,.05); }
+.card-join::after    { background:rgba(143,214,148,.05); }
+.card-feedback::after{ background:rgba(200,168,232,.05); }
+.contact-card:hover::after { opacity:1; }
+
+.card-icon {
+  font-size:40px; margin-bottom:16px;
+  display:block; line-height:1;
+  transition:transform .3s var(--ease);
+}
+.contact-card:hover .card-icon { transform:scale(1.15) rotate(-5deg); }
+
+.card-tag {
+  font-weight:800; font-size:10px; letter-spacing:.2em;
+  text-transform:uppercase; color:var(--gray3); margin-bottom:10px;
+}
+.card-title {
+  font-weight:900; font-size:clamp(20px,2.5vw,26px);
+  letter-spacing:-.01em; color:var(--black); margin-bottom:10px; line-height:1.2;
+}
+.card-desc {
+  font-weight:700; font-size:14px; line-height:1.75;
+  color:var(--gray3); margin-bottom:24px; flex:1;
+}
+.card-cta {
+  display:inline-flex; align-items:center; gap:8px;
+  font-weight:900; font-size:13px; letter-spacing:.04em;
+  color:var(--black);
+  transition:gap .25s var(--ease);
+}
+.contact-card:hover .card-cta { gap:14px; }
+.card-cta-arrow {
+  width:28px; height:28px; border-radius:50%;
+  background:var(--black); color:var(--white);
+  display:flex; align-items:center; justify-content:center;
+  font-size:14px;
+  transition:transform .25s var(--ease);
+}
+.contact-card:hover .card-cta-arrow { transform:translateX(4px); }
+
+/* Wide card extra info */
+.card-wide .card-desc { max-width:480px; }
+.card-wide-badges {
+  display:flex; flex-wrap:wrap; gap:8px; margin-bottom:24px;
+}
+.badge-pill {
+  font-weight:800; font-size:11px; letter-spacing:.06em;
+  padding:5px 14px; border-radius:999px;
+  background:var(--cream); color:var(--gray3); border:1px solid var(--gray1);
+}
+
+/* ══════════════════════════
+   RESPONSE PROMISE
+══════════════════════════ */
+.promise-section {
+  background: var(--black);
+  padding: 80px var(--pad-mob);
+  text-align:center;
+}
+@media(min-width:1024px){ .promise-section{ padding:80px var(--pad-desk); } }
+
+.promise-inner {
+  max-width:700px; margin:0 auto;
+}
+.promise-icon { font-size:48px; margin-bottom:20px; }
+.promise-title {
+  font-weight:900; font-size:clamp(24px,4vw,40px);
+  letter-spacing:-.02em; color:var(--white); margin-bottom:16px;
+}
+.promise-body {
+  font-weight:700; font-size:15px; line-height:1.9;
+  color:rgba(255,255,255,.45); margin-bottom:36px;
+}
+.promise-stats {
+  display:flex; justify-content:center; gap:48px; flex-wrap:wrap;
+}
+.stat { text-align:center; }
+.stat-num {
+  font-weight:900; font-size:clamp(28px,5vw,48px);
+  letter-spacing:-.03em; color:var(--accent-y); display:block; line-height:1;
+}
+.stat-label {
+  font-weight:700; font-size:12px; letter-spacing:.1em;
+  color:rgba(255,255,255,.3); text-transform:uppercase; margin-top:6px;
+}
+
+/* ══════════════════════════
+   FOOTER (minimal)
+══════════════════════════ */
+footer {
+  background:var(--black); color:rgba(255,255,255,.4);
+  padding:48px var(--pad-mob) 36px;
+  border-top:1px solid #1E1E1C;
+}
+@media(min-width:1024px){ footer{ padding:48px var(--pad-desk) 36px; } }
+.foot-row {
+  display:flex; flex-direction:column; gap:16px;
+}
+@media(min-width:640px){
+  .foot-row{ flex-direction:row; align-items:center; justify-content:space-between; }
+}
+.foot-logo { font-weight:900; font-size:20px; color:var(--white); letter-spacing:-.01em; }
+.foot-links { display:flex; gap:24px; flex-wrap:wrap; }
+.foot-links a { font-weight:700; font-size:13px; color:rgba(255,255,255,.35); transition:color .2s; }
+.foot-links a:hover { color:var(--white); }
+.foot-copy { font-weight:700; font-size:12px; color:rgba(255,255,255,.18); margin-top:24px; }
+
+/* ══════════════════════════
+   MODAL
+══════════════════════════ */
+.modal-backdrop {
+  position:fixed; inset:0; z-index:1000;
+  background:rgba(17,17,16,.6);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  opacity:0; pointer-events:none;
+  transition:opacity .35s var(--ease);
+  display:flex; align-items:center; justify-content:center;
+  padding:20px;
+}
+.modal-backdrop.open {
+  opacity:1; pointer-events:all;
+}
+
+.modal {
+  background:var(--white);
+  border-radius:32px;
+  width:100%; max-width:580px;
+  max-height:90vh;
+  overflow-y:auto;
+  transform:translateY(40px) scale(.96);
+  transition:transform .4s var(--ease);
+  position:relative;
+  scrollbar-width:none;
+}
+.modal::-webkit-scrollbar{ display:none; }
+.modal-backdrop.open .modal {
+  transform:none;
+}
+
+/* Modal color header */
+.modal-header {
+  padding:36px 36px 28px;
+  position:relative;
+  border-radius:30px 30px 0 0;
+  overflow:hidden;
+}
+.modal-header-bg {
+  position:absolute; inset:0; opacity:.12;
+}
+.modal-artist  .modal-header-bg { background:var(--accent-y); }
+.modal-channel .modal-header-bg { background:var(--accent-o); }
+.modal-media   .modal-header-bg { background:var(--accent-b); }
+.modal-join    .modal-header-bg { background:var(--accent-g); }
+.modal-feedback .modal-header-bg{ background:var(--accent-p); }
+
+.modal-close {
+  position:absolute; top:20px; right:20px;
+  width:36px; height:36px; border-radius:50%;
+  background:rgba(0,0,0,.08); border:none; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  font-size:18px; color:var(--black);
+  transition:background .2s, transform .2s;
+}
+.modal-close:hover { background:rgba(0,0,0,.14); transform:rotate(90deg); }
+
+.modal-icon { font-size:44px; margin-bottom:12px; display:block; }
+.modal-title {
+  font-weight:900; font-size:clamp(22px,4vw,30px);
+  letter-spacing:-.02em; color:var(--black); margin-bottom:6px;
+}
+.modal-subtitle {
+  font-weight:700; font-size:14px; color:var(--gray3); line-height:1.7;
+}
+
+/* Form */
+.modal-body { padding:28px 36px 36px; }
+
+.form-group { margin-bottom:20px; }
+.form-label {
+  display:block; font-weight:800; font-size:12px;
+  letter-spacing:.1em; text-transform:uppercase;
+  color:var(--gray3); margin-bottom:8px;
+}
+.form-required { color:var(--accent-o); margin-left:3px; }
+
+.form-input,
+.form-textarea,
+.form-select {
+  width:100%; padding:14px 18px;
+  font-family:var(--font); font-weight:700; font-size:15px;
+  color:var(--black);
+  background:var(--cream);
+  border:2px solid var(--gray1);
+  border-radius:14px;
+  outline:none;
+  transition:border-color .2s, box-shadow .2s;
+  -webkit-appearance:none;
+}
+.form-input:focus,
+.form-textarea:focus,
+.form-select:focus {
+  border-color:var(--black);
+  box-shadow:0 0 0 4px rgba(17,17,16,.06);
+}
+.form-input::placeholder,
+.form-textarea::placeholder { color:var(--gray2); font-weight:700; }
+.form-textarea { resize:vertical; min-height:120px; line-height:1.7; }
+.form-select { cursor:pointer; }
+
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+@media(max-width:480px){ .form-row{ grid-template-columns:1fr; } }
+
+/* File upload */
+.file-upload {
+  width:100%; padding:24px;
+  border:2px dashed var(--gray1);
+  border-radius:14px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
+  cursor:pointer; transition:border-color .2s, background .2s;
+  background:var(--cream);
+}
+.file-upload:hover { border-color:var(--gray2); background:var(--gray1); }
+.file-upload input { display:none; }
+.file-upload-icon { font-size:28px; }
+.file-upload-text { font-weight:800; font-size:13px; color:var(--gray3); text-align:center; }
+.file-upload-sub  { font-weight:700; font-size:11px; color:var(--gray2); }
+.file-name { font-weight:800; font-size:13px; color:var(--black); display:none; }
+
+/* Submit */
+.form-submit {
+  width:100%; padding:16px;
+  font-weight:900; font-size:16px; letter-spacing:.03em;
+  background:var(--black); color:var(--white);
+  border-radius:999px; min-height:56px;
+  transition:opacity .2s, transform .2s;
+  margin-top:8px;
+}
+.form-submit:hover { opacity:.85; }
+.form-submit:active { transform:scale(.98); }
+
+.form-note {
+  font-weight:700; font-size:12px; color:var(--gray3);
+  text-align:center; margin-top:14px; line-height:1.7;
+}
+
+/* Success state */
+.modal-success {
+  display:none;
+  flex-direction:column; align-items:center; justify-content:center;
+  padding:60px 36px;
+  text-align:center; gap:16px;
+}
+.success-icon { font-size:64px; animation:pop .5s var(--ease); }
+@keyframes pop { from{transform:scale(0)} to{transform:scale(1)} }
+.success-title {
+  font-weight:900; font-size:28px; letter-spacing:-.02em; color:var(--black);
+}
+.success-body {
+  font-weight:700; font-size:15px; color:var(--gray3); line-height:1.8; max-width:360px;
+}
+.success-close {
+  margin-top:8px; padding:14px 36px;
+  font-weight:900; font-size:14px;
+  background:var(--black); color:var(--white);
+  border-radius:999px; min-height:52px;
+  transition:opacity .2s;
+}
+.success-close:hover { opacity:.8; }
+
+/* ── REVEAL ── */
+.reveal { opacity:0; transform:translateY(24px); transition:opacity .7s var(--ease), transform .7s var(--ease); }
+.reveal.on { opacity:1; transform:none; }
+.d1{transition-delay:.08s} .d2{transition-delay:.16s} .d3{transition-delay:.24s} .d4{transition-delay:.32s} .d5{transition-delay:.4s}
+</style>
+</head>
+<body>
+
+<!-- Mobile menu -->
+<div class="mobile-menu" id="mobileMenu">
+  <a href="mowo-homepage-v3.html" onclick="closeMenu()">关于我们</a>
+  <a href="#" onclick="closeMenu()">产品介绍</a>
+  <a href="#" onclick="closeMenu()">社区分享</a>
+  <a href="#" onclick="closeMenu()">创作中心</a>
+  <a href="#" class="active" onclick="closeMenu()">联络我们</a>
+</div>
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="mowo-homepage-v3.html" class="nav-logo">
+    <span class="nav-logo-cn">哞屋</span>
+    <span class="nav-logo-en">MOWO</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="#">关于我们</a></li>
+    <li><a href="#">产品介绍</a></li>
+    <li><a href="#">社区分享</a></li>
+    <li><a href="#">创作中心</a></li>
+    <li><a href="#" class="active">联络我们</a></li>
+  </ul>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <a href="#" class="nav-login">登录</a>
+    <div class="burger" id="burger" onclick="toggleMenu()">
+      <span></span><span></span><span></span>
+    </div>
+  </div>
+</nav>
+
+<!-- ══ HERO ══ -->
+<section class="page-hero">
+  <div class="hero-dot dot1"></div>
+  <div class="hero-dot dot2"></div>
+  <div class="hero-dot dot3"></div>
+  <p class="hero-eyebrow">联络我们 · CONTACT</p>
+  <h1 class="hero-title">我们很想<br><em>认识你</em></h1>
+  <p class="hero-sub">无论你是想合作的伙伴、想加入的同路人，还是有话想说的用户——这里都有你的位置。</p>
+</section>
+
+<!-- ══ CARDS ══ -->
+<section class="cards-section">
+  <div class="cards-grid">
+
+    <!-- Artist / IP collab — wide -->
+    <div class="contact-card card-artist card-wide reveal" onclick="openModal('artist')">
+      <div>
+        <span class="card-icon">🎨</span>
+        <p class="card-tag">画师 / IP 联名</p>
+        <h2 class="card-title">你的角色，值得更大的舞台</h2>
+        <p class="card-desc">如果你有成熟的原创IP或一定的粉丝基础，我们希望和你一起做官方联名款动画机——品牌背书、联合推广、专属设计，让你的作品走进更多人的手心。</p>
+        <div class="card-wide-badges">
+          <span class="badge-pill">原创IP联名</span>
+          <span class="badge-pill">联合推广</span>
+          <span class="badge-pill">限定款设计</span>
+          <span class="badge-pill">品牌背书</span>
+        </div>
+      </div>
+      <div class="card-cta">
+        立即洽谈
+        <span class="card-cta-arrow">→</span>
+      </div>
+    </div>
+
+    <!-- Channel collab -->
+    <div class="contact-card card-channel reveal d1" onclick="openModal('channel')">
+      <div>
+        <span class="card-icon">🏪</span>
+        <p class="card-tag">线下渠道合作</p>
+        <h2 class="card-title">把哞屋带进你的店</h2>
+        <p class="card-desc">潮玩店、精品店、商场买手店……如果你想在线下销售哞屋动画机，我们期待和你聊聊入驻和代理的可能性。</p>
+      </div>
+      <div class="card-cta">
+        了解合作
+        <span class="card-cta-arrow">→</span>
+      </div>
+    </div>
+
+    <!-- Media / KOL -->
+    <div class="contact-card card-media reveal d2" onclick="openModal('media')">
+      <div>
+        <span class="card-icon">📣</span>
+        <p class="card-tag">媒体 / 博主合作</p>
+        <h2 class="card-title">一起把故事讲出去</h2>
+        <p class="card-desc">如果你是博主、媒体或内容创作者，有兴趣报道、测评或与哞屋共创内容，欢迎来聊。</p>
+      </div>
+      <div class="card-cta">
+        发起合作
+        <span class="card-cta-arrow">→</span>
+      </div>
+    </div>
+
+    <!-- Join -->
+    <div class="contact-card card-join reveal d3" onclick="openModal('join')">
+      <div>
+        <span class="card-icon">💼</span>
+        <p class="card-tag">加入哞屋</p>
+        <h2 class="card-title">一起做有意思的事</h2>
+        <p class="card-desc">我们在寻找热爱动画、热爱产品的同路人。如果你想成为哞屋的一份子，把简历发过来吧。</p>
+      </div>
+      <div class="card-cta">
+        投递简历
+        <span class="card-cta-arrow">→</span>
+      </div>
+    </div>
+
+    <!-- Feedback -->
+    <div class="contact-card card-feedback reveal d4" onclick="openModal('feedback')">
+      <div>
+        <span class="card-icon">💬</span>
+        <p class="card-tag">用户反馈</p>
+        <h2 class="card-title">你的想法，我们认真听</h2>
+        <p class="card-desc">收到产品了？有建议？遇到问题？任何反馈对我们都很重要，我们会认真阅读每一条。</p>
+      </div>
+      <div class="card-cta">
+        告诉我们
+        <span class="card-cta-arrow">→</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ══ PROMISE ══ -->
+<section class="promise-section">
+  <div class="promise-inner reveal">
+    <div class="promise-icon">⚡</div>
+    <h2 class="promise-title">我们会认真回复每一封信</h2>
+    <p class="promise-body">每条合作意向我们都会仔细阅读。如果你的方向和我们契合，我们一定会主动联系你。请在表单里尽量描述清楚你的想法——细节越多，我们越快做出判断。</p>
+    <div class="promise-stats">
+      <div class="stat">
+        <span class="stat-num">3</span>
+        <span class="stat-label">工作日内回复</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num">100%</span>
+        <span class="stat-label">人工阅读</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num">∞</span>
+        <span class="stat-label">合作可能性</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="foot-row">
+    <span class="foot-logo">哞屋 MOWO</span>
+    <div class="foot-links">
+      <a href="#">关于我们</a>
+      <a href="#">产品介绍</a>
+      <a href="#">社区分享</a>
+      <a href="#">创作中心</a>
+    </div>
+  </div>
+  <p class="foot-copy">© 2025 哞屋 MOWO. All rights reserved.</p>
+</footer>
+
+<!-- ══════════════════════════════
+     MODALS
+══════════════════════════════ -->
+
+<!-- Artist Modal -->
+<div class="modal-backdrop" id="modal-artist" onclick="handleBackdrop(event,'artist')">
+  <div class="modal modal-artist">
+    <div class="modal-header">
+      <div class="modal-header-bg"></div>
+      <button class="modal-close" onclick="closeModal('artist')">✕</button>
+      <span class="modal-icon">🎨</span>
+      <h2 class="modal-title">画师 / IP 联名合作</h2>
+      <p class="modal-subtitle">告诉我们你的创作方向和合作想法，我们会在 3 个工作日内回复你。</p>
+    </div>
+    <div class="modal-body" id="form-artist">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">你的名字 / 工作室名<span class="form-required">*</span></label>
+          <input class="form-input" type="text" placeholder="例：小墨工作室">
+        </div>
+        <div class="form-group">
+          <label class="form-label">联系邮箱<span class="form-required">*</span></label>
+          <input class="form-input" type="email" placeholder="your@email.com">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">主要创作平台</label>
+          <input class="form-input" type="text" placeholder="例：微博、B站、小红书">
+        </div>
+        <div class="form-group">
+          <label class="form-label">粉丝量级</label>
+          <select class="form-select">
+            <option value="" disabled selected>请选择</option>
+            <option>1万以下</option>
+            <option>1万 – 10万</option>
+            <option>10万 – 50万</option>
+            <option>50万以上</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">IP / 作品介绍<span class="form-required">*</span></label>
+        <textarea class="form-textarea" placeholder="简单介绍一下你的IP或角色，风格特点，以及你对联名合作的想法……"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">作品集链接</label>
+        <input class="form-input" type="url" placeholder="https://...（微博主页、Portfolio等）">
+      </div>
+      <button class="form-submit" onclick="submitForm('artist')">提交合作申请 →</button>
+      <p class="form-note">提交后我们会在 3 个工作日内通过邮件联系你</p>
+    </div>
+    <div class="modal-success" id="success-artist">
+      <div class="success-icon">🎉</div>
+      <h3 class="success-title">收到了！</h3>
+      <p class="success-body">你的合作申请已成功提交。我们的团队会仔细阅读，并在 3 个工作日内通过邮件联系你。</p>
+      <button class="success-close" onclick="closeModal('artist')">好的，期待你的回复</button>
+    </div>
+  </div>
+</div>
+
+<!-- Channel Modal -->
+<div class="modal-backdrop" id="modal-channel" onclick="handleBackdrop(event,'channel')">
+  <div class="modal modal-channel">
+    <div class="modal-header">
+      <div class="modal-header-bg"></div>
+      <button class="modal-close" onclick="closeModal('channel')">✕</button>
+      <span class="modal-icon">🏪</span>
+      <h2 class="modal-title">线下渠道合作</h2>
+      <p class="modal-subtitle">告诉我们你的门店信息，我们会评估合作可行性并尽快回复。</p>
+    </div>
+    <div class="modal-body" id="form-channel">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">联系人姓名<span class="form-required">*</span></label>
+          <input class="form-input" type="text" placeholder="你的姓名">
+        </div>
+        <div class="form-group">
+          <label class="form-label">联系邮箱<span class="form-required">*</span></label>
+          <input class="form-input" type="email" placeholder="your@email.com">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">公司 / 门店名称<span class="form-required">*</span></label>
+          <input class="form-input" type="text" placeholder="例：XX潮玩集合店">
+        </div>
+        <div class="form-group">
+          <label class="form-label">所在城市<span class="form-required">*</span></label>
+          <input class="form-input" type="text" placeholder="例：北京、上海">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">门店类型</label>
+        <select class="form-select">
+          <option value="" disabled selected>请选择</option>
+          <option>潮玩集合店</option>
+          <option>独立精品店</option>
+          <option>商场买手店</option>
+          <option>书店 / 文创店</option>
+          <option>其他</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">合作想法<span class="form-required">*</span></label>
+        <textarea class="form-textarea" placeholder="介绍一下你的门店情况，以及你希望以什么形式合作（代理、入驻、快闪等）……"></textarea>
+      </div>
+      <button class="form-submit" onclick="submitForm('channel')">提交合作意向 →</button>
+      <p class="form-note">提交后我们会在 3 个工作日内通过邮件联系你</p>
+    </div>
+    <div class="modal-success" id="success-channel">
+      <div class="success-icon">🏪</div>
+      <h3 class="success-title">意向已收到！</h3>
+      <p class="success-body">我们的商务团队会仔细评估，并在 3 个工作日内通过邮件与你联系。</p>
+      <button class="success-close" onclick="closeModal('channel')">好的，静候佳音</button>
+    </div>
+  </div>
+</div>
+
+<!-- Media Modal -->
+<div class="modal-backdrop" id="modal-media" onclick="handleBackdrop(event,'media')">
+  <div class="modal modal-media">
+    <div class="modal-header">
+      <div class="modal-header-bg"></div>
+      <button class="modal-close" onclick="closeModal('media')">✕</button>
+      <span class="modal-icon">📣</span>
+      <h2 class="modal-title">媒体 / 博主合作</h2>
+      <p class="modal-subtitle">告诉我们你的频道和合作方向，一起把哞屋的故事讲出去。</p>
+    </div>
+    <div class="modal-body" id="form-media">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">你的名字 / 媒体名<span class="form-required">*</span></label>
+          <input class="form-input" type="text" placeholder="例：XX测评">
+        </div>
+        <div class="form-group">
+          <label class="form-label">联系邮箱<span class="form-required">*</span></label>
+          <input class="form-input" type="email" placeholder="your@email.com">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">主要平台<span class="form-required">*</span></label>
+          <select class="form-select">
+            <option value="" disabled selected>请选择</option>
+            <option>B站</option>
+            <option>小红书</option>
+            <option>微博</option>
+            <option>抖音</option>
+            <option>微信公众号</option>
+            <option>媒体/杂志</option>
+            <option>其他</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">粉丝 / 阅读量</label>
+          <input class="form-input" type="text" placeholder="例：5万粉、月阅读10万+">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">合作方向<span class="form-required">*</span></label>
+        <textarea class="form-textarea" placeholder="你希望以什么形式合作？测评、探店、联名内容、采访报道……告诉我们你的想法。"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">主页链接</label>
+        <input class="form-input" type="url" placeholder="https://...">
+      </div>
+      <button class="form-submit" onclick="submitForm('media')">发起合作 →</button>
+      <p class="form-note">提交后我们会在 3 个工作日内通过邮件联系你</p>
+    </div>
+    <div class="modal-success" id="success-media">
+      <div class="success-icon">📣</div>
+      <h3 class="success-title">期待和你合作！</h3>
+      <p class="success-body">你的合作申请已成功提交，我们会在 3 个工作日内回复你。</p>
+      <button class="success-close" onclick="closeModal('media')">好的！</button>
+    </div>
+  </div>
+</div>
+
+<!-- Join Modal -->
+<div class="modal-backdrop" id="modal-join" onclick="handleBackdrop(event,'join')">
+  <div class="modal modal-join">
+    <div class="modal-header">
+      <div class="modal-header-bg"></div>
+      <button class="modal-close" onclick="closeModal('join')">✕</button>
+      <span class="modal-icon">💼</span>
+      <h2 class="modal-title">加入哞屋</h2>
+      <p class="modal-subtitle">如果你也想做有意思的事，把简历发过来，我们很想认识你。</p>
+    </div>
+    <div class="modal-body" id="form-join">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">你的名字<span class="form-required">*</span></label>
+          <input class="form-input" type="text" placeholder="姓名">
+        </div>
+        <div class="form-group">
+          <label class="form-label">联系邮箱<span class="form-required">*</span></label>
+          <input class="form-input" type="email" placeholder="your@email.com">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">应聘方向<span class="form-required">*</span></label>
+          <select class="form-select">
+            <option value="" disabled selected>请选择</option>
+            <option>产品设计</option>
+            <option>前端开发</option>
+            <option>后端开发</option>
+            <option>品牌营销</option>
+            <option>内容创作</option>
+            <option>供应链 / 运营</option>
+            <option>其他 / 自荐</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">工作年限</label>
+          <select class="form-select">
+            <option value="" disabled selected>请选择</option>
+            <option>应届生</option>
+            <option>1 – 3 年</option>
+            <option>3 – 5 年</option>
+            <option>5 年以上</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">自我介绍</label>
+        <textarea class="form-textarea" placeholder="简单说说你是谁，做过什么，为什么想加入哞屋……"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">上传简历<span class="form-required">*</span></label>
+        <label class="file-upload" id="file-label">
+          <input type="file" accept=".pdf,.doc,.docx" id="resume-file" onchange="handleFile(this)">
+          <span class="file-upload-icon">📄</span>
+          <span class="file-upload-text">点击上传简历</span>
+          <span class="file-upload-sub">支持 PDF、Word，最大 10MB</span>
+          <span class="file-name" id="file-name"></span>
+        </label>
+      </div>
+      <div class="form-group">
+        <label class="form-label">作品集 / 个人链接</label>
+        <input class="form-input" type="url" placeholder="https://...（可选）">
+      </div>
+      <button class="form-submit" onclick="submitForm('join')">投递简历 →</button>
+      <p class="form-note">我们会认真阅读每一份简历，并在 5 个工作日内回复你</p>
+    </div>
+    <div class="modal-success" id="success-join">
+      <div class="success-icon">🌟</div>
+      <h3 class="success-title">简历已收到！</h3>
+      <p class="success-body">我们会认真看你的简历，并在 5 个工作日内通过邮件联系你。期待和你见面！</p>
+      <button class="success-close" onclick="closeModal('join')">好的，期待消息</button>
+    </div>
+  </div>
+</div>
+
+<!-- Feedback Modal -->
+<div class="modal-backdrop" id="modal-feedback" onclick="handleBackdrop(event,'feedback')">
+  <div class="modal modal-feedback">
+    <div class="modal-header">
+      <div class="modal-header-bg"></div>
+      <button class="modal-close" onclick="closeModal('feedback')">✕</button>
+      <span class="modal-icon">💬</span>
+      <h2 class="modal-title">用户反馈</h2>
+      <p class="modal-subtitle">你的想法对我们很重要。每一条反馈我们都会认真读。</p>
+    </div>
+    <div class="modal-body" id="form-feedback">
+      <div class="form-group">
+        <label class="form-label">反馈类型<span class="form-required">*</span></label>
+        <select class="form-select">
+          <option value="" disabled selected>请选择</option>
+          <option>产品使用问题</option>
+          <option>功能建议</option>
+          <option>创作中心反馈</option>
+          <option>物流 / 售后</option>
+          <option>其他</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">联系邮箱（可选）</label>
+        <input class="form-input" type="email" placeholder="填写后我们可以回复你">
+      </div>
+      <div class="form-group">
+        <label class="form-label">具体描述<span class="form-required">*</span></label>
+        <textarea class="form-textarea" style="min-height:160px" placeholder="尽量详细描述你的问题或建议，这样我们能更快帮到你……"></textarea>
+      </div>
+      <button class="form-submit" onclick="submitForm('feedback')">提交反馈 →</button>
+      <p class="form-note">如果你留了邮箱，我们会在 3 个工作日内回复</p>
+    </div>
+    <div class="modal-success" id="success-feedback">
+      <div class="success-icon">💙</div>
+      <h3 class="success-title">谢谢你告诉我们</h3>
+      <p class="success-body">你的反馈已收到。如果你留了邮箱，我们会尽快回复你。</p>
+      <button class="success-close" onclick="closeModal('feedback')">好的</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── Mobile menu ── */
+function toggleMenu(){
+  const m=document.getElementById('mobileMenu'),b=document.getElementById('burger');
+  const o=m.classList.toggle('open');
+  b.classList.toggle('open',o);
+  document.body.style.overflow=o?'hidden':'';
+}
+function closeMenu(){
+  document.getElementById('mobileMenu').classList.remove('open');
+  document.getElementById('burger').classList.remove('open');
+  document.body.style.overflow='';
+}
+
+/* ── Modal ── */
+function openModal(id){
+  document.getElementById('modal-'+id).classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeModal(id){
+  document.getElementById('modal-'+id).classList.remove('open');
+  document.body.style.overflow='';
+  // Reset success state after close
+  setTimeout(()=>{
+    const form=document.getElementById('form-'+id);
+    const succ=document.getElementById('success-'+id);
+    if(form) form.style.display='';
+    if(succ) succ.style.display='none';
+  },400);
+}
+function handleBackdrop(e,id){
+  if(e.target===e.currentTarget) closeModal(id);
+}
+
+/* ── File upload ── */
+function handleFile(input){
+  const name=document.getElementById('file-name');
+  const text=input.closest('.file-upload').querySelector('.file-upload-text');
+  const sub=input.closest('.file-upload').querySelector('.file-upload-sub');
+  if(input.files[0]){
+    name.textContent='✓ '+input.files[0].name;
+    name.style.display='block';
+    text.style.display='none';
+    sub.style.display='none';
+  }
+}
+
+/* ── Submit (mock) ── */
+function submitForm(id){
+  const form=document.getElementById('form-'+id);
+  const succ=document.getElementById('success-'+id);
+  // Simple required check
+  const required=form.querySelectorAll('[required], input[placeholder*="*"]');
+  // Just show success for demo
+  form.style.display='none';
+  succ.style.display='flex';
+}
+
+/* ── ESC to close ── */
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    document.querySelectorAll('.modal-backdrop.open').forEach(m=>{
+      const id=m.id.replace('modal-','');
+      closeModal(id);
+    });
+  }
+});
+
+/* ── Scroll reveal ── */
+const obs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('on');obs.unobserve(e.target);}});
+},{threshold:.1,rootMargin:'0px 0px -40px 0px'});
+document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+
+/* ── Desktop cursor ── */
+if(window.matchMedia('(pointer:fine)').matches){
+  const c=document.createElement('div');
+  const r=document.createElement('div');
+  const cs='position:fixed;border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%)';
+  c.style.cssText=cs+';width:8px;height:8px;background:#111';
+  r.style.cssText=cs+';width:32px;height:32px;border:1.5px solid rgba(17,17,16,.3);transition:width .3s,height .3s,opacity .3s';
+  document.body.append(c,r);
+  document.body.style.cursor='none';
+  let mx=0,my=0,rx=0,ry=0;
+  document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;c.style.left=mx+'px';c.style.top=my+'px';});
+  (function tick(){rx+=(mx-rx)*.12;ry+=(my-ry)*.12;r.style.left=rx+'px';r.style.top=ry+'px';requestAnimationFrame(tick);})();
+  document.querySelectorAll('a,button,.contact-card').forEach(el=>{
+    el.addEventListener('mouseenter',()=>{r.style.width='52px';r.style.height='52px';r.style.opacity='.4';});
+    el.addEventListener('mouseleave',()=>{r.style.width='32px';r.style.height='32px';r.style.opacity='1';});
+  });
+}
+</script>
+</body>
+</html>
