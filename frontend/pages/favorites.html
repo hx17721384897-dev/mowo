@@ -231,33 +231,9 @@ a{text-decoration:none;}
     <li><a href="contact.html">联络我们</a></li>
   </ul>
   <div class="nav-right">
-    <div class="nav-user">
-      <button class="nav-avatar-btn" id="navBtn" onclick="toggleDD()">
-        <div class="nav-avatar" id="navAv">橘</div>
-        <span class="nav-uname">小橘酱</span>
-        <span class="nav-chevron">▾</span>
-      </button>
-      <div class="user-dropdown" id="userDD">
-        <div class="dropdown-head">
-          <div class="dh-av">橘</div>
-          <div><div class="dh-name">小橘酱</div><div class="dh-role">普通用户</div></div>
-        </div>
-        <button class="di cart" onclick="goCart()">
-          <div class="di-ic">🛒</div><span>购物车</span>
-          <span class="cart-bdg" id="cartBdg">3</span>
-        </button>
-        <button class="di fav" onclick="closeDD()">
-          <div class="di-ic">❤</div><span>我的收藏</span>
-        </button>
-        <button class="di orders"><div class="di-ic">📦</div><span>我的订单</span></button>
-        <button class="di works"><div class="di-ic">🎨</div><span>我的作品</span></button>
-        <button class="di dashboard"><div class="di-ic">📊</div><span>创作者数据台</span></button>
-        <div class="dd-divider"></div>
-        <button class="di settings"><div class="di-ic">⚙️</div><span>账号设置</span></button>
-        <button class="di help"><div class="di-ic">💬</div><span>帮助与反馈</span></button>
-        <div class="dd-divider"></div>
-        <button class="di danger"><div class="di-ic">🚪</div><span>退出登录</span></button>
-      </div>
+    <button class="nav-login nav-login-btn" id="navLoginBtn">登录</button>
+    <div class="burger" id="burger" onclick="toggleMenu()">
+      <span></span><span></span><span></span>
     </div>
   </div>
 </nav>
@@ -594,5 +570,6 @@ if(window.matchMedia('(pointer:fine)').matches){
 renderFavs();
 updateBadge();
 </script>
+<script src="../js/auth.js"></script>
 </body>
 </html>

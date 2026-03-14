@@ -82,14 +82,14 @@ button{font-family:var(--font);cursor:pointer;border:none;background:none;}
 }
 @media(min-width:900px){
   .detail-wrap{
-    grid-template-columns:1fr 400px;
+    grid-template-columns:420px 1fr;
     gap:48px;
     padding:28px var(--pad-desk) 100px;
     align-items:start;
   }
 }
 @media(min-width:1200px){
-  .detail-wrap{grid-template-columns:1fr 440px;}
+  .detail-wrap{grid-template-columns:460px 1fr;}
 }
 
 /* ══ LEFT — Media Gallery ══ */
@@ -113,6 +113,14 @@ button{font-family:var(--font);cursor:pointer;border:none;background:none;}
   border:2px solid var(--gray1);
   position:relative;
   margin-bottom:12px;
+}
+
+/* 手机端限制媒体区最大高度，给下方内容留空间 */
+@media(max-width:899px){
+  .gallery-main{
+    aspect-ratio:4/3;
+    max-height:60vw;
+  }
 }
 
 /* Each slide */
@@ -229,6 +237,11 @@ button{font-family:var(--font);cursor:pointer;border:none;background:none;}
   padding-bottom:2px;
 }
 .gallery-thumbs::-webkit-scrollbar{display:none;}
+
+/* 手机端隐藏缩略图，给内容留空间 */
+@media(max-width:899px){
+  .gallery-thumbs{display:none;}
+}
 
 .gallery-thumb{
   flex-shrink:0;
@@ -740,7 +753,7 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
       <!-- 商品模式：保留原来带数字的点赞按钮 -->
       <button class="like-big" id="likeBigBtnProduct" onclick="toggleLikeBig(this)" style="display:none;margin-left:auto;">
         <span class="like-big-icon">♡</span>
-        <span class="like-big-count">2,401</span>
+        <span class="like-big-count">0</span>
       </button>
     </div>
 
@@ -900,22 +913,9 @@ const MACHINE_SPECS = {
   hexagon:{label:'六棱柱款',materials:[{id:'alum',name:'铝合金',icon:'⚙️',desc:'金属哑光，现代工业风'},{id:'acrylic',name:'亚克力',icon:'💎',desc:'透明感强，光影效果好'}],colors:{alum:[{id:'black',name:'哑光黑',hex:'#2A2A2A'},{id:'silver',name:'银色',hex:'#C0C0C0'}],acrylic:[{id:'clear',name:'透明',hex:'#E8F4F8'},{id:'smoke',name:'烟灰',hex:'#9BA0A8'}]}},
 };
 
-/* 演示评论数据 */
-const DEMO_COMMENTS = [
-  {id:1, name:'橘子不吃鱼', avatar:'🐱', badge:'', time:'2天前', text:'太喜欢了！第一次看到动画机这个东西，感觉太有创意了，做工也很精细，收到实物比视频里还好看！', likes:24, liked:false, replies:[
-    {name:'小橘工作室', avatar:'🎨', badge:'创作者', time:'2天前', text:'谢谢你！做这套动画花了很久时间，能得到你的喜欢真的很开心 ✦'},
-  ]},
-  {id:2, name:'深夜画图中', avatar:'✏️', badge:'', time:'5天前', text:'请问这个适合放在桌上当摆件吗？尺寸大概多大？', likes:6, liked:false, replies:[
-    {name:'小橘工作室', avatar:'🎨', badge:'创作者', time:'5天前', text:'经典圆筒款高约16cm，直径约8cm，非常适合桌面摆放～旋转起来才能看到动画效果哦！'},
-  ]},
-  {id:3, name:'风吹过的夏天', avatar:'🌊', badge:'', time:'1周前', text:'动画流畅度超出预期，12帧完全够用，橘猫的动作设计很细腻，能感受到创作者的用心。', likes:31, liked:false, replies:[]},
-  {id:4, name:'收藏控本控',  avatar:'📦', badge:'', time:'2周前', text:'已经是第三次回购了，这次入了玫瑰粉亚克力款，每种颜色都有不同的感觉！', likes:18, liked:false, replies:[]},
-];
+/* 演示评论数据已移除，改用真实API */
 
-/* comments 必须在 DEMO_COMMENTS 之后、init() 之前声明 */
-let comments = JSON.parse(JSON.stringify(DEMO_COMMENTS));
-
-/* 弹窗状态 — 必须在 init() 前声明 */
+/* 弹窗状态 */
 let skuAction  = 'buy';
 let selMatId   = null;
 let selColorId = null;
@@ -925,35 +925,38 @@ let toastTimer;
 
 /* ── Gallery ── */
 let currentSlide = 0;
-const totalSlides = 4;
 let isPlaying = false;
 
 function goSlide(index) {
-  // Pause video if leaving slide 0
+  const totalSlides = window._totalSlides || document.querySelectorAll('.gallery-slide').length;
   if (currentSlide === 0 && index !== 0 && isPlaying) {
     isPlaying = false;
-    document.getElementById('playBtn').classList.remove('playing');
+    const pb = document.getElementById('playBtn');
+    if (pb) pb.classList.remove('playing');
   }
 
   document.querySelectorAll('.gallery-slide').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.gallery-thumb').forEach(t => t.classList.remove('active'));
 
   currentSlide = index;
-  document.querySelector(`.gallery-slide[data-index="${index}"]`).classList.add('active');
-  document.querySelector(`.gallery-thumb[data-index="${index}"]`).classList.add('active');
+  const activeSlide = document.querySelector(`.gallery-slide[data-index="${index}"]`);
+  const activeThumb = document.querySelector(`.gallery-thumb[data-index="${index}"]`);
+  if (activeSlide) activeSlide.classList.add('active');
+  if (activeThumb) {
+    activeThumb.classList.add('active');
+    activeThumb.scrollIntoView({ behavior:'smooth', inline:'center', block:'nearest' });
+  }
   document.getElementById('galleryCounter').textContent = `${index + 1} / ${totalSlides}`;
-
-  // Scroll thumb into view
-  const thumb = document.querySelector(`.gallery-thumb[data-index="${index}"]`);
-  thumb.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
 }
 
 function prevSlide() {
-  goSlide((currentSlide - 1 + totalSlides) % totalSlides);
+  const total = window._totalSlides || document.querySelectorAll('.gallery-slide').length;
+  goSlide((currentSlide - 1 + total) % total);
 }
 
 function nextSlide() {
-  goSlide((currentSlide + 1) % totalSlides);
+  const total = window._totalSlides || document.querySelectorAll('.gallery-slide').length;
+  goSlide((currentSlide + 1) % total);
 }
 
 function togglePlay() {
@@ -1003,57 +1006,420 @@ function toggleCollect(btn){
 }
 
 /* ══════════════════════════════
-   页面初始化：根据URL参数判断模式
+   页面初始化：从API加载真实数据
 ══════════════════════════════ */
-(function init() {
-  const params = new URLSearchParams(location.search);
-  const type   = params.get('type') || 'article'; /* article | product */
+const MOWO_API = 'http://localhost:3001';
 
-  /* 存储作者ID供跳转用 */
-  window._authorId = params.get('creatorId') || null;
+// 格式化数字
+function fmtNum(n) {
+  if (!n && n !== 0) return '0';
+  return n >= 10000 ? (n/10000).toFixed(1).replace(/\.0$/,'') + '万' :
+         n >= 1000  ? (n/1000).toFixed(1).replace(/\.0$/,'') + 'k' : String(n);
+}
 
-  if (type === 'product') {
-    /* 商品模式：显示价格、购买按钮、规格表 */
-    const price    = params.get('price')    || '299';
-    const oldPrice = params.get('oldPrice') || '';
-    const machineType = params.get('machine') || 'cylinder';
+// 机型名称
+const MACHINE_NAMES = { cylinder:'圆筒款', lantern:'灯笼款', hexagon:'六棱柱款', 'flat-round':'扁圆款', mini:'迷你款' };
 
-    document.getElementById('ctaBlock').style.display   = 'block';
-    document.getElementById('specsBlock').style.display = 'block';
-    document.getElementById('ctaPrice').textContent     = '¥ ' + price;
-    if (oldPrice) document.getElementById('ctaPriceOld').textContent = '¥ ' + oldPrice;
+// 骨架屏
+function showSkeleton() {
+  document.querySelector('.work-title').textContent = '加载中…';
+  document.getElementById('authorHandle').textContent = '…';
+  document.getElementById('authorStats').textContent = '…';
+}
 
-    /* 商品模式：已售替换收藏 */
-    document.getElementById('statThirdItem').querySelector('.stat-icon').textContent = '🛍';
-    document.getElementById('statThirdVal').textContent = '87';
-    document.getElementById('statThirdLab').textContent = '已售';
+// 渲染文章模式
+function renderArticle(data) {
+  const { id, title, content, coverUrl, tags, likeCount, collectCount, commentCount, viewCount, user, articleProducts } = data;
 
-    /* 商品模式：隐藏文章操作按钮，显示商品点赞按钮 */
-    document.getElementById('articleActions').style.display = 'none';
-    document.getElementById('likeBigBtnProduct').style.display = 'flex';
+  // 作者
+  window._authorId = user?.id || null;
+  const nickname = user?.profile?.nickname || '未知用户';
+  const avatarUrl = user?.profile?.avatarUrl;
+  document.getElementById('authorHandle').textContent = nickname;
+  document.getElementById('authorStats').textContent =
+    `${fmtNum(user?.profile?.followerCount || 0)} 关注者`;
+  const avEl = document.getElementById('authorAvatar');
+  if (avatarUrl) avEl.innerHTML = `<img src="${avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+  else avEl.textContent = nickname[0];
 
-    /* 在specs区下方插入「好评率」小行 */
-    const specsBlock = document.querySelector('.specs-block');
-    if (specsBlock) {
-      const extraRow = document.createElement('div');
-      extraRow.className = 'spec-row';
-      extraRow.innerHTML = '<span class="spec-key">好评率</span><span class="spec-val" style="color:#287030;">98.6%</span>';
-      specsBlock.appendChild(extraRow);
-    }
+  // 标题
+  document.querySelector('.work-title').textContent = title || '无标题';
 
-    const saleBadge = document.querySelector('.gallery-sale-badge');
-    if (saleBadge) saleBadge.textContent = '✦ 在售 · ¥' + price;
-
-    window._machineType  = machineType;
-    window._productPrice = parseInt(price);
-  } else {
-    /* 文章模式：隐藏规格表，显示文章操作按钮 */
-    const saleBadge = document.querySelector('.gallery-sale-badge');
-    if (saleBadge) saleBadge.textContent = '✦ 作品分享';
-    /* articleActions 默认已显示，无需额外操作 */
+  // 标签
+  const tagsEl = document.querySelector('.work-tags');
+  if (tags) {
+    try {
+      const tagsArr = JSON.parse(tags);
+      tagsEl.innerHTML = tagsArr.map(t => `<span class="work-tag"># ${t}</span>`).join('');
+    } catch(e) { tagsEl.innerHTML = ''; }
   }
 
-  renderComments();
+  // 统计
+  document.getElementById('statViews').textContent  = fmtNum(viewCount);
+  document.getElementById('statLikes').textContent  = fmtNum(likeCount);
+  document.getElementById('statThirdVal').textContent = fmtNum(collectCount);
+
+  // 描述
+  document.querySelector('.work-desc').innerHTML = (content || '').replace(/\n/g, '<br>');
+
+  // 封面图（用第一张图作为gallery主图）
+  if (coverUrl) {
+    const slide0 = document.querySelector('.gallery-slide[data-index="0"] .gallery-video-ph');
+    if (slide0) slide0.innerHTML = `<img src="${coverUrl}" style="width:100%;height:100%;object-fit:cover;">`;
+  }
+
+  // gallery sale badge
+  const saleBadge = document.querySelector('.gallery-sale-badge');
+  if (saleBadge) saleBadge.textContent = articleProducts?.length > 0 ? '✦ 含关联商品' : '✦ 作品分享';
+
+  // 文章模式：规格表隐藏，文章操作显示
+  document.getElementById('specsBlock').style.display = 'none';
+  document.getElementById('ctaBlock').style.display = 'none';
+  document.getElementById('articleActions').style.display = 'flex';
+  document.getElementById('likeBigBtnProduct').style.display = 'none';
+
+  // 存储ID供点赞收藏用
+  window._contentId   = id;
+  window._contentType = 'article';
+
+  // 检查当前用户是否已点赞/收藏
+  checkUserActions(id, 'article');
+
+  // 关联商品卡片
+  renderRelatedProducts(articleProducts);
+
+  // 加载评论
+  loadComments(id);
+}
+
+// 渲染关联商品卡片（文章带商品链接时显示）
+function renderRelatedProducts(articleProducts) {
+  // 找到描述下方，规格表上方的位置插入
+  const descLabel = document.querySelector('.work-desc-label');
+  if (!descLabel) return;
+
+  // 先删除旧的关联商品区域
+  const old = document.getElementById('relatedProductsBlock');
+  if (old) old.remove();
+
+  // 没有关联商品就不显示
+  if (!articleProducts || articleProducts.length === 0) return;
+
+  const block = document.createElement('div');
+  block.id = 'relatedProductsBlock';
+  block.style.cssText = 'margin-bottom:24px;';
+  block.innerHTML = `
+    <p class="work-desc-label" style="margin-bottom:12px;">关联商品</p>
+    ${articleProducts.map(ap => {
+      const p = ap.product;
+      if (!p) return '';
+      return `
+        <div onclick="window.location.href='work-detail.html?type=product&id=${p.id}'"
+             style="display:flex;align-items:center;gap:14px;padding:14px 16px;
+                    background:#fff;border:1.5px solid #EBEBEA;border-radius:16px;
+                    cursor:pointer;margin-bottom:8px;transition:border-color .2s;"
+             onmouseover="this.style.borderColor='#111110'"
+             onmouseout="this.style.borderColor='#EBEBEA'">
+          <div style="width:48px;height:48px;border-radius:10px;background:#F5F3EF;
+                      display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">
+            🎠
+          </div>
+          <div style="flex:1;min-width:0;">
+            <p style="font-weight:900;font-size:13px;color:#111110;margin-bottom:3px;
+                      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.title}</p>
+            <p style="font-weight:700;font-size:11px;color:#787874;">
+              ${MACHINE_NAMES[p.machineType] || p.machineType} · ${p.salesCount || 0} 件已售
+            </p>
+          </div>
+          <p style="font-weight:900;font-size:15px;color:#FF6B35;flex-shrink:0;">
+            ¥${Number(p.finalPrice).toFixed(2)}
+          </p>
+        </div>`;
+    }).join('')}
+  `;
+
+  // 插入到描述标签前面
+  descLabel.parentNode.insertBefore(block, descLabel);
+}
+
+// 渲染商品模式
+function renderProduct(data) {
+  const { id, title, description, machineType, frameCount, finalPrice, salesCount, basePrice, animation, user } = data;
+
+  // 作者
+  window._authorId = user?.id || null;
+  const nickname = user?.profile?.nickname || '未知用户';
+  const avatarUrl = user?.profile?.avatarUrl;
+  document.getElementById('authorHandle').textContent = nickname;
+  document.getElementById('authorStats').textContent =
+    `${fmtNum(user?.creatorProfile?.totalSales || 0)} 件已售`;
+  const avEl = document.getElementById('authorAvatar');
+  if (avatarUrl) avEl.innerHTML = `<img src="${avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+  else avEl.textContent = nickname[0];
+
+  // 标题
+  document.querySelector('.work-title').textContent = title || '无标题';
+
+  // 描述
+  document.querySelector('.work-desc').innerHTML = (description || '').replace(/\n/g, '<br>');
+
+  // 统计
+  document.getElementById('statViews').closest('.stat-item').style.display = 'none';
+  document.getElementById('statLikes').closest('.stat-item').style.display = 'none';
+  document.getElementById('statThirdItem').querySelector('.stat-icon').textContent = '🛍';
+  document.getElementById('statThirdVal').textContent = fmtNum(salesCount);
+  document.getElementById('statThirdLab').textContent = '已售';
+
+  // 价格
+  document.getElementById('ctaBlock').style.display = 'block';
+  document.getElementById('ctaPrice').textContent = `¥ ${Number(finalPrice).toFixed(2)}`;
+
+  // 规格表
+  document.getElementById('specsBlock').style.display = 'block';
+  document.getElementById('specsBlock').innerHTML = `
+    <div class="spec-row"><span class="spec-key">机型</span><span class="spec-val">${MACHINE_NAMES[machineType] || machineType}</span></div>
+    <div class="spec-row"><span class="spec-key">帧数</span><span class="spec-val">${frameCount} 帧</span></div>
+    <div class="spec-row"><span class="spec-key">底价</span><span class="spec-val">¥${Number(basePrice).toFixed(2)}</span></div>
+    <div class="spec-row"><span class="spec-key">已售</span><span class="spec-val">${fmtNum(salesCount)} 件</span></div>
+  `;
+
+  // 商品模式：隐藏文章操作，显示商品点赞
+  document.getElementById('articleActions').style.display = 'none';
+  document.getElementById('likeBigBtnProduct').style.display = 'flex';
+
+  // sale badge
+  const saleBadge = document.querySelector('.gallery-sale-badge');
+  if (saleBadge) saleBadge.textContent = `✦ 在售 · ¥${Number(finalPrice).toFixed(2)}`;
+
+  // 动画帧图 gallery
+  if (animation?.frames?.length > 0) {
+    renderFrameGallery(animation.frames);
+  } else if (animation?.previewUrl) {
+    const slide0 = document.querySelector('.gallery-slide[data-index="0"] .gallery-video-ph');
+    if (slide0) slide0.innerHTML = `<img src="${animation.previewUrl}" style="width:100%;height:100%;object-fit:cover;">`;
+  }
+
+  // 存储供购买用
+  window._contentId     = id;
+  window._contentType   = 'product';
+  window._machineType   = machineType;
+  window._productPrice  = Number(finalPrice);
+}
+
+// 渲染帧图Gallery
+function renderFrameGallery(frames) {
+  const main   = document.getElementById('galleryMain');
+  const thumbs = document.getElementById('galleryThumbs');
+
+  // 清空现有slides和thumbs
+  main.querySelectorAll('.gallery-slide').forEach(s => s.remove());
+  thumbs.innerHTML = '';
+
+  frames.forEach((frame, i) => {
+    // slide
+    const slide = document.createElement('div');
+    slide.className = 'gallery-slide' + (i === 0 ? ' active' : '');
+    slide.dataset.index = i;
+    slide.innerHTML = `<img src="${frame.imageUrl}" style="width:100%;height:100%;object-fit:cover;" alt="第${frame.frameIndex}帧">`;
+    main.insertBefore(slide, main.querySelector('.gallery-arrow-prev'));
+
+    // thumb
+    const thumb = document.createElement('div');
+    thumb.className = 'gallery-thumb' + (i === 0 ? ' active' : '');
+    thumb.dataset.index = i;
+    thumb.onclick = () => goSlide(i);
+    thumb.innerHTML = `<img src="${frame.imageUrl}" style="width:100%;height:100%;object-fit:cover;" alt="">`;
+    thumbs.appendChild(thumb);
+  });
+
+  document.getElementById('galleryCounter').textContent = `1 / ${frames.length}`;
+  window._totalSlides = frames.length;
+}
+
+// 检查用户点赞/收藏状态
+async function checkUserActions(id, type) {
+  const token = typeof getToken === 'function' ? getToken() : localStorage.getItem('mowo_token');
+  if (!token) return;
+  // TODO: 后续加入查询已点赞/已收藏的接口
+}
+
+// 从API加载评论
+async function loadComments(articleId) {
+  try {
+    const res  = await fetch(`${MOWO_API}/api/articles/${articleId}/comments`);
+    const json = await res.json();
+    if (!json.success) return;
+
+    const list = document.getElementById('commentList');
+    const countEl = document.getElementById('commentsCount');
+    const { comments, pagination } = json.data;
+
+    if (countEl) countEl.textContent = `共 ${pagination.total} 条评论`;
+
+    if (!comments || comments.length === 0) {
+      list.innerHTML = '<p style="color:var(--gray3);font-weight:700;padding:20px 0;">还没有评论，来说点什么吧</p>';
+      return;
+    }
+
+    list.innerHTML = comments.map(c => {
+      const name   = c.user?.profile?.nickname || '用户';
+      const avatar = c.user?.profile?.avatarUrl
+        ? `<img src="${c.user.profile.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+        : name[0];
+      const time = new Date(c.createdAt).toLocaleDateString('zh-CN', { month:'numeric', day:'numeric' });
+      const repliesHTML = c.replies?.length ? `
+        <div class="comment-replies">
+          ${c.replies.map(r => {
+            const rname = r.user?.profile?.nickname || '用户';
+            const rav   = r.user?.profile?.avatarUrl
+              ? `<img src="${r.user.profile.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+              : rname[0];
+            return `<div class="reply-item">
+              <div class="reply-av">${rav}</div>
+              <div class="reply-body">
+                <p class="reply-name">${rname}</p>
+                <p class="reply-text">${r.content}</p>
+                <p class="reply-time">${new Date(r.createdAt).toLocaleDateString('zh-CN',{month:'numeric',day:'numeric'})}</p>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>` : '';
+      return `
+        <div class="comment-item">
+          <div class="comment-item-av">${avatar}</div>
+          <div class="comment-item-body">
+            <div class="comment-item-top">
+              <span class="comment-name">${name}</span>
+              <span class="comment-time">${time}</span>
+            </div>
+            <p class="comment-text">${c.content}</p>
+            <div class="comment-item-acts">
+              <button class="comment-act" onclick="replyTo('${c.id}','${name}')">回复</button>
+            </div>
+            ${repliesHTML}
+          </div>
+        </div>`;
+    }).join('');
+  } catch(e) {
+    console.error('加载评论失败', e);
+  }
+}
+
+// 提交评论（对接真实API）
+async function submitComment() {
+  const textarea = document.getElementById('commentInput');
+  const text = textarea?.value.trim();
+  if (!text) return;
+
+  const token = typeof getToken === 'function' ? getToken() : localStorage.getItem('mowo_token');
+  if (!token) { showToast('请先登录再评论'); openAuthModal(); return; }
+
+  const articleId = window._contentId;
+  if (!articleId || window._contentType !== 'article') return;
+
+  try {
+    const replyTo = textarea.dataset.replyTo || null;
+    const res = await fetch(`${MOWO_API}/api/articles/${articleId}/comments`, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
+      body: JSON.stringify({ content: text, parentId: replyTo || undefined })
+    });
+    const json = await res.json();
+    if (json.success) {
+      textarea.value = '';
+      delete textarea.dataset.replyTo;
+      showToast('评论已发布');
+      loadComments(articleId);
+    }
+  } catch(e) { showToast('评论失败，请重试'); }
+}
+
+// 点赞（对接真实API）
+async function toggleLikeBig(btn) {
+  const token = typeof getToken === 'function' ? getToken() : localStorage.getItem('mowo_token');
+  if (!token) { showToast('请先登录'); openAuthModal(); return; }
+
+  const liked = btn.classList.toggle('liked');
+  const icon  = btn.querySelector('.like-big-icon');
+  if (icon) icon.textContent = liked ? '♥' : '♡';
+
+  const id = window._contentId;
+  if (!id || window._contentType !== 'article') return;
+  try {
+    await fetch(`${MOWO_API}/api/articles/${id}/like`, {
+      method: 'POST',
+      headers: { Authorization:`Bearer ${token}` }
+    });
+    // 刷新点赞数
+    const statEl = document.getElementById('statLikes');
+    if (statEl) {
+      let n = parseInt(statEl.textContent.replace(/[^0-9]/g,'')) || 0;
+      statEl.textContent = fmtNum(liked ? n+1 : n-1);
+    }
+  } catch(e) {}
+}
+
+// 收藏（对接真实API）
+async function toggleCollect(btn) {
+  const token = typeof getToken === 'function' ? getToken() : localStorage.getItem('mowo_token');
+  if (!token) { showToast('请先登录'); openAuthModal(); return; }
+
+  const collected = btn.classList.toggle('collected');
+  showToast(collected ? '⭐ 已收藏' : '已取消收藏');
+
+  const id = window._contentId;
+  if (!id || window._contentType !== 'article') return;
+  try {
+    await fetch(`${MOWO_API}/api/articles/${id}/collect`, {
+      method: 'POST',
+      headers: { Authorization:`Bearer ${token}` }
+    });
+    // 刷新收藏数
+    const statEl = document.getElementById('statThirdVal');
+    if (statEl) {
+      let n = parseInt(statEl.textContent.replace(/[^0-9]/g,'')) || 0;
+      statEl.textContent = fmtNum(collected ? n+1 : n-1);
+    }
+  } catch(e) {}
+}
+
+/* ══════════════════════════════
+   主初始化：从API加载数据
+══════════════════════════════ */
+(async function init() {
+  const params = new URLSearchParams(location.search);
+  const type   = params.get('type') || 'article';
+  const id     = params.get('id');
+
+  showSkeleton();
+
+  if (!id) {
+    document.querySelector('.work-title').textContent = '内容不存在';
+    return;
+  }
+
+  try {
+    const url = type === 'product'
+      ? `${MOWO_API}/api/products/${id}`
+      : `${MOWO_API}/api/articles/${id}`;
+
+    const res  = await fetch(url);
+    const json = await res.json();
+
+    if (!json.success) {
+      document.querySelector('.work-title').textContent = '内容不存在或已删除';
+      return;
+    }
+
+    if (type === 'product') {
+      renderProduct(json.data);
+    } else {
+      renderArticle(json.data);
+    }
+  } catch(e) {
+    document.querySelector('.work-title').textContent = '加载失败，请刷新重试';
+    console.error(e);
+  }
 })();
 
 /* ── 跳转创作者主页 ── */
@@ -1234,85 +1600,15 @@ function closeSkuModal() {
 }
 
 /* ══════════════════════════════
-   评论区
+   评论区辅助函数
 ══════════════════════════════ */
-function renderComments() {
-  const list = document.getElementById('commentList');
-  if (!list) return;
-  list.innerHTML = comments.map(c => `
-    <div class="comment-item" id="comment_${c.id}">
-      <div class="comment-item-av">${c.avatar}</div>
-      <div class="comment-item-body">
-        <div class="comment-item-top">
-          <span class="comment-name">${c.name}</span>
-          ${c.badge ? `<span class="comment-badge">${c.badge}</span>` : ''}
-          <span class="comment-time">${c.time}</span>
-        </div>
-        <p class="comment-text">${c.text}</p>
-        <div class="comment-item-acts">
-          <button class="comment-act ${c.liked ? 'liked' : ''}" onclick="likeComment(${c.id})">
-            ${c.liked ? '♥' : '♡'} ${c.likes}
-          </button>
-          <button class="comment-act" onclick="replyTo(${c.id}, '${c.name}')">
-            回复
-          </button>
-        </div>
-        ${c.replies.length ? `
-          <div class="comment-replies">
-            ${c.replies.map(r => `
-              <div class="reply-item">
-                <div class="reply-av">${r.avatar}</div>
-                <div class="reply-body">
-                  <p class="reply-name">${r.name}${r.badge ? ` <span style="font-weight:800;font-size:9px;padding:1px 6px;border-radius:999px;background:rgba(245,230,66,.2);color:#7A6500;">${r.badge}</span>` : ''}</p>
-                  <p class="reply-text">${r.text}</p>
-                  <p class="reply-time">${r.time}</p>
-                </div>
-              </div>`).join('')}
-          </div>` : ''}
-      </div>
-    </div>`).join('');
-
-  const countEl = document.getElementById('commentsCount');
-  if (countEl) countEl.textContent = `共 ${comments.length} 条评论`;
-}
-
-function likeComment(id) {
-  const c = comments.find(x => x.id === id);
-  if (!c) return;
-  c.liked = !c.liked;
-  c.likes += c.liked ? 1 : -1;
-  renderComments();
-}
-
-function replyTo(id, name) {
+function replyTo(commentId, name) {
   const textarea = document.getElementById('commentInput');
   if (!textarea) return;
   textarea.value = `@${name} `;
   textarea.focus();
-  textarea.dataset.replyTo = id;
-  textarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
-}
-
-function submitComment() {
-  const textarea = document.getElementById('commentInput');
-  const text = textarea?.value.trim();
-  if (!text) return;
-
-  const replyTo = textarea.dataset.replyTo ? parseInt(textarea.dataset.replyTo) : null;
-
-  if (replyTo) {
-    const parent = comments.find(c => c.id === replyTo);
-    if (parent) {
-      parent.replies.push({ name:'我', avatar:'😊', badge:'', time:'刚刚', text });
-    }
-  } else {
-    comments.unshift({ id: Date.now(), name:'我', avatar:'😊', badge:'', time:'刚刚', text, likes:0, liked:false, replies:[] });
-  }
-
-  textarea.value = '';
-  delete textarea.dataset.replyTo;
-  renderComments();
-  showToast('评论已发布');
+  textarea.dataset.replyTo = commentId;
+  textarea.scrollIntoView({ behavior:'smooth', block:'center' });
 }
 
 /* ══════════════════════════════

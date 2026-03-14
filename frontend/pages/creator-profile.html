@@ -39,6 +39,8 @@ button{font-family:var(--font);cursor:pointer;border:none;background:none;}
 .nav-btn.black:hover{opacity:.8;}
 .nav-btn.ghost{border:1.5px solid var(--gray1);color:var(--gray3);}
 .nav-btn.ghost:hover{border-color:var(--black);color:var(--black);}
+.nav-login,.nav-login-btn{font-weight:800;font-size:13px;padding:10px 22px;background:var(--black);color:var(--white);border-radius:999px;min-height:44px;display:flex;align-items:center;transition:opacity .2s;cursor:pointer;}
+.nav-login:hover,.nav-login-btn:hover{opacity:.8;}
 .burger{display:flex;flex-direction:column;gap:5px;padding:8px;min-width:44px;min-height:44px;justify-content:center;align-items:center;}
 @media(min-width:1024px){.burger{display:none;}}
 .burger span{display:block;width:22px;height:2px;background:var(--black);border-radius:2px;transition:transform .3s,opacity .3s;}
@@ -247,12 +249,10 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
     <li><a href="contact.html">联络我们</a></li>
   </ul>
   <div class="nav-right">
-    <a href="auth.html" class="nav-btn ghost" id="navLoginBtn" style="display:none;">登录</a>
-    <a href="auth.html" class="nav-btn black" id="navSignupBtn" style="display:none;">注册</a>
-    <div id="navUserArea" style="display:none;align-items:center;gap:10px;">
-      <div style="width:36px;height:36px;border-radius:50%;background:var(--accent-y);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:var(--black);cursor:pointer;" id="navAvatar">我</div>
+    <button class="nav-login nav-login-btn" id="navLoginBtn">登录</button>
+    <div class="burger" id="burger" onclick="toggleMenu()">
+      <span></span><span></span><span></span>
     </div>
-    <div class="burger" id="burger" onclick="toggleMenu()"><span></span><span></span><span></span></div>
   </div>
 </nav>
 
@@ -458,28 +458,7 @@ let currentTab  = 0;
   renderWorks();
   renderProducts();
   renderReviews();
-  initNavUser();
 })();
-
-function initNavUser() {
-  try {
-    const t = JSON.parse(localStorage.getItem('mowo_token') || 'null');
-    const loginBtn  = document.getElementById('navLoginBtn');
-    const signupBtn = document.getElementById('navSignupBtn');
-    const userArea  = document.getElementById('navUserArea');
-    const avatar    = document.getElementById('navAvatar');
-    if (t) {
-      loginBtn.style.display  = 'none';
-      signupBtn.style.display = 'none';
-      userArea.style.display  = 'flex';
-      avatar.textContent = (t.name || '我')[0].toUpperCase();
-    } else {
-      loginBtn.style.display  = 'inline-flex';
-      signupBtn.style.display = 'inline-flex';
-      userArea.style.display  = 'none';
-    }
-  } catch(e) {}
-}
 
 /* ══════════════════════════════
    渲染 Hero
@@ -743,5 +722,6 @@ if (window.matchMedia('(pointer:fine)').matches) {
   });
 }
 </script>
+<script src="../js/auth.js"></script>
 </body>
 </html>

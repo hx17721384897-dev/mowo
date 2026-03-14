@@ -279,7 +279,7 @@ input,textarea,select{font-family:var(--font);}
   </div>
   <div style="display:flex;align-items:center;gap:10px;">
     <a href="index.html" style="font-weight:800;font-size:12px;color:var(--gray3);display:flex;align-items:center;gap:5px;padding:7px 14px;border-radius:999px;border:1.5px solid var(--gray1);background:var(--white);transition:all .2s;" onmouseover="this.style.borderColor='var(--black)';this.style.color='var(--black)'" onmouseout="this.style.borderColor='var(--gray1)';this.style.color='var(--gray3)'">← 回到主站</a>
-    <div class="topbar-avatar" id="topbarAvatar">我</div>
+    <div class="topbar-avatar" id="topbarAvatar"></div>
   </div>
 </header>
 
@@ -930,6 +930,26 @@ if (window.matchMedia('(pointer:fine)').matches) {
     el.addEventListener('mouseleave', () => { r.style.width = '32px'; r.style.height = '32px'; r.style.opacity = '1'; });
   });
 }
+</script>
+<script src="../js/auth.js"></script>
+<script>
+// 创作者后台：页面加载后用真实用户信息填充头像
+(async function(){
+  const user = await fetchCurrentUser();
+  if (!user) {
+    // 未登录，跳回首页并弹出登录框
+    window.location.href = 'index.html';
+    return;
+  }
+  const avatar = document.getElementById('topbarAvatar');
+  if (avatar) {
+    if (user.profile?.avatarUrl) {
+      avatar.innerHTML = `<img src="${user.profile.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+    } else {
+      avatar.textContent = (user.profile?.nickname || '用')[0];
+    }
+  }
+})();
 </script>
 </body>
 </html>
