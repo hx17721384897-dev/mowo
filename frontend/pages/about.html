@@ -435,8 +435,8 @@ footer{background:#0A2918;color:rgba(255,255,255,.4);padding:48px var(--pad-mob)
     <li><a href="customize-start.html">创作中心</a></li>
     <li><a href="contact.html">联络我们</a></li>
   </ul>
-  <div style="display:flex;align-items:center;gap:12px;">
-    <a href="auth.html" class="nav-login">登录</a>
+  <div class="nav-right">
+    <button class="nav-login nav-login-btn" id="navLoginBtn">登录</button>
     <div class="burger" id="burger" onclick="toggleMenu()">
       <span></span><span></span><span></span>
     </div>
@@ -672,5 +672,6 @@ if(window.matchMedia('(pointer:fine)').matches){
   });
 }
 </script>
+<script src="../js/auth.js"></script>
 </body>
 </html>
