@@ -134,3 +134,15 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmNGU2Y
 ### 收益明细
 GET http://localhost:3001/api/earnings
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmNGU2YjE2NS01MWNmLTRlYmYtYjZjNi01MzBlMWFhZDUxYmMiLCJwaG9uZSI6IjEzODAwMTM4MDAwIiwiY2VydGlmeVN0YXR1cyI6MiwiaWF0IjoxNzczNDA0OTA2LCJleHAiOjE3NzQwMDk3MDZ9.JMREbLJ3V_ZlydexRA548oK0TY_N10hQI6qGz20Xclc
+
+
+
+
+### 社区feed流
+GET http://localhost:3001/api/feed
+
+### 只看可购买
+GET http://localhost:3001/api/feed?saleOnly=true
+
+### 按热门排序
+GET http://localhost:3001/api/feed?sort=popular

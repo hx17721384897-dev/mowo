@@ -219,16 +219,16 @@ a{text-decoration:none;}
 
 <!-- NAV -->
 <nav class="nav">
-  <a href="#" class="nav-logo">
+  <a href="index.html" class="nav-logo">
     <span class="nav-logo-cn">哞屋</span>
     <span class="nav-logo-en">MOWO</span>
   </a>
   <ul class="nav-links">
-    <li><a href="#">关于我们</a></li>
-    <li><a href="#">产品介绍</a></li>
-    <li><a href="#">社区分享</a></li>
-    <li><a href="#">创作中心</a></li>
-    <li><a href="#">联络我们</a></li>
+    <li><a href="about.html">关于我们</a></li>
+    <li><a href="products.html">产品介绍</a></li>
+    <li><a href="community.html">社区分享</a></li>
+    <li><a href="customize-start.html">创作中心</a></li>
+    <li><a href="contact.html">联络我们</a></li>
   </ul>
   <div class="nav-right">
     <div class="nav-user">
@@ -271,7 +271,7 @@ a{text-decoration:none;}
 
   <div class="cart-bar reveal d1">
     <span class="cart-bar-info">购物车中有 <strong id="cartBarCount">3</strong> 件商品等待结算</span>
-    <a href="mowo-cart.html" class="btn-go-cart">去购物车 →</a>
+    <a href="cart.html" class="btn-go-cart">去购物车 →</a>
   </div>
 
   <div class="fav-grid" id="favGrid"></div>
@@ -279,7 +279,7 @@ a{text-decoration:none;}
     <div class="empty-icon">🔖</div>
     <div class="empty-title">还没有收藏任何作品</div>
     <div class="empty-desc">在社区浏览时，点击作品上的 ❤ 收藏<br>喜欢的作品会在这里等你</div>
-    <a href="mowo-community.html" class="btn-go">去社区逛逛 →</a>
+    <a href="community.html" class="btn-go">去社区逛逛 →</a>
   </div>
 </main>
 
@@ -475,7 +475,7 @@ function toggleFollow(){
   bf.classList.toggle('on',following.has(curWorkId));
 }
 
-function buyNow(){toast('跳转购买流程（后端对接后实现）');}
+function buyNow(){window.location.href='checkout.html';}
 
 /* ─── ADD TO CART + FLY ─── */
 function doAddToCart(){
@@ -543,7 +543,7 @@ function updateBadge(){
   document.getElementById('cartBarCount').textContent=cartCount;
 }
 
-function goCart(){closeDD();toast('前往 mowo-cart.html');}
+function goCart(){closeDD();window.location.href='cart.html';}
 
 /* ─── DROPDOWN ─── */
 function toggleDD(){

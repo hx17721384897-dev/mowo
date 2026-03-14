@@ -14,7 +14,7 @@ import certifyRoutes from './routes/certify.js'
 import animationRoutes from './routes/animations.js'
 import productRoutes from './routes/products.js'
 import earningRoutes from './routes/earnings.js'
-
+import feedRoutes from './routes/feed.js'
 
 // 创建 Fastify 实例
 // logger: true 会在终端打印每次请求的日志，方便开发调试
@@ -44,7 +44,7 @@ async function start() {
     await fastify.register(animationRoutes, { prefix: '/api/animations' })
     await fastify.register(productRoutes, { prefix: '/api/products' })
     await fastify.register(earningRoutes, { prefix: '/api/earnings' })
-
+    await fastify.register(feedRoutes, { prefix: '/api/feed' })
 
 
     

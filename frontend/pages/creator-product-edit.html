@@ -339,8 +339,7 @@ textarea,input,select{font-family:var(--font);}
           <p class="view-subtitle">管理已上架商品，或将新作品上架销售</p>
         </div>
         <div class="header-actions">
-          <button class="btn btn-ghost" onclick="enterPickView('single')">＋ 上架商品</button>
-          <button class="btn btn-black" onclick="enterPickView('bundle')">组合上架</button>
+          <button class="btn btn-yellow" onclick="enterPickView('single')">＋ 上架商品</button>
         </div>
       </div>
       <div class="product-list reveal d1" id="productList"></div>
@@ -648,13 +647,9 @@ function renderProductList() {
 function enterPickView(mode) {
   PICK_MODE = mode;
   selectedIds.clear();
-  const isB=mode==='bundle', isBB=mode==='blindbox';
-  document.getElementById('pickTitle').textContent =
-    isBB?'选择盲盒内含的动画机（至少 6 件）':isB?'选择要组合的动画机（至少 2 件）':'选择要上架的动画机';
-  document.getElementById('pickDesc').textContent =
-    isBB?'买家购买盲盒时随机获得其中一款':isB?'买家可单独加购每件，配合满减券享优惠':'只选一件，选完进入信息编辑';
-  document.getElementById('topCrumb').textContent =
-    isBB?'创建盲盒':isB?'组合上架':'上架商品';
+  document.getElementById('pickTitle').textContent = '选择要上架的动画';
+  document.getElementById('pickDesc').textContent = '可选择多个动画组合成一个商品的多个SKU，同一动画可重复用于不同商品';
+  document.getElementById('topCrumb').textContent = '上架商品';
   updatePickCount();
   showView('pick');
   renderWorksGrid();
@@ -662,8 +657,8 @@ function enterPickView(mode) {
 
 function renderWorksGrid() {
   document.getElementById('worksGrid').innerHTML = MY_WORKS.map(w=>`
-    <div class="work-card ${w.listed?'already':''} ${selectedIds.has(w.id)?'selected':''}"
-         data-id="${w.id}" onclick="togglePick(${w.id},${w.listed})">
+    <div class="work-card ${selectedIds.has(w.id)?'selected':''}"
+         data-id="${w.id}" onclick="togglePick(${w.id})">
       <div class="work-card-check">✓</div>
       ${w.listed?'<span class="listed-badge">已上架</span>':''}
       <div class="work-card-preview" style="background:${w.colorHex}20;">
@@ -676,25 +671,21 @@ function renderWorksGrid() {
     </div>`).join('');
 }
 
-function togglePick(id, listed) {
-  if (listed){showToast('该作品已上架，如需修改请从编辑入口进入');return;}
-  if (PICK_MODE==='single'){
-    selectedIds.clear();
-    document.querySelectorAll('.work-card').forEach(c=>c.classList.remove('selected'));
-    selectedIds.add(id);
+function togglePick(id) {
+  if (selectedIds.has(id)) {
+    selectedIds.delete(id);
+    document.querySelector(`.work-card[data-id="${id}"]`)?.classList.remove('selected');
   } else {
-    if(selectedIds.has(id)){selectedIds.delete(id);document.querySelector(`.work-card[data-id="${id}"]`).classList.remove('selected');}
-    else{selectedIds.add(id);document.querySelector(`.work-card[data-id="${id}"]`).classList.add('selected');}
+    selectedIds.add(id);
+    document.querySelector(`.work-card[data-id="${id}"]`)?.classList.add('selected');
   }
-  document.querySelector(`.work-card[data-id="${id}"]`)?.classList.toggle('selected', selectedIds.has(id));
   updatePickCount();
 }
 
 function updatePickCount() {
-  const n=selectedIds.size, min=PICK_MODE==='single'?1:PICK_MODE==='blindbox'?6:2;
-  document.getElementById('pickCountBadge').textContent=`已选 ${n} 件`;
-  document.getElementById('pickConfirmBtn').disabled=n<min;
-  if(PICK_MODE!=='single'&&n>0) document.getElementById('pickCountBadge').textContent=`已选 ${n} 件${n<min?`（还差${min-n}件）`:''}`;
+  const n = selectedIds.size;
+  document.getElementById('pickCountBadge').textContent = `已选 ${n} 件`;
+  document.getElementById('pickConfirmBtn').disabled = n < 1;
 }
 
 function confirmPick() {

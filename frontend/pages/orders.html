@@ -182,14 +182,14 @@ a{text-decoration:none;}
 
 <!-- NAV -->
 <nav class="nav">
-  <a href="#" class="nav-logo">
+  <a href="index.html" class="nav-logo">
     <span class="nav-logo-cn">哞屋</span>
     <span class="nav-logo-en">MOWO</span>
   </a>
   <ul class="nav-links">
-    <li><a href="#">关于我们</a></li><li><a href="#">产品介绍</a></li>
-    <li><a href="#">社区分享</a></li><li><a href="#">创作中心</a></li>
-    <li><a href="#">联络我们</a></li>
+    <li><a href="about.html">关于我们</a></li><li><a href="products.html">产品介绍</a></li>
+    <li><a href="community.html">社区分享</a></li><li><a href="customize-start.html">创作中心</a></li>
+    <li><a href="contact.html">联络我们</a></li>
   </ul>
   <div class="nav-right">
     <div class="nav-user">
@@ -203,8 +203,8 @@ a{text-decoration:none;}
           <div class="dh-av">橘</div>
           <div><div class="dh-name">小橘酱</div><div class="dh-role">普通用户</div></div>
         </div>
-        <button class="di cart" onclick="nav('mowo-cart.html')"><div class="di-ic">🛒</div><span>购物车</span><span class="cart-bdg">3</span></button>
-        <button class="di fav" onclick="nav('mowo-favorites.html')"><div class="di-ic">❤</div><span>我的收藏</span></button>
+        <button class="di cart" onclick="nav('cart.html')"><div class="di-ic">🛒</div><span>购物车</span><span class="cart-bdg">3</span></button>
+        <button class="di fav" onclick="nav('favorites.html')"><div class="di-ic">❤</div><span>我的收藏</span></button>
         <button class="di orders" onclick="closeDD()"><div class="di-ic">📦</div><span>我的订单</span></button>
         <button class="di works"><div class="di-ic">🎨</div><span>我的作品</span></button>
         <button class="di dashboard"><div class="di-ic">📊</div><span>创作者数据台</span></button>
@@ -240,7 +240,7 @@ a{text-decoration:none;}
       <div class="empty-icon">📭</div>
       <div class="empty-title">这里还没有订单</div>
       <div class="empty-desc">去社区找一个喜欢的动画<br>选好机型，下单就能看到了</div>
-      <a href="mowo-community.html" class="btn-go">去逛社区 →</a>
+      <a href="community.html" class="btn-go">去逛社区 →</a>
     </div>
   </div>
 </main>
@@ -382,13 +382,17 @@ function switchTab(tab) {
 
 function goDetail(e, id) {
   if (e) e.stopPropagation();
-  // 实际：window.location.href = `mowo-order-detail.html?id=${id}`;
-  toast(`前往订单详情 · ${id}`);
+  const qs = new URLSearchParams();
+  qs.set('id', id);
+  window.location.href = `order-detail.html?${qs.toString()}`;
 }
 
 function writeReview(e, id) {
   e.stopPropagation();
-  toast('跳转写评价页（后端对接后实现）');
+  const qs = new URLSearchParams();
+  qs.set('id', id);
+  qs.set('focus', 'review');
+  window.location.href = `order-detail.html?${qs.toString()}`;
 }
 
 function rebuy(e, id) {
@@ -398,7 +402,7 @@ function rebuy(e, id) {
 }
 
 /* ─── NAV ─── */
-function nav(url) { closeDD(); toast(`前往 ${url}`); }
+function nav(url) { closeDD(); window.location.href = url; }
 function toggleDD() {
   const dd = document.getElementById('userDD'), btn = document.getElementById('navBtn');
   const o = dd.classList.toggle('open');

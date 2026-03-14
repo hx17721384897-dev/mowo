@@ -205,16 +205,16 @@ a{text-decoration:none;}
 
 <!-- NAV -->
 <nav class="nav">
-  <a href="#" class="nav-logo">
+  <a href="index.html" class="nav-logo">
     <span class="nav-logo-cn">哞屋</span>
     <span class="nav-logo-en">MOWO</span>
   </a>
   <ul class="nav-links">
-    <li><a href="#">关于我们</a></li>
-    <li><a href="#">产品介绍</a></li>
-    <li><a href="#">社区分享</a></li>
-    <li><a href="#">创作中心</a></li>
-    <li><a href="#">联络我们</a></li>
+    <li><a href="about.html">关于我们</a></li>
+    <li><a href="products.html">产品介绍</a></li>
+    <li><a href="community.html">社区分享</a></li>
+    <li><a href="customize-start.html">创作中心</a></li>
+    <li><a href="contact.html">联络我们</a></li>
   </ul>
   <div class="nav-right">
     <div class="nav-user">
@@ -284,7 +284,7 @@ a{text-decoration:none;}
     <div class="empty-icon">🛒</div>
     <div class="empty-title">购物车还是空的</div>
     <div class="empty-desc">在社区或收藏夹选好作品和机型<br>加入购物车后就可以在这里结算</div>
-    <a href="mowo-favorites.html" class="btn-go">去收藏夹看看 →</a>
+    <a href="favorites.html" class="btn-go">去收藏夹看看 →</a>
   </div>
 </main>
 
@@ -411,8 +411,12 @@ function updateSummary(){
 }
 
 function goWork(workId){
-  toast(`跳转至作品详情页 work-detail?id=${workId}`);
-  // 实际：window.location.href = `mowo-work-detail.html?id=${workId}`;
+  const item = cartItems.find(c => c.workId === workId);
+  const qs = new URLSearchParams();
+  qs.set('type', 'product');
+  qs.set('id', workId);
+  if (item && item.unitPrice) qs.set('price', String(item.unitPrice));
+  window.location.href = `work-detail.html?${qs.toString()}`;
 }
 
 /* ─── CHECKOUT CONFIRM ─── */
@@ -432,10 +436,10 @@ function closeConfirm(){
   document.body.style.overflow='';
 }
 function handleConfirmBg(e){if(e.target.id==='confirmBg')closeConfirm();}
-function goCheckout(){closeConfirm();toast('跳转结算页（后端对接后实现）');}
+function goCheckout(){closeConfirm();window.location.href='checkout.html';}
 
 /* ─── NAV ─── */
-function goFav(){toast('前往 mowo-favorites.html');}
+function goFav(){window.location.href='favorites.html';}
 function toggleDD(){
   const dd=document.getElementById('userDD'),btn=document.getElementById('navBtn');
   const o=dd.classList.toggle('open');

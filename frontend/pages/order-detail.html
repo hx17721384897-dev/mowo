@@ -216,14 +216,14 @@ a{text-decoration:none;}
 
 <!-- NAV -->
 <nav class="nav">
-  <a href="#" class="nav-logo">
+  <a href="index.html" class="nav-logo">
     <span class="nav-logo-cn">哞屋</span>
     <span class="nav-logo-en">MOWO</span>
   </a>
   <ul class="nav-links">
-    <li><a href="#">关于我们</a></li><li><a href="#">产品介绍</a></li>
-    <li><a href="#">社区分享</a></li><li><a href="#">创作中心</a></li>
-    <li><a href="#">联络我们</a></li>
+    <li><a href="about.html">关于我们</a></li><li><a href="products.html">产品介绍</a></li>
+    <li><a href="community.html">社区分享</a></li><li><a href="customize-start.html">创作中心</a></li>
+    <li><a href="contact.html">联络我们</a></li>
   </ul>
   <div class="nav-right">
     <div class="nav-user">
@@ -432,16 +432,16 @@ function buildPage() {
 
   if (o.status === 'pending') {
     btns.innerHTML = `
-      <button class="btn-action primary" onclick="toast('跳转支付页')">去付款</button>
+      <button class="btn-action primary" onclick="goPay()">去付款</button>
       <button class="btn-action danger" onclick="openRefund()">取消订单</button>`;
   } else if (o.status === 'making' || o.status === 'shipped') {
     btns.innerHTML = `
-      <button class="btn-action outline" onclick="toast('联系客服')">联系客服</button>
+      <button class="btn-action outline" onclick="goContact()">联系客服</button>
       <button class="btn-action danger" onclick="openRefund()">申请退款</button>`;
   } else if (o.status === 'done') {
     btns.innerHTML = `
       <button class="btn-action primary" onclick="rebuy()">再次购买</button>
-      <button class="btn-action outline" onclick="toast('联系客服')">联系客服</button>
+      <button class="btn-action outline" onclick="goContact()">联系客服</button>
       <button class="btn-action danger" onclick="openRefund()">申请退款</button>`;
   }
 
@@ -470,7 +470,10 @@ function rebuy() {
 }
 
 function goWork(id) {
-  toast(`跳转作品详情 · ${id}`);
+  const qs = new URLSearchParams();
+  qs.set('type', 'product');
+  qs.set('id', id);
+  window.location.href = `work-detail.html?${qs.toString()}`;
 }
 
 /* ─── REFUND ─── */
@@ -506,7 +509,13 @@ function handleModalBg(e) {
 }
 
 /* ─── NAV ─── */
-function goBack() { toast('返回 mowo-orders.html'); }
+function goBack() { window.location.href = 'orders.html'; }
+function goContact() { window.location.href = 'contact.html'; }
+function goPay() {
+  const qs = new URLSearchParams();
+  if (ORDER && ORDER.id) qs.set('orderId', ORDER.id);
+  window.location.href = `checkout.html?${qs.toString()}`;
+}
 function toggleDD() {
   const dd = document.getElementById('userDD'), btn = document.getElementById('navBtn');
   const o = dd.classList.toggle('open');

@@ -164,35 +164,35 @@ a { text-decoration:none; color:inherit; }
 
 /* ── 页头 ── */
 .page-header {
-  padding:48px var(--pad-mobile) 40px;
+  padding:28px var(--pad-mobile) 24px;
   text-align:center;
 }
-@media (min-width:1024px) { .page-header { padding:64px var(--pad-desk) 48px; } }
+@media (min-width:1024px) { .page-header { padding:36px var(--pad-desk) 28px; } }
 .page-eyebrow {
   font-weight:800; font-size:11px; letter-spacing:.25em;
-  text-transform:uppercase; color:var(--gray3); margin-bottom:16px;
+  text-transform:uppercase; color:var(--gray3); margin-bottom:10px;
 }
 .page-title {
-  font-weight:900; font-size:clamp(32px,5vw,60px);
-  line-height:1.08; letter-spacing:-.03em; color:var(--black); margin-bottom:16px;
+  font-weight:900; font-size:clamp(24px,3.5vw,42px);
+  line-height:1.1; letter-spacing:-.03em; color:var(--black); margin-bottom:10px;
 }
 .page-title em {
   font-style:normal; position:relative; display:inline-block;
 }
 .page-title em::after {
   content:''; position:absolute; bottom:2px; left:0; right:0;
-  height:7px; background:var(--accent-y); z-index:-1; border-radius:4px;
+  height:5px; background:var(--accent-y); z-index:-1; border-radius:4px;
 }
 .page-sub {
-  font-weight:700; font-size:clamp(14px,1.8vw,17px);
-  color:var(--gray3); line-height:1.7; max-width:480px; margin:0 auto;
+  font-weight:700; font-size:clamp(13px,1.5vw,15px);
+  color:var(--gray3); line-height:1.6; max-width:480px; margin:0 auto;
 }
 
 /* ── 型号网格 ── */
 .machines-section {
-  padding:0 var(--pad-mobile) 80px;
+  padding:0 var(--pad-mobile) 60px;
 }
-@media (min-width:1024px) { .machines-section { padding:0 var(--pad-desk) 100px; } }
+@media (min-width:1024px) { .machines-section { padding:0 var(--pad-desk) 80px; } }
 
 .machines-grid {
   display:grid;
@@ -253,7 +253,7 @@ a { text-decoration:none; color:inherit; }
 
 /* 卡片图像区 */
 .card-visual {
-  width:100%; aspect-ratio:3/4;
+  width:100%; aspect-ratio:4/3;
   display:flex; align-items:center; justify-content:center;
   position:relative; overflow:hidden;
 }
@@ -266,7 +266,7 @@ a { text-decoration:none; color:inherit; }
 /* 桌面大卡片高度调整 */
 @media (min-width:1024px) {
   .machine-card:nth-child(1) .card-visual,
-  .machine-card:nth-child(2) .card-visual { aspect-ratio:4/3; }
+  .machine-card:nth-child(2) .card-visual { aspect-ratio:16/9; }
 }
 
 /* 机器占位模型 */
@@ -345,17 +345,17 @@ a { text-decoration:none; color:inherit; }
 .machine-card:hover .mock-ring { animation-duration:.4s !important; }
 
 /* 卡片底部信息 */
-.card-body { padding:20px 20px 22px; }
+.card-body { padding:14px 16px 16px; }
 .card-name {
   font-weight:900; font-size:17px; letter-spacing:-.01em;
   color:var(--black); margin-bottom:4px;
 }
 .card-sub {
   font-weight:700; font-size:12px; color:var(--gray3);
-  margin-bottom:14px; line-height:1.5;
+  margin-bottom:10px; line-height:1.5;
 }
 .card-tags {
-  display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px;
+  display:flex; flex-wrap:wrap; gap:5px; margin-bottom:12px;
 }
 .card-tag {
   font-weight:800; font-size:10px; letter-spacing:.1em;
@@ -408,7 +408,8 @@ a { text-decoration:none; color:inherit; }
   padding:0 var(--pad-mobile) calc(var(--pad-mobile) + env(safe-area-inset-bottom));
   max-height:85vh; overflow-y:auto;
   transform:translateY(100%);
-  transition:transform .4s var(--ease);
+  opacity:0;
+  transition:transform .4s var(--ease), opacity .3s;
 }
 @media (min-width:768px) {
   .price-overlay {
@@ -590,7 +591,8 @@ footer {
   padding:0 var(--pad-mobile) calc(var(--pad-mobile) + env(safe-area-inset-bottom));
   max-height:85vh; overflow-y:auto;
   transform:translateY(100%);
-  transition:transform .4s var(--ease);
+  opacity:0;
+  transition:transform .4s var(--ease), opacity .3s;
 }
 @media (min-width:768px) {
   .help-overlay { align-items:center; }

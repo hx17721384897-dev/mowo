@@ -418,8 +418,9 @@ button { font-family:var(--font);cursor:pointer;border:none;background:none; }
 .anim-tag.creator-tag { background:rgba(143,214,148,.15);color:#287030; }
 
 .anim-footer {
-  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  display:flex;align-items:center;justify-content:flex-end;gap:6px;
   padding-top:10px;border-top:1px solid var(--gray1);
+  flex-wrap:wrap;
 }
 .anim-price { font-weight:900;font-size:15px; }
 .anim-price small { font-weight:700;font-size:11px;color:var(--gray3); }
@@ -434,6 +435,7 @@ button { font-family:var(--font);cursor:pointer;border:none;background:none; }
 .anim-btn:hover { border-color:var(--black);color:var(--black); }
 .anim-btn.primary { background:var(--black);color:var(--white);border-color:var(--black); }
 .anim-btn.primary:hover { opacity:.8; }
+.anim-btn.danger:hover { border-color:var(--red);color:var(--red); }
 
 /* 上架引导卡 */
 .publish-cta {
@@ -618,9 +620,9 @@ button { font-family:var(--font);cursor:pointer;border:none;background:none; }
     <div class="page-header reveal">
       <div>
         <h1 class="page-title">我的作品</h1>
-        <p class="page-subtitle">管理你发布的文章和定制动画机</p>
+        <p class="page-subtitle">管理你发布的文章和上传的动画</p>
       </div>
-      <button class="btn-new" onclick="openNewMenu()">＋ 新建内容</button>
+
     </div>
 
     <!-- Tab 切换 -->
@@ -630,7 +632,7 @@ button { font-family:var(--font);cursor:pointer;border:none;background:none; }
         <span class="tab-count" id="countArticles">0</span>
       </button>
       <button class="tab-btn" id="tabAnimations" onclick="switchTab('animations')">
-        🎡 动画机
+        🎬 动画管理
         <span class="tab-count" id="countAnimations">0</span>
       </button>
     </div>
@@ -645,6 +647,7 @@ button { font-family:var(--font);cursor:pointer;border:none;background:none; }
           <button class="filter-btn" onclick="filterArticles('draft',this)">草稿</button>
           <button class="filter-btn" onclick="filterArticles('reviewing',this)">审核中</button>
         </div>
+        <button class="btn-new" onclick="showToast('打开文章编辑器')">＋ 新建文章</button>
       </div>
 
       <div class="article-list reveal d3" id="articleList">
@@ -660,9 +663,8 @@ button { font-family:var(--font);cursor:pointer;border:none;background:none; }
         <div class="filter-group">
           <button class="filter-btn active" onclick="filterAnims('all',this)">全部</button>
           <button class="filter-btn" onclick="filterAnims('draft',this)">草稿</button>
-          <button class="filter-btn" onclick="filterAnims('published',this)">已上架</button>
-          <button class="filter-btn" onclick="filterAnims('unlisted',this)">已下架</button>
         </div>
+        <button class="btn-new" onclick="location.href='customize-start.html'">＋ 上传动画</button>
       </div>
 
       <div id="publishCta" style="display:none;" class="reveal d2">
@@ -890,8 +892,8 @@ function renderAnimations() {
     cta.innerHTML = `
       <div class="publish-cta">
         <div class="publish-cta-text">
-          <p class="publish-cta-title">🔒 想把动画机上架销售？</p>
-          <p class="publish-cta-desc">完成创作者认证后，可以将动画机发布到商城，获得销售收益</p>
+          <p class="publish-cta-title">🔒 想把动画上架销售？</p>
+          <p class="publish-cta-desc">完成创作者认证后，可以将动画发布到商城，获得销售收益</p>
         </div>
         <button class="publish-cta-btn" onclick="goCertify()">去认证</button>
       </div>`;
@@ -913,7 +915,6 @@ function renderAnimations() {
   const bgMap = { draft:'var(--cream)', published:'#EBF9F0', unlisted:'var(--gray1)' };
   grid.innerHTML = data.map((a, i) => {
     const [cls, label] = STATUS_LABEL[a.status] || ['draft','草稿'];
-    const canPublish = DEMO_USER.isCreator && a.status === 'draft';
     return `
       <div class="anim-card reveal" style="transition-delay:${i*0.06}s">
         <div class="anim-preview" style="background:${bgMap[a.status]||'var(--cream)'}">
@@ -933,16 +934,13 @@ function renderAnimations() {
             ${a.status === 'published' ? `<span class="anim-tag creator-tag">已上架</span>` : ''}
           </div>
           <div class="anim-footer">
-            <p class="anim-price">
-              ${a.price ? `¥${a.price}` : '<small>未定价</small>'}
-            </p>
-            <div class="anim-actions">
-              ${canPublish
-                ? `<button class="anim-btn primary" onclick="publishAnim(${a.id})">上架</button>`
-                : a.status === 'published'
-                  ? `<button class="anim-btn" onclick="editAnim(${a.id})">编辑</button>`
-                  : ''}
-              <button class="anim-btn" onclick="openDeleteModal('anim',${a.id},'「${a.title}」')">删除</button>
+            <div class="anim-actions" style="width:100%;justify-content:flex-end;">
+              <button class="anim-btn" onclick="viewAnim(${a.id})">预览</button>
+              <button class="anim-btn" onclick="editAnim(${a.id})">编辑</button>
+              ${DEMO_USER.isCreator
+                ? `<button class="anim-btn primary" onclick="publishAnim(${a.id})">去上架</button>`
+                : `<button class="anim-btn" onclick="goCertify()">去上架</button>`}
+              <button class="anim-btn danger" onclick="openDeleteModal('anim',${a.id},'「${a.title}」')">删除</button>
             </div>
           </div>
         </div>
@@ -967,10 +965,10 @@ function filterAnims(filter, btn) {
 }
 
 function publishAnim(id) {
-  showToast('跳转到商品编辑页，填写上架信息');
-  setTimeout(() => { location.href = `creator-product-edit.html?animId=${id}`; }, 800);
+  location.href = `creator-product-edit.html?animId=${id}`;
 }
-function editAnim(id) { showToast(`编辑动画机（id: ${id}）`); }
+function viewAnim(id) { showToast(`预览动画（id: ${id}）`); }
+function editAnim(id) { showToast(`编辑动画（id: ${id}）`); }
 
 /* ══════════════════════════════
    新建内容

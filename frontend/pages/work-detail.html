@@ -567,6 +567,14 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
 .foot-links a:hover{color:var(--white);}
 .foot-copy{font-weight:700;font-size:12px;color:rgba(255,255,255,.18);margin-top:24px;}
 
+.like-big.liked{background:#FFF2EC;border-color:var(--accent-o);color:var(--accent-o);}
+.collect-btn{color:var(--gray2);}
+.collect-btn:hover{border-color:var(--accent-y);color:var(--accent-y);}
+.collect-btn.collected{background:#FFFBEC;border-color:var(--accent-y);color:var(--accent-y);}
+.collect-star{transition:fill .2s,color .2s,transform .25s var(--ease);}
+.collect-btn:hover .collect-star{transform:scale(1.15);}
+.collect-btn.collected .collect-star{fill:var(--accent-y);transform:scale(1.2);}
+
 /* REVEAL */
 .reveal{opacity:0;transform:translateY(20px);transition:opacity .7s var(--ease),transform .7s var(--ease);}
 .reveal.on{opacity:1;transform:none;}
@@ -576,27 +584,27 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
 <body>
 
 <div class="mobile-menu" id="mobileMenu">
-  <a href="#">关于我们</a>
-  <a href="#">产品介绍</a>
-  <a href="mowo-community.html" class="active">社区分享</a>
-  <a href="#">创作中心</a>
-  <a href="#">联络我们</a>
+  <a href="about.html">关于我们</a>
+  <a href="products.html">产品介绍</a>
+  <a href="community.html" class="active">社区分享</a>
+  <a href="customize-start.html">创作中心</a>
+  <a href="contact.html">联络我们</a>
 </div>
 
 <nav class="nav">
-  <a href="#" class="nav-logo">
+  <a href="index.html" class="nav-logo">
     <span class="nav-logo-cn">哞屋</span>
     <span class="nav-logo-en">MOWO</span>
   </a>
   <ul class="nav-links">
-    <li><a href="#">关于我们</a></li>
-    <li><a href="#">产品介绍</a></li>
-    <li><a href="mowo-community.html" class="active">社区分享</a></li>
-    <li><a href="#">创作中心</a></li>
-    <li><a href="#">联络我们</a></li>
+    <li><a href="about.html">关于我们</a></li>
+    <li><a href="products.html">产品介绍</a></li>
+    <li><a href="community.html" class="active">社区分享</a></li>
+    <li><a href="customize-start.html">创作中心</a></li>
+    <li><a href="contact.html">联络我们</a></li>
   </ul>
   <div class="nav-right">
-    <a href="#" class="nav-login">登录</a>
+    <a href="auth.html" class="nav-login">登录</a>
     <div class="burger" id="burger">
       <span></span><span></span><span></span>
     </div>
@@ -605,7 +613,7 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
 
 <!-- Breadcrumb -->
 <div class="breadcrumb">
-  <a href="mowo-community.html" class="back-btn">
+  <a href="community.html" class="back-btn">
     <span class="back-arrow">←</span>
     <span>返回社区</span>
   </a>
@@ -681,10 +689,10 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
 
     <!-- Author -->
     <div class="author-row">
-      <div class="author-av-lg">🐱</div>
-      <div class="author-meta">
-        <p class="author-handle">小橘工作室</p>
-        <p class="author-stats">32 件作品 · 1.4万 关注者</p>
+      <div class="author-av-lg" id="authorAvatar" onclick="goCreator()" style="cursor:pointer;">🐱</div>
+      <div class="author-meta" onclick="goCreator()" style="cursor:pointer;">
+        <p class="author-handle" id="authorHandle">小橘工作室</p>
+        <p class="author-stats" id="authorStats">32 件作品 · 1.4万 关注者</p>
       </div>
       <button class="follow-btn" onclick="toggleFollow(this)">关注</button>
     </div>
@@ -704,20 +712,33 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
     <div class="stats-row">
       <div class="stat-item">
         <span class="stat-icon">👁</span>
-        <span class="stat-val">1.2万</span>
+        <span class="stat-val" id="statViews">1.2万</span>
         <span class="stat-lab">浏览</span>
       </div>
       <div class="stat-item">
         <span class="stat-icon">♥</span>
-        <span class="stat-val">2,401</span>
+        <span class="stat-val" id="statLikes">2,401</span>
         <span class="stat-lab">点赞</span>
       </div>
-      <div class="stat-item">
-        <span class="stat-icon">🛍</span>
-        <span class="stat-val">87</span>
-        <span class="stat-lab">已售</span>
+      <!-- 文章模式显示收藏量，商品模式显示已售 -->
+      <div class="stat-item" id="statThirdItem">
+        <span class="stat-icon">⭐</span>
+        <span class="stat-val" id="statThirdVal">318</span>
+        <span class="stat-lab" id="statThirdLab">收藏</span>
       </div>
-      <button class="like-big" onclick="toggleLikeBig(this)">
+      <!-- 文章模式：只显示爱心和收藏图标 -->
+      <div class="article-actions" id="articleActions" style="display:flex;gap:10px;margin-left:auto;">
+        <button class="like-big" id="likeBigBtn" onclick="toggleLikeBig(this)" title="点赞">
+          <span class="like-big-icon">♡</span>
+        </button>
+        <button class="like-big collect-btn" id="collectBtn" onclick="toggleCollect(this)" title="收藏">
+          <svg class="collect-star" width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2.5C12 2.5 13.8 7.2 14.5 8.5C15.2 9.8 20.5 10.2 20.5 10.2C20.5 10.2 17 13.5 16.5 14.5C16 15.5 17.2 21 17.2 21C17.2 21 12.5 18.2 12 17.8C11.5 18.2 6.8 21 6.8 21C6.8 21 8 15.5 7.5 14.5C7 13.5 3.5 10.2 3.5 10.2C3.5 10.2 8.8 9.8 9.5 8.5C10.2 7.2 12 2.5 12 2.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+      <!-- 商品模式：保留原来带数字的点赞按钮 -->
+      <button class="like-big" id="likeBigBtnProduct" onclick="toggleLikeBig(this)" style="display:none;margin-left:auto;">
         <span class="like-big-icon">♡</span>
         <span class="like-big-count">2,401</span>
       </button>
@@ -727,8 +748,8 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
     <p class="work-desc-label">作品介绍</p>
     <p class="work-desc">一只爱跑步的橘猫，12帧流畅循环，动作参考了真实猫咪的跑姿，逐帧手绘完成。适合经典圆筒款和扁圆盒款动画机。<br><br>这是我第一套正式发布的动画机内容，画了将近两周，希望你们喜欢。</p>
 
-    <!-- Specs -->
-    <div class="specs-block">
+    <!-- Specs（只有商品模式显示）-->
+    <div class="specs-block" id="specsBlock" style="display:none;">
       <div class="spec-row">
         <span class="spec-key">帧数</span>
         <span class="spec-val">12 帧</span>
@@ -768,10 +789,7 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
     <!-- Share -->
     <div class="share-row">
       <span class="share-label">分享</span>
-      <button class="share-btn" title="复制链接">🔗</button>
-      <button class="share-btn" title="微博">🐦</button>
-      <button class="share-btn" title="微信">💬</button>
-      <button class="share-btn" title="小红书">📕</button>
+      <button class="share-btn" title="复制链接" onclick="copyLink()">🔗</button>
     </div>
 
   </div>
@@ -825,31 +843,31 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
 <section class="related reveal">
   <div class="related-header">
     <h2 class="related-title">同作者的其他作品</h2>
-    <a href="mowo-community.html" class="related-more">查看全部 →</a>
+    <a href="community.html" class="related-more">查看全部 →</a>
   </div>
   <div class="related-grid">
-    <div class="rel-card" onclick="window.location.href='mowo-work-detail.html'">
+    <div class="rel-card" onclick="window.location.href='work-detail.html?type=article'">
       <div class="rel-img">🐱</div>
       <div class="rel-body">
         <p class="rel-title">睡觉的橘猫 · 8帧</p>
         <p class="rel-author">@小橘工作室</p>
       </div>
     </div>
-    <div class="rel-card" onclick="window.location.href='mowo-work-detail.html'">
+    <div class="rel-card" onclick="window.location.href='work-detail.html?type=article'">
       <div class="rel-img">🐾</div>
       <div class="rel-body">
         <p class="rel-title">猫咪洗脸循环</p>
         <p class="rel-author">@小橘工作室</p>
       </div>
     </div>
-    <div class="rel-card" onclick="window.location.href='mowo-work-detail.html'">
+    <div class="rel-card" onclick="window.location.href='work-detail.html?type=article'">
       <div class="rel-img">😺</div>
       <div class="rel-body">
         <p class="rel-title">橘猫摇尾巴</p>
         <p class="rel-author">@小橘工作室</p>
       </div>
     </div>
-    <div class="rel-card" onclick="window.location.href='mowo-work-detail.html'">
+    <div class="rel-card" onclick="window.location.href='work-detail.html?type=article'">
       <div class="rel-img">🌙</div>
       <div class="rel-body">
         <p class="rel-title">夜猫子系列 · Vol.1</p>
@@ -863,8 +881,8 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
   <div class="foot-row">
     <span class="foot-logo">哞屋 MOWO</span>
     <div class="foot-links">
-      <a href="#">关于我们</a><a href="#">产品介绍</a>
-      <a href="mowo-community.html">社区分享</a><a href="#">创作中心</a><a href="#">联络我们</a>
+      <a href="about.html">关于我们</a><a href="products.html">产品介绍</a>
+      <a href="community.html">社区分享</a><a href="customize-start.html">创作中心</a><a href="contact.html">联络我们</a>
     </div>
   </div>
   <p class="foot-copy">© 2025 哞屋 MOWO. All rights reserved.</p>
@@ -963,15 +981,25 @@ function toggleFollow(btn){
 function toggleLikeBig(btn){
   const liked = btn.classList.toggle('liked');
   const icon = btn.querySelector('.like-big-icon');
+  if (icon) {
+    icon.textContent = liked ? '♥' : '♡';
+  }
+  // 商品模式才更新数字
   const countEl = btn.querySelector('.like-big-count');
-  icon.textContent = liked ? '♥' : '♡';
-  let n = parseInt(countEl.textContent.replace(',',''));
-  n = liked ? n+1 : n-1;
-  countEl.textContent = n.toLocaleString('zh-CN');
+  if (countEl) {
+    let n = parseInt(countEl.textContent.replace(',',''));
+    n = liked ? n+1 : n-1;
+    countEl.textContent = n.toLocaleString('zh-CN');
+  }
 }
 function toggleWish(btn){
   const wished = btn.classList.toggle('wished');
   btn.textContent = wished ? '♥' : '♡';
+}
+function toggleCollect(btn){
+  const collected = btn.classList.toggle('collected');
+  showToast(collected ? '⭐ 已收藏' : '已取消收藏');
+  // TODO: 对接API时在这里调用 POST /api/articles/:id/collect
 }
 
 /* ══════════════════════════════
@@ -981,17 +1009,30 @@ function toggleWish(btn){
   const params = new URLSearchParams(location.search);
   const type   = params.get('type') || 'article'; /* article | product */
 
+  /* 存储作者ID供跳转用 */
+  window._authorId = params.get('creatorId') || null;
+
   if (type === 'product') {
-    /* 商品模式：显示价格和购买按钮 */
+    /* 商品模式：显示价格、购买按钮、规格表 */
     const price    = params.get('price')    || '299';
     const oldPrice = params.get('oldPrice') || '';
     const machineType = params.get('machine') || 'cylinder';
 
-    document.getElementById('ctaBlock').style.display = 'block';
-    document.getElementById('ctaPrice').textContent   = '¥ ' + price;
+    document.getElementById('ctaBlock').style.display   = 'block';
+    document.getElementById('specsBlock').style.display = 'block';
+    document.getElementById('ctaPrice').textContent     = '¥ ' + price;
     if (oldPrice) document.getElementById('ctaPriceOld').textContent = '¥ ' + oldPrice;
 
-    /* 在specs区下方插入「已售/好评率」小行 */
+    /* 商品模式：已售替换收藏 */
+    document.getElementById('statThirdItem').querySelector('.stat-icon').textContent = '🛍';
+    document.getElementById('statThirdVal').textContent = '87';
+    document.getElementById('statThirdLab').textContent = '已售';
+
+    /* 商品模式：隐藏文章操作按钮，显示商品点赞按钮 */
+    document.getElementById('articleActions').style.display = 'none';
+    document.getElementById('likeBigBtnProduct').style.display = 'flex';
+
+    /* 在specs区下方插入「好评率」小行 */
     const specsBlock = document.querySelector('.specs-block');
     if (specsBlock) {
       const extraRow = document.createElement('div');
@@ -1000,21 +1041,43 @@ function toggleWish(btn){
       specsBlock.appendChild(extraRow);
     }
 
-    /* 把 gallery-sale-badge 文字改掉 */
     const saleBadge = document.querySelector('.gallery-sale-badge');
     if (saleBadge) saleBadge.textContent = '✦ 在售 · ¥' + price;
 
-    /* 存机型供弹窗使用 */
-    window._machineType = machineType;
+    window._machineType  = machineType;
     window._productPrice = parseInt(price);
   } else {
-    /* 文章模式：确保CTA隐藏，gallery-sale-badge改为「作品」 */
+    /* 文章模式：隐藏规格表，显示文章操作按钮 */
     const saleBadge = document.querySelector('.gallery-sale-badge');
     if (saleBadge) saleBadge.textContent = '✦ 作品分享';
+    /* articleActions 默认已显示，无需额外操作 */
   }
 
   renderComments();
 })();
+
+/* ── 跳转创作者主页 ── */
+function goCreator() {
+  const id = window._authorId;
+  if (!id) return;
+  window.location.href = `creator-profile.html?id=${id}`;
+}
+
+/* ── 复制链接 ── */
+function copyLink() {
+  navigator.clipboard.writeText(window.location.href)
+    .then(() => showToast('🔗 链接已复制'))
+    .catch(() => {
+      /* 兼容不支持clipboard API的环境 */
+      const input = document.createElement('input');
+      input.value = window.location.href;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+      showToast('🔗 链接已复制');
+    });
+}
 
 /* ══════════════════════════════
    SKU 选配弹窗
