@@ -150,43 +150,41 @@ export default async function articleRoutes(fastify) {
   // ─────────────────────────────────────────
   // GET /api/articles/:id 获取文章详情
   // ─────────────────────────────────────────
-  // 不需要登录
-  // 返回文章完整内容、关联商品、作者信息
-  // 同时增加浏览数
+  // 不需要登录，但如果带了token会额外返回当前用户的点赞/收藏状态
   fastify.get('/:id', async (request, reply) => {
     const { id } = request.params
 
-    const article = await fastify.prisma.article.findUnique({
+    const article = await fastify.prisma.article.findUnique({ 
       where: { id },
-      include: {
-        user: {
-          select: {
-            id: true,
-            certifyStatus: true,
-            profile: {
-              select: { nickname: true, avatarUrl: true, bio: true }
-            },
-            creatorProfile: {
-              select: { styleTags: true }
-            }
-          }
-        },
-        articleProducts: {
-          orderBy: { position: 'asc' },
-          include: {
-            product: {
-              select: {
-                id: true,
-                title: true,
-                machineType: true,
-                finalPrice: true,
-                salesCount: true
-              }
-            }
-          }
-        }
-      }
-    })
+      include: { 
+        user: { 
+          select: { 
+            id: true, 
+            certifyStatus: true, 
+            profile: { 
+              select: { nickname: true, avatarUrl: true, bio: true } 
+            }, 
+            creatorProfile: { 
+              select: { styleTags: true } 
+            } 
+          } 
+        }, 
+        articleProducts: { 
+          orderBy: { position: 'asc' }, 
+          include: { 
+            product: { 
+              select: { 
+                id: true, 
+                title: true, 
+                machineType: true, 
+                finalPrice: true, 
+                salesCount: true 
+              } 
+            } 
+          } 
+        } 
+      } 
+    }) 
 
     if (!article || article.status === 'removed') {
       return reply.code(404).send({ success: false, message: '文章不存在' })
@@ -198,7 +196,42 @@ export default async function articleRoutes(fastify) {
       data: { viewCount: { increment: 1 } }
     })
 
-    return reply.send({ success: true, data: article })
+    // 查询当前用户的点赞/收藏状态（如果已登录）
+    let isLiked = false
+    let isCollected = false
+
+    try {
+      const token = request.headers.authorization?.replace('Bearer ', '')
+      if (token) {
+        const decoded = fastify.jwt.verify(token)
+        const userId = decoded.userId
+
+        const [like, collect] = await Promise.all([
+          fastify.prisma.like.findUnique({
+            where: {
+              userId_targetType_targetId: {
+                userId,
+                targetType: 'article',
+                targetId: id
+              }
+            }
+          }),
+          fastify.prisma.collect.findUnique({
+            where: { userId_articleId: { userId, articleId: id } }
+          })
+        ])
+
+        isLiked     = !!like
+        isCollected = !!collect
+      }
+    } catch(e) {
+      // token无效或过期，当未登录处理，不影响文章数据返回
+    }
+
+    return reply.send({
+      success: true,
+      data: { ...article, isLiked, isCollected }
+    })
   })
 
   // ─────────────────────────────────────────

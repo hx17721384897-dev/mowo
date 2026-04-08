@@ -17,16 +17,18 @@ export default async function authRoutes(fastify) {
     schema: {
       body: {
         type: 'object',
-        required: ['phone', 'password', 'nickname'],
+        required: ['phone', 'password'],
         properties: {
-          phone: { type: 'string', minLength: 11, maxLength: 11 },
-          password: { type: 'string', minLength: 6, maxLength: 50 },
-          nickname: { type: 'string', minLength: 1, maxLength: 50 }
+          phone:    { type: 'string', minLength: 11, maxLength: 11 },
+          password: { type: 'string', minLength: 6,  maxLength: 50 },
+          nickname: { type: 'string', minLength: 1,  maxLength: 50 }
         }
       }
     }
   }, async (request, reply) => {
-    const { phone, password, nickname } = request.body
+    const { phone, password } = request.body
+    // nickname 选填，默认用「用户」+ 手机号后四位
+    const nickname = request.body.nickname || `用户${phone.slice(-4)}`
 
     // 检查手机号是否已注册
     const existing = await fastify.prisma.user.findUnique({ where: { phone } })
@@ -170,6 +172,7 @@ export default async function authRoutes(fastify) {
       data: {
         id: user.id,
         phone: user.phone,
+        role: user.role,
         certifyStatus: user.certifyStatus,
         isBanned: user.isBanned,
         profile: user.profile,

@@ -43,6 +43,33 @@ GET http://localhost:3001/api/articles
 GET http://localhost:3001/api/articles?tag=治愈
 
 
+### 发布带商品链接的文章
+POST http://localhost:3001/api/articles
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmNGU2YjE2NS01MWNmLTRlYmYtYjZjNi01MzBlMWFhZDUxYmMiLCJwaG9uZSI6IjEzODAwMTM4MDAwIiwiY2VydGlmeVN0YXR1cyI6MiwiaWF0IjoxNzczNDkwODgzLCJleHAiOjE3NzQwOTU2ODN9.N6wAeVPT7JgFAtxO1X8Mq9TG9jOqPZpZ4XcYEIEsyPI
+
+{
+  "title": "小猫走路动画机开箱分享",
+  "content": "终于收到了！这个动画机真的太可爱了，转起来的效果超级棒！",
+  "tags": ["开箱", "治愈", "动画机"],
+  "productIds": ["0a8f95fc-1532-4605-acdd-669920a4e77d"]
+}
+
+
+### 发布手绘标签文章
+POST http://localhost:3001/api/articles
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmNGU2YjE2NS01MWNmLTRlYmYtYjZjNi01MzBlMWFhZDUxYmMiLCJwaG9uZSI6IjEzODAwMTM4MDAwIiwiY2VydGlmeVN0YXR1cyI6MiwiaWF0IjoxNzczNTAxNjk4LCJleHAiOjE3NzQxMDY0OTh9.e0QphxCRl5mnNmc_p84lb8M48F8Q8pLgNvaZnkMoV2w
+
+{
+  "title": "手绘小猫测试",
+  "content": "测试手绘标签筛选",
+  "tags": ["手绘", "猫咪"]
+}
+
+
+
+
 
 ### 点赞文章
 POST http://localhost:3001/api/articles/fafb1987-5cd7-463b-b4ca-fba232db1d4f/like
@@ -146,3 +173,86 @@ GET http://localhost:3001/api/feed?saleOnly=true
 
 ### 按热门排序
 GET http://localhost:3001/api/feed?sort=popular
+
+
+
+### 获取机型款式列表
+GET http://localhost:3001/api/machine-models
+
+### 获取常规机型SKU
+GET http://localhost:3001/api/machine-models/c88ba10d-2598-44ed-979d-85c3e2a9c3a4/skus
+
+
+### 测试预签名URL
+POST http://localhost:3001/api/upload/presign
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmNGU2YjE2NS01MWNmLTRlYmYtYjZjNi01MzBlMWFhZDUxYmMiLCJwaG9uZSI6IjEzODAwMTM4MDAwIiwiY2VydGlmeVN0YXR1cyI6MiwiaWF0IjoxNzc0MDY3NzIyLCJleHAiOjE3NzQ2NzI1MjJ9.g8mfOQk25pa5h9hvueipqvBGwWZp8_cEVDGwsgLtp2g
+
+{
+  "fileName": "test.jpg",
+  "fileType": "image/jpeg",
+  "folder": "test"
+}
+
+
+
+### 创建定制订单
+POST http://localhost:3001/api/customize-orders
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmNGU2YjE2NS01MWNmLTRlYmYtYjZjNi01MzBlMWFhZDUxYmMiLCJwaG9uZSI6IjEzODAwMTM4MDAwIiwiY2VydGlmeVN0YXR1cyI6MiwiaWF0IjoxNzc0MDc0NzU2LCJleHAiOjE3NzQ2Nzk1NTZ9.yO8pJfrQG8zfC46ofjeU9zj05ss8B4ZH2bJbvI6IDvI
+
+{
+  "modelId": "c88ba10d-2598-44ed-979d-85c3e2a9c3a4",
+  "modelName": "常规机型",
+  "frameCount": 12,
+  "size": "5x5cm",
+  "material": "椴木板",
+  "color": "natural",
+  "colorName": "原色",
+  "skuId": "a91d68f6-8e5b-452d-9aa4-ffce69069029",
+  "ossPath": "customize/1aad51bc/ORD123",
+  "frameUrls": ["customize/1aad51bc/ORD123/001.jpg", "customize/1aad51bc/ORD123/002.jpg"]
+}
+
+### 用普通用户token访问管理员接口（应该返回403）
+GET http://localhost:3001/api/customize-orders
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmNGU2YjE2NS01MWNmLTRlYmYtYjZjNi01MzBlMWFhZDUxYmMiLCJwaG9uZSI6IjEzODAwMTM4MDAwIiwiY2VydGlmeVN0YXR1cyI6Miwicm9sZSI6MywiaWF0IjoxNzc0MDg0NjE2LCJleHAiOjE3NzQ2ODk0MTZ9.zGGFtQkaHLhrcQCVitAPczTgj5UWIdXaR0HHi2Vwtak
+
+### 管理员获取订单列表
+GET http://localhost:3001/api/admin/orders
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmNGU2YjE2NS01MWNmLTRlYmYtYjZjNi01MzBlMWFhZDUxYmMiLCJwaG9uZSI6IjEzODAwMTM4MDAwIiwiY2VydGlmeVN0YXR1cyI6Miwicm9sZSI6MywiaWF0IjoxNzc0MDg1MjMzLCJleHAiOjE3NzQ2OTAwMzN9.e1XWnWIllg9ta6gWAtgEiXj-V4VeSaD7cY3htoDpRUE
+
+### 用普通用户token测试权限拦截（应返回403）
+GET http://localhost:3001/api/admin/orders
+Authorization: Bearer 普通用户token
+
+
+### 获取统计数据
+GET http://localhost:3001/api/admin/stats
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmNGU2YjE2NS01MWNmLTRlYmYtYjZjNi01MzBlMWFhZDUxYmMiLCJwaG9uZSI6IjEzODAwMTM4MDAwIiwiY2VydGlmeVN0YXR1cyI6Miwicm9sZSI6MywiaWF0IjoxNzc0MDkxODIwLCJleHAiOjE3NzQ2OTY2MjB9.C6hUHusZ7R554tVFgDisLH8nq1rGAFaVpDN4335TGuA
+
+### 下载ZIP（用真实订单号）
+GET http://localhost:3001/api/admin/orders/ORD1774075464586428/download-zip
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmNGU2YjE2NS01MWNmLTRlYmYtYjZjNi01MzBlMWFhZDUxYmMiLCJwaG9uZSI6IjEzODAwMTM4MDAwIiwiY2VydGlmeVN0YXR1cyI6Miwicm9sZSI6MywiaWF0IjoxNzc0MDkxODIwLCJleHAiOjE3NzQ2OTY2MjB9.C6hUHusZ7R554tVFgDisLH8nq1rGAFaVpDN4335TGuA
+
+
+### 下载ZIP
+GET http://localhost:3001/api/admin/orders/ORD1774075464586428/download-zip
+Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmNGU2YjE2NS01MWNmLTRlYmYtYjZjNi01MzBlMWFhZDUxYmMiLCJwaG9uZSI6IjEzODAwMTM4MDAwIiwiY2VydGlmeVN0YXR1cyI6Miwicm9sZSI6MywiaWF0IjoxNzc0MDkyMDEzLCJleHAiOjE3NzQ2OTY4MTN9.Rvo4o04tTy4k5xRbFho9n6wSgUqOSyWAGkq0TtJPgY4
+
+### 待生产汇总
+GET http://localhost:3001/api/admin/production/summary
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmNGU2YjE2NS01MWNmLTRlYmYtYjZjNi01MzBlMWFhZDUxYmMiLCJwaG9uZSI6IjEzODAwMTM4MDAwIiwiY2VydGlmeVN0YXR1cyI6Miwicm9sZSI6MywiaWF0IjoxNzc0MTAyNTkxLCJleHAiOjE3NzQ3MDczOTF9.Yuo5DGnQZ0j-u6trHDSaHeSClkbqfW4RzDR5yhJlXKY
+
+### 待生产订单列表
+GET http://localhost:3001/api/admin/production/orders
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmNGU2YjE2NS01MWNmLTRlYmYtYjZjNi01MzBlMWFhZDUxYmMiLCJwaG9uZSI6IjEzODAwMTM4MDAwIiwiY2VydGlmeVN0YXR1cyI6Miwicm9sZSI6MywiaWF0IjoxNzc0MTAyNTkxLCJleHAiOjE3NzQ3MDczOTF9.Yuo5DGnQZ0j-u6trHDSaHeSClkbqfW4RzDR5yhJlXKY
+
+### 把订单改为已支付
+PUT http://localhost:3001/api/admin/orders/ORD1774075464586428/status
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmNGU2YjE2NS01MWNmLTRlYmYtYjZjNi01MzBlMWFhZDUxYmMiLCJwaG9uZSI6IjEzODAwMTM4MDAwIiwiY2VydGlmeVN0YXR1cyI6Miwicm9sZSI6MywiaWF0IjoxNzc0MTAyNTkxLCJleHAiOjE3NzQ3MDczOTF9.Yuo5DGnQZ0j-u6trHDSaHeSClkbqfW4RzDR5yhJlXKY
+
+{
+  "status": "paid"
+}

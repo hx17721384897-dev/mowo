@@ -19,13 +19,14 @@ export async function verifyPassword(password, hash) {
 
 // 生成 JWT token
 // payload 是存在 token 里的数据，前端拿到 token 后可以解码读取这些信息
-// 包含用户 id、手机号、认证状态，有效期 7 天
+// 包含用户 id、手机号、认证状态、角色，有效期 7 天
 export function signToken(fastify, user) {
   return fastify.jwt.sign(
     {
-      userId: user.id,
-      phone: user.phone,
-      certifyStatus: user.certifyStatus
+      userId:        user.id,
+      phone:         user.phone,
+      certifyStatus: user.certifyStatus,
+      role:          user.role ?? 0   // 0=User 1=Production 2=Admin 3=SuperAdmin
     },
     { expiresIn: '7d' }
   )
