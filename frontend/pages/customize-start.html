@@ -769,7 +769,7 @@ function doSelect(m) {
   const skus   = m.skus || []
   const frames = [...new Set(skus.map(s => s.frameCount))].sort((a,b) => a-b)
   const sizes  = [...new Set(skus.map(s => s.size))]
-  localStorage.setItem('mowo_customize_meta', JSON.stringify({ modelId:m.id, name:m.name, frames, sizes }))
+  localStorage.setItem('mowo_customize_meta', JSON.stringify({ modelId:m.id, name:m.name, frames, sizes, modelType: m.modelType || 'single' }))
 }
 
 function clearSelection() {

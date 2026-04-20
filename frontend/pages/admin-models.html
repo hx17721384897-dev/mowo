@@ -288,6 +288,14 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
       <label class="form-label">介绍视频URL <em>选填，OSS视频地址或公开视频链接</em></label>
       <input class="form-input" id="mVideoUrl" placeholder="https://...">
     </div>
+    <div class="form-field">
+      <label class="form-label">款式类型</label>
+      <select class="form-input" id="mModelType">
+        <option value="single">普通款（单动画）</option>
+        <option value="dual">双动画款（上下分屏）</option>
+        <option value="panorama">全景款</option>
+      </select>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModelModal()">取消</button>
       <button class="btn btn-black" onclick="submitModel()">保存款式</button>
@@ -953,11 +961,13 @@ function openModelModal(modelId) {
     document.getElementById('mDescription').value  = m.description || ''
     document.getElementById('mPreviewImage').value = m.previewImage || ''
     document.getElementById('mVideoUrl').value     = m.videoUrl || ''
+    document.getElementById('mModelType').value    = m.modelType || 'single'
   } else {
     document.getElementById('mName').value         = ''
     document.getElementById('mDescription').value  = ''
     document.getElementById('mPreviewImage').value = ''
     document.getElementById('mVideoUrl').value     = ''
+    document.getElementById('mModelType').value    = 'single'
   }
   document.getElementById('modelModal').classList.add('show')
 }
@@ -968,6 +978,7 @@ async function submitModel() {
   const description  = document.getElementById('mDescription').value.trim()
   const previewImage = document.getElementById('mPreviewImage').value.trim()
   const videoUrl     = document.getElementById('mVideoUrl').value.trim()
+  const modelType    = document.getElementById('mModelType').value
   if (!name)        { showToast('请填写款式名称'); return }
   if (!description) { showToast('请填写款式介绍'); return }
   try {
@@ -976,13 +987,13 @@ async function submitModel() {
       res = await fetch(`${API}/api/machine-models/${_editModelId}`, {
         method: 'PUT',
         headers: {'Content-Type':'application/json', Authorization:`Bearer ${_token}`},
-        body: JSON.stringify({ name, description, previewImage: previewImage || null, videoUrl: videoUrl || null })
+        body: JSON.stringify({ name, description, previewImage: previewImage || null, videoUrl: videoUrl || null, modelType })
       })
     } else {
       res = await fetch(`${API}/api/machine-models`, {
         method: 'POST',
         headers: {'Content-Type':'application/json', Authorization:`Bearer ${_token}`},
-        body: JSON.stringify({ name, description, previewImage: previewImage || null, videoUrl: videoUrl || null })
+        body: JSON.stringify({ name, description, previewImage: previewImage || null, videoUrl: videoUrl || null, modelType })
       })
     }
     const json = await res.json()

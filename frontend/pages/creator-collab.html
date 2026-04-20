@@ -156,6 +156,19 @@ input,select,textarea{font-family:var(--font);}
 .sku-chip.selected:hover{background:rgba(17,17,16,.85);}
 .sku-loading{font-weight:700;font-size:13px;color:var(--gray3);padding:12px 0;}
 
+/* ── SKU 分组卡片（草稿锁定款式后） ── */
+.sku-size-group{margin-bottom:14px;}
+.sku-size-label{font-weight:900;font-size:12px;color:var(--black);margin-bottom:7px;letter-spacing:.3px;}
+.sku-chips-row{display:flex;flex-wrap:wrap;gap:7px;}
+.sku-chip-card{display:flex;align-items:center;gap:5px;padding:7px 12px;border-radius:10px;border:1.5px solid var(--gray1);background:var(--white);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;user-select:none;}
+.sku-chip-card:hover{border-color:var(--gray2);}
+.sku-chip-card.selected{border-color:var(--black);background:var(--black);color:var(--white);}
+.sku-chip-card.selected .sku-chip-mat{color:rgba(255,255,255,.7);}
+.sku-chip-frame{font-weight:900;}
+.sku-chip-mat{color:var(--gray3);font-size:10px;}
+.sku-chip-clr{font-size:10px;}
+.sku-color-dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex-shrink:0;border:1px solid rgba(0,0,0,.1);}
+
 /* ── 协议勾选 ── */
 .agreement-box{background:var(--cream);border-radius:14px;padding:14px 16px;border:1.5px solid var(--gray1);}
 .agreement-text{font-weight:700;font-size:12px;color:var(--gray3);line-height:1.7;margin-bottom:10px;}
@@ -408,6 +421,10 @@ function switchTab(tab) {
     document.getElementById(tabMap[k]).classList.toggle('active', k === tab)
     document.getElementById(btnMap[k]).classList.toggle('active', k === tab)
   })
+  // 切换到提交页时，若尚未加载 SKU（无 animationId 场景），加载模型选择
+  if (tab === 'apply' && allSkus.length === 0 && !currentAnimId) {
+    loadSkus()
+  }
 }
 
 /* ─────────────────────────────────────────
@@ -573,51 +590,99 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ─────────────────────────────────────────
    加载款式 SKU
 ───────────────────────────────────────── */
+
+// 初始化时不再调用，改由 loadAnimSource 触发
 async function loadSkus() {
+  // fallback：无 animationId 时先展示模型选择
+  await loadAllModels()
+}
+
+// 加载全部模型供选择（无草稿时 fallback）
+async function loadAllModels() {
   try {
     const res  = await fetch(`${CAPI}/api/machine-models`)
     const json = await res.json()
     if (!json.success) throw new Error(json.message)
-
-    // 展平所有模型的 SKU
-    allSkus = []
-    ;(json.data || []).forEach(model => {
-      ;(model.skus || []).forEach(sku => {
-        if (sku.isActive !== false) {
-          allSkus.push({
-            id: sku.id,
-            label: `${model.name} · ${sku.size} · ${sku.material} · ${sku.frameCount}帧`,
-            short: `${sku.size}`,
-            modelName: model.name,
-          })
-        }
-      })
-    })
-
-    renderSkuGrid()
+    const models = (json.data || []).filter(m => m.isActive !== false)
+    if (!models.length) {
+      document.getElementById('skuGrid').innerHTML =
+        '<p style="font-weight:700;font-size:12px;color:var(--gray3);">暂无可用款式</p>'
+      return
+    }
+    // 渲染模型选择列表
+    document.getElementById('skuGrid').innerHTML =
+      `<p style="font-weight:700;font-size:12px;color:var(--gray3);margin-bottom:10px;">请先选择适配的款式：</p>` +
+      `<div style="display:flex;flex-wrap:wrap;gap:8px;">` +
+      models.map(m =>
+        `<button class="sku-chip" onclick="loadSkusForModel('${escHtml(m.id)}','${escHtml(m.name)}')"
+           title="${escHtml(m.name)}">${escHtml(m.name)}</button>`
+      ).join('') +
+      `</div>`
   } catch(e) {
     document.getElementById('skuGrid').innerHTML =
       '<p style="font-weight:700;font-size:12px;color:var(--gray3);">款式加载失败，请刷新重试</p>'
   }
 }
 
-function renderSkuGrid() {
-  if (allSkus.length === 0) {
+// 加载指定模型的 SKU（草稿锁定 or 手动选模型）
+async function loadSkusForModel(modelId, modelName) {
+  document.getElementById('skuGrid').innerHTML =
+    '<p style="font-weight:700;font-size:12px;color:var(--gray3);">加载中…</p>'
+  try {
+    const res  = await fetch(`${CAPI}/api/machine-models/${modelId}/skus`)
+    const json = await res.json()
+    if (!json.success) throw new Error(json.message)
+    allSkus = (json.data || []).filter(s => s.isActive !== false)
+      .map(s => ({ ...s, modelId, modelName: modelName || '' }))
+    renderSkuGrouped(modelName || '')
+  } catch(e) {
     document.getElementById('skuGrid').innerHTML =
-      '<p style="font-weight:700;font-size:12px;color:var(--gray3);">暂无可选款式</p>'
+      '<p style="font-weight:700;font-size:12px;color:var(--gray3);">规格加载失败，请刷新重试</p>'
+  }
+}
+
+// 按尺寸分组渲染 SKU 卡片
+function renderSkuGrouped(modelName) {
+  const container = document.getElementById('skuGrid')
+  if (!allSkus.length) {
+    container.innerHTML = '<p style="font-weight:700;font-size:12px;color:var(--gray3);">该款式暂无可用规格</p>'
     return
   }
-  document.getElementById('skuGrid').innerHTML = allSkus.map(sku =>
-    `<button class="sku-chip${selectedSkus.has(sku.id) ? ' selected' : ''}"
-       onclick="toggleSku('${sku.id}')"
-       title="${escHtml(sku.label)}">${escHtml(sku.short)}</button>`
+  // 按 size 分组
+  const bySize = {}
+  allSkus.forEach(s => {
+    if (!bySize[s.size]) bySize[s.size] = []
+    bySize[s.size].push(s)
+  })
+  const header = modelName
+    ? `<p style="font-weight:900;font-size:12px;color:var(--gray3);margin-bottom:12px;">适配款式：${escHtml(modelName)}</p>`
+    : ''
+  container.innerHTML = header + Object.entries(bySize).map(([size, list]) =>
+    `<div class="sku-size-group">
+      <div class="sku-size-label">${escHtml(size)}</div>
+      <div class="sku-chips-row">
+        ${list.map(s => {
+          const sel = selectedSkus.has(s.id)
+          const colorDot = s.colorName
+            ? `<span class="sku-color-dot" style="background:${escHtml(s.colorHex||'#ccc')}"></span>`
+            : ''
+          return `<div class="sku-chip-card${sel ? ' selected' : ''}" onclick="toggleSku('${escHtml(s.id)}')" title="${escHtml(s.material)} · ${s.frameCount}帧${s.colorName?' · '+s.colorName:''}">
+            <span class="sku-chip-frame">${s.frameCount}帧</span>
+            <span class="sku-chip-mat">${escHtml(s.material)}</span>
+            ${s.colorName ? `${colorDot}<span class="sku-chip-clr">${escHtml(s.colorName)}</span>` : ''}
+          </div>`
+        }).join('')}
+      </div>
+    </div>`
   ).join('')
 }
 
 function toggleSku(id) {
   if (selectedSkus.has(id)) selectedSkus.delete(id)
   else selectedSkus.add(id)
-  renderSkuGrid()
+  // 重新渲染（保留当前模型名，从现有 allSkus 第一项取）
+  const modelName = allSkus[0]?.modelName || ''
+  if (allSkus.length > 0) renderSkuGrouped(modelName)
   updateSubmitBtn()
 }
 
@@ -660,16 +725,27 @@ async function loadAnimSource(animId) {
     const json = await res.json()
     if (!json.success) throw new Error(json.message)
     const cp = json.data
-    const frames = safeParseJson(cp.animationFrames) || []
-    const name   = (safeParseJson(cp.configJson)?.animName) || `动画 ${fmtDate(cp.createdAt)}`
+    const frames    = safeParseJson(cp.animationFrames) || []
+    const cfgJson   = safeParseJson(cp.configJson) || {}
+    const name      = cfgJson.animName || `动画 ${fmtDate(cp.createdAt)}`
+    const modelId   = cfgJson.modelId   || null
+    const modelName = cfgJson.modelName || null
     document.getElementById('sourceAnimName').textContent = name
     document.getElementById('sourceAnimMeta').textContent = `${frames.length} 帧 · ${fmtDate(cp.createdAt)} 创建`
     if (cp.previewUrl) {
       document.getElementById('sourceAnimPreview').innerHTML = `<img src="${escHtml(cp.previewUrl)}" alt="预览">`
     }
     updateSubmitBtn()
+
+    // 草稿锁定模型：只展示该动画对应模型的 SKU
+    if (modelId) {
+      await loadSkusForModel(modelId, modelName)
+    } else {
+      await loadAllModels()  // fallback：configJson 无 modelId
+    }
   } catch(e) {
     document.getElementById('sourceAnimName').textContent = '加载失败'
+    await loadAllModels()  // fallback
   }
 }
 
@@ -783,9 +859,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!requireCreator()) return
   initReveal()
 
-  // 并行加载
+  // 并行加载作品列表
   loadMyWorks()
-  loadSkus()
 
   // URL 参数处理
   const params  = new URLSearchParams(location.search)
@@ -793,14 +868,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   const openTab = params.get('tab')
 
   if (animId) {
-    // 来自动画库的"提交联名"按钮
+    // 来自动画库的"提交联名"按钮：loadAnimSource 内部会加载对应模型 SKU
     switchTab('apply')
     await loadAnimSource(animId)
     // 清掉 URL 参数
     history.replaceState({}, '', location.pathname)
   } else if (openTab === 'apply') {
     switchTab('apply')
+    // 无 animationId，展示模型选择列表
+    await loadSkus()
     history.replaceState({}, '', location.pathname)
+  } else {
+    // 默认在作品页，apply 表单如被展示则预加载模型列表
+    // SKU 区域已有 placeholder，loadSkus 在切换到 apply tab 时调用
   }
 })
 </script>

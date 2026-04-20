@@ -504,6 +504,7 @@ model MachineModel {
   sizes        String
   previewImage String?
   videoUrl     String?         @map("video_url") @db.VarChar(500)
+  modelType    String          @default("single") @map("model_type")
   isActive     Boolean         @default(true)
   sortOrder    Int             @default(0)
   createdAt    DateTime        @default(now())

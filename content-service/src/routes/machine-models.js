@@ -155,7 +155,8 @@ export default async function machineModelRoutes(fastify) {
       select: {
         id: true, name: true, description: true,
         ratios: true, frameOptions: true, sizes: true,
-        previewImage: true, sortOrder: true, isActive: true
+        previewImage: true, sortOrder: true, isActive: true,
+        modelType: true
       }
     })
     return reply.send({ success: true, data: models.map(parseModel) })
@@ -181,7 +182,7 @@ export default async function machineModelRoutes(fastify) {
   // ─────────────────────────────────────────────
 
   fastify.post('/', { preHandler: requireAdmin }, async (req, reply) => {
-    const { name, description, previewImage } = req.body
+    const { name, description, previewImage, modelType = 'single' } = req.body
     if (!name) return reply.code(400).send({ success: false, message: '款式名称必填' })
     const maxSort = await fastify.prisma.machineModel.findFirst({
       orderBy: { sortOrder: 'desc' }, select: { sortOrder: true }
@@ -191,6 +192,7 @@ export default async function machineModelRoutes(fastify) {
         name,
         description:  description  ?? null,
         previewImage: previewImage ?? null,
+        modelType:    modelType,
         ratios:       JSON.stringify(['1:1']),
         frameOptions: JSON.stringify([]),
         sizes:        JSON.stringify([]),
@@ -203,7 +205,7 @@ export default async function machineModelRoutes(fastify) {
 
   fastify.put('/:id', { preHandler: requireAdmin }, async (req, reply) => {
     const { id } = req.params
-    const { name, description, previewImage, videoUrl, isActive, sortOrder } = req.body
+    const { name, description, previewImage, videoUrl, isActive, sortOrder, modelType } = req.body
     const existing = await fastify.prisma.machineModel.findUnique({ where: { id } })
     if (!existing) return reply.code(404).send({ success: false, message: '款式不存在' })
     const data = {}
@@ -213,6 +215,7 @@ export default async function machineModelRoutes(fastify) {
     if (videoUrl      !== undefined) data.videoUrl     = videoUrl
     if (isActive      !== undefined) data.isActive     = isActive
     if (sortOrder     !== undefined) data.sortOrder    = sortOrder
+    if (modelType     !== undefined) data.modelType    = modelType
     const updated = await fastify.prisma.machineModel.update({ where: { id }, data })
     return reply.send({ success: true, data: parseModel(updated) })
   })
