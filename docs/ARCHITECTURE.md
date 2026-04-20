@@ -10,18 +10,19 @@
   (阿里云 ECS)
      │
      ├── /                  → frontend/pages/        (静态 HTML)
-     ├── /assets/*          → frontend/assets/        (静态资源)
-     ├── /api/content/*     → content-service :3001   (Node.js)
-     └── /api/shop/*        → CRMEB :8080             (PHP)
-          │
-          ├── MySQL          (CRMEB 商城数据)
-          └── PostgreSQL     (内容服务数据)
+     ├── /js/*              → frontend/js/           (公共JS)
+     ├── /api/*             → content-service :3001   (Node.js)
+     └── /api/shop/*        → CRMEB :8080             (PHP，待配置)
 
 外部服务：
-  ├── 阿里云 OSS             (动画帧图、封面视频、用户头像)
-  ├── 腾讯云实名认证 API      (创作者身份核验)
-  ├── 微信支付               (通过 CRMEB 接入)
-  └── 支付宝                 (通过 CRMEB 接入)
+  ├── 阿里云 OSS（mowo-uploads，上海，私有）
+  │     └── 用途：定制帧图、头像、动画帧
+  ├── 微信小程序（待开发）
+  │     └── 用途：支付、订单码查询、社群互动
+  ├── CRMEB（待配置）
+  │     └── 用途：商品SKU、购物车、微信支付
+  └── 腾讯云实名认证（待接入）
+        └── 用途：创作者身份核验
 ```
 
 ---
@@ -29,93 +30,138 @@
 ## 三端职责划分
 
 ### frontend/（纯静态）
-- 所有页面的 HTML / CSS / JS
-- 不含任何服务端逻辑
-- 通过 fetch 调用后端 API
-- 静态文件由 Nginx 直接服务
+- HTML页面，CSS/JS全部内联
+- 唯一公共文件：`js/auth.js`（登录状态管理）
+- 通过 fetch 调用 content-service API
+- 初期只展示：产品介绍 + 案例展示 + 定制工具
+- 社群/购物等页面代码保留，等许可证后挂载
 
-### content-service/（Node.js + Fastify）
-负责平台自有业务逻辑：
-- 用户注册、登录、JWT 签发
+### content-service/（Node.js + Fastify，端口3001）
+负责平台所有业务逻辑：
+- 用户注册、登录、JWT签发（7天有效期）
 - 创作者认证申请与审核
-- 作品上传、社区内容管理
+- 文章、社区内容管理（后期上线）
+- 动画内容上传与帧图管理
 - 创作者商品上架配置
 - 收益记录、提现申请
-- 文件上传（OSS 预签名 URL）
+- 机型款式及SKU管理
+- OSS预签名URL生成
+- 定制订单创建与管理
+- 管理员后台接口（订单/生产完整流程/用户/日志）
+- 联名系统（审核/活动/上下架/帧素材包库存/创作者端）
 
 ### crmeb/（PHP，只调用不修改）
-负责标准电商流程：
-- 商品 SKU 管理
+负责标准电商流程（待配置）：
+- 商品SKU管理
 - 购物车、下单
-- 微信支付 / 支付宝
-- 订单状态管理
+- 微信支付/支付宝
 - 物流信息
+
+### 小程序（待开发）
+- 订单码查询（输入订单号显示定制详情）
+- 支付闭环（微信支付）
+- 物流信息填写
+- 社群互动（后期）
+
+---
+
+## 合规架构设计
+
+```
+网页端（展示+工具）← 无需EDI证
+  ├── 产品介绍
+  ├── 案例展示（联名作品，无评论无购买）
+  └── 定制工具（上传帧图、生成订单号）
+           ↓ 显示订单号+小程序二维码
+小程序端（交易+互动）← 微信生态合规
+  ├── 输入订单号/扫码识别
+  ├── 确认规格+支付
+  └── 物流信息填写
+           ↓ 支付成功回调
+content-service（统一处理）
+  ├── 更新订单状态（paid）
+  ├── 计算联名分红
+  └── 触发生产看板
+```
 
 ---
 
 ## 数据流说明
 
-### 用户购买流程
+### 定制购买流程（当前）
 ```
-前端选商品 → work-detail.html
-  → 选规格弹窗（前端本地）
-  → 立即购买 → checkout.html
-  → 调用 CRMEB 下单 API /api/shop/order/create
-  → 调用 CRMEB 支付 API /api/shop/pay
-  → 支付回调 → CRMEB 更新订单状态
-  → content-service 监听回调 → 记录创作者收益
-```
-
-### 创作者上架流程
-```
-creator-product-edit.html
-  → 调用 content-service /api/products/create
-  → content-service 同步调用 CRMEB 商品 API 创建 SKU
-  → 前端展示上架成功
+customize-start.html → customize-editor.html → customize-confirm.html
+  → 上传帧图到OSS（预签名URL）
+  → POST /api/customize-orders（创建订单）
+  → 显示订单号 + 客服微信引导
+  → 管理员手动确认收款 → 改状态为paid
+  → 待生产看板自动显示
 ```
 
-### 定制购买流程
+### 定制购买流程（后期接小程序）
 ```
-customize-start.html（选型号）
-  → customize-editor.html（上传帧图 → OSS）
-  → customize-confirm.html（选款式规格）
-  → checkout.html
-  → CRMEB 下单（定制商品特殊 SKU）
+同上 → 显示订单号 + 小程序二维码
+  → 用户扫码进小程序 → 输入订单号
+  → 小程序显示订单详情 → 用户支付
+  → CRMEB回调 → content-service改状态为paid
+  → 待生产看板自动显示
+```
+
+### 联名作品购买流程（待开发）
+```
+showcase.html → 点「前往小程序定制此款」
+  → 用户扫码进小程序 → 显示联名作品详情
+  → 用户确认规格 → 支付
+  → CRMEB回调 → content-service
+    → 创建customize_orders
+    → 创建collab_orders（计算分红）
+    → 待生产看板显示「联名款：XXX作品」
+```
+
+### 生产流程（已实现）
+```
+管理员在 admin-orders.html
+  待处理视图：导出收件地址ZIP（CSV+XLSX，按SKU全局优先级+订单数量排序）→ locked
+  处理中视图：批量录入快递单号（格式：订单号,快递公司,快递单号）→ processing
+  待生产视图：勾选订单 → 导出帧素材包ZIP → producing
+    ZIP结构：对照清单/ + 条形码清单/ + 按SKU分文件夹（序号_订单号/帧图）
+  本地运行 mowo_process.py 处理帧图片
+  生产端扫码发货（production-scan.html）✅
+    查询模式：扫材料包/订单码/快递单号
+    发货模式：扫面单→逐件扫订单码→配齐确认→shipped
+    等候区：未配齐跳过，被扫到时弹出确认归属
 ```
 
 ---
 
-## 服务器配置（阿里云 ECS）
+## 服务器配置（阿里云ECS，待部署）
 
-**推荐规格：** 2核 4G 内存，40G SSD，带宽 5Mbps
+**推荐规格：** 2核4G，40G SSD，5Mbps带宽
 
-**运行进程：**
 ```
-Nginx          — 反向代理 + 静态文件服务
-PHP-FPM        — CRMEB 运行环境
-Node.js (PM2)  — content-service
-MySQL 8.0      — CRMEB 数据库
-PostgreSQL 15  — content-service 数据库
+Nginx     — 反向代理 + 静态文件服务
+PHP-FPM   — CRMEB运行环境
+Node.js   — content-service（PM2管理）
+MySQL 8.0 — CRMEB数据库
+PostgreSQL 18 — content-service数据库
 ```
 
-**Nginx 配置要点：**
+**Nginx配置要点：**
 ```nginx
 server {
   listen 443 ssl;
   server_name mowobox.com;
 
-  # 静态前端
   location / {
     root /var/www/mowo/frontend/pages;
     try_files $uri $uri/ /index.html;
   }
 
-  # 内容服务 API
-  location /api/content/ {
-    proxy_pass http://127.0.0.1:3001/;
+  location /api/ {
+    proxy_pass http://127.0.0.1:3001/api/;
+    proxy_set_header Authorization $http_authorization;
   }
 
-  # CRMEB 商城 API
   location /api/shop/ {
     proxy_pass http://127.0.0.1:8080/;
   }
@@ -124,20 +170,30 @@ server {
 
 ---
 
-## 环境变量清单
+## 环境变量
 
-### content-service/.env
+### content-service/.env（本地）
 ```
-DATABASE_URL=postgresql://user:pass@localhost:5432/mowo_content
-JWT_SECRET=your_jwt_secret_here
-OSS_REGION=oss-cn-hangzhou
+DATABASE_URL=postgresql://postgres:Xiang1357999@localhost:5432/mowo_db
+JWT_SECRET=mowo_jwt_secret_2026_change_this
+OSS_REGION=oss-cn-shanghai
+OSS_BUCKET=mowo-uploads
+OSS_ACCESS_KEY_ID=（已配置）
+OSS_ACCESS_KEY_SECRET=（已配置）
+PORT=3001
+NODE_ENV=development
+```
+
+### content-service/.env（生产，待配置）
+```
+DATABASE_URL=postgresql://user:pass@localhost:5432/mowo_db
+JWT_SECRET=<强随机字符串，32位以上>
+OSS_REGION=oss-cn-shanghai
 OSS_BUCKET=mowo-uploads
 OSS_ACCESS_KEY_ID=xxx
 OSS_ACCESS_KEY_SECRET=xxx
 CRMEB_API_BASE=http://127.0.0.1:8080/api
 CRMEB_API_TOKEN=xxx
-TENCENT_VERIFY_APP_ID=xxx
-TENCENT_VERIFY_SECRET_KEY=xxx
 PORT=3001
 NODE_ENV=production
 ```

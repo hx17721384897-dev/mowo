@@ -14,19 +14,57 @@ datasource db {
 }
 
 // ================================================================
-// 第一组：用户与身份（7张表）
+// 第一组：用户与身份（7张表 + 账户系统v1新增6张）
 // ================================================================
 
+// v1 新增：用户状态枚举
+enum UserStatus {
+  ACTIVE         // 正常
+  LIMITED        // 限制（不能进行资金操作）
+  SUSPENDED      // 已封禁
+  PENDING_DELETE // 冷静期注销（7天后正式删除）
+  DELETED   // 已注销（PIPL软删除）
+}
+
+// v1 新增：短信用途枚举
+enum SmsPurpose {
+  LOGIN
+  REGISTER
+  RESET_PASSWORD
+  BIND_PHONE
+  DEACTIVATE
+  STEP_UP_WITHDRAW
+  STEP_UP_CHANGE_PAYOUT
+  STEP_UP_CHANGE_PASSWORD
+}
+
+// v1 新增：高危操作Token类型枚举
+enum ActionType {
+  WITHDRAW
+  CHANGE_PAYOUT_ACCOUNT
+  CHANGE_PASSWORD
+  CHANGE_PHONE
+}
+
 model User {
-  id            String    @id @default(uuid())
-  phone         String    @unique
-  passwordHash  String    @map("password_hash")
-  certifyStatus Int       @default(0) @map("certify_status") // 0未申请 1审核中 2通过 3拒绝
-  isBanned      Boolean   @default(false) @map("is_banned")
-  role          Int       @default(0) // 0=User 1=Production 2=Admin 3=SuperAdmin
-  lastLoginAt   DateTime? @map("last_login_at")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  id            String     @id @default(uuid())
+  phone         String?    @unique                                     // v1：可为空（WeChat-only用户预留）
+  passwordHash  String?    @map("password_hash")                      // v1：可为空（SMS注册用户 / 注销匿名化）
+  certifyStatus Int        @default(0) @map("certify_status") // 0未申请 1审核中 2通过 3拒绝（兼容保留）
+  isBanned      Boolean    @default(false) @map("is_banned")  // 兼容保留，v1用status
+  role          Int        @default(0)                        // 0=User 1=Production 2=Admin 3=SuperAdmin（兼容保留）
+  lastLoginAt   DateTime?  @map("last_login_at")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+
+  // v1 新增：用户状态与隐私合规字段
+  status               UserStatus @default(ACTIVE)                          // 账号状态
+  wechatOpenid         String?    @unique @map("wechat_openid")             // 微信登录预留
+  wechatUnionid        String?    @unique @map("wechat_unionid")            // 微信联合ID预留
+  deletedAt            DateTime?  @map("deleted_at")                        // PIPL注销时间
+  deleteReason         String?    @map("delete_reason") @db.VarChar(500)    // 注销原因
+  privacyAgreedAt      DateTime?  @map("privacy_agreed_at")                 // 首次同意隐私协议时间戳
+  privacyPolicyVersion String?    @map("privacy_policy_version") @db.VarChar(20) // 同意时协议版本
 
   profile             UserProfile?
   creatorProfile      CreatorProfile?
@@ -50,6 +88,22 @@ model User {
   reserveLogs         ReserveLog[]
   settlementRecords   SettlementRecord[]
   settledRecords      SettlementRecord[]   @relation("SettlementAdmin")
+  bullScores          BullScore[]
+  bullScoreLogs       BullScoreLog[]
+  referralLink        CreatorReferralLink?
+  configsUpdated      PlatformConfig[]     @relation("ConfigUpdater")
+  socialLinks         CreatorSocialLink[]
+  contracts           CreatorContract[]    @relation("ContractCreator")
+  contractsCreated    CreatorContract[]    @relation("ContractAdmin")
+
+  // v1 新增关联
+  smsCodes      SmsCode[]
+  refreshTokens RefreshToken[]
+  actionTokens  ActionToken[]
+  auditLogs     AuditLog[]
+
+  // 收货地址
+  addresses     UserAddress[]
 
   @@map("users")
 }
@@ -70,6 +124,24 @@ model UserProfile {
   articleCount   Int       @default(0) @map("article_count")
   likedCount     Int       @default(0) @map("liked_count")
   updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  // v1 新增：登录安全字段
+  loginFailCount   Int       @default(0)    @map("login_fail_count")   // 连续登录失败次数
+  loginLockedUntil DateTime?              @map("login_locked_until")  // 锁定到期时间
+  lastLoginIp      String?   @db.VarChar(50) @map("last_login_ip")    // 最后登录IP
+  lastLoginAt      DateTime?              @map("last_login_at_v1")    // 最后登录时间（profile版）
+
+  // 昵称修改频率控制
+  nicknameUpdatedAt DateTime? @map("nickname_updated_at")
+
+  // 通知设置（默认全开）
+  notifyInteraction Boolean @default(true) @map("notify_interaction")
+  notifyOrder       Boolean @default(true) @map("notify_order")
+  notifySystem      Boolean @default(true) @map("notify_system")
+  notifyPromo       Boolean @default(true) @map("notify_promo")
+
+  // 隐私设置（public | followers | private）
+  profileVisibility String @default("public") @map("profile_visibility") @db.VarChar(20)
 
   user User @relation(fields: [userId], references: [id])
 
@@ -455,6 +527,13 @@ model MachineModelSku {
   skuBarcode   String?      @map("sku_barcode") @db.VarChar(50)
   isActive     Boolean      @default(true) @map("is_active")
   sortOrder    Int          @default(0) @map("sort_order")
+
+  // v2 新增：结构化编码与授权字段
+  skuCode           String?   @map("sku_code") @db.VarChar(50)          // 如 STD-55-12F-WD-NA
+  skuType           String    @default("KIT") @map("sku_type") @db.VarChar(20) // KIT / CBR_TEMPLATE / MTO_TEMPLATE
+  licenseExpireDate DateTime? @map("license_expire_date")                // CBR授权到期日
+  licenseStatus     String?   @default("Active") @map("license_status") @db.VarChar(20) // Active / Expiring / Expired
+
   createdAt    DateTime     @default(now()) @map("created_at")
   updatedAt    DateTime     @updatedAt @map("updated_at")
 
@@ -493,11 +572,24 @@ model CustomizeOrder {
   trackingCompany String?   @map("tracking_company")
   batchId         String?   @map("batch_id")
   seqNo           Int?      @map("seq_no")
+
+  // v2 新增：多平台来源 + 锁单机制
+  platform        String    @default("SELF") @map("platform") @db.VarChar(20)
+  // SELF / TAOBAO / DOUYIN / XHS
+  externalOrderId String?   @map("external_order_id") @db.VarChar(100) // 原平台订单号
+  lockStatus      String    @default("UNLOCKED") @map("lock_status") @db.VarChar(20)
+  // UNLOCKED / LOCKED（加入批次后禁止修改SKU/规格/数量）
+  priorityLevel   Int       @default(0) @map("priority_level") // 迭代预留：0=普通/1=加急/2=KOL
+  buyerNote       String?   @map("buyer_note") @db.VarChar(500)
+  importStatus    String?   @map("import_status") @db.VarChar(20)
+  // pending_info（待补全收件信息）/ pending_sku（SKU待确认）/ null=正常
+
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id])
 
+  @@unique([platform, externalOrderId], name: "platform_external_order_unique")
   @@map("customize_orders")
 }
 
@@ -508,7 +600,7 @@ model CustomizeOrder {
 model CollabWork {
   id                String    @id @default(uuid())
   creatorId         String    @map("creator_id")
-  orderNo           String    @map("order_no")
+  orderNo           String?   @map("order_no")   // 可选：动画直接提交时为 null
   title             String
   description       String?
   coverUrl          String?   @map("cover_url")
@@ -605,16 +697,80 @@ model CollabFramePack {
 }
 
 // ================================================================
+// 第六组（续）：帧包备货白名单
+// ================================================================
+
+model FramePackWork {
+  id           String   @id @default(uuid())
+  collabWorkId String?  @unique @map("collab_work_id")
+  name         String   @db.VarChar(200)
+  thumbnailKey String?  @map("thumbnail_key") @db.VarChar(500)
+  isActive     Boolean  @default(true) @map("is_active")
+  createdBy    String   @map("created_by")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  variants     FramePackVariant[]
+
+  @@map("frame_pack_works")
+}
+
+model FramePackVariant {
+  id           String   @id @default(uuid())
+  workId       String   @map("work_id")
+  size         String   @db.VarChar(20)
+  frameCount   Int      @map("frame_count")
+  skuCode      String?  @map("sku_code") @db.VarChar(50)
+  currentStock Int      @default(0) @map("current_stock")
+  safetyStock  Int      @default(5) @map("safety_stock")
+  leadTime     Int      @default(7) @map("lead_time")
+  note         String?  @db.VarChar(200)
+  isActive     Boolean  @default(true) @map("is_active")
+  createdBy    String   @map("created_by")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  work         FramePackWork    @relation(fields: [workId], references: [id])
+  logs         FramePackLog[]
+
+  @@unique([workId, size, frameCount])
+  @@map("frame_pack_variants")
+}
+
+model FramePackLog {
+  id         String   @id @default(uuid())
+  variantId  String   @map("variant_id")
+  type       String   @db.VarChar(30)
+  quantity   Int
+  beforeQty  Int      @map("before_qty")
+  afterQty   Int      @map("after_qty")
+  operatorId String   @map("operator_id")
+  note       String?  @db.VarChar(200)
+  orderId    String?  @map("order_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  variant    FramePackVariant @relation(fields: [variantId], references: [id])
+
+  @@index([variantId])
+  @@map("frame_pack_logs")
+}
+
+// ================================================================
 // 第七组：库存与生产
 // ================================================================
 
 model SkuInventory {
   id            String   @id @default(uuid())
   skuId         String   @unique @map("sku_id")
-  currentStock  Int      @default(0) @map("current_stock")
-  reservedStock Int      @default(0) @map("reserved_stock")
+  currentStock  Int      @default(0) @map("current_stock")   // 等同 total_qty
+  reservedStock Int      @default(0) @map("reserved_stock")  // 等同 locked_qty（已下单待生产）
   safetyStock   Int      @default(10) @map("safety_stock")
   maxOrderLimit Int      @default(100) @map("max_order_limit")
+
+  // v2 新增：4态库存（available = currentStock - reservedStock - wipFrameQty - wipKitQty）
+  wipFrameQty   Int      @default(0) @map("wip_frame_qty")   // 帧图在制，不可回流
+  wipKitQty     Int      @default(0) @map("wip_kit_qty")     // 材料包在制，取消可归还
+  warehouseId   String   @default("1") @map("warehouse_id")
+  finishedQty   Int      @default(0) @map("finished_qty")    // 迭代预留，初期为0
+  safetyFactor  Float    @default(1.0) @map("safety_factor") // 流量因子，发视频前调至2.0
+
   updatedAt     DateTime @updatedAt @map("updated_at")
   createdAt     DateTime @default(now()) @map("created_at")
 
@@ -624,13 +780,24 @@ model SkuInventory {
 model InventoryLog {
   id         String   @id @default(uuid())
   skuId      String   @map("sku_id")
-  type       String   @db.VarChar(20) // in / out / reserved / released
+  // in / out / reserved / released（旧）
+  // wip_frame_start / wip_kit_start / wip_kit_rollback / wip_defect_frame / wip_deduct / manual_adjustment（新）
+  type       String   @db.VarChar(30)
   quantity   Int
   orderId    String?  @map("order_id")
-  operatorId String   @map("operator_id")
+  operatorId String?  @map("operator_id")
   note       String?  @db.VarChar(200)
+
+  // v2 新增
+  idempotencyKey String?  @unique @map("idempotency_key") @db.VarChar(100)
+  beforeQty      Int?     @map("before_qty")   // 操作前 available_qty
+  afterQty       Int?     @map("after_qty")    // 操作后 available_qty
+  reason         String?  @db.VarChar(200)     // manual_adjustment 时必填
+
   createdAt  DateTime @default(now()) @map("created_at")
 
+  @@index([skuId])
+  @@index([orderId])
   @@map("inventory_logs")
 }
 
@@ -661,6 +828,123 @@ model ShippingBatch {
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   @@map("shipping_batches")
+}
+
+// ================================================================
+// 库存系统 v2 新增（7张表）
+// ================================================================
+
+// 平台规格文本 → 内部 sku_code 映射
+model PlatformSkuMapping {
+  id              String   @id @default(uuid())
+  platform        String   @db.VarChar(10)   // TB / DY / XHS
+  externalDesc    String   @map("external_desc") @db.Text
+  internalSkuCode String   @map("internal_sku_code") @db.VarChar(50) // 映射到 machine_model_skus.sku_code
+  collabWorkId    String?  @map("collab_work_id")  // null = 普通定制款；有值 = 联名款，映射到 collab_works.id
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([platform])
+  @@map("platform_sku_mappings")
+}
+
+// 生产批次主表（id 格式：YYYYMMDD_HHMMSS，与现有 batchId 字符串兼容）
+model ProductionBatch {
+  id          String      @id // 例：20260414_143022
+  operatorId  String      @map("operator_id")
+  status      String      @default("Open") @db.VarChar(20)
+  // Open / Locked / Processing / Completed
+  maxCapacity Int?        @map("max_capacity")  // 迭代预留，初期 NULL 不限制
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  batchItems  BatchItem[]
+
+  @@map("production_batches")
+}
+
+// 批次内各 SKU 计划/实产/报废聚合（生产看板数据源）
+model BatchItem {
+  id         String   @id @default(uuid())
+  batchId    String   @map("batch_id")
+  skuId      String   @map("sku_id")        // 关联 machine_model_skus.id
+  skuCode    String?  @map("sku_code") @db.VarChar(50) // 冗余存 sku_code，方便展示
+  plannedQty Int      @default(0) @map("planned_qty")  // 批次导出时计算
+  actualQty  Int      @default(0) @map("actual_qty")   // 扫码配对成功时 +1
+  defectQty  Int      @default(0) @map("defect_qty")   // 点击「报废重制」时 +1
+
+  batch ProductionBatch @relation(fields: [batchId], references: [id])
+
+  @@unique([batchId, skuId])
+  @@index([batchId])
+  @@map("batch_items")
+}
+
+// 定制款帧图实例（MTO 订单专用）
+// content_hash 在生成打印文件时计算冻结，生产端始终按此版本执行
+model FrameInstance {
+  id              String   @id @default(uuid())
+  orderId         String   @map("order_id")
+  templateSkuCode String   @map("template_sku_code") @db.VarChar(50)
+  imageUrl        String?  @map("image_url") @db.Text     // 用户上传原始图片 OSS 路径
+  printFileUrl    String?  @map("print_file_url") @db.Text // 拼版后 PDF 打印文件路径
+  contentHash     String?  @map("content_hash") @db.VarChar(64) // SHA-256，生产文件生成时写入
+  status          String   @default("Draft") @db.VarChar(20)
+  // Draft（用户可修改）/ Locked（生产文件已生成，禁止修改）
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([orderId])
+  @@map("frame_instances")
+}
+
+// 每日库存全量快照（财务级审计基准）
+model InventorySnapshot {
+  id           String   @id @default(uuid())
+  skuId        String   @map("sku_id")
+  totalQty     Int      @map("total_qty")
+  availableQty Int      @map("available_qty")
+  lockedQty    Int      @map("locked_qty")
+  wipFrameQty  Int      @map("wip_frame_qty")
+  wipKitQty    Int      @map("wip_kit_qty")
+  unitCost     Decimal? @map("unit_cost") @db.Decimal(10, 2) // 迭代预留：加权平均单位成本
+  snapshotDate DateTime @map("snapshot_date") @db.Date
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@unique([skuId, snapshotDate])
+  @@index([snapshotDate])
+  @@map("inventory_snapshots")
+}
+
+// 扫码配对绑定记录（配对绑定 + 合单分拣双用途）
+model OrderItemBinding {
+  id              String   @id @default(uuid())
+  orderId         String   @map("order_id")
+  trackingNo      String?  @map("tracking_no")
+  source          String   @db.VarChar(20)  // SELF / TAOBAO / DOUYIN / XHS
+  externalOrderId String?  @map("external_order_id") @db.VarChar(100)
+  frameCode       String?  @map("frame_code") @db.VarChar(100)  // 帧包码（条形码）
+  kitSkuId        String?  @map("kit_sku_id")                   // 材料包 SKU ID
+  batchId         String?  @map("batch_id")                     // 所属生产批次
+  status          String   @default("Pending") @db.VarChar(20)
+  // Pending / Bound / Shipped
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([orderId])
+  @@index([batchId])
+  @@map("order_item_bindings")
+}
+
+// 渠道配额配置（每 SKU 一条，运营手动设置后同步至各平台后台）
+model ChannelQuota {
+  id             String   @id @default(uuid())
+  skuId          String   @unique @map("sku_id")
+  bufferPool     Int      @default(10) @map("buffer_pool")      // 负向缓冲池（实际可分配 = available - bufferPool）
+  taobaoQty      Int      @default(0) @map("taobao_qty")        // 淘宝展示配额（绝对数）
+  douyinQty      Int      @default(0) @map("douyin_qty")        // 抖音展示配额
+  xhsQty         Int      @default(0) @map("xhs_qty")           // 小红书展示配额
+  livestreamMode Boolean  @default(false) @map("livestream_mode") // 开启时抖音配额临时扩至60%
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("channel_quotas")
 }
 
 model OperationLog {
@@ -795,4 +1079,490 @@ model SettlementRecord {
   @@index([settlementWeek])
   @@index([creatorId])
   @@map("settlement_records")
+}
+
+// ================================================================
+// 第十组：牛量系统（5张表）
+// ================================================================
+
+// 平台可调参数配置，管理后台可修改，批处理读取
+// 所有牛量等级阈值、权重、分红参数都存这里，不写死在代码里
+model PlatformConfig {
+  id          String   @id @default(uuid())
+  configKey   String   @unique @map("config_key") @db.VarChar(100)
+  configValue String   @map("config_value") @db.VarChar(500) // 统一存字符串，读取时按需转换
+  valueType   String   @default("number") @map("value_type") @db.VarChar(20)
+  // number / string / json
+  description String?  @db.VarChar(200)
+  groupName   String   @default("bull") @map("group_name") @db.VarChar(50)
+  // bull=牛量参数 / revenue=分红参数 / system=系统参数
+  updatedBy   String?  @map("updated_by")  // 最后修改的管理员 userId
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  updater User? @relation("ConfigUpdater", fields: [updatedBy], references: [id])
+
+  @@index([groupName])
+  @@map("platform_configs")
+}
+
+// 创作者每日牛量积分快照，批处理每天写一条
+model BullScore {
+  id          String   @id @default(uuid())
+  creatorId   String   @map("creator_id")
+
+  // 三维度原始分（0~100）
+  activityScore   Float @default(0) @map("activity_score")   // 活跃贡献度得分
+  socialScore     Float @default(0) @map("social_score")     // 外部声量得分
+  conversionScore Float @default(0) @map("conversion_score") // 销售转化得分
+
+  // 加权合成总分（activity×0.2 + social×0.3 + conversion×0.5）
+  totalScore  Float @default(0) @map("total_score")
+
+  // 各维度原始数据快照（方便回溯和展示）
+  monthlyPosts    Int   @default(0) @map("monthly_posts")    // 近30天上传数
+  monthlyOrders   Int   @default(0) @map("monthly_orders")   // 近30天订单数
+  totalViews      Int   @default(0) @map("total_views")      // 外部累计播放量
+  totalLikes      Int   @default(0) @map("total_likes")      // 外部累计点赞数
+  socialManualMod Float @default(1.0) @map("social_manual_mod") // 管理员人工系数（0.5~2.0）
+
+  scoreDate   DateTime @map("score_date") @db.Date // 计算日期（每天一条）
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  creator User @relation(fields: [creatorId], references: [id])
+
+  @@unique([creatorId, scoreDate]) // 每人每天只有一条
+  @@index([creatorId])
+  @@index([scoreDate])
+  @@map("bull_scores")
+}
+
+// 牛量等级变动记录，升级/降级/手动调整都记一条，创作者可查看原因
+model BullScoreLog {
+  id          String   @id @default(uuid())
+  creatorId   String   @map("creator_id")
+
+  changeType  String   @map("change_type") @db.VarChar(20)
+  // upgrade=升级 / downgrade=降级 / manual=管理员手动调整 / init=初始化
+
+  levelBefore Int      @map("level_before") // 变动前等级 1~5
+  levelAfter  Int      @map("level_after")  // 变动后等级 1~5
+  scoreBefore Float    @map("score_before")
+  scoreAfter  Float    @map("score_after")
+
+  reason      String?  @db.VarChar(200)     // 变动原因描述，如「连续2个月未达标」
+  operatorId  String?  @map("operator_id")  // 手动调整时的管理员 userId
+
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  creator User @relation(fields: [creatorId], references: [id])
+
+  @@index([creatorId])
+  @@index([createdAt])
+  @@map("bull_score_logs")
+}
+
+// 创作者专属推广链接，用于销售转化维度归因
+model CreatorReferralLink {
+  id          String    @id @default(uuid())
+  creatorId   String    @unique @map("creator_id")
+
+  linkCode    String    @unique @map("link_code") @db.VarChar(20)
+  // 如 ref_abc123，拼接成 mowobox.com?ref=abc123
+
+  totalClicks   Int @default(0) @map("total_clicks")   // 累计点击次数
+  totalOrders   Int @default(0) @map("total_orders")   // 累计带来的订单数
+  totalRevenue  Float @default(0) @map("total_revenue") // 累计带来的销售额
+
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  creator User             @relation(fields: [creatorId], references: [id])
+  clicks  ReferralClick[]
+
+  @@map("creator_referral_links")
+}
+
+// 推广链接点击记录，用于追踪归因
+model ReferralClick {
+  id          String   @id @default(uuid())
+  linkId      String   @map("link_id")
+  creatorId   String   @map("creator_id")  // 冗余，方便查询
+
+  ip          String?  @db.VarChar(50)
+  userAgent   String?  @db.Text @map("user_agent")
+  referrer    String?  @db.VarChar(500)    // 来源页（B站/小红书等）
+  orderId     String?  @map("order_id")    // 如果该次点击最终产生了订单，记录订单ID
+
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  link CreatorReferralLink @relation(fields: [linkId], references: [id])
+
+  @@index([linkId])
+  @@index([creatorId])
+  @@index([createdAt])
+  @@map("referral_clicks")
+}
+
+// ================================================================
+// 第十一组：引流链接 + 大IP商务合同（2张表）
+// ================================================================
+
+// 创作者填写的外部平台视频链接，用于声量维度计算
+model CreatorSocialLink {
+  id          String    @id @default(uuid())
+  creatorId   String    @map("creator_id")
+
+  platform    String    @db.VarChar(20)
+  // bilibili / xiaohongshu / weibo / douyin / other
+
+  videoUrl    String    @map("video_url") @db.VarChar(500)   // 视频链接
+  videoTitle  String?   @map("video_title") @db.VarChar(200) // 视频标题（创作者填写）
+  description String?   @db.Text                             // 创作者说明
+
+  // 爬取到的数据（初期由管理员手动填，后期爬虫自动更新）
+  viewCount   Int       @default(0) @map("view_count")
+  likeCount   Int       @default(0) @map("like_count")
+  lastFetchedAt DateTime? @map("last_fetched_at")
+
+  // 审核
+  status      String    @default("pending") @map("status") @db.VarChar(20)
+  // pending=待审核 / approved=通过 / rejected=不符合要求
+
+  brandMentioned  Boolean   @default(false) @map("brand_mentioned")  // 是否提及品牌
+  manualMod       Float     @default(1.0)   @map("manual_mod")       // 声量加成系数 0.5~2.0
+  reviewNote      String?   @map("review_note") @db.VarChar(200)     // 审核备注
+  reviewedBy      String?   @map("reviewed_by")
+  reviewedAt      DateTime? @map("reviewed_at")
+
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  creator User @relation(fields: [creatorId], references: [id])
+
+  @@index([creatorId])
+  @@index([status])
+  @@map("creator_social_links")
+}
+
+// 大IP / 商务合作合同记录
+// 这类合作不走平台标准分红体系，由商务单独谈定后在此录入
+model CreatorContract {
+  id          String    @id @default(uuid())
+  creatorId   String    @map("creator_id")   // 关联平台账号（可选，有些IP方可能没有创作者账号）
+  creatorName String    @map("creator_name") @db.VarChar(100) // 合作方名称（冗余，防止账号不存在）
+
+  contractType  String  @map("contract_type") @db.VarChar(20)
+  // revenue_share=纯分红 / guarantee_plus=保底+分红 / buyout=买断 / custom=自定义
+
+  // 分红模式参数
+  revenueRate   Float?  @map("revenue_rate")    // 分红比例，如 0.25
+  guaranteeAmount Float? @map("guarantee_amount") // 保底金额
+  buyoutAmount  Float?  @map("buyout_amount")   // 买断金额
+
+  // 合同周期
+  startAt     DateTime  @map("start_at")
+  endAt       DateTime? @map("end_at")  // null = 长期有效
+
+  // 合同条款说明（富文本或纯文本，存核心条款摘要）
+  terms       String?   @db.Text
+
+  // 附件（OSS objectKey，存合同扫描件等）
+  attachments String?   @db.Text   // JSON数组
+
+  status      String    @default("active") @db.VarChar(20)
+  // active=生效中 / expired=已到期 / terminated=已终止
+
+  // 结算记录（每次打款记一条，存JSON数组，简单记账）
+  settlementLogs String? @map("settlement_logs") @db.Text // JSON数组
+
+  createdBy   String    @map("created_by")   // 录入的管理员 userId
+  note        String?   @db.Text              // 内部备注
+
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  creator     User?  @relation("ContractCreator", fields: [creatorId], references: [id])
+  createdByUser User @relation("ContractAdmin",   fields: [createdBy],  references: [id])
+
+  @@index([creatorId])
+  @@index([status])
+  @@map("creator_contracts")
+}
+
+// ================================================================
+// 第十二组：账户安全系统 v1（6张表）
+// ================================================================
+
+// 短信验证码记录
+model SmsCode {
+  id        String     @id @default(uuid())
+  userId    String?    @map("user_id")
+  phone     String     @db.VarChar(20)
+  code      String     @db.VarChar(10)
+  purpose   SmsPurpose
+  expiresAt DateTime   @map("expires_at")
+  usedAt    DateTime?  @map("used_at")
+  attempts  Int        @default(0)
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([phone, createdAt])
+  @@index([phone, purpose, createdAt])
+  @@map("sms_codes")
+}
+
+// 短信全局计数器（每小时限额500条，防刷）
+model SmsGlobalCounter {
+  id        String   @id @default(uuid())
+  hourKey   String   @unique @map("hour_key") @db.VarChar(20) // 如 "2025-01-01T12"
+  count     Int      @default(0)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([hourKey])
+  @@map("sms_global_counters")
+}
+
+// 高危操作二次验证Token（提现/改密/换手机）
+model ActionToken {
+  id        String     @id @default(uuid())
+  userId    String     @map("user_id")
+  token     String     @unique
+  action    ActionType
+  targetId  String?    @map("target_id")    // 操作目标ID（如提现账户ID）
+  uaHash    String?    @map("ua_hash")      // User-Agent哈希，防跨设备截用
+  expiresAt DateTime   @map("expires_at")
+  usedAt    DateTime?  @map("used_at")
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, action, createdAt])
+  @@map("action_tokens")
+}
+
+// Refresh Token（双Token机制，存SHA256哈希）
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique                // SHA256(rawToken)，明文存HttpOnly Cookie
+  sessionId String?  @map("session_id")
+  expiresAt DateTime @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// Token黑名单（即时封禁/改密后立即让旧Token失效）
+model TokenBlacklist {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  expiresAt DateTime @map("expires_at")     // 黑名单记录过期时间（通常15min）
+  reason    String?  @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId, expiresAt])
+  @@map("token_blacklist")
+}
+
+// 合规审计日志（PIPL要求，DB层只有INSERT+SELECT权限）
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?  @map("user_id")
+  action    String   @db.VarChar(100)       // 如 PRIVACY_AGREED / ALL_SESSIONS_REVOKED / ACCOUNT_DEACTIVATED
+  targetId  String?  @map("target_id")
+  detail    Json?                           // 不含明文手机号/hash/token/证件号
+  ip        String?  @db.VarChar(50)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
+  @@map("audit_logs")
+}
+
+// ================================================================
+// 第七组：购物车系统（5张表）
+// ================================================================
+
+// 购物车主表（每个用户一张购物车）
+model Cart {
+  id        String     @id @default(uuid())
+  userId    String     @unique @map("user_id")
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+  items     CartItem[]
+
+  @@map("carts")
+}
+
+// 购物车条目
+model CartItem {
+  id                 String   @id @default(uuid())
+  cartId             String   @map("cart_id")
+  itemType           String   @map("item_type")             // MARKET | CUSTOM
+  contentId          String   @map("content_id")            // collab_work.id 或 custom_product.id
+  hardwareSkuId      String   @map("hardware_sku_id")       // machine_model_skus.id
+  hardwareSkuCode    String?  @map("hardware_sku_code")     // 冗余 skuCode 供展示
+  snapshotTitle      String   @map("snapshot_title")
+  snapshotPreviewUrl String?  @map("snapshot_preview_url") @db.Text // GIF 快照（定制品）
+  coverUrl           String?  @map("cover_url") @db.Text             // 成品封面图
+  configSnapshotJson String?  @map("config_snapshot_json") @db.Text  // 定制参数快照（JSON）
+  snapshotPrice      Decimal? @map("snapshot_price") @db.Decimal(10,2) // 加购时的价格快照
+  quantity           Int      @default(1)
+  selected           Boolean  @default(true)
+  creatorId          String?  @map("creator_id")
+  status             String   @default("normal")            // normal|invalid|stock_out|price_changed
+  customProductId    String?  @map("custom_product_id")     // 仅 CUSTOM 有效
+  sessionGroupId     String?  @map("session_group_id")      // 同一次加购批次共享，用于购物车分组
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  cart Cart @relation(fields: [cartId], references: [id])
+
+  @@index([cartId])
+  @@index([sessionGroupId])
+  @@map("cart_items")
+}
+
+// DIY 草稿工作区（7天有效，编辑器产出）
+model CustomProduct {
+  id               String    @id @default(uuid())
+  userId           String    @map("user_id")
+  animationFrames  String    @map("animation_frames") @db.Text  // JSON 帧图列表
+  draftData        String?   @map("draft_data") @db.Text        // 工程文件（7天）
+  draftExpiresAt   DateTime? @map("draft_expires_at")
+  previewUrl       String?   @map("preview_url") @db.Text       // GIF（编辑器实时版）
+  staticPreviewUrl String?   @map("static_preview_url") @db.Text // 效果图合成 PNG
+  configJson       String?   @map("config_json") @db.Text       // 实时定制参数
+  hardwareSkuId    String?   @map("hardware_sku_id")
+  frameCount       Int?      @map("frame_count")                // 帧数（用于物理校验）
+  status           String    @default("draft")                  // draft|in_cart|ordered|removed
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  @@index([userId, status])
+  @@map("custom_products")
+}
+
+// 预订单（10分钟库存锁定，支付前临时凭据）
+model PreOrder {
+  id                     String   @id @default(uuid())
+  userId                 String   @map("user_id")
+  cartItemIds            String   @map("cart_item_ids") @db.Text        // JSON 数组，幂等校验用
+  checkoutIdempotencyKey String   @unique @map("checkout_idempotency_key")
+  status                 String   @default("pending_payment")           // pending_payment|paid|expired|cancelled
+  orderType              String   @default("normal") @map("order_type") // normal|presale
+  discountAdjustment     Decimal? @map("discount_adjustment") @db.Decimal(10,2)
+  totalAmount            Decimal  @map("total_amount") @db.Decimal(10,2)
+  // 收件信息（结算时填写，字段名与 customize_orders 统一用 receiver*）
+  receiverName           String?  @map("receiver_name")
+  receiverPhone          String?  @map("receiver_phone")
+  receiverAddress        String?  @map("receiver_address") @db.Text
+  receiverCity           String?  @map("receiver_city")
+  expiresAt              DateTime @map("expires_at")                    // 创建时间 + 10分钟
+  wxPayParams            String?  @map("wx_pay_params") @db.Text        // 微信支付参数 JSON
+  createdAt              DateTime @default(now()) @map("created_at")
+
+  @@index([userId, status])
+  @@index([expiresAt])
+  @@map("pre_orders")
+}
+
+// 用户收货地址簿
+model UserAddress {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  label     String?                       // 「家」「公司」「学校」等标签
+  name      String                        // 收件人姓名
+  phone     String                        // 手机号
+  province  String                        // 省
+  city      String                        // 市
+  district  String                        // 区/县
+  detail    String   @db.Text            // 详细地址（街道、楼号等）
+  isDefault Boolean  @default(false) @map("is_default")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("user_addresses")
+}
+
+// 限量内容配额（限量版联名作品销售控制）
+model ContentQuota {
+  id           String   @id @default(uuid())
+  collabWorkId String   @unique @map("collab_work_id")
+  totalQuota   Int      @map("total_quota")                    // 总配额
+  usedQuota    Int      @default(0) @map("used_quota")         // 已售出
+  lockedQuota  Int      @default(0) @map("locked_quota")       // 预锁（pending_payment）
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("content_quotas")
+}
+
+// ================================================================
+// 材料包物品管理（辅助耗材体系，独立于机型SKU）
+// ================================================================
+
+// 材料物品清单
+model MaterialItem {
+  id           String   @id @default(uuid())
+  name         String   @db.VarChar(100)
+  unit         String   @default("个") @db.VarChar(20)
+  currentStock Int      @default(0) @map("current_stock")
+  safetyStock  Int      @default(10) @map("safety_stock")
+  leadTime     Int      @default(7) @map("lead_time")       // 采购周期（天）
+  note         String?  @db.VarChar(200)
+  isActive     Boolean  @default(true) @map("is_active")
+  createdBy    String   @map("created_by")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  logs         MaterialLog[]
+  skuBindings  MaterialSkuBinding[]
+
+  @@map("material_items")
+}
+
+// 材料操作日志
+model MaterialLog {
+  id         String   @id @default(uuid())
+  materialId String   @map("material_id")
+  // purchase_in / order_consumed / production_defect / manual_adjustment / opening_stock
+  type       String   @db.VarChar(30)
+  quantity   Int
+  beforeQty  Int      @map("before_qty")
+  afterQty   Int      @map("after_qty")
+  operatorId String   @map("operator_id")
+  note       String?  @db.VarChar(200)
+  orderId    String?  @map("order_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  material   MaterialItem @relation(fields: [materialId], references: [id])
+
+  @@index([materialId])
+  @@map("material_logs")
+}
+
+// 材料-SKU 绑定关系（每出货1个SKU自动扣减对应材料）
+model MaterialSkuBinding {
+  id         String   @id @default(uuid())
+  materialId String   @map("material_id")
+  skuId      String   @map("sku_id")            // machine_model_skus.id
+  qtyPerUnit Int      @default(1) @map("qty_per_unit")  // 每出1个SKU消耗的材料数量
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  material   MaterialItem @relation(fields: [materialId], references: [id])
+
+  @@unique([materialId, skuId])
+  @@map("material_sku_bindings")
 }

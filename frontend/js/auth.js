@@ -2,27 +2,130 @@
 // 所有页面共用：登录弹窗 + 导航栏状态管理 + 下拉菜单
 // 每个页面在 </body> 前引入：<script src="../js/auth.js"></script>
 
-var MOWO_API_BASE = 'http://localhost:3001';
+var MOWO_API_BASE = (location.hostname==='127.0.0.1' ? 'http://127.0.0.1:3001' : 'http://localhost:3001');
 const TOKEN_KEY = 'mowo_token';
 const USER_KEY  = 'mowo_user';
 
 /* ─────────────────────────────────────────
    Token 工具
 ───────────────────────────────────────── */
-function getToken()        { return localStorage.getItem(TOKEN_KEY); }
-function setToken(t)       { localStorage.setItem(TOKEN_KEY, t); }
-function removeToken()     { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(USER_KEY); }
+function getToken()    { return localStorage.getItem(TOKEN_KEY); }
+function removeToken() { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(USER_KEY); }
+
+/* 主动刷新定时器：在 AccessToken 过期前 2 分钟静默刷新，避免 401 */
+var _proactiveRefreshTimer = null;
+function _scheduleProactiveRefresh(token) {
+  clearTimeout(_proactiveRefreshTimer);
+  try {
+    const exp = JSON.parse(atob(token.split('.')[1])).exp;
+    const delay = exp * 1000 - Date.now() - 2 * 60 * 1000; // 过期前 2 分钟
+    if (delay > 0) {
+      _proactiveRefreshTimer = setTimeout(() => refreshAccessToken(), delay);
+    }
+  } catch(_) {}
+}
+
+function setToken(t) {
+  localStorage.setItem(TOKEN_KEY, t);
+  _scheduleProactiveRefresh(t);
+  window.dispatchEvent(new CustomEvent('mowoTokenRefreshed'));
+}
 
 /* ─────────────────────────────────────────
-   获取当前用户（缓存优先）
+   刷新 AccessToken（利用 HttpOnly Cookie 中的 refresh_token）
+───────────────────────────────────────── */
+async function refreshAccessToken() {
+  try {
+    const res = await fetch(`${MOWO_API_BASE}/api/v1/auth/refresh`, {
+      method: 'POST',
+      credentials: 'include'
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    const newToken = json.data?.accessToken || json.data?.token;
+    if (newToken) { setToken(newToken); return newToken; }
+    return null;
+  } catch(_) { return null; }
+}
+
+/* ─────────────────────────────────────────
+   全局 fetch 拦截器：自动处理 AccessToken 过期
+   所有 /api/ 请求如果返回 401，先尝试刷新 Token 再重试一次。
+   管理页无需改动各自的 api() 函数即可受益。
+───────────────────────────────────────── */
+(function patchFetch() {
+  const _fetch = window.fetch;
+  let _refreshPromise = null;   // 防止并发 401 触发多次刷新
+
+  window.fetch = async function(url, opts) {
+    const res = await _fetch(url, opts);
+
+    // 只拦截 API 请求的 401；刷新请求本身不再拦截（防递归）
+    const urlStr = String(url);
+    if (res.status !== 401 || !urlStr.includes('/api/') || urlStr.includes('/auth/refresh')) {
+      return res;
+    }
+
+    // 并发保护：多个同时 401 只发一次刷新
+    if (!_refreshPromise) {
+      _refreshPromise = refreshAccessToken().finally(() => { _refreshPromise = null; });
+    }
+    const newToken = await _refreshPromise;
+    if (!newToken) {
+      // refresh token 也失效了，清除本地凭证，跳回前台首页
+      removeToken();
+      const isAdminOrCreator = window.location.pathname.includes('admin') || window.location.pathname.includes('creator');
+      if (isAdminOrCreator) {
+        // 计算到 frontend 根目录的相对路径（admin 页面在 pages/ 子目录）
+        const depth = window.location.pathname.split('/').length - 2;
+        const prefix = depth > 1 ? '../'.repeat(depth - 1) : '';
+        window.location.href = prefix + 'index.html';
+      }
+      return res;
+    }
+
+    // 存储新 token，触发 mowoTokenRefreshed 事件，让各页面的 _token 变量同步更新
+    setToken(newToken);
+
+    // 用新 token 重试，保留 credentials 确保 Cookie 不丢失
+    const newOpts = {
+      ...(opts || {}),
+      credentials: (opts?.credentials) || 'include',
+      headers: { ...(opts?.headers || {}), Authorization: `Bearer ${newToken}` }
+    };
+    return _fetch(url, newOpts);
+  };
+})();
+
+/* ─────────────────────────────────────────
+   获取当前用户（缓存优先，自动刷新Token）
 ───────────────────────────────────────── */
 async function fetchCurrentUser() {
   const token = getToken();
-  if (!token) return null;
+  if (!token) {
+    // 没有 AccessToken，尝试用 RefreshToken Cookie 静默刷新
+    const refreshed = await refreshAccessToken();
+    if (!refreshed) return null;
+  }
   const cached = localStorage.getItem(USER_KEY);
   if (cached) { try { return JSON.parse(cached); } catch(e) {} }
   try {
-    const res  = await fetch(`${MOWO_API_BASE}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
+    const currentToken = getToken();
+    const res  = await fetch(`${MOWO_API_BASE}/api/auth/me`, {
+      headers: { Authorization: `Bearer ${currentToken}` }
+    });
+    if (res.status === 401) {
+      // AccessToken 过期，尝试刷新
+      const newToken = await refreshAccessToken();
+      if (!newToken) { removeToken(); return null; }
+      const res2 = await fetch(`${MOWO_API_BASE}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${newToken}` }
+      });
+      if (!res2.ok) { removeToken(); return null; }
+      const json2 = await res2.json();
+      localStorage.setItem(USER_KEY, JSON.stringify(json2.data));
+      return json2.data;
+    }
     if (!res.ok) { removeToken(); return null; }
     const json = await res.json();
     localStorage.setItem(USER_KEY, JSON.stringify(json.data));
@@ -71,6 +174,9 @@ function injectCSS() {
 .dd-divider{height:1px;background:#EBEBEA;margin:4px 0;}
 .dd-item.creator-only{display:none;}
 .nav-user.is-creator .dd-item.creator-only{display:flex;}
+.dd-item.admin-only{display:none;}
+.nav-user.is-admin .dd-item.admin-only{display:flex;}
+.dd-item.admin-only .dd-item-icon{background:#FFF9C4;}
 
 /* ── 登录弹窗遮罩 ── */
 .auth-overlay{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(17,17,16,.45);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .3s cubic-bezier(.22,1,.36,1);}
@@ -152,7 +258,7 @@ function injectAuthModal() {
   if (document.getElementById('mowoAuthOverlay')) return;
   const div = document.createElement('div');
   div.innerHTML = `
-<div class="auth-overlay" id="mowoAuthOverlay" onclick="if(event.target===this)closeAuthModal()">
+<div class="auth-overlay" id="mowoAuthOverlay">
   <div class="auth-box" onclick="event.stopPropagation()">
     <div class="auth-box-bar"></div>
     <div class="auth-box-inner">
@@ -227,25 +333,11 @@ function injectAuthModal() {
           </div>
           <p class="auth-field-err" id="regCodeErr">验证码不正确</p>
         </div>
-        <div class="auth-field">
-          <div class="auth-field-row" id="regPwdRow">
-            <input class="auth-input" type="password" id="regPwd" placeholder="密码（至少8位，含字母和数字）" oninput="checkRegForm()">
-            <button class="auth-eye-btn" onclick="authTogglePwd('regPwd',this)">👁</button>
-          </div>
-          <p class="auth-field-err" id="regPwdErr">密码至少8位，需包含字母和数字</p>
-        </div>
-        <div class="auth-field">
-          <div class="auth-field-row" id="regPwdCfmRow">
-            <input class="auth-input" type="password" id="regPwdCfm" placeholder="再次输入密码" oninput="checkRegForm()">
-            <button class="auth-eye-btn" onclick="authTogglePwd('regPwdCfm',this)">👁</button>
-          </div>
-          <p class="auth-field-err" id="regPwdCfmErr">两次密码不一致</p>
-        </div>
         <div class="auth-agree">
           <div class="auth-agree-box" id="authAgreeBox" onclick="authToggleAgree()"></div>
           <p class="auth-agree-text">我已阅读并同意 <a href="#">《用户协议》</a> 和 <a href="#">《隐私政策》</a></p>
         </div>
-        <button class="auth-submit-btn" id="regSubmitBtn" onclick="submitRegister()" disabled>注册</button>
+        <button class="auth-submit-btn" id="regSubmitBtn" onclick="submitRegister()" disabled>注册并登录</button>
       </div>
 
     </div>
@@ -312,17 +404,20 @@ function injectNavUser() {
           <span class="dd-badge user" id="mowoDdBadge">普通用户</span>
         </div>
       </div>
-      <button class="dd-item" onclick="navGoTo('favorites')">
-        <div class="dd-item-icon" style="background:#FFF2EC;">🩷</div>我的收藏
-      </button>
       <button class="dd-item" onclick="navGoTo('cart')">
         <div class="dd-item-icon" style="background:#FFFBE6;">🛒</div>购物车
       </button>
       <button class="dd-item" onclick="navGoTo('orders')">
         <div class="dd-item-icon" style="background:#EBF5FF;">📦</div>我的订单
       </button>
-      <button class="dd-item creator-only" onclick="navGoTo('dashboard')">
-        <div class="dd-item-icon" style="background:#EDFBEE;">📊</div>数据管理
+      <button class="dd-item" onclick="navGoTo('myAnimations')">
+        <div class="dd-item-icon" style="background:#F0F4FF;">🎬</div>我的动画
+      </button>
+      <button class="dd-item creator-only" onclick="navGoTo('creatorCenter')">
+        <div class="dd-item-icon" style="background:#FFF3FB;">✦</div>创作者中心
+      </button>
+      <button class="dd-item admin-only" onclick="navGoTo('admin')">
+        <div class="dd-item-icon" style="background:#FFF9C4;">🛠</div>进入后台
       </button>
       <div class="dd-divider"></div>
       <button class="dd-item" onclick="navGoTo('settings')">
@@ -356,6 +451,11 @@ function updateNavState(user) {
     if (user.certifyStatus === 2) navUser.classList.add('is-creator');
     else navUser.classList.remove('is-creator');
 
+    // role >= 2 显示「进入后台」入口
+    const userRole = user.role ?? 0;
+    if (userRole >= 2) navUser.classList.add('is-admin');
+    else navUser.classList.remove('is-admin');
+
     const nickname  = user.profile?.nickname || '用户';
     const avatarUrl = user.profile?.avatarUrl;
     const initial   = nickname[0].toUpperCase();
@@ -380,8 +480,11 @@ function updateNavState(user) {
 
     const badge = document.getElementById('mowoDdBadge');
     if (badge) {
-      if (user.certifyStatus === 2) { badge.textContent='✦ 创作者'; badge.className='dd-badge creator'; }
-      else { badge.textContent='普通用户'; badge.className='dd-badge user'; }
+      const role = user.role ?? 0;
+      if (role >= 3)              { badge.textContent='⭐ 超级管理员'; badge.className='dd-badge'; badge.style.cssText='background:#FCE4EC;color:#C62828;'; }
+      else if (role === 2)        { badge.textContent='🛡 管理员';    badge.className='dd-badge'; badge.style.cssText='background:#FFF8E1;color:#B8860B;'; }
+      else if (user.certifyStatus === 2) { badge.textContent='✦ 创作者'; badge.className='dd-badge creator'; badge.style.cssText=''; }
+      else                        { badge.textContent='普通用户';    badge.className='dd-badge user';    badge.style.cssText=''; }
     }
   } else {
     if (loginBtn) loginBtn.style.display = '';
@@ -413,21 +516,31 @@ function navGoTo(page) {
   document.getElementById('mowoDropdown')?.classList.remove('open');
   document.getElementById('mowoNavAvatarBtn')?.classList.remove('open');
   const map = {
-    favorites: 'favorites.html',
-    cart:      'cart.html',
-    orders:    'orders.html',
-    dashboard: 'creator-works.html',
-    settings:  'settings.html',
-    help:      'contact.html',
+    cart:          'cart.html',
+    orders:        'orders.html',
+    addresses:     'my-addresses.html',
+    myAnimations:  'my-animations.html',
+    creatorCenter: 'creator-dashboard.html',
+    settings:      'settings.html',
+    help:          'contact.html',
+    admin:         'admin-orders.html',
   };
   window.location.href = map[page] || 'index.html';
 }
-function navLogout() {
+async function navLogout() {
   document.getElementById('mowoDropdown')?.classList.remove('open');
   document.getElementById('mowoNavAvatarBtn')?.classList.remove('open');
+  // 通知后端撤销所有 session（含 HttpOnly Cookie 中的 refresh_token）
+  try {
+    await fetch(`${MOWO_API_BASE}/api/v1/auth/logout`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: getToken() ? { 'Authorization': `Bearer ${getToken()}` } : {}
+    });
+  } catch(_) {}
   removeToken();
   updateNavState(null);
-  const protected_ = ['creator-works','creator-earnings','creator-certify','orders','favorites','cart'];
+  const protected_ = ['orders','cart','my-animations','settings','my-addresses','creator-dashboard','creator-earnings','creator-animations','creator-collab','creator-links'];
   const cur = window.location.pathname.split('/').pop().replace('.html','');
   if (protected_.includes(cur)) window.location.href = 'index.html';
 }
@@ -483,7 +596,7 @@ function authTogglePwd(id, btn) {
 
 /* ── 验证码倒计时 ── */
 let _cdTimer = null;
-function authSendCode(type) {
+async function authSendCode(type) {
   const phoneId = type==='lc'?'lcPhone':'regPhone';
   const btnId   = type==='lc'?'lcSendBtn':'regSendBtn';
   const errId   = type==='lc'?'lcPhoneErr':'regPhoneErr';
@@ -498,13 +611,35 @@ function authSendCode(type) {
   document.getElementById(rowId).classList.remove('error');
   document.getElementById(errId).classList.remove('show');
 
-  // 开发阶段：验证码固定 123456
-  console.log('[开发模式] 验证码：123456');
-  // TODO: 上线前接真实短信API
+  const btn = document.getElementById(btnId);
+  btn.disabled=true; btn.textContent='发送中...';
 
+  try {
+    const purpose = type==='reg' ? 'REGISTER' : 'LOGIN';
+    const res  = await fetch(`${MOWO_API_BASE}/api/v1/auth/sms/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, purpose })
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      document.getElementById(errId).textContent = json.message || '发送失败，请重试';
+      document.getElementById(errId).classList.add('show');
+      btn.disabled=false; btn.textContent='获取验证码';
+      return;
+    }
+    // 开发Mock模式：提示验证码
+    if (json._devCode) showToast(`[开发] 验证码：${json._devCode}`);
+  } catch(e) {
+    document.getElementById(errId).textContent = '网络异常，请稍后重试';
+    document.getElementById(errId).classList.add('show');
+    btn.disabled=false; btn.textContent='获取验证码';
+    return;
+  }
+
+  // 倒计时
   let s=60;
-  const btn=document.getElementById(btnId);
-  btn.disabled=true; btn.classList.add('counting'); btn.textContent=`${s}s后重发`;
+  btn.classList.add('counting'); btn.textContent=`${s}s后重发`;
   clearInterval(_cdTimer);
   _cdTimer=setInterval(()=>{
     s--; btn.textContent=`${s}s后重发`;
@@ -520,21 +655,10 @@ function authToggleAgree() {
   checkRegForm();
 }
 function checkRegForm() {
-  const phone  = document.getElementById('regPhone')?.value||'';
-  const code   = document.getElementById('regCode')?.value||'';
-  const pwd    = document.getElementById('regPwd')?.value||'';
-  const pwdCfm = document.getElementById('regPwdCfm')?.value||'';
-
-  const pwdOk  = authValidatePwd(pwd);
-  const cfmOk  = pwd===pwdCfm && pwdCfm.length>0;
-
-  const pwdErr = document.getElementById('regPwdErr');
-  const cfmErr = document.getElementById('regPwdCfmErr');
-  if (pwdErr) pwdErr.classList.toggle('show', pwd.length>0&&!pwdOk);
-  if (cfmErr) cfmErr.classList.toggle('show', pwdCfm.length>0&&!cfmOk);
-
-  const btn = document.getElementById('regSubmitBtn');
-  if (btn) btn.disabled = !(authValidatePhone(phone)&&code.length===6&&pwdOk&&cfmOk&&_regAgree);
+  const phone = document.getElementById('regPhone')?.value||'';
+  const code  = document.getElementById('regCode')?.value||'';
+  const btn   = document.getElementById('regSubmitBtn');
+  if (btn) btn.disabled = !(authValidatePhone(phone) && code.length===6 && _regAgree);
 }
 
 /* ─────────────────────────────────────────
@@ -554,14 +678,18 @@ async function submitLoginByCode() {
   const btn=document.getElementById('lcSubmitBtn');
   btn.classList.add('loading'); btn.textContent=''; btn.disabled=true;
   try {
-    // 开发阶段：用密码接口模拟（验证码=123456时用固定密码）
-    const res  = await fetch(`${MOWO_API_BASE}/api/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone,password:'Abc12345'})});
+    const res  = await fetch(`${MOWO_API_BASE}/api/v1/auth/sms/verify`, {
+      method: 'POST',
+      credentials: 'include', // 接收 refresh_token HttpOnly Cookie
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ phone, code })
+    });
     const json = await res.json();
     if (json.success) {
       closeAuthModal();
-      await _finalizeLogin(json.data.token);
+      await _finalizeLogin(json.data.token || json.data.accessToken);
     } else {
-      document.getElementById('lcCodeErr').textContent=json.message||'登录失败';
+      document.getElementById('lcCodeErr').textContent = json.message || '登录失败';
       document.getElementById('lcCodeErr').classList.add('show');
     }
   } catch(e) {
@@ -587,13 +715,22 @@ async function submitLoginByPassword() {
   const btn=document.getElementById('lpSubmitBtn');
   btn.classList.add('loading'); btn.textContent=''; btn.disabled=true;
   try {
-    const res  = await fetch(`${MOWO_API_BASE}/api/auth/login`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone,password:pwd})});
+    const res  = await fetch(`${MOWO_API_BASE}/api/v1/auth/password/login`, {
+      method: 'POST',
+      credentials: 'include', // 接收 refresh_token HttpOnly Cookie
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ phone, password: pwd })
+    });
     const json = await res.json();
     if (json.success) {
       closeAuthModal();
-      await _finalizeLogin(json.data.token);
+      await _finalizeLogin(json.data.token || json.data.accessToken);
     } else {
-      document.getElementById('lpPwdErr').textContent=json.message||'手机号或密码不正确';
+      // LOGIN_LOCKED：展示锁定剩余时间
+      const msg = json.code==='LOGIN_LOCKED'
+        ? `连续登录失败次数过多，账号已锁定 ${json.remainingMin||30} 分钟`
+        : (json.message || '手机号或密码不正确');
+      document.getElementById('lpPwdErr').textContent = msg;
       document.getElementById('lpPwdErr').classList.add('show');
     }
   } catch(e) {
@@ -609,26 +746,35 @@ async function submitLoginByPassword() {
 let _pendingToken = null;
 async function submitRegister() {
   const phone = document.getElementById('regPhone').value;
-  const pwd   = document.getElementById('regPwd').value;
-  if (!authValidatePhone(phone)||!authValidatePwd(pwd)) return;
+  const code  = document.getElementById('regCode').value;
+  if (!authValidatePhone(phone) || code.length!==6 || !_regAgree) return;
   const btn=document.getElementById('regSubmitBtn');
   btn.classList.add('loading'); btn.textContent=''; btn.disabled=true;
   try {
-    const res  = await fetch(`${MOWO_API_BASE}/api/auth/register`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone,password:pwd})});
+    // 注册使用 v1 SMS verify 接口（新手机号自动注册）
+    const res  = await fetch(`${MOWO_API_BASE}/api/v1/auth/sms/verify`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ phone, code, agreedToPrivacy: true })
+    });
     const json = await res.json();
     if (json.success) {
-      _pendingToken = json.data.token;
+      _pendingToken = json.data.token || json.data.accessToken;
       closeAuthModal();
       openProfileModal();
     } else {
-      document.getElementById('regCodeErr').textContent=json.message||'注册失败，手机号可能已存在';
+      const msg = json.code==='PRIVACY_NOT_AGREED'
+        ? '请先勾选同意《隐私政策》和《用户协议》'
+        : (json.message || '注册失败，请重试');
+      document.getElementById('regCodeErr').textContent = msg;
       document.getElementById('regCodeErr').classList.add('show');
     }
   } catch(e) {
     document.getElementById('regCodeErr').textContent='网络异常，请稍后重试';
     document.getElementById('regCodeErr').classList.add('show');
   }
-  btn.classList.remove('loading'); btn.textContent='注册'; btn.disabled=false;
+  btn.classList.remove('loading'); btn.textContent='注册并登录'; btn.disabled=false;
 }
 
 /* ─────────────────────────────────────────
@@ -668,23 +814,24 @@ async function _finalizeLogin(token) {
 /* ─────────────────────────────────────────
    Toast
 ───────────────────────────────────────── */
-let _toastTimer;
+var _authToastTimer;
 function showToast(msg) {
   const t=document.getElementById('mowoToast');
   if(!t) return;
   t.textContent=msg; t.classList.add('show');
-  clearTimeout(_toastTimer);
-  _toastTimer=setTimeout(()=>t.classList.remove('show'),2600);
+  clearTimeout(_authToastTimer);
+  _authToastTimer=setTimeout(()=>t.classList.remove('show'),2600);
 }
 
 /* ─────────────────────────────────────────
    对外暴露（供其他页面调用）
 ───────────────────────────────────────── */
-window.openAuthModal   = openAuthModal;
-window.closeAuthModal  = closeAuthModal;
-window.showToast       = showToast;
-window.getToken        = getToken;
-window.fetchCurrentUser = fetchCurrentUser;
+window.openAuthModal      = openAuthModal;
+window.closeAuthModal     = closeAuthModal;
+window.showToast          = showToast;
+window.getToken           = getToken;
+window.fetchCurrentUser   = fetchCurrentUser;
+window.refreshAccessToken = refreshAccessToken;
 
 /* ─────────────────────────────────────────
    页面初始化
@@ -697,6 +844,20 @@ window.fetchCurrentUser = fetchCurrentUser;
   // 绑定登录按钮点击
   const loginBtn = document.getElementById('navLoginBtn');
   if (loginBtn) loginBtn.addEventListener('click', openAuthModal);
+
+  // 页面加载时处理现有 token：过期则立即刷新，否则调度主动刷新定时器
+  const existing = getToken();
+  if (existing) {
+    try {
+      const exp = JSON.parse(atob(existing.split('.')[1])).exp;
+      if (exp * 1000 < Date.now()) {
+        // Token 已过期，立即静默刷新（不等待，让 fetchCurrentUser 的拦截器处理）
+        refreshAccessToken();
+      } else {
+        _scheduleProactiveRefresh(existing);
+      }
+    } catch(_) { _scheduleProactiveRefresh(existing); }
+  }
 
   const user = await fetchCurrentUser();
   updateNavState(user);

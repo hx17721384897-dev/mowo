@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>引流链接 — 哞屋创作者中心</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Noto+Sans+SC:wght@300;400;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --white:#FFFFFF;--cream:#F5F3EF;--black:#111110;
+  --gray1:#EBEBEA;--gray2:#C4C3BF;--gray3:#787874;
+  --accent-y:#F5E642;--accent-o:#FF6B35;--accent-g:#8FD694;--accent-b:#7EC8E3;
+  --font:'Nunito','Noto Sans SC',sans-serif;
+  --ease:cubic-bezier(0.22,1,0.36,1);
+  --sidebar-w:240px;--topbar-h:60px;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:var(--font);background:var(--cream);color:var(--black);overflow-x:hidden;-webkit-font-smoothing:antialiased;}
+a{text-decoration:none;color:inherit;}
+button{font-family:var(--font);cursor:pointer;border:none;background:none;}
+input,select,textarea{font-family:var(--font);}
+
+/* ── 侧栏 ── */
+.sidebar{width:var(--sidebar-w);background:var(--black);position:fixed;top:0;left:0;bottom:0;display:flex;flex-direction:column;z-index:800;transition:transform .35s var(--ease);}
+@media(max-width:1023px){.sidebar{transform:translateX(-100%);}.sidebar.open{transform:none;}}
+.sidebar-logo{padding:20px 20px 16px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:12px;flex-shrink:0;}
+.sidebar-logo-mark{width:36px;height:36px;border-radius:10px;background:var(--accent-y);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;color:var(--black);flex-shrink:0;}
+.sidebar-logo-cn{font-weight:900;font-size:16px;color:var(--white);}
+.sidebar-logo-sub{font-weight:700;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:rgba(255,255,255,.35);}
+.sidebar-user{padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:12px;flex-shrink:0;}
+.sidebar-avatar{width:36px;height:36px;border-radius:50%;background:var(--accent-y);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:var(--black);flex-shrink:0;border:2px solid rgba(255,255,255,.1);}
+.sidebar-user-name{font-weight:800;font-size:13px;color:var(--white);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sidebar-user-badge{display:inline-flex;align-items:center;gap:3px;margin-top:2px;font-weight:800;font-size:10px;letter-spacing:.06em;padding:1px 7px;border-radius:999px;background:rgba(143,214,148,.15);color:var(--accent-g);}
+.sidebar-nav{flex:1;overflow-y:auto;padding:12px 10px;}
+.sidebar-nav::-webkit-scrollbar{width:0;}
+.nav-sec{font-weight:800;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.25);padding:8px 10px 4px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;font-weight:800;font-size:13px;color:rgba(255,255,255,.55);transition:background .15s,color .15s;position:relative;white-space:nowrap;margin-bottom:2px;}
+.nav-item:hover{background:rgba(255,255,255,.07);color:rgba(255,255,255,.85);}
+.nav-item.active{background:rgba(255,255,255,.1);color:var(--white);}
+.nav-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:20px;border-radius:0 3px 3px 0;background:var(--accent-y);}
+.nav-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;background:rgba(255,255,255,.05);}
+.nav-item.active .nav-icon{background:rgba(245,230,66,.15);}
+.sidebar-bottom{padding:12px 10px 20px;border-top:1px solid rgba(255,255,255,.08);flex-shrink:0;}
+.cert-v{background:rgba(143,214,148,.1);border-radius:14px;padding:12px 14px;}
+.cert-vt{font-weight:900;font-size:12px;color:var(--accent-g);margin-bottom:4px;}
+.cert-vd{font-weight:700;font-size:11px;color:rgba(143,214,148,.6);line-height:1.5;margin-bottom:10px;}
+.cert-vb{width:100%;padding:8px;border-radius:9px;font-family:var(--font);font-weight:800;font-size:12px;background:rgba(143,214,148,.2);color:var(--accent-g);cursor:default;}
+.backdrop{display:none;position:fixed;inset:0;z-index:799;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);}
+.backdrop.show{display:block;}
+
+/* ── 顶栏 ── */
+.topbar{position:fixed;top:0;right:0;left:var(--sidebar-w);z-index:700;height:var(--topbar-h);background:rgba(245,243,239,.95);backdrop-filter:blur(20px);border-bottom:1px solid var(--gray1);display:flex;align-items:center;justify-content:space-between;padding:0 32px;}
+@media(max-width:1023px){.topbar{left:0;padding:0 20px;}}
+.topbar-left{display:flex;align-items:center;gap:14px;}
+.menu-btn{width:36px;height:36px;border-radius:10px;background:var(--gray1);display:none;align-items:center;justify-content:center;font-size:16px;}
+@media(max-width:1023px){.menu-btn{display:flex;}}
+.bc-home{font-weight:700;font-size:13px;color:var(--gray3);}
+.bc-home:hover{color:var(--black);}
+.bc-sep{color:var(--gray2);font-size:12px;margin:0 6px;}
+.bc-cur{font-weight:900;font-size:14px;}
+.topbar-avatar{width:34px;height:34px;border-radius:50%;background:var(--accent-y);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:var(--black);border:2px solid var(--gray1);}
+
+/* ── 主区 ── */
+.main{margin-left:var(--sidebar-w);padding-top:var(--topbar-h);}
+@media(max-width:1023px){.main{margin-left:0;}}
+.inner{padding:32px;max-width:900px;}
+@media(max-width:640px){.inner{padding:20px 16px 60px;}}
+
+/* ── 通用 ── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;font-family:var(--font);font-weight:800;font-size:13px;padding:10px 22px;border-radius:999px;min-height:44px;transition:all .2s;cursor:pointer;border:none;white-space:nowrap;}
+.btn:active{transform:scale(.97);}
+.btn-ghost{background:var(--white);color:var(--black);border:1.5px solid var(--gray1);}
+.btn-ghost:hover{border-color:var(--black);}
+.btn-black{background:var(--black);color:var(--white);}
+.btn-black:hover{opacity:.85;}
+.btn-yellow{background:var(--accent-y);color:var(--black);box-shadow:0 3px 0 #C8BB00;}
+.btn-yellow:hover{box-shadow:0 5px 0 #C8BB00;transform:translateY(-1px);}
+.btn-sm{font-size:12px;padding:7px 16px;min-height:36px;}
+.btn-danger{background:#FFE0DC;color:#993C1D;border:none;}
+.btn-danger:hover{background:#FFCCC6;}
+.btn:disabled{opacity:.4;cursor:not-allowed;pointer-events:none;}
+.page-title{font-weight:900;font-size:26px;letter-spacing:-.02em;margin-bottom:6px;}
+.page-sub{font-weight:700;font-size:13px;color:var(--gray3);}
+.reveal{opacity:0;transform:translateY(16px);transition:opacity .55s var(--ease),transform .55s var(--ease);}
+.reveal.on{opacity:1;transform:none;}
+.d1{transition-delay:.06s}.d2{transition-delay:.12s}.d3{transition-delay:.18s}
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
+.section-title{font-weight:900;font-size:17px;letter-spacing:-.01em;}
+
+/* ── 专属推广链接卡片 ── */
+.referral-banner{background:var(--black);border-radius:28px;padding:28px 32px;margin-bottom:24px;position:relative;overflow:hidden;}
+.referral-banner-noise{position:absolute;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;opacity:.5;}
+.referral-banner-accent{position:absolute;top:-40px;right:-40px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(127,200,227,.2) 0%,transparent 70%);pointer-events:none;}
+.referral-label{font-weight:800;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.4);margin-bottom:10px;}
+.referral-url{font-weight:900;font-size:20px;color:var(--white);letter-spacing:-.01em;margin-bottom:16px;word-break:break-all;position:relative;}
+.referral-stats{display:flex;gap:24px;flex-wrap:wrap;}
+.referral-stat{background:rgba(255,255,255,.07);border-radius:14px;padding:12px 18px;}
+.referral-stat-label{font-weight:800;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:4px;}
+.referral-stat-val{font-weight:900;font-size:20px;color:var(--white);}
+.copy-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:999px;background:rgba(255,255,255,.12);color:var(--white);font-family:var(--font);font-weight:800;font-size:12px;cursor:pointer;border:none;transition:background .2s;position:relative;}
+.copy-btn:hover{background:rgba(255,255,255,.2);}
+
+/* ── 视频链接列表 ── */
+.link-card{background:var(--white);border-radius:22px;border:1.5px solid var(--gray1);padding:20px 24px;margin-bottom:12px;transition:border-color .2s;}
+.link-card:hover{border-color:var(--gray2);}
+.link-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;}
+.link-platform{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;font-weight:800;font-size:12px;}
+.platform-bilibili{background:rgba(127,200,227,.15);color:#1565a0;}
+.platform-xiaohongshu{background:rgba(255,90,90,.1);color:#c0321a;}
+.platform-weibo{background:rgba(255,90,0,.1);color:#c04a00;}
+.platform-douyin{background:rgba(0,0,0,.06);color:#111;}
+.platform-other{background:var(--gray1);color:var(--gray3);}
+.link-status{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;font-weight:800;font-size:11px;}
+.status-pending{background:#FFF3CD;color:#856404;}
+.status-approved{background:#D4EDDA;color:#1a5c2e;}
+.status-rejected{background:#FFE0DC;color:#993C1D;}
+.link-url{font-weight:700;font-size:13px;color:var(--accent-b);word-break:break-all;margin-bottom:6px;}
+.link-url a{color:inherit;}
+.link-title{font-weight:800;font-size:14px;margin-bottom:4px;}
+.link-desc{font-weight:700;font-size:12px;color:var(--gray3);}
+.link-meta{display:flex;gap:16px;margin-top:10px;flex-wrap:wrap;}
+.link-meta-item{font-weight:700;font-size:12px;color:var(--gray3);}
+.link-meta-item strong{color:var(--black);font-weight:900;}
+.link-note{margin-top:10px;padding:10px 14px;background:var(--cream);border-radius:10px;font-weight:700;font-size:12px;color:var(--gray3);}
+.link-actions{display:flex;gap:8px;margin-top:12px;}
+
+/* ── 添加链接表单 ── */
+.add-form{background:var(--white);border-radius:24px;border:1.5px solid var(--gray1);padding:24px;margin-bottom:24px;}
+.add-form-title{font-weight:900;font-size:15px;margin-bottom:18px;}
+.form-row{margin-bottom:14px;}
+.form-label{font-weight:800;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gray3);display:block;margin-bottom:6px;}
+.form-field{width:100%;height:42px;border:1.5px solid var(--gray1);border-radius:12px;padding:0 14px;font-family:var(--font);font-weight:700;font-size:13px;color:var(--black);background:var(--white);outline:none;transition:border-color .2s;}
+.form-field:focus{border-color:var(--black);}
+.form-select{appearance:none;cursor:pointer;}
+.form-textarea{width:100%;min-height:80px;border:1.5px solid var(--gray1);border-radius:12px;padding:10px 14px;font-family:var(--font);font-weight:700;font-size:13px;resize:vertical;outline:none;transition:border-color .2s;line-height:1.6;}
+.form-textarea:focus{border-color:var(--black);}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media(max-width:640px){.form-grid{grid-template-columns:1fr;}}
+
+/* 空状态 */
+.empty{padding:48px 20px;text-align:center;background:var(--white);border-radius:24px;border:1.5px solid var(--gray1);}
+.empty-icon{font-size:40px;margin-bottom:12px;}
+.empty-text{font-weight:900;font-size:15px;margin-bottom:6px;}
+.empty-sub{font-weight:700;font-size:12px;color:var(--gray3);}
+
+/* Toast */
+.toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--black);color:var(--white);font-weight:800;font-size:13px;padding:10px 22px;border-radius:999px;opacity:0;pointer-events:none;transition:all .3s var(--ease);z-index:9000;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div class="backdrop" id="backdrop" onclick="closeSidebar()"></div>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="sidebar-logo-mark">哞</div>
+    <div style="line-height:1.2;"><p class="sidebar-logo-cn">创作者中心</p><p class="sidebar-logo-sub">MOWO Studio</p></div>
+  </div>
+  <div class="sidebar-user">
+    <div class="sidebar-avatar" id="sidebarAvatar">创</div>
+    <div style="flex:1;min-width:0;">
+      <p class="sidebar-user-name" id="sidebarName">加载中…</p>
+      <span class="sidebar-user-badge">✦ 认证创作者</span>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <p class="nav-sec">数据中心</p>
+    <a href="creator-dashboard.html" class="nav-item"><span class="nav-icon">📊</span>数据总览</a>
+    <a href="creator-earnings.html"  class="nav-item"><span class="nav-icon">💰</span>收益与提现</a>
+    <p class="nav-sec" style="margin-top:12px;">创作管理</p>
+    <a href="creator-animations.html" class="nav-item"><span class="nav-icon">🎬</span>我的动画</a>
+    <a href="creator-collab.html"    class="nav-item"><span class="nav-icon">🎨</span>我的联名</a>
+    <a href="creator-links.html"     class="nav-item active"><span class="nav-icon">🔗</span>引流链接</a>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="cert-v">
+      <p class="cert-vt">✦ 已认证创作者</p>
+      <p class="cert-vd">创作者认证有效</p>
+      <button class="cert-vb">认证有效 ✓</button>
+    </div>
+  </div>
+</aside>
+
+<header class="topbar">
+  <div class="topbar-left">
+    <button class="menu-btn" onclick="openSidebar()">☰</button>
+    <div style="display:flex;align-items:center;">
+      <a href="index.html" class="bc-home">哞屋</a>
+      <span class="bc-sep">›</span>
+      <span class="bc-cur">引流链接</span>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="topbar-avatar" id="topbarAvatar"></div>
+  </div>
+</header>
+
+<main class="main">
+  <div class="inner">
+    <div style="margin-bottom:24px;" class="reveal">
+      <h1 class="page-title">引流链接</h1>
+      <p class="page-sub">管理你的专属推广链接和外部平台视频，帮助提升牛量声量积分</p>
+    </div>
+
+    <!-- 专属推广链接 -->
+    <div class="reveal d1">
+      <div class="referral-banner">
+        <div class="referral-banner-noise"></div>
+        <div class="referral-banner-accent"></div>
+        <div style="position:relative;">
+          <p class="referral-label">专属推广链接</p>
+          <p class="referral-url" id="referralUrl">加载中…</p>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
+            <button class="copy-btn" onclick="copyReferralUrl()">📋 复制链接</button>
+            <span style="font-weight:700;font-size:12px;color:rgba(255,255,255,.4);">将此链接贴到你的视频简介，带来的订单将计入牛量转化维度</span>
+          </div>
+          <div class="referral-stats">
+            <div class="referral-stat">
+              <p class="referral-stat-label">累计点击</p>
+              <p class="referral-stat-val" id="refClicks">—</p>
+            </div>
+            <div class="referral-stat">
+              <p class="referral-stat-label">带来订单</p>
+              <p class="referral-stat-val" id="refOrders">—</p>
+            </div>
+            <div class="referral-stat">
+              <p class="referral-stat-label">带来销售额</p>
+              <p class="referral-stat-val" id="refRevenue">—</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 添加视频链接 -->
+    <div class="reveal d2">
+      <div class="section-head">
+        <div>
+          <p class="section-title">外部视频链接</p>
+          <p style="font-weight:700;font-size:12px;color:var(--gray3);margin-top:3px;">提交含有哞屋品牌提及的视频，审核通过后计入牛量声量积分</p>
+        </div>
+        <button class="btn btn-black btn-sm" onclick="toggleAddForm()">＋ 添加链接</button>
+      </div>
+
+      <!-- 添加表单（默认隐藏） -->
+      <div class="add-form" id="addForm" style="display:none;">
+        <p class="add-form-title">添加外部视频链接</p>
+        <div class="form-grid">
+          <div class="form-row">
+            <label class="form-label">平台</label>
+            <select class="form-field form-select" id="fPlatform">
+              <option value="bilibili">B站</option>
+              <option value="xiaohongshu">小红书</option>
+              <option value="weibo">微博</option>
+              <option value="douyin">抖音</option>
+              <option value="other">其他平台</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label class="form-label">视频链接</label>
+            <input class="form-field" type="url" id="fVideoUrl" placeholder="https://…">
+          </div>
+        </div>
+        <div class="form-row">
+          <label class="form-label">视频标题（选填）</label>
+          <input class="form-field" type="text" id="fVideoTitle" placeholder="填写视频标题方便管理员识别" maxlength="200">
+        </div>
+        <div class="form-row">
+          <label class="form-label">说明（选填）</label>
+          <textarea class="form-textarea" id="fDescription" placeholder="说明视频内容和品牌提及方式，如「简介中有哞屋官网链接」" maxlength="500"></textarea>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-yellow btn-sm" onclick="submitLink()">提交审核</button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleAddForm()">取消</button>
+        </div>
+      </div>
+
+      <!-- 链接列表 -->
+      <div id="linkList"><div style="padding:32px;text-align:center;font-weight:700;font-size:13px;color:var(--gray3);">正在加载…</div></div>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+<script src="../js/auth.js"></script>
+<script>
+const API = (location.hostname==='127.0.0.1'?'http://127.0.0.1:3001':'http://localhost:3001')
+let referralFullUrl = ''
+
+const PLATFORM_LABELS = {bilibili:'B站',xiaohongshu:'小红书',weibo:'微博',douyin:'抖音',other:'其他平台'}
+const PLATFORM_CLS    = {bilibili:'platform-bilibili',xiaohongshu:'platform-xiaohongshu',weibo:'platform-weibo',douyin:'platform-douyin',other:'platform-other'}
+const STATUS_LABELS   = {pending:'待审核',approved:'已通过',rejected:'不符合要求'}
+const STATUS_CLS      = {pending:'status-pending',approved:'status-approved',rejected:'status-rejected'}
+
+let toastTimer
+function showToast(msg){ const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.classList.remove('show')},2800) }
+function openSidebar(){ document.getElementById('sidebar').classList.add('open');document.getElementById('backdrop').classList.add('show');document.body.style.overflow='hidden' }
+function closeSidebar(){ document.getElementById('sidebar').classList.remove('open');document.getElementById('backdrop').classList.remove('show');document.body.style.overflow='' }
+function getToken(){ return localStorage.getItem('mowo_token') }
+function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+
+async function apiFetch(path, opts){
+  opts=opts||{}
+  const res=await fetch(API+path,Object.assign({},opts,{headers:Object.assign({'Content-Type':'application/json','Authorization':'Bearer '+getToken()},opts.headers||{})}))
+  return res.json()
+}
+
+// reveal
+const rObs=new IntersectionObserver(function(e){e.forEach(function(x){if(x.isIntersecting){x.target.classList.add('on');rObs.unobserve(x.target)}})},{threshold:0.05})
+document.querySelectorAll('.reveal').forEach(function(el){rObs.observe(el)})
+
+// 复制推广链接
+function copyReferralUrl(){
+  if(!referralFullUrl) return
+  navigator.clipboard.writeText(referralFullUrl).then(function(){
+    showToast('✅ 链接已复制到剪贴板')
+  }).catch(function(){
+    showToast('请手动复制：'+referralFullUrl)
+  })
+}
+
+// 加载专属推广链接
+async function loadReferral(){
+  const data = await apiFetch('/api/creator/bull/referral')
+  if(!data.success) return
+  const d = data.data
+  referralFullUrl = d.fullUrl
+  document.getElementById('referralUrl').textContent = d.fullUrl
+  document.getElementById('refClicks').textContent   = d.totalClicks.toLocaleString()
+  document.getElementById('refOrders').textContent   = d.totalOrders.toLocaleString()
+  document.getElementById('refRevenue').textContent  = '¥'+d.totalRevenue.toFixed(2)
+}
+
+// 切换添加表单
+function toggleAddForm(){
+  const f = document.getElementById('addForm')
+  f.style.display = f.style.display==='none' ? '' : 'none'
+}
+
+// 提交视频链接
+async function submitLink(){
+  const platform   = document.getElementById('fPlatform').value
+  const videoUrl   = document.getElementById('fVideoUrl').value.trim()
+  const videoTitle = document.getElementById('fVideoTitle').value.trim()
+  const description= document.getElementById('fDescription').value.trim()
+
+  if(!videoUrl){ showToast('请填写视频链接'); return }
+
+  const data = await apiFetch('/api/creator/links/social',{
+    method:'POST',
+    body: JSON.stringify({ platform, videoUrl, videoTitle:videoTitle||undefined, description:description||undefined })
+  })
+
+  if(data.success){
+    showToast('✅ 提交成功，等待管理员审核')
+    document.getElementById('fVideoUrl').value = ''
+    document.getElementById('fVideoTitle').value = ''
+    document.getElementById('fDescription').value = ''
+    toggleAddForm()
+    loadLinks()
+  } else {
+    showToast('❌ '+data.message)
+  }
+}
+
+// 删除链接
+async function deleteLink(id){
+  if(!confirm('确认删除这条链接？')) return
+  const data = await apiFetch('/api/creator/links/social/'+id, { method:'DELETE' })
+  if(data.success){ showToast('已删除'); loadLinks() }
+  else showToast('❌ '+data.message)
+}
+
+// 加载视频链接列表
+async function loadLinks(){
+  document.getElementById('linkList').innerHTML = '<div style="padding:32px;text-align:center;font-weight:700;font-size:13px;color:var(--gray3);">正在加载…</div>'
+  const data = await apiFetch('/api/creator/links/social')
+  if(!data.success){ showToast('加载失败'); return }
+  const links = data.data
+
+  if(links.length===0){
+    document.getElementById('linkList').innerHTML =
+      '<div class="empty"><div class="empty-icon">🔗</div>'+
+      '<div class="empty-text">暂无视频链接</div>'+
+      '<div class="empty-sub">添加你在B站、小红书等平台发布的提及哞屋的视频</div></div>'
+    return
+  }
+
+  document.getElementById('linkList').innerHTML = links.map(function(l){
+    const approved = l.status==='approved'
+    return '<div class="link-card">'+
+      '<div class="link-card-top">'+
+        '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'+
+          '<span class="link-platform '+(PLATFORM_CLS[l.platform]||'platform-other')+'">'+(PLATFORM_LABELS[l.platform]||l.platform)+'</span>'+
+          '<span class="link-status '+(STATUS_CLS[l.status]||'status-pending')+'">'+(STATUS_LABELS[l.status]||l.status)+'</span>'+
+          (approved&&l.brandMentioned ? '<span style="font-size:11px;font-weight:800;color:#1a5c2e;background:#D4EDDA;padding:2px 8px;border-radius:999px;">✓ 品牌提及确认</span>' : '')+
+        '</div>'+
+        (l.status==='pending' ? '<button class="btn btn-danger btn-sm" onclick="deleteLink(\''+l.id+'\')">删除</button>' : '')+
+      '</div>'+
+      (l.videoTitle ? '<p class="link-title">'+escHtml(l.videoTitle)+'</p>' : '')+
+      '<p class="link-url"><a href="'+escHtml(l.videoUrl)+'" target="_blank">'+escHtml(l.videoUrl)+'</a></p>'+
+      (l.description ? '<p class="link-desc">'+escHtml(l.description)+'</p>' : '')+
+      (approved ? (
+        '<div class="link-meta">'+
+          '<span class="link-meta-item">播放量 <strong>'+l.viewCount.toLocaleString()+'</strong></span>'+
+          '<span class="link-meta-item">点赞 <strong>'+l.likeCount.toLocaleString()+'</strong></span>'+
+          '<span class="link-meta-item">声量系数 <strong>×'+l.manualMod+'</strong></span>'+
+        '</div>'
+      ) : '')+
+      (l.reviewNote ? '<div class="link-note">审核备注：'+escHtml(l.reviewNote)+'</div>' : '')+
+    '</div>'
+  }).join('')
+}
+
+// 自定义光标
+if(window.matchMedia('(pointer:fine)').matches){
+  const c=document.createElement('div'),r=document.createElement('div')
+  const cs='position:fixed;border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%)'
+  c.style.cssText=cs+';width:8px;height:8px;background:#111'
+  r.style.cssText=cs+';width:32px;height:32px;border:1.5px solid rgba(17,17,16,.3);transition:width .3s,height .3s'
+  document.body.append(c,r);document.body.style.cursor='none'
+  let mx=0,my=0,rx=0,ry=0
+  document.addEventListener('mousemove',function(e){mx=e.clientX;my=e.clientY;c.style.left=mx+'px';c.style.top=my+'px'})
+  ;(function tick(){rx+=(mx-rx)*.12;ry+=(my-ry)*.12;r.style.left=rx+'px';r.style.top=ry+'px';requestAnimationFrame(tick)})()
+}
+
+window.addEventListener('DOMContentLoaded', async function(){
+  const userStr = localStorage.getItem('mowo_user')
+  if(userStr){
+    try{
+      const u=JSON.parse(userStr)
+      const name=u.nickname||u.phone||'创作者'
+      document.getElementById('sidebarName').textContent=name
+      document.getElementById('sidebarAvatar').textContent=name[0].toUpperCase()
+      document.getElementById('topbarAvatar').textContent=name[0].toUpperCase()
+    }catch(e){}
+  }
+  loadReferral()
+  loadLinks()
+})
+</script>
+</body>
+</html>

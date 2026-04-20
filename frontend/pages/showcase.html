@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>画师联名 — 哞屋 MOWO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Noto+Sans+SC:wght@300;400;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --white:    #FFFFFF;
+  --cream:    #F5F3EF;
+  --black:    #111110;
+  --gray1:    #EBEBEA;
+  --gray2:    #C4C3BF;
+  --gray3:    #787874;
+  --accent-y: #F5E642;
+  --accent-o: #FF6B35;
+  --accent-g: #8FD694;
+  --font:     'Nunito', 'Noto Sans SC', sans-serif;
+  --ease:     cubic-bezier(0.22, 1, 0.36, 1);
+  --pad-mob:  24px;
+  --pad-desk: 72px;
+  --nav-h:    75px;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:var(--font);background:var(--cream);color:var(--black);overflow-x:hidden;-webkit-font-smoothing:antialiased;}
+a{text-decoration:none;color:inherit;}
+button{font-family:var(--font);cursor:pointer;border:none;background:none;}
+
+/* ── NAV ── */
+.nav{position:fixed;top:0;left:0;right:0;z-index:900;display:flex;align-items:center;justify-content:space-between;padding:14px var(--pad-mob);background:rgba(255,255,255,0.9);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid rgba(0,0,0,0.06);}
+@media(min-width:1024px){.nav{padding:20px var(--pad-desk);}}
+.nav-logo{line-height:1;}
+.nav-logo-cn{font-weight:900;font-size:22px;letter-spacing:-.01em;color:var(--black);display:block;}
+.nav-logo-en{font-weight:700;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--gray3);display:block;margin-top:1px;}
+.nav-links{display:none;list-style:none;gap:36px;}
+@media(min-width:1024px){.nav-links{display:flex;}}
+.nav-links a{font-weight:800;font-size:14px;color:var(--gray3);transition:color .2s;position:relative;padding-bottom:3px;}
+.nav-links a::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--accent-y);border-radius:2px;transform:scaleX(0);transition:transform .25s var(--ease);}
+.nav-links a:hover{color:var(--black);}
+.nav-links a:hover::after,.nav-links a.active::after{transform:scaleX(1);}
+.nav-links a.active{color:var(--black);}
+.nav-right{display:flex;align-items:center;gap:8px;}
+.nav-login{font-weight:800;font-size:13px;padding:10px 22px;background:var(--black);color:var(--white);border-radius:999px;min-height:44px;display:flex;align-items:center;transition:opacity .2s;border:none;cursor:pointer;}
+.nav-login:hover{opacity:.8;}
+.burger{display:flex;flex-direction:column;gap:5px;cursor:pointer;padding:8px;min-width:44px;min-height:44px;justify-content:center;align-items:center;}
+@media(min-width:1024px){.burger{display:none;}}
+.burger span{display:block;width:22px;height:2px;background:var(--black);border-radius:2px;transition:transform .3s,opacity .3s;}
+.burger.open span:nth-child(1){transform:translateY(7px) rotate(45deg);}
+.burger.open span:nth-child(2){opacity:0;}
+.burger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg);}
+.mobile-menu{position:fixed;inset:0;background:var(--black);z-index:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:36px;opacity:0;pointer-events:none;transition:opacity .35s var(--ease);}
+.mobile-menu.open{opacity:1;pointer-events:all;}
+.mobile-menu a{font-weight:900;font-size:clamp(28px,8vw,48px);color:var(--white);transition:color .2s;}
+.mobile-menu a:hover{color:var(--accent-y);}
+.mobile-menu-footer{position:absolute;bottom:48px;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:12px;}
+.mobile-login-btn{font-family:var(--font);font-weight:900;font-size:16px;padding:14px 48px;background:var(--accent-y);color:var(--black);border-radius:999px;border:none;cursor:pointer;transition:opacity .2s;min-height:52px;}
+.mobile-login-btn:hover{opacity:.85;}
+.mobile-menu-avatar{display:flex;flex-direction:column;align-items:center;gap:8px;}
+.mobile-menu-avatar-btn{width:56px;height:56px;border-radius:50%;background:var(--accent-y);color:var(--black);font-weight:900;font-size:22px;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;transition:opacity .2s;}
+.mobile-menu-avatar-btn:hover{opacity:.8;}
+.mobile-menu-avatar-name{font-weight:700;font-size:13px;color:rgba(255,255,255,.5);letter-spacing:.05em;}
+
+/* ── FILTER BAR ── */
+.filter-bar{position:sticky;top:var(--nav-h);z-index:700;background:rgba(245,243,239,.96);backdrop-filter:blur(16px);border-bottom:1px solid var(--gray1);padding:12px var(--pad-mob) 0;}
+@media(min-width:1024px){.filter-bar{padding:14px var(--pad-desk) 0;}}
+.filter-top{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap;}
+.search-wrap{flex:1;min-width:200px;max-width:360px;position:relative;}
+.search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--gray3);pointer-events:none;}
+.search-input{width:100%;height:44px;padding:0 16px 0 40px;font-family:var(--font);font-weight:700;font-size:14px;color:var(--black);background:var(--white);border:2px solid var(--gray1);border-radius:999px;outline:none;transition:border-color .2s,box-shadow .2s;}
+.search-input::placeholder{color:var(--gray2);}
+.search-input:focus{border-color:var(--black);box-shadow:0 0 0 4px rgba(17,17,16,.05);}
+.sort-tabs{display:flex;background:var(--white);border:2px solid var(--gray1);border-radius:999px;padding:3px;gap:2px;flex-shrink:0;}
+.sort-tab{font-weight:800;font-size:13px;padding:8px 18px;border-radius:999px;color:var(--gray3);transition:background .2s,color .2s;min-height:36px;display:flex;align-items:center;}
+.sort-tab.active{background:var(--black);color:var(--white);}
+.sort-tab:hover:not(.active){color:var(--black);}
+.tags-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:12px;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+.tags-row::-webkit-scrollbar{display:none;}
+.tag-pill{flex-shrink:0;font-weight:800;font-size:12px;letter-spacing:.04em;padding:7px 16px;border-radius:999px;background:var(--white);color:var(--gray3);border:2px solid var(--gray1);transition:all .2s;min-height:36px;display:flex;align-items:center;white-space:nowrap;}
+.tag-pill:hover{border-color:var(--gray2);color:var(--black);}
+.tag-pill.active{background:var(--black);color:var(--white);border-color:var(--black);}
+
+/* ── MAIN ── */
+.main{padding:24px var(--pad-mob) 60px;max-width:1600px;margin:0 auto;}
+@media(min-width:1024px){.main{padding:28px var(--pad-desk) 80px;}}
+.result-info{font-weight:800;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--gray3);margin-bottom:20px;}
+
+/* ── MASONRY ── */
+.masonry{columns:2;column-gap:12px;}
+@media(min-width:640px){.masonry{columns:3;column-gap:14px;}}
+@media(min-width:1024px){.masonry{columns:4;column-gap:16px;}}
+@media(min-width:1400px){.masonry{columns:5;column-gap:18px;}}
+
+/* ── WORK CARD ── */
+.work-card{break-inside:avoid;margin-bottom:12px;background:var(--white);border-radius:20px;overflow:hidden;border:1.5px solid var(--gray1);cursor:pointer;position:relative;transition:transform .3s var(--ease),box-shadow .3s;}
+@media(min-width:1024px){.work-card{margin-bottom:16px;}}
+.work-card:hover{transform:translateY(-4px);box-shadow:0 16px 40px rgba(0,0,0,.1);border-color:var(--gray2);}
+.card-media{width:100%;aspect-ratio:1/1;position:relative;overflow:hidden;background:var(--cream);}
+.card-media img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .4s var(--ease);}
+.work-card:hover .card-media img{transform:scale(1.04);}
+.card-media-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:40px;background:var(--gray1);opacity:.4;}
+.card-badges{position:absolute;top:10px;left:10px;display:flex;gap:6px;flex-wrap:wrap;}
+.badge-exclusive{font-weight:900;font-size:10px;letter-spacing:.06em;padding:4px 10px;border-radius:999px;background:var(--accent-y);color:var(--black);}
+.badge-new{font-weight:900;font-size:10px;letter-spacing:.06em;padding:4px 10px;border-radius:999px;background:var(--accent-o);color:var(--white);}
+.card-body{padding:12px 14px 14px;}
+.card-title{font-weight:900;font-size:13px;letter-spacing:-.01em;color:var(--black);margin-bottom:6px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.card-footer{display:flex;align-items:center;justify-content:space-between;}
+.card-author{display:flex;align-items:center;gap:7px;cursor:pointer;flex:1;min-width:0;}
+.card-author:hover .author-name{color:var(--black);}
+.author-avatar{width:24px;height:24px;border-radius:50%;background:var(--accent-y);display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;overflow:hidden;border:1.5px solid var(--gray1);}
+.author-avatar img{width:100%;height:100%;object-fit:cover;}
+.author-name{font-weight:800;font-size:11px;color:var(--gray3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px;transition:color .2s;}
+.card-like{display:flex;align-items:center;gap:5px;font-weight:800;font-size:11px;color:var(--gray3);padding:4px 8px;border-radius:999px;transition:all .2s;min-height:28px;flex-shrink:0;}
+.card-like:hover{background:var(--cream);color:#C03030;}
+.card-like.liked{color:#C03030;}
+.like-icon{font-size:12px;transition:transform .2s var(--ease);}
+.card-like:hover .like-icon,.card-like.liked .like-icon{transform:scale(1.25);}
+
+/* ── SKELETON ── */
+.skeleton{background:linear-gradient(90deg,var(--gray1) 25%,#e8e7e3 50%,var(--gray1) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skeleton-card{break-inside:avoid;margin-bottom:12px;background:var(--white);border-radius:20px;overflow:hidden;border:1.5px solid var(--gray1);}
+@media(min-width:1024px){.skeleton-card{margin-bottom:16px;}}
+.skeleton-media{aspect-ratio:1/1;}
+.skeleton-body{padding:12px 14px 14px;}
+.skeleton-title{height:14px;border-radius:4px;margin-bottom:8px;}
+.skeleton-title-short{height:14px;border-radius:4px;width:60%;margin-bottom:10px;}
+.skeleton-footer{display:flex;align-items:center;justify-content:space-between;}
+.skeleton-avatar{width:24px;height:24px;border-radius:50%;}
+.skeleton-name{height:10px;border-radius:4px;width:60px;}
+
+/* ── LOAD MORE ── */
+.load-more-wrap{display:flex;justify-content:center;padding:40px 0 20px;}
+.load-more-btn{font-weight:900;font-size:14px;letter-spacing:.04em;padding:16px 40px;border-radius:999px;min-height:52px;background:var(--white);color:var(--black);border:2px solid var(--gray1);transition:all .25s var(--ease);display:flex;align-items:center;gap:10px;}
+.load-more-btn:hover{border-color:var(--black);box-shadow:0 4px 0 var(--gray1);}
+.load-more-btn.loading .load-spinner{animation:spin-slow .8s linear infinite;}
+.load-more-btn:disabled{opacity:.4;cursor:not-allowed;}
+@keyframes spin-slow{to{transform:rotate(360deg);}}
+
+/* ── EMPTY STATE ── */
+.empty-state{display:none;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;text-align:center;gap:12px;}
+.empty-state.show{display:flex;}
+.empty-icon{font-size:52px;opacity:.4;}
+.empty-title{font-weight:900;font-size:20px;}
+.empty-desc{font-weight:700;font-size:14px;color:var(--gray3);}
+
+/* REVEAL */
+.reveal{opacity:0;transform:translateY(20px);transition:opacity .6s var(--ease),transform .6s var(--ease);}
+.reveal.on{opacity:1;transform:none;}
+
+/* FOOTER */
+footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad-mob) 36px;}
+@media(min-width:1024px){footer{padding:48px var(--pad-desk) 36px;}}
+.foot-row{display:flex;flex-direction:column;gap:16px;}
+@media(min-width:640px){.foot-row{flex-direction:row;align-items:center;justify-content:space-between;}}
+.foot-logo{font-weight:900;font-size:20px;color:var(--white);}
+.foot-links{display:flex;gap:24px;flex-wrap:wrap;}
+.foot-links a{font-weight:700;font-size:13px;color:rgba(255,255,255,.35);transition:color .2s;}
+.foot-links a:hover{color:var(--white);}
+.foot-copy{font-weight:700;font-size:12px;margin-top:24px;}
+</style>
+</head>
+<body>
+
+<!-- MOBILE MENU -->
+<div class="mobile-menu" id="mobileMenu">
+  <a href="about.html" onclick="closeMenu()">关于我们</a>
+  <a href="products.html" onclick="closeMenu()">产品介绍</a>
+  <a href="showcase.html" class="active" onclick="closeMenu()">画师联名</a>
+  <a href="customize-start.html" onclick="closeMenu()">创作中心</a>
+  <a href="contact.html" onclick="closeMenu()">联络我们</a>
+  <div class="mobile-menu-footer">
+    <button class="mobile-login-btn" id="mobileLoginBtn">登录 / 注册</button>
+    <div class="mobile-menu-avatar" id="mobileMenuAvatar" style="display:none">
+      <button class="mobile-menu-avatar-btn" id="mobileMenuAvatarBtn"></button>
+      <span class="mobile-menu-avatar-name" id="mobileMenuAvatarName"></span>
+    </div>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="index.html" class="nav-logo">
+    <span class="nav-logo-cn">哞屋</span>
+    <span class="nav-logo-en">MOWO</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="about.html">关于我们</a></li>
+    <li><a href="products.html">产品介绍</a></li>
+    <li><a href="showcase.html" class="active">画师联名</a></li>
+    <li><a href="customize-start.html">创作中心</a></li>
+    <li><a href="contact.html">联络我们</a></li>
+  </ul>
+  <div class="nav-right">
+    <button class="nav-login nav-login-btn" id="navLoginBtn">登录</button>
+    <div class="burger" id="burger" onclick="toggleMenu()">
+      <span></span><span></span><span></span>
+    </div>
+  </div>
+</nav>
+
+<!-- FILTER BAR -->
+<div class="filter-bar">
+  <div class="filter-top">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input class="search-input" type="text" placeholder="搜索作品或创作者…" id="searchInput" oninput="handleSearch()">
+    </div>
+    <div class="sort-tabs">
+      <button class="sort-tab active" onclick="setSort('latest',this)">最新</button>
+      <button class="sort-tab" onclick="setSort('popular',this)">热门</button>
+    </div>
+  </div>
+  <div class="tags-row" id="tagsRow">
+    <button class="tag-pill active" onclick="setCreator('',this)"># 全部</button>
+    <!-- 创作者筛选动态插入 -->
+  </div>
+</div>
+
+<!-- MAIN -->
+<main class="main">
+  <p class="result-info" id="resultInfo">加载中…</p>
+  <div class="masonry" id="masonryGrid"></div>
+  <div class="empty-state" id="emptyState">
+    <div class="empty-icon">🎨</div>
+    <p class="empty-title">暂无匹配作品</p>
+    <p class="empty-desc">换个搜索词或创作者试试</p>
+  </div>
+  <div class="load-more-wrap" id="loadMoreWrap" style="display:none">
+    <button class="load-more-btn" id="loadMoreBtn" onclick="loadMore()">
+      <span class="load-spinner">↻</span>
+      <span>加载更多</span>
+    </button>
+  </div>
+</main>
+
+<footer>
+  <div class="foot-row">
+    <span class="foot-logo">哞屋 MOWO</span>
+    <div class="foot-links">
+      <a href="about.html">关于我们</a>
+      <a href="products.html">产品介绍</a>
+      <a href="showcase.html">画师联名</a>
+      <a href="customize-start.html">创作中心</a>
+      <a href="contact.html">联络我们</a>
+    </div>
+  </div>
+  <p class="foot-copy">© 2025 哞屋 MOWO. All rights reserved.</p>
+</footer>
+
+<script src="../js/auth.js"></script>
+<script>
+const API = (location.hostname === '127.0.0.1' ? 'http://127.0.0.1:3001' : 'http://localhost:3001')
+
+let allWorks = []
+let filteredWorks = []
+let currentCreatorId = ''
+let currentSort = 'latest'
+let searchQuery = ''
+let displayCount = 12
+const PAGE_SIZE = 12
+
+/* ── Mobile menu ── */
+function toggleMenu() {
+  const m = document.getElementById('mobileMenu'), b = document.getElementById('burger')
+  const o = m.classList.toggle('open')
+  b.classList.toggle('open', o)
+  document.body.style.overflow = o ? 'hidden' : ''
+}
+function closeMenu() {
+  document.getElementById('mobileMenu').classList.remove('open')
+  document.getElementById('burger').classList.remove('open')
+  document.body.style.overflow = ''
+}
+
+/* ── 骨架屏 ── */
+function renderSkeletons(n = 8) {
+  const grid = document.getElementById('masonryGrid')
+  grid.innerHTML = ''
+  for (let i = 0; i < n; i++) {
+    grid.innerHTML += `<div class="skeleton-card">
+      <div class="skeleton skeleton-media"></div>
+      <div class="skeleton-body">
+        <div class="skeleton skeleton-title"></div>
+        <div class="skeleton skeleton-title-short"></div>
+        <div class="skeleton-footer">
+          <div style="display:flex;align-items:center;gap:7px;">
+            <div class="skeleton skeleton-avatar"></div>
+            <div class="skeleton skeleton-name"></div>
+          </div>
+        </div>
+      </div>
+    </div>`
+  }
+}
+
+/* ── 加载数据 ── */
+async function loadWorks() {
+  renderSkeletons()
+  try {
+    const token = localStorage.getItem('mowo_token') || ''
+    const headers = token ? { Authorization: `Bearer ${token}` } : {}
+    const res = await fetch(`${API}/api/collab/works?status=approved&limit=200`, { headers })
+    const data = await res.json()
+    if (!data.success) throw new Error()
+    allWorks = data.data?.works || []
+    buildCreatorTags()
+    applyFilters()
+  } catch {
+    document.getElementById('masonryGrid').innerHTML =
+      '<p style="color:var(--gray3);font-weight:700;padding:40px;text-align:center;grid-column:1/-1">加载失败，请刷新重试</p>'
+    document.getElementById('resultInfo').textContent = ''
+  }
+}
+
+/* ── 创作者标签 ── */
+function buildCreatorTags() {
+  const seen = new Map()
+  allWorks.forEach(w => {
+    if (!seen.has(w.creatorId)) seen.set(w.creatorId, w.creator?.nickname || w.creatorId.slice(0, 6))
+  })
+  const row = document.getElementById('tagsRow')
+  seen.forEach((name, id) => {
+    const btn = document.createElement('button')
+    btn.className = 'tag-pill'
+    btn.dataset.creatorId = id
+    btn.textContent = `@ ${name}`
+    btn.onclick = () => setCreator(id, btn)
+    row.appendChild(btn)
+  })
+}
+
+/* ── 筛选 + 排序 ── */
+function applyFilters() {
+  let list = allWorks
+
+  if (currentCreatorId) list = list.filter(w => w.creatorId === currentCreatorId)
+
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase()
+    list = list.filter(w =>
+      (w.title || '').toLowerCase().includes(q) ||
+      (w.creator?.nickname || '').toLowerCase().includes(q)
+    )
+  }
+
+  if (currentSort === 'popular') {
+    list = [...list].sort((a, b) => (b.likeCount || 0) - (a.likeCount || 0))
+  }
+
+  filteredWorks = list
+  displayCount = PAGE_SIZE
+  renderWorks(true)
+}
+
+/* ── 渲染卡片 ── */
+function renderWorks(reset = false) {
+  const grid = document.getElementById('masonryGrid')
+  const slice = filteredWorks.slice(0, displayCount)
+
+  if (filteredWorks.length === 0) {
+    grid.innerHTML = ''
+    document.getElementById('emptyState').classList.add('show')
+    document.getElementById('resultInfo').textContent = '共 0 件作品'
+    document.getElementById('loadMoreWrap').style.display = 'none'
+    return
+  }
+
+  document.getElementById('emptyState').classList.remove('show')
+  document.getElementById('resultInfo').textContent = `共 ${filteredWorks.length} 件画师联名`
+
+  if (reset) grid.innerHTML = ''
+
+  const startIdx = reset ? 0 : grid.querySelectorAll('.work-card').length
+  slice.slice(startIdx).forEach(work => {
+    const div = document.createElement('div')
+    div.innerHTML = buildCard(work).trim()
+    const card = div.firstChild
+    grid.appendChild(card)
+    requestAnimationFrame(() => requestAnimationFrame(() => card.classList.add('on')))
+  })
+
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('on'); obs.unobserve(e.target) } })
+  }, { threshold: .08, rootMargin: '0px 0px -20px 0px' })
+  grid.querySelectorAll('.reveal:not(.on)').forEach(el => obs.observe(el))
+
+  const wrap = document.getElementById('loadMoreWrap')
+  wrap.style.display = displayCount < filteredWorks.length ? 'flex' : 'none'
+}
+
+function buildCard(w) {
+  const cover = w.coverUrl || ''
+  const name = esc(w.creator?.nickname || '创作者')
+  const initial = name.charAt(0)
+  const avatarUrl = w.creator?.avatarUrl || ''
+  const avatarHtml = avatarUrl
+    ? `<img src="${esc(avatarUrl)}" alt="avatar">`
+    : initial
+
+  const liked = w.isLiked ? 'liked' : ''
+  const likeIcon = w.isLiked ? '♥' : '♡'
+  const likeCount = fmtCount(w.likeCount || 0)
+
+  let badges = ''
+  if (w.isExclusiveWork) badges += `<span class="badge-exclusive">限定</span>`
+  if (w.isNewbieWork) badges += `<span class="badge-new">新人</span>`
+
+  return `<div class="work-card reveal" data-id="${esc(w.id)}" onclick="goDetail('${esc(w.id)}')">
+    <div class="card-media">
+      ${cover ? `<img src="${esc(cover)}" alt="${esc(w.title || '')}" loading="lazy">` : `<div class="card-media-placeholder">🎨</div>`}
+      <div class="card-badges">${badges}</div>
+    </div>
+    <div class="card-body">
+      <p class="card-title">${esc(w.title || '未命名作品')}</p>
+      <div class="card-footer">
+        <div class="card-author" onclick="event.stopPropagation();goCreator('${esc(w.creatorId)}')">
+          <div class="author-avatar">${avatarHtml}</div>
+          <span class="author-name">@${name}</span>
+        </div>
+        <button class="card-like ${liked}" onclick="event.stopPropagation();toggleLike(this,'${esc(w.id)}')">
+          <span class="like-icon">${likeIcon}</span>
+          <span class="like-count">${likeCount}</span>
+        </button>
+      </div>
+    </div>
+  </div>`
+}
+
+/* ── 点赞 ── */
+async function toggleLike(btn, workId) {
+  const token = localStorage.getItem('mowo_token')
+  if (!token) { if (typeof openAuthModal === 'function') openAuthModal(); return }
+
+  const liked = btn.classList.toggle('liked')
+  const icon = btn.querySelector('.like-icon')
+  const countEl = btn.querySelector('.like-count')
+  icon.textContent = liked ? '♥' : '♡'
+  let n = parseCount(countEl.textContent)
+  n = liked ? n + 1 : Math.max(0, n - 1)
+  countEl.textContent = fmtCount(n)
+
+  try {
+    await fetch(`${API}/api/collab/works/${workId}/like`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` }
+    })
+  } catch {
+    btn.classList.toggle('liked')
+    icon.textContent = liked ? '♡' : '♥'
+  }
+}
+
+function parseCount(s) {
+  if (!s) return 0
+  return s.includes('k') ? parseFloat(s) * 1000 : parseInt(s) || 0
+}
+
+function fmtCount(n) {
+  if (!n) return '0'
+  return n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : String(n)
+}
+
+/* ── 跳转 ── */
+function goDetail(id) {
+  window.location.href = `./showcase-confirm.html?workId=${encodeURIComponent(id)}`
+}
+function goCreator(userId) {
+  if (!userId) return
+  window.location.href = `./creator-profile.html?id=${encodeURIComponent(userId)}`
+}
+
+/* ── 控件 ── */
+function setSort(sort, btn) {
+  currentSort = sort
+  document.querySelectorAll('.sort-tab').forEach(b => b.classList.remove('active'))
+  btn.classList.add('active')
+  applyFilters()
+}
+
+function setCreator(creatorId, btn) {
+  currentCreatorId = creatorId
+  document.querySelectorAll('.tag-pill').forEach(p => p.classList.remove('active'))
+  btn.classList.add('active')
+  applyFilters()
+}
+
+function handleSearch() {
+  searchQuery = document.getElementById('searchInput').value.toLowerCase().trim()
+  applyFilters()
+}
+
+function loadMore() {
+  const btn = document.getElementById('loadMoreBtn')
+  btn.classList.add('loading')
+  btn.querySelector('span:last-child').textContent = '加载中…'
+  displayCount += PAGE_SIZE
+  renderWorks(false)
+  btn.classList.remove('loading')
+  btn.querySelector('span:last-child').textContent = '加载更多'
+}
+
+function esc(s) {
+  if (!s) return ''
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')
+}
+
+/* ── Init ── */
+loadWorks()
+
+/* ── Desktop custom cursor ── */
+if (window.matchMedia('(pointer:fine)').matches) {
+  const c = document.createElement('div'), r = document.createElement('div')
+  const cs = 'position:fixed;border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%)'
+  c.style.cssText = cs + ';width:8px;height:8px;background:#111'
+  r.style.cssText = cs + ';width:32px;height:32px;border:1.5px solid rgba(17,17,16,.3);transition:width .3s,height .3s,opacity .3s'
+  document.body.append(c, r)
+  document.body.style.cursor = 'none'
+  let mx = 0, my = 0, rx = 0, ry = 0
+  document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; c.style.left = mx + 'px'; c.style.top = my + 'px' })
+  ;(function tick() { rx += (mx - rx) * .12; ry += (my - ry) * .12; r.style.left = rx + 'px'; r.style.top = ry + 'px'; requestAnimationFrame(tick) })()
+}
+</script>
+<script>
+/* ── Mobile auth sync ── */
+(function syncMobileAuth() {
+  function applyState() {
+    const navLoginBtn = document.getElementById('navLoginBtn')
+    const mowoNavUser = document.getElementById('mowoNavUser')
+    const mobileLoginBtn = document.getElementById('mobileLoginBtn')
+    const mobileAvatar = document.getElementById('mobileMenuAvatar')
+    const mobileAvatarBtn = document.getElementById('mobileMenuAvatarBtn')
+    const mobileAvatarName = document.getElementById('mobileMenuAvatarName')
+    if (!mobileLoginBtn) return
+    const loggedIn = (navLoginBtn && navLoginBtn.style.display === 'none') || (mowoNavUser && mowoNavUser.classList.contains('show'))
+    if (loggedIn) {
+      mobileLoginBtn.style.display = 'none'
+      if (mobileAvatar) mobileAvatar.style.display = 'flex'
+      const uname = document.getElementById('mowoNavUname')
+      const initial = document.getElementById('mowoNavAvatarInitial')
+      if (mobileAvatarBtn) mobileAvatarBtn.textContent = (initial && initial.textContent) || '?'
+      if (mobileAvatarName) mobileAvatarName.textContent = (uname && uname.textContent) || '我的账户'
+      if (mobileAvatarBtn) mobileAvatarBtn.onclick = () => { document.getElementById('mowoNavAvatarBtn')?.click(); closeMenu() }
+    } else {
+      mobileLoginBtn.style.display = ''
+      if (mobileAvatar) mobileAvatar.style.display = 'none'
+      mobileLoginBtn.onclick = () => { closeMenu(); window.openAuthModal && window.openAuthModal() }
+    }
+  }
+  function startObserving() {
+    const navLoginBtn = document.getElementById('navLoginBtn')
+    const mowoNavUser = document.getElementById('mowoNavUser')
+    if (navLoginBtn) new MutationObserver(applyState).observe(navLoginBtn, { attributes: true, attributeFilter: ['style'] })
+    if (mowoNavUser) new MutationObserver(applyState).observe(mowoNavUser, { attributes: true, attributeFilter: ['class'] })
+    applyState()
+  }
+  document.readyState === 'complete' ? startObserving() : window.addEventListener('load', startObserving)
+  setTimeout(applyState, 800)
+})()
+</script>
+</body>
+</html>

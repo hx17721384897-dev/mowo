@@ -23,17 +23,17 @@
   --ease:     cubic-bezier(0.22, 1, 0.36, 1);
   --pad-mobile: 24px;
   --pad-desk:   72px;
-  --nav-h: 61px;
-  --prog-h: 52px;
+  --nav-h: 55px;
+  --prog-h: 44px;
 }
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-html { scroll-behavior:smooth; }
+html { scroll-behavior:smooth; scrollbar-gutter:stable; }
 body { font-family:var(--font); background:var(--white); color:var(--black); overflow-x:hidden; -webkit-font-smoothing:antialiased; }
 a { text-decoration:none; color:inherit; }
 
 /* ── NAV ── */
-.nav { position:fixed; top:0; left:0; right:0; z-index:900; display:flex; align-items:center; justify-content:space-between; padding:14px var(--pad-mobile); background:rgba(255,255,255,0.92); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border-bottom:1px solid rgba(0,0,0,0.06); height:var(--nav-h); }
-@media (min-width:1024px) { .nav { padding:20px var(--pad-desk); } }
+.nav { position:fixed; top:0; left:0; right:0; z-index:900; display:flex; align-items:center; justify-content:space-between; padding:8px var(--pad-mobile); background:rgba(255,255,255,0.9); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border-bottom:1px solid rgba(0,0,0,0.06); }
+@media (min-width:1024px) { .nav { padding:8px var(--pad-desk); } }
 .nav-logo { line-height:1; }
 .nav-logo-cn { font-weight:900; font-size:22px; letter-spacing:-0.01em; color:var(--black); }
 .nav-logo-en { font-weight:700; font-size:10px; letter-spacing:0.22em; text-transform:uppercase; color:var(--gray3); display:block; margin-top:1px; }
@@ -43,8 +43,6 @@ a { text-decoration:none; color:inherit; }
 .nav-links a::after { content:''; position:absolute; bottom:0; left:0; right:0; height:2px; background:var(--accent-y); border-radius:2px; transform:scaleX(0); transition:transform .25s var(--ease); }
 .nav-links a:hover { color:var(--black); }
 .nav-links a:hover::after { transform:scaleX(1); }
-.nav-login { font-weight:800; font-size:13px; padding:10px 22px; background:var(--black); color:var(--white); border-radius:999px; min-height:44px; display:flex; align-items:center; transition:opacity .2s; }
-.nav-login:hover { opacity:.8; }
 .burger { display:flex; flex-direction:column; gap:5px; cursor:pointer; padding:8px; min-width:44px; min-height:44px; justify-content:center; align-items:center; }
 @media (min-width:1024px) { .burger { display:none; } }
 .burger span { display:block; width:22px; height:2px; background:var(--black); border-radius:2px; transition:transform .3s, opacity .3s; }
@@ -55,21 +53,47 @@ a { text-decoration:none; color:inherit; }
 .mobile-menu.open { opacity:1; pointer-events:all; }
 .mobile-menu a { font-weight:900; font-size:clamp(28px,8vw,48px); color:var(--white); transition:color .2s; }
 .mobile-menu a:hover { color:var(--accent-y); }
+/* Mobile menu 底部登录区 */
+.mobile-menu-footer {
+  position:absolute; bottom:48px; left:0; right:0;
+  display:flex; flex-direction:column; align-items:center; gap:12px;
+}
+.mobile-login-btn {
+  font-family:var(--font); font-weight:900; font-size:16px; letter-spacing:.05em;
+  padding:14px 48px; background:var(--accent-y); color:var(--black);
+  border-radius:999px; border:none; cursor:pointer;
+  transition:opacity .2s; min-height:52px;
+}
+.mobile-login-btn:hover { opacity:.85; }
+.mobile-menu-avatar {
+  display:flex; flex-direction:column; align-items:center; gap:8px;
+}
+.mobile-menu-avatar-btn {
+  width:56px; height:56px; border-radius:50%;
+  background:var(--accent-y); color:var(--black);
+  font-weight:900; font-size:22px;
+  display:flex; align-items:center; justify-content:center;
+  border:none; cursor:pointer; transition:opacity .2s;
+}
+.mobile-menu-avatar-btn:hover { opacity:.8; }
+.mobile-menu-avatar-name {
+  font-weight:700; font-size:13px; color:rgba(255,255,255,.5); letter-spacing:.05em;
+}
 
 /* ── 进度条 ── */
-.progress-bar { position:fixed; top:61px; left:0; right:0; z-index:800; background:var(--gray1); height:3px; }
-@media (min-width:1024px) { .progress-bar { top:73px; } }
+.progress-bar { position:fixed; top:55px; left:0; right:0; z-index:800; background:var(--gray1); height:3px; }
+@media (min-width:1024px) { .progress-bar { top:55px; } }
 .progress-fill { height:100%; width:50%; background:var(--accent-y); border-radius:0 2px 2px 0; }
-.progress-steps { position:fixed; top:64px; left:0; right:0; z-index:799; background:rgba(255,255,255,.95); backdrop-filter:blur(12px); border-bottom:1px solid var(--gray1); padding:12px var(--pad-mobile); display:flex; align-items:center; gap:8px; height:var(--prog-h); }
-@media (min-width:1024px) { .progress-steps { padding:12px var(--pad-desk); top:76px; } }
-.step-item { display:flex; align-items:center; gap:6px; font-weight:800; font-size:11px; letter-spacing:.08em; color:var(--gray2); white-space:nowrap; }
+.progress-steps { position:fixed; top:58px; left:0; right:0; z-index:799; background:rgba(255,255,255,0.9); backdrop-filter:blur(12px); border-bottom:1.5px solid var(--gray1); padding:10px var(--pad-mobile); display:flex; align-items:center; justify-content:center; gap:0; height:var(--prog-h); }
+@media (min-width:1024px) { .progress-steps { padding:10px var(--pad-desk); top:58px; } }
+.step-item { display:flex; align-items:center; gap:8px; font-weight:800; font-size:12px; letter-spacing:.04em; color:var(--gray2); white-space:nowrap; }
 .step-item.active { color:var(--black); }
-.step-item.done { color:var(--accent-g); }
-.step-num { width:20px; height:20px; border-radius:50%; border:2px solid currentColor; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:900; flex-shrink:0; }
+.step-item.done { color:var(--black); }
+.step-num { width:24px; height:24px; border-radius:50%; border:2px solid currentColor; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:900; flex-shrink:0; transition:background .3s,border-color .3s; }
 .step-item.active .step-num { background:var(--black); color:var(--white); border-color:var(--black); }
-.step-item.done .step-num { background:var(--accent-g); color:var(--black); border-color:var(--accent-g); }
-.step-divider { width:20px; height:1px; background:var(--gray1); flex-shrink:0; }
-@media (max-width:480px) { .step-label { display:none; } }
+.step-item.done .step-num { background:var(--black); color:var(--white); border-color:var(--black); }
+.step-divider { width:clamp(20px,4vw,60px); height:2px; background:var(--gray1); flex-shrink:0; margin:0 4px; }
+@media (max-width:480px) { .step-label { display:none; } .step-item { gap:0; } .step-num { width:26px; height:26px; font-size:12px; } .step-divider { width:16px; } }
 
 /* ── 通用按钮 ── */
 .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; font-family:var(--font); font-weight:800; font-size:15px; letter-spacing:.02em; padding:14px 28px; border-radius:999px; min-height:52px; transition:transform .2s, box-shadow .2s; cursor:pointer; border:none; -webkit-tap-highlight-color:transparent; }
@@ -164,14 +188,14 @@ a { text-decoration:none; color:inherit; }
 .editor-top { display:flex; flex:0 0 auto; height:clamp(240px,38vh,400px); border-bottom:2px solid var(--gray1); overflow:hidden; }
 
 /* 左：预览 */
-.preview-panel { flex:1; min-width:0; background:#111; display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; border-right:1px solid #222; }
-.preview-canvas-wrap { flex:1; width:100%; display:flex; align-items:center; justify-content:center; padding:16px; min-height:0; }
+.preview-panel { flex:1; min-width:0; background:var(--cream); display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; border-right:1px solid var(--gray1); }
+.preview-canvas-wrap { flex:1; width:100%; display:flex; align-items:center; justify-content:center; padding:12px 16px 4px; min-height:0; }
 .preview-img { max-width:100%; max-height:100%; object-fit:contain; border-radius:8px; display:block; image-rendering:pixelated; }
 .preview-empty { display:flex; flex-direction:column; align-items:center; gap:10px; opacity:.3; }
 .preview-empty-icon { font-size:40px; }
-.preview-empty-text { font-weight:700; font-size:13px; color:var(--white); }
-.preview-counter { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,.6); backdrop-filter:blur(8px); border-radius:999px; padding:4px 12px; font-weight:800; font-size:11px; color:var(--white); white-space:nowrap; letter-spacing:.04em; pointer-events:none; }
-.preview-counter .cnt-hi { color:var(--accent-y); }
+.preview-empty-text { font-weight:700; font-size:13px; color:var(--gray3); }
+.preview-counter { flex:0 0 auto; padding:4px 0 8px; font-weight:800; font-size:11px; color:var(--gray3); white-space:nowrap; letter-spacing:.04em; text-align:center; }
+.preview-counter .cnt-hi { color:var(--black); }
 
 /* 右：控制 */
 .control-panel { flex:1; min-width:0; background:var(--cream); display:flex; flex-direction:column; padding:14px 12px; gap:10px; overflow-y:auto; }
@@ -200,6 +224,8 @@ a { text-decoration:none; color:inherit; }
 .edit-row { display:flex; gap:5px; }
 .edit-btn { flex:1; min-height:34px; border-radius:9px; font-family:var(--font); font-weight:800; font-size:11px; cursor:pointer; transition:all .15s; border:1.5px solid; display:flex; align-items:center; justify-content:center; gap:4px; white-space:nowrap; }
 .edit-btn:active { transform:scale(.94); }
+.btn-clone { background:#EBF5FF; border-color:#C5E0FF; color:#1A5FA8; }
+.btn-clone:hover { background:#D6ECFF; }
 .btn-del { background:#FFF0ED; border-color:#FFCFC5; color:#C0320A; }
 .btn-del:hover { background:#FFE0D8; }
 .btn-undo { background:var(--white); border-color:var(--gray1); color:var(--gray3); }
@@ -265,6 +291,329 @@ a { text-decoration:none; color:inherit; }
 .ebar-r { display:flex; gap:10px; align-items:center; flex-shrink:0; }
 .ebar-back-btn { font-family:var(--font); font-weight:800; font-size:13px; color:var(--gray3); background:none; border:none; cursor:pointer; padding:8px; transition:color .2s; }
 .ebar-back-btn:hover { color:var(--black); }
+
+/* ══════════════════════════════
+   状态四：视频裁剪模块
+══════════════════════════════ */
+#stateTrim {
+  display:none;
+  flex-direction:column;
+  align-items:center;
+  padding: calc(var(--nav-h) + var(--prog-h) + 32px) var(--pad-mobile) 120px;
+  min-height:100vh;
+  gap:24px;
+}
+#stateTrim.active { display:flex; }
+
+.trim-wrap {
+  width:100%;
+  max-width:800px;
+  display:flex;
+  flex-direction:column;
+  gap:20px;
+}
+
+.trim-title {
+  font-weight:900;
+  font-size:22px;
+  letter-spacing:-.02em;
+  color:var(--black);
+}
+.trim-sub {
+  font-weight:700;
+  font-size:13px;
+  color:var(--gray3);
+  margin-top:4px;
+  line-height:1.6;
+}
+
+/* 视频预览区 */
+.trim-video-wrap {
+  width:100%;
+  background:var(--black);
+  border-radius:20px;
+  overflow:hidden;
+  aspect-ratio:16/9;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+}
+.trim-video-wrap video {
+  width:100%;
+  height:100%;
+  object-fit:contain;
+}
+
+/* 时长提示 */
+.trim-info-row {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.trim-duration-badge {
+  font-weight:800;
+  font-size:13px;
+  padding:6px 14px;
+  border-radius:999px;
+  background:var(--gray1);
+  color:var(--black);
+}
+.trim-duration-badge.warn { background:#FFF3CD; color:#7A5800; }
+.trim-duration-badge.err  { background:#FFE8E3; color:#C0320A; }
+.trim-est {
+  font-weight:700;
+  font-size:12px;
+  color:var(--gray3);
+}
+
+/* 时间轴 */
+.trim-timeline-wrap {
+  background:var(--white);
+  border:1.5px solid var(--gray1);
+  border-radius:16px;
+  padding:16px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.trim-timeline-label {
+  font-weight:800;
+  font-size:11px;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:var(--gray3);
+}
+
+/* 缩略图条 */
+.trim-thumb-row {
+  position:relative;
+  height:48px;
+  border-radius:8px;
+  overflow:hidden;
+  background:var(--gray1);
+  display:flex;
+}
+.trim-thumb-img {
+  flex:1;
+  height:100%;
+  object-fit:cover;
+  pointer-events:none;
+}
+
+/* 选区遮罩 */
+.trim-mask-left,
+.trim-mask-right {
+  position:absolute;
+  top:0; bottom:0;
+  background:rgba(17,17,16,.55);
+  pointer-events:none;
+  transition:width .05s;
+}
+.trim-mask-left  { left:0; }
+.trim-mask-right { right:0; }
+
+/* 选区边框 */
+.trim-selection {
+  position:absolute;
+  top:0; bottom:0;
+  border:2.5px solid var(--accent-y);
+  border-radius:4px;
+  pointer-events:none;
+  box-sizing:border-box;
+}
+
+/* 拖动手柄 */
+.trim-handle {
+  position:absolute;
+  top:0; bottom:0;
+  width:18px;
+  background:var(--accent-y);
+  border-radius:4px;
+  cursor:ew-resize;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:10;
+}
+.trim-handle::after {
+  content:'';
+  width:2px;
+  height:20px;
+  background:rgba(0,0,0,.4);
+  border-radius:1px;
+}
+#trimHandleL { transform:translateX(-50%); }
+#trimHandleR { transform:translateX(50%); }
+
+/* 时间刻度 */
+.trim-ticks {
+  display:flex;
+  justify-content:space-between;
+  padding:0 2px;
+}
+.trim-tick {
+  font-weight:700;
+  font-size:10px;
+  color:var(--gray3);
+}
+
+/* 选中时间显示 */
+.trim-time-row {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  font-weight:800;
+  font-size:13px;
+  color:var(--black);
+}
+.trim-time-sep { color:var(--gray3); }
+.trim-time-val { 
+  background:var(--cream);
+  padding:4px 12px;
+  border-radius:8px;
+  font-variant-numeric:tabular-nums;
+}
+
+/* 底部按钮 */
+.trim-actions {
+  display:flex;
+  gap:10px;
+  justify-content:flex-end;
+}
+
+/* 播放控制行 */
+.trim-play-row {
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+.trim-play-btn {
+  width:44px; height:44px;
+  border-radius:50%;
+  background:var(--black);
+  color:var(--white);
+  border:none;
+  cursor:pointer;
+  font-size:16px;
+  display:flex; align-items:center; justify-content:center;
+  flex-shrink:0;
+  transition:opacity .2s;
+}
+.trim-play-btn:hover { opacity:.8; }
+.trim-play-hint {
+  font-weight:700; font-size:12px; color:var(--gray3);
+  line-height:1.5;
+}
+
+/* 进度指示线 */
+.trim-playhead {
+  position:absolute;
+  top:0; bottom:0;
+  width:2px;
+  background:var(--accent-y);
+  pointer-events:none;
+  z-index:20;
+  display:none;
+  box-shadow:0 0 4px rgba(245,230,66,.6);
+}
+.trim-playhead::before {
+  content:'';
+  position:absolute;
+  top:-4px; left:50%;
+  transform:translateX(-50%);
+  width:8px; height:8px;
+  border-radius:50%;
+  background:var(--accent-y);
+}
+
+/* ══════════════════════════════
+   手机端：仅看已选 + 勾选模式
+══════════════════════════════ */
+
+/* 仅看已选按钮 */
+.mini-btn-filter { font-family:var(--font); font-weight:800; font-size:11px; background:none; border:1.5px solid var(--gray1); border-radius:7px; padding:4px 10px; cursor:pointer; color:var(--gray3); transition:all .15s; }
+.mini-btn-filter:hover { border-color:var(--black); color:var(--black); }
+.mini-btn-filter.active { background:var(--accent-y); border-color:var(--accent-y); color:var(--black); }
+
+/* 勾选模式按钮 */
+.btn-select-mode {
+  font-family:var(--font); font-weight:900; font-size:12px;
+  padding:5px 16px; border-radius:999px;
+  background:var(--accent-y); color:var(--black);
+  border:none; cursor:pointer; transition:all .2s; white-space:nowrap;
+}
+.btn-select-done {
+  font-family:var(--font); font-weight:900; font-size:12px;
+  padding:5px 16px; border-radius:999px;
+  background:var(--black); color:var(--white);
+  border:none; cursor:pointer; white-space:nowrap;
+}
+
+/* 桌面端：桌面栏显示，手机栏隐藏 */
+@media(min-width:768px) {
+  .thumb-bar-desktop { display:flex; gap:6px; align-items:center; }
+  .thumb-bar-mobile  { display:none !important; }
+  /* 桌面端缩略图勾选框始终显示 */
+  .thumb-check { opacity:1 !important; pointer-events:auto !important; }
+}
+
+/* 手机端：手机栏显示，桌面栏隐藏 */
+@media(max-width:767px) {
+  .thumb-bar-desktop { display:none !important; }
+  .thumb-bar-mobile  { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+
+  /* 默认浏览模式：勾选框隐藏 */
+  .thumb-check { opacity:0 !important; pointer-events:none !important; }
+
+  /* 勾选模式：勾选框显示 */
+  .select-mode .thumb-check { opacity:1 !important; pointer-events:auto !important; width:22px; height:22px; border-radius:6px; }
+  .select-mode .thumb-tick  { font-size:13px; }
+}
+
+/* 首次提示横幅 */
+.select-hint-banner {
+  position:fixed; bottom:80px; left:50%;
+  transform:translateX(-50%);
+  background:rgba(17,17,16,.88); color:#fff;
+  font-weight:800; font-size:12px;
+  padding:10px 18px; border-radius:12px;
+  z-index:500; white-space:nowrap; pointer-events:none;
+  display:none;
+}
+.select-hint-banner.show {
+  display:block;
+  animation:hintFadeOut 3.2s ease forwards;
+}
+@keyframes hintFadeOut {
+  0%,70% { opacity:1; transform:translateX(-50%) translateY(0); }
+  100%   { opacity:0; transform:translateX(-50%) translateY(8px); }
+}
+
+.nav-right {
+  display:flex; align-items:center; gap:8px;
+}
+.nav-login {
+  font-weight:800; font-size:13px; letter-spacing:.03em;
+  padding:10px 22px; background:var(--black); color:var(--white);
+  border-radius:999px; min-height:44px; display:flex; align-items:center;
+  transition:opacity .2s; border:none; cursor:pointer; font-family:var(--font);
+}
+.nav-login:hover { opacity:.8; }
+.nav-avatar {
+  width:36px; height:36px; border-radius:50%;
+  background:var(--accent-y); color:var(--black);
+  font-weight:900; font-size:14px;
+  display:flex; align-items:center; justify-content:center;
+  border:none; cursor:pointer; transition:opacity .2s;
+  flex-shrink:0;
+}
+.nav-avatar:hover { opacity:.8; }
+@media (max-width:1023px) { .nav-login-text { display:none; } }
+@media (min-width:1024px) { .nav-login-text { display:flex; } }
 </style>
 </head>
 <body>
@@ -272,9 +621,16 @@ a { text-decoration:none; color:inherit; }
 <div class="mobile-menu" id="mobileMenu">
   <a href="about.html" onclick="closeMenu()">关于我们</a>
   <a href="products.html" onclick="closeMenu()">产品介绍</a>
-  <a href="community.html" onclick="closeMenu()">社区分享</a>
+  <a href="showcase.html" onclick="closeMenu()">画师联名</a>
   <a href="customize-start.html" onclick="closeMenu()">创作中心</a>
   <a href="contact.html" onclick="closeMenu()">联络我们</a>
+  <div class="mobile-menu-footer">
+    <button class="mobile-login-btn" id="mobileLoginBtn">登录 / 注册</button>
+    <div class="mobile-menu-avatar" id="mobileMenuAvatar" style="display:none">
+      <button class="mobile-menu-avatar-btn" id="mobileMenuAvatarBtn"></button>
+      <span class="mobile-menu-avatar-name" id="mobileMenuAvatarName"></span>
+    </div>
+  </div>
 </div>
 
 <nav class="nav">
@@ -285,19 +641,21 @@ a { text-decoration:none; color:inherit; }
   <ul class="nav-links">
     <li><a href="about.html">关于我们</a></li>
     <li><a href="products.html">产品介绍</a></li>
-    <li><a href="community.html">社区分享</a></li>
+    <li><a href="showcase.html">画师联名</a></li>
     <li><a href="customize-start.html">创作中心</a></li>
     <li><a href="contact.html">联络我们</a></li>
   </ul>
-  <div class="nav-right">
-    <button class="nav-login nav-login-btn" id="navLoginBtn">登录</button>
-    <div class="burger" id="burger" onclick="toggleMenu()"><span></span><span></span><span></span></div>
+    <div class="nav-right">
+    <button class="nav-login nav-login-btn nav-login-text" id="navLoginBtn">登录</button>
+    <div class="burger" id="burger" onclick="toggleMenu()">
+      <span></span><span></span><span></span>
+    </div>
   </div>
 </nav>
 
 <div class="progress-bar"><div class="progress-fill"></div></div>
 <div class="progress-steps">
-  <div class="step-item done"><div class="step-num">✓</div><span class="step-label">选型号</span></div>
+  <div class="step-item done"><div class="step-num">1</div><span class="step-label">选型号</span></div>
   <div class="step-divider"></div>
   <div class="step-item active"><div class="step-num">2</div><span class="step-label">上传 &amp; 筛帧</span></div>
   <div class="step-divider"></div>
@@ -347,6 +705,65 @@ a { text-decoration:none; color:inherit; }
   </div>
 </div>
 
+<!-- ══ 状态四：视频裁剪 ══ -->
+<div id="stateTrim">
+  <div class="trim-wrap">
+    <div>
+      <p class="trim-title">裁剪视频片段</p>
+      <p class="trim-sub">拖动两端手柄选取你想要的片段（最长 8 秒），系统会自动提取该区间的帧。</p>
+    </div>
+
+    <!-- 视频预览 -->
+    <div class="trim-video-wrap">
+      <video id="trimVideo" playsinline preload="metadata"></video>
+    </div>
+
+    <!-- 播放控制行 -->
+    <div class="trim-play-row">
+      <button class="trim-play-btn" id="btnTrimPlay">▶</button>
+      <p class="trim-play-hint">预览选取区间 · 播完自动暂停<br>拖动手柄时视频同步预览对应画面</p>
+    </div>
+
+    <!-- 时长提示 -->
+    <div class="trim-info-row">
+      <span class="trim-duration-badge" id="trimDurationBadge">已选 0.0 秒</span>
+      <span class="trim-est" id="trimEst">预计提取约 — 帧</span>
+    </div>
+
+    <!-- 时间轴 -->
+    <div class="trim-timeline-wrap">
+      <span class="trim-timeline-label">选取区间</span>
+
+      <!-- 缩略图条 + 手柄 + 进度线 -->
+      <div class="trim-thumb-row" id="trimThumbRow">
+        <!-- 缩略图由JS动态插入 -->
+        <div class="trim-mask-left"  id="trimMaskL"></div>
+        <div class="trim-mask-right" id="trimMaskR"></div>
+        <div class="trim-selection"  id="trimSelection"></div>
+        <div class="trim-playhead"   id="trimPlayhead"></div>
+        <div class="trim-handle" id="trimHandleL"></div>
+        <div class="trim-handle" id="trimHandleR"></div>
+      </div>
+
+      <!-- 时间刻度 -->
+      <div class="trim-ticks" id="trimTicks"></div>
+
+      <!-- 选中时间显示 -->
+      <div class="trim-time-row">
+        <span class="trim-time-val" id="trimTimeL">0.0s</span>
+        <span class="trim-time-sep">→</span>
+        <span class="trim-time-val" id="trimTimeR">0.0s</span>
+      </div>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div class="trim-actions">
+      <button class="btn btn-secondary btn-sm" onclick="goState(S.UPLOAD)">← 重新上传</button>
+      <button class="btn btn-yellow btn-sm" id="btnTrimConfirm">提取帧 →</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ 状态二：Loading ══ -->
 <div id="stateLoading">
   <span class="loading-anim">⚙️</span>
@@ -375,14 +792,14 @@ a { text-decoration:none; color:inherit; }
     <!-- 左：预览 -->
     <div class="preview-panel">
       <div class="preview-canvas-wrap">
-        <img class="preview-img" id="previewImg" src="" alt="" style="display:none;">
+        <canvas id="previewCanvas" style="display:none;max-width:calc(100% - 32px);max-height:calc(100% - 8px);object-fit:contain;border-radius:8px;-webkit-user-select:none;user-select:none;pointer-events:none;">
         <div class="preview-empty" id="previewEmpty">
           <span class="preview-empty-icon">🎞</span>
           <span class="preview-empty-text">暂无勾选帧</span>
         </div>
-        <div class="preview-counter">
-          第 <span class="cnt-hi" id="cntCur">0</span> 帧 &nbsp;/&nbsp; 共 <span id="cntTot">0</span> 帧已选
-        </div>
+      </div>
+      <div class="preview-counter">
+        第 <span class="cnt-hi" id="cntCur">0</span> 帧 &nbsp;/&nbsp; 共 <span id="cntTot">0</span> 帧已选
       </div>
     </div>
 
@@ -408,8 +825,9 @@ a { text-decoration:none; color:inherit; }
       <div class="ctrl-section">
         <span class="ctrl-label">编辑当前帧</span>
         <div class="edit-row">
-          <button class="edit-btn btn-del"  id="btnDel">🗑 删除此帧</button>
-          <button class="edit-btn btn-undo" id="btnUndo" disabled>↩ 撤销</button>
+          <button class="edit-btn btn-clone" id="btnClone">⧉ 克隆此帧</button>
+          <button class="edit-btn btn-del"   id="btnDel">🗑 删除此帧</button>
+          <button class="edit-btn btn-undo"  id="btnUndo" disabled>↩ 撤销</button>
         </div>
       </div>
 
@@ -417,9 +835,9 @@ a { text-decoration:none; color:inherit; }
         <div class="tool-card">
           <div class="tool-head">
             <span class="tool-name">🔍 智能去重</span>
-            <span class="tool-badge">自动</span>
+            <span class="tool-badge">感知哈希</span>
           </div>
-          <p class="tool-desc">找出相似帧并取消勾选，强度越高去除越多。</p>
+          <p class="tool-desc">用感知哈希找出相似帧并取消勾选。停顿帧不会被删除，可手动重新勾选。</p>
           <div class="seg-btns">
             <button class="seg-btn" data-lv="low">轻度</button>
             <button class="seg-btn on" data-lv="mid">中度</button>
@@ -449,13 +867,33 @@ a { text-decoration:none; color:inherit; }
   </div>
 
   <!-- 下半：缩略图 -->
-  <div class="thumb-panel">
+  <div class="thumb-panel" id="thumbPanel">
     <div class="thumb-bar">
       <div class="thumb-bar-left">
         <span class="thumb-count-txt">已选 <strong id="selCount">0</strong> 帧 <span>/ 共 <span id="totCount">0</span> 帧</span></span>
-        <button class="mini-btn" id="btnSelAll">全选</button>
-        <button class="mini-btn" id="btnDeselAll">全不选</button>
+
+        <!-- 桌面端按钮组 -->
+        <div class="thumb-bar-desktop">
+          <button class="mini-btn" id="btnSelAll">全选</button>
+          <button class="mini-btn" id="btnDeselAll">全不选</button>
+          <button class="mini-btn-filter" id="btnFilterSel">仅看已选</button>
+        </div>
+
+        <!-- 手机端：默认模式（浏览模式） -->
+        <div class="thumb-bar-mobile" id="mobileBarBrowse">
+          <button class="btn-select-mode" id="btnEnterSelect">☑ 勾选</button>
+          <button class="mini-btn-filter" id="btnFilterSelM">仅看已选</button>
+        </div>
+
+        <!-- 手机端：勾选模式（默认隐藏） -->
+        <div class="thumb-bar-mobile" id="mobileBarSelect" style="display:none;">
+          <button class="mini-btn" id="btnSelAllM">全选</button>
+          <button class="mini-btn" id="btnDeselAllM">全不选</button>
+          <button class="mini-btn-filter" id="btnFilterSelM2">仅看已选</button>
+          <button class="btn-select-done" id="btnDoneSelect">完成 ✓</button>
+        </div>
       </div>
+
       <div style="display:flex;align-items:center;gap:8px;">
         <span class="frame-badge badge-warn" id="frameBadge">0 帧</span>
         <span class="frame-hint">目标：<span id="targetTxt">—</span></span>
@@ -481,11 +919,17 @@ a { text-decoration:none; color:inherit; }
     </div>
     <div class="ebar-r">
       <button class="ebar-back-btn" onclick="goReupload()">← 重新上传</button>
-      <button class="btn btn-yellow btn-sm" id="btnNextStep" disabled>下一步 →</button>
+      <button class="btn btn-yellow btn-sm" id="btnNextStep" disabled
+        data-buyer-label="下一步 →" data-creator-label="确认 →">下一步 →</button>
     </div>
   </div>
 
 </div><!-- /stateEditor -->
+
+<!-- 首次进入编辑器提示（手机端） -->
+<div class="select-hint-banner" id="selectHintBanner">
+  👆 点图片预览 · 长按或点「勾选」进入选择模式
+</div>
 
 <script>
 'use strict';
@@ -493,19 +937,23 @@ a { text-decoration:none; color:inherit; }
 /* ══════════════
    读取型号信息
 ══════════════ */
-let machineType    = 'cylinder';
-let machineName    = '经典圆筒款';
+let machineType    = 'standard';
+let machineName    = '常规机型';
 let allowedFrames  = [12, 16, 24];
+let allowedRatios  = ['1:1'];
 
 try {
   const m = JSON.parse(localStorage.getItem('mowo_customize_meta') || '{}');
-  if (m.type)   machineType   = m.type;
   if (m.name)   machineName   = m.name;
   if (m.frames) allowedFrames = m.frames;
+  if (m.ratios) allowedRatios = m.ratios;
 } catch(e) {}
 
-const up = new URLSearchParams(location.search);
-if (up.get('type')) machineType = up.get('type');
+/* Creator 模式：更新按钮文字 */
+if (new URLSearchParams(location.search).get('mode') === 'creator') {
+  const btn = document.getElementById('btnNextStep');
+  btn.textContent = btn.dataset.creatorLabel || '确认 →';
+}
 
 /* 渲染底部目标帧数 */
 document.getElementById('targetTxt').textContent = allowedFrames.join(' / ') + ' 帧';
@@ -517,17 +965,179 @@ ebarTargets.innerHTML = allowedFrames.map(f =>
 /* ══════════════
    状态切换
 ══════════════ */
-const S = { UPLOAD:'upload', LOAD:'load', EDIT:'edit' };
+const S = { UPLOAD:'upload', TRIM:'trim', LOAD:'load', EDIT:'edit' };
 let curState = S.UPLOAD;
 
 function goState(s) {
   curState = s;
-  document.getElementById('stateUpload').style.display  = s === S.UPLOAD ? '' : 'none';
+  document.getElementById('stateUpload').style.display = s === S.UPLOAD ? '' : 'none';
+  document.getElementById('stateTrim').classList.toggle('active',  s === S.TRIM);
   document.getElementById('stateLoading').classList.toggle('active', s === S.LOAD);
   document.getElementById('stateEditor').classList.toggle('active',  s === S.EDIT);
   document.body.style.overflow = s === S.EDIT ? 'hidden' : '';
 }
 goState(S.UPLOAD);
+
+/* ══════════════════════════════════════════
+   「重新编辑」草稿加载
+   URL 参数 editId（creator-animations）或
+            productId（my-animations）均支持
+══════════════════════════════════════════ */
+;(async function loadDraftIfNeeded() {
+  const params  = new URLSearchParams(location.search);
+  const draftId = params.get('editId') || params.get('productId');
+  if (!draftId) return;                    // 普通新建流程，不处理
+
+  const token = localStorage.getItem('mowo_token');
+  if (!token) return;
+
+  goState(S.LOAD);  // 显示加载动画
+  const CAPI = location.hostname === '127.0.0.1' ? 'http://127.0.0.1:3001' : 'http://localhost:3001';
+  try {
+    const res  = await fetch(`${CAPI}/api/custom-products/${encodeURIComponent(draftId)}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.message || '草稿不存在');
+
+    let savedFrames = [];
+    try { savedFrames = JSON.parse(json.data.animationFrames || '[]'); } catch(e) {}
+
+    if (!Array.isArray(savedFrames) || savedFrames.length === 0) {
+      // 草稿里没有帧（可能已清除），回到上传界面
+      goState(S.UPLOAD);
+      return;
+    }
+
+    // 把已保存的帧载入编辑器，全部勾选——用户可以重新排序/增删
+    // 短期方案：这是用户上次筛选的结果帧，不是原始 100 帧
+    // 完整原始帧恢复见 docs/ANIMATION_DRAFT_PLAN.md（OSS 方案）
+    initEditor(savedFrames);
+  } catch(e) {
+    console.error('草稿加载失败：', e.message);
+    // 加载失败降级回上传界面，不中断用户操作
+    goState(S.UPLOAD);
+  }
+})();
+
+/* ══════════════
+   比例检测
+══════════════ */
+function parseRatio(r) { const [w,h]=r.split(':').map(Number); return w/h; }
+
+function checkRatio(w, h) {
+  const actual = w/h;
+  for (const r of allowedRatios) {
+    if (Math.abs(actual - parseRatio(r)) / parseRatio(r) <= 0.10)
+      return { ok:true };
+  }
+  const str = w>=h ? `${(w/h).toFixed(2)}:1` : `1:${(h/w).toFixed(2)}`;
+  return { ok:false, actual:str, suggested:allowedRatios.join(' 或 ') };
+}
+
+function getImageDimensions(file) {
+  return new Promise(res => {
+    const url=URL.createObjectURL(file), img=new Image();
+    img.onload=()=>{ res({w:img.naturalWidth,h:img.naturalHeight}); URL.revokeObjectURL(url); };
+    img.onerror=()=>res(null); img.src=url;
+  });
+}
+
+function showRatioWarning(actual, suggested, onForce) {
+  const ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:20px;';
+  ov.innerHTML=`<div style="background:#fff;border-radius:24px;padding:32px;max-width:400px;width:100%;text-align:center;">
+    <div style="font-size:40px;margin-bottom:16px;">⚠️</div>
+    <p style="font-weight:900;font-size:18px;color:#111;margin-bottom:8px;">图片比例不符合要求</p>
+    <p style="font-weight:700;font-size:14px;color:#787874;line-height:1.7;margin-bottom:20px;">
+      检测到您上传的内容比例约为 <strong style="color:#FF6B35;">${actual}</strong>，<br>
+      当前机型支持的比例为 <strong style="color:#111;">${suggested}</strong>。<br>
+      建议裁剪后重新上传，效果更佳。
+    </p>
+    <div style="display:flex;gap:10px;">
+      <button id="_rf" style="flex:1;height:48px;border-radius:999px;background:#111;color:#fff;font-family:inherit;font-weight:800;font-size:14px;border:none;cursor:pointer;">强制使用</button>
+      <button id="_rc" style="flex:1;height:48px;border-radius:999px;background:#fff;color:#111;border:2px solid #EBEBEA;font-family:inherit;font-weight:800;font-size:14px;cursor:pointer;">重新上传</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  document.getElementById('_rf').onclick = ()=>{ document.body.removeChild(ov); onForce(); };
+  document.getElementById('_rc').onclick = ()=>{ document.body.removeChild(ov); };
+}
+
+/* ══════════════
+   Canvas渲染 + 水印
+   - 全分辨率预览
+   - 右下角：MOWOBOX（小字，清晰，白色带阴影）
+   - 中间偏上：用户ID后8位（淡淡斜排，可辨认）
+══════════════ */
+const _canvas = document.getElementById('previewCanvas');
+const _ctx    = _canvas ? _canvas.getContext('2d') : null;
+const _imgCache = new Map();
+
+function getUserId8() {
+  try {
+    const token = localStorage.getItem('mowo_token');
+    if (!token) return null;
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return (payload.userId || '').slice(-8).toUpperCase();
+  } catch(e) { return null; }
+}
+
+function drawFrameToCanvas(src) {
+  if (!_ctx) return;
+
+  const render = (img) => {
+    const cw = img.naturalWidth  || img.width  || 480;
+    const ch = img.naturalHeight || img.height || 480;
+    _canvas.width  = cw;
+    _canvas.height = ch;
+    _canvas.style.width  = '100%';
+    _canvas.style.height = '100%';
+    _canvas.style.objectFit = 'contain';
+    // 1. 绘制原图（全分辨率）
+    _ctx.clearRect(0, 0, cw, ch);
+    _ctx.drawImage(img, 0, 0, cw, ch);
+
+    // 2. 右下角：MOWOBOX 小字，清晰可见
+    const brandSize = Math.max(10, Math.min(cw, ch) * 0.035);
+    _ctx.save();
+    _ctx.globalAlpha  = 0.55;
+    _ctx.font         = `bold ${brandSize}px sans-serif`;
+    _ctx.textAlign    = 'right';
+    _ctx.textBaseline = 'bottom';
+    _ctx.shadowColor  = 'rgba(0,0,0,0.8)';
+    _ctx.shadowBlur   = 3;
+    _ctx.fillStyle    = '#ffffff';
+    _ctx.fillText('MOWOBOX', cw - 8, ch - 6);
+    _ctx.restore();
+
+    // 3. 中间偏上：用户ID，淡淡斜排，可辨认但不突兀
+    const uid = getUserId8();
+    if (uid) {
+      const idSize = Math.max(10, Math.min(cw, ch) * 0.04);
+      _ctx.save();
+      _ctx.globalAlpha  = 0.12;
+      _ctx.fillStyle    = '#000000';
+      _ctx.font         = `bold ${idSize}px sans-serif`;
+      _ctx.textAlign    = 'center';
+      _ctx.textBaseline = 'middle';
+      _ctx.translate(cw/2, ch * 0.3);
+      _ctx.rotate(-0.15); // 微微倾斜
+      _ctx.fillText(uid, 0, 0);
+      _ctx.restore();
+    }
+
+    _canvas.style.display = 'block';
+  };
+
+  if (_imgCache.has(src)) {
+    render(_imgCache.get(src));
+  } else {
+    const img = new Image();
+    img.onload = () => { _imgCache.set(src, img); render(img); };
+    img.src = src;
+  }
+}
 
 /* ══════════════
    上传逻辑
@@ -559,24 +1169,41 @@ function clearFile() {
 
 function handleFiles(files) {
   if (!files.length) return;
-  const imgExts   = ['png','jpg','jpeg'];
-  const videoExts = ['mp4','gif'];
-  const ext0      = files[0].name.split('.').pop().toLowerCase();
-  const allImg    = files.every(f => imgExts.includes(f.name.split('.').pop().toLowerCase()));
-  const isVideo   = files.length === 1 && videoExts.includes(ext0);
+  const imgExts   = ['png','jpg','jpeg','webp'];
+  const videoExts = ['mp4','gif','webm','mov'];
+  const ext0  = files[0].name.split('.').pop().toLowerCase();
+  const allImg  = files.every(f => imgExts.includes(f.name.split('.').pop().toLowerCase()));
+  const isVideo = files.length===1 && videoExts.includes(ext0);
 
-  if (isVideo) {
-    selFile = files[0]; selFiles = []; isMulti = false;
-    showFilePrev(files[0]);
-  } else if (allImg) {
-    selFiles = [...files].sort((a,b) => a.name.localeCompare(b.name));
-    selFile = null; isMulti = true;
-    showFilePrev(null, files.length);
-  } else {
-    alert('请上传单个 MP4/GIF，或一组 PNG/JPG 图片序列。');
+  if (!isVideo && !allImg) {
+    alert('请上传单个 MP4/GIF 视频，或一组 PNG/JPG 图片序列。');
     return;
   }
-  btnStart.disabled = false;
+
+  const proceed = () => {
+    if (isVideo) { selFile=files[0]; selFiles=[]; isMulti=false; showFilePrev(files[0]); }
+    else { selFiles=[...files].sort((a,b)=>a.name.localeCompare(b.name)); selFile=null; isMulti=true; showFilePrev(null,files.length); }
+    btnStart.disabled = false;
+  };
+
+  const doCheck = async () => {
+    if (isVideo) {
+      const r = await new Promise(res => {
+        const url=URL.createObjectURL(files[0]), v=document.createElement('video');
+        v.onloadedmetadata=()=>{ res({w:v.videoWidth,h:v.videoHeight}); URL.revokeObjectURL(url); };
+        v.onerror=()=>res(null); v.src=url;
+      });
+      return r ? checkRatio(r.w, r.h) : { ok:true };
+    } else {
+      const d = await getImageDimensions(files[0]);
+      return d ? checkRatio(d.w, d.h) : { ok:true };
+    }
+  };
+
+  doCheck().then(result => {
+    if (result.ok) proceed();
+    else showRatioWarning(result.actual, result.suggested, proceed);
+  });
 }
 
 function showFilePrev(file, imgCount) {
@@ -619,15 +1246,360 @@ function loadImages(files) {
 }
 
 function simulateExtract(file) {
+  // 视频文件 → 进入裁剪模块
+  initTrimModule(file);
+}
+
+/* ══════════════════════════════
+   视频裁剪模块
+══════════════════════════════ */
+const MAX_TRIM_SEC  = 8;      // 最长允许裁剪秒数
+const MAX_FRAMES    = 150;    // 帧数上限
+const PHASH_THRESH  = 5;      // 感知哈希相似度阈值（≤5视为重复）
+
+let trimFile     = null;
+let trimDuration = 0;
+let trimStart    = 0;
+let trimEnd      = 0;
+let trimDragging = null; // 'L' | 'R' | null
+
+function initTrimModule(file) {
+  trimFile = file;
+  const video = document.getElementById('trimVideo');
+  const url   = URL.createObjectURL(file);
+  video.src   = url;
+
+  video.onloadedmetadata = () => {
+    trimDuration = video.duration;
+    trimStart    = 0;
+    trimEnd      = Math.min(trimDuration, MAX_TRIM_SEC);
+    buildTrimTicks();
+    buildTrimThumbs(video);
+    updateTrimUI();
+    goState(S.TRIM);
+  };
+}
+
+// 生成时间刻度
+function buildTrimTicks() {
+  const ticks = document.getElementById('trimTicks');
+  const count = Math.min(Math.ceil(trimDuration) + 1, 9);
+  const step  = trimDuration / (count - 1);
+  ticks.innerHTML = Array.from({length: count}, (_, i) => {
+    const t = i * step;
+    return `<span class="trim-tick">${t.toFixed(1)}s</span>`;
+  }).join('');
+}
+
+// 生成时间轴缩略图（每秒一张）
+async function buildTrimThumbs(video) {
+  const row    = document.getElementById('trimThumbRow');
+  const count  = Math.max(2, Math.ceil(trimDuration));
+  const canvas = document.createElement('canvas');
+  canvas.width  = 80;
+  canvas.height = 48;
+  const ctx = canvas.getContext('2d');
+
+  for (let i = 0; i < count; i++) {
+    await new Promise(res => {
+      video.currentTime = (i / (count - 1)) * trimDuration;
+      video.onseeked = () => {
+        ctx.drawImage(video, 0, 0, 80, 48);
+        const img = document.createElement('img');
+        img.className = 'trim-thumb-img';
+        img.src = canvas.toDataURL('image/jpeg', 0.6);
+        // 插入到遮罩前面
+        row.insertBefore(img, document.getElementById('trimMaskL'));
+        res();
+      };
+    });
+  }
+}
+
+// 更新裁剪UI（遮罩、手柄、时间显示、提示）
+function updateTrimUI(syncVideo) {
+  const row  = document.getElementById('trimThumbRow');
+  const W    = row.offsetWidth || 600;
+  const dur  = trimDuration;
+  const pctL = trimStart / dur;
+  const pctR = trimEnd   / dur;
+  const wL   = pctL * W;
+  const wR   = (1 - pctR) * W;
+
+  document.getElementById('trimMaskL').style.width     = wL + 'px';
+  document.getElementById('trimMaskR').style.width     = wR + 'px';
+  document.getElementById('trimSelection').style.left  = wL + 'px';
+  document.getElementById('trimSelection').style.right = wR + 'px';
+  document.getElementById('trimHandleL').style.left    = wL + 'px';
+  document.getElementById('trimHandleR').style.right   = wR + 'px';
+  document.getElementById('trimTimeL').textContent     = trimStart.toFixed(1) + 's';
+  document.getElementById('trimTimeR').textContent     = trimEnd.toFixed(1) + 's';
+
+  // 拖动手柄时同步视频预览
+  if (syncVideo !== false) {
+    const video = document.getElementById('trimVideo');
+    const targetTime = trimDragging === 'R' ? trimEnd : trimStart;
+    video.currentTime = targetTime;
+  }
+
+  // 时长徽章
+  const sel   = trimEnd - trimStart;
+  const badge = document.getElementById('trimDurationBadge');
+  badge.textContent = `已选 ${sel.toFixed(1)} 秒`;
+  badge.className   = 'trim-duration-badge' +
+    (sel > MAX_TRIM_SEC ? ' err' : sel > MAX_TRIM_SEC * 0.8 ? ' warn' : '');
+
+  // 预计帧数估算
+  const estFrames = Math.round(sel * 30);
+  document.getElementById('trimEst').textContent = `提取后约 ${estFrames} 帧，去重后更少`;
+
+  // 超出限制时禁用确认按钮
+  document.getElementById('btnTrimConfirm').disabled = sel > MAX_TRIM_SEC || sel < 0.5;
+}
+
+// 播放进度线更新
+let _trimPlayRAF = null;
+
+function updatePlayhead() {
+  const video    = document.getElementById('trimVideo');
+  const playhead = document.getElementById('trimPlayhead');
+  const row      = document.getElementById('trimThumbRow');
+  if (!video || !playhead || !row) return;
+
+  const W   = row.offsetWidth || 600;
+  const pct = (video.currentTime - 0) / trimDuration;
+  playhead.style.left    = (pct * W) + 'px';
+  playhead.style.display = 'block';
+
+  // 播放到终点自动停止
+  if (video.currentTime >= trimEnd - 0.05) {
+    video.pause();
+    video.currentTime = trimStart;
+    playhead.style.display = 'none';
+    document.getElementById('btnTrimPlay').textContent = '▶';
+    return;
+  }
+
+  _trimPlayRAF = requestAnimationFrame(updatePlayhead);
+}
+
+// 播放按钮
+document.getElementById('btnTrimPlay').addEventListener('click', () => {
+  const video = document.getElementById('trimVideo');
+  const btn   = document.getElementById('btnTrimPlay');
+
+  if (!video.paused) {
+    // 暂停
+    video.pause();
+    cancelAnimationFrame(_trimPlayRAF);
+    btn.textContent = '▶';
+  } else {
+    // 如果当前时间不在选区内，从起点开始
+    if (video.currentTime < trimStart || video.currentTime >= trimEnd) {
+      video.currentTime = trimStart;
+    }
+    video.play();
+    btn.textContent = '⏸';
+    _trimPlayRAF = requestAnimationFrame(updatePlayhead);
+  }
+});
+
+// 拖动手柄逻辑
+document.getElementById('trimHandleL').addEventListener('mousedown', e => { trimDragging='L'; e.preventDefault(); });
+document.getElementById('trimHandleR').addEventListener('mousedown', e => { trimDragging='R'; e.preventDefault(); });
+document.getElementById('trimHandleL').addEventListener('touchstart', e => { trimDragging='L'; }, {passive:true});
+document.getElementById('trimHandleR').addEventListener('touchstart', e => { trimDragging='R'; }, {passive:true});
+
+function onTrimMove(clientX) {
+  if (!trimDragging) return;
+  const row  = document.getElementById('trimThumbRow');
+  const rect = row.getBoundingClientRect();
+  const pct  = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+  const t    = pct * trimDuration;
+  if (trimDragging === 'L') {
+    trimStart = Math.max(0, Math.min(t, trimEnd - 0.5));
+  } else {
+    trimEnd = Math.min(trimDuration, Math.max(t, trimStart + 0.5));
+  }
+  updateTrimUI();
+}
+
+document.addEventListener('mousemove', e => onTrimMove(e.clientX));
+document.addEventListener('touchmove', e => onTrimMove(e.touches[0].clientX), {passive:true});
+document.addEventListener('mouseup',  () => {
+  if (trimDragging) {
+    trimDragging = null;
+    // 拖动结束后停止播放，让用户重新手动播放
+    const video = document.getElementById('trimVideo');
+    if (!video.paused) {
+      video.pause();
+      cancelAnimationFrame(_trimPlayRAF);
+      document.getElementById('btnTrimPlay').textContent = '▶';
+      document.getElementById('trimPlayhead').style.display = 'none';
+    }
+  }
+});
+document.addEventListener('touchend', () => {
+  if (trimDragging) {
+    trimDragging = null;
+    const video = document.getElementById('trimVideo');
+    if (!video.paused) {
+      video.pause();
+      cancelAnimationFrame(_trimPlayRAF);
+      document.getElementById('btnTrimPlay').textContent = '▶';
+      document.getElementById('trimPlayhead').style.display = 'none';
+    }
+  }
+});
+
+// 确认裁剪，开始提取帧
+document.getElementById('btnTrimConfirm').addEventListener('click', () => {
+  extractFramesFromVideo(
+    document.getElementById('trimVideo'),
+    trimStart, trimEnd
+  );
+});
+
+/* ══════════════════════════════
+   视频帧提取（全量 → 感知哈希去重 → 降帧至150以下）
+══════════════════════════════ */
+async function extractFramesFromVideo(video, start, end) {
   goState(S.LOAD);
-  document.getElementById('loadingSub').textContent =
-    `正在提取「${file.name}」中的帧，视频越长等待越久。`;
-  /* ⚠️ 后端接好后替换此处：上传文件 → 轮询 → 拿帧 URL 数组 */
-  const n = 24;
-  fakeProgress('解析视频中…', n, () => {
-    const palette = ['#FFD6D6','#FFE8D6','#FFFBD6','#D6FFE2','#D6F0FF','#E2D6FF','#FFD6F2','#D6EAFF'];
-    initEditor(Array.from({length:n}, (_,i) => makeFakeFrame(i+1, palette[i%palette.length])));
+  document.getElementById('loadingSub').textContent = '正在逐帧提取，请稍候…';
+
+  const fps      = 30; // 按30fps提取
+  const duration = end - start;
+  const total    = Math.round(duration * fps);
+  const canvas   = document.createElement('canvas');
+  const ctx      = canvas.getContext('2d');
+
+  // 设置Canvas尺寸（降低内存占用，预览用480px宽）
+  const vw = video.videoWidth  || 480;
+  const vh = video.videoHeight || 480;
+  const scale = Math.min(1, 480 / Math.max(vw, vh));
+  canvas.width  = Math.round(vw * scale);
+  canvas.height = Math.round(vh * scale);
+
+  const rawFrames = [];
+  let extracted   = 0;
+
+  // 逐帧截图
+  for (let i = 0; i < total; i++) {
+    const t = start + (i / fps);
+    await new Promise(res => {
+      video.currentTime = t;
+      video.onseeked = () => {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        rawFrames.push(canvas.toDataURL('image/jpeg', 0.85));
+        extracted++;
+        // 更新进度条
+        const pct = Math.round((extracted / total) * 60); // 前60%用于提取
+        document.getElementById('loadingFill').style.width = pct + '%';
+        document.getElementById('loadingPct').textContent  = pct + '%';
+        document.getElementById('loadingStatus').textContent = `已提取 ${extracted} / ${total} 帧`;
+        res();
+      };
+    });
+
+    // 每10帧让出控制权，防止浏览器卡死
+    if (i % 10 === 0) await new Promise(res => setTimeout(res, 0));
+  }
+
+  // 感知哈希去重（取消勾选，不删帧）
+  document.getElementById('loadingStatus').textContent = '正在分析重复帧…';
+  document.getElementById('loadingFill').style.width = '65%';
+  document.getElementById('loadingPct').textContent  = '65%';
+
+  await new Promise(res => setTimeout(res, 50));
+  const { checkedArr, removedCount } = await deduplicateFrames(rawFrames, PHASH_THRESH);
+
+  // 降帧至150以下
+  document.getElementById('loadingStatus').textContent = '整理帧序列…';
+  document.getElementById('loadingFill').style.width = '85%';
+  document.getElementById('loadingPct').textContent  = '85%';
+
+  await new Promise(res => setTimeout(res, 50));
+  let finalFrames  = [...rawFrames]; // 先复制，再清空原数组
+  let finalChecked = checkedArr;
+  let autoReduceMsg = '';
+
+  const checkedCount = checkedArr.filter(Boolean).length;
+  if (checkedCount > MAX_FRAMES) {
+    const step = Math.ceil(finalFrames.length / MAX_FRAMES);
+    finalFrames  = finalFrames.filter((_, i) => i % step === 0);
+    finalChecked = finalChecked.filter((_, i) => i % step === 0);
+    autoReduceMsg = `已自动精简至 ${finalFrames.length} 帧`;
+  }
+
+  // 释放原始数组内存
+  rawFrames.length = 0;
+
+  document.getElementById('loadingFill').style.width = '100%';
+  document.getElementById('loadingPct').textContent  = '100%';
+  await new Promise(res => setTimeout(res, 300));
+
+  const msgs = [];
+  if (removedCount > 0) msgs.push(`已标记 ${removedCount} 个疑似重复帧（取消勾选，可手动恢复）`);
+  if (autoReduceMsg)    msgs.push(autoReduceMsg);
+  if (msgs.length > 0)  setTimeout(() => showToast(msgs.join(' · ')), 500);
+
+  initEditorWithChecked(finalFrames, finalChecked);
+}
+
+/* ══════════════════════════════
+   感知哈希去重
+   返回 { checkedArr, removedCount }
+   只取消勾选重复帧，不删除帧，保留停顿帧可重新勾选
+══════════════════════════════ */
+async function deduplicateFrames(framesArr, threshold) {
+  const size   = 8;
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  const ctx    = canvas.getContext('2d', { willReadFrequently: true });
+  const hashes = [];
+
+  for (let i = 0; i < framesArr.length; i++) {
+    hashes.push(await computePHash(framesArr[i], canvas, ctx, size));
+    if (i % 20 === 0) await new Promise(res => setTimeout(res, 0));
+  }
+
+  // 比较相邻帧，标记重复为取消勾选
+  const checkedArr = new Array(framesArr.length).fill(true);
+  let removedCount = 0;
+  for (let i = 1; i < framesArr.length; i++) {
+    if (hammingDistance(hashes[i], hashes[i-1]) <= threshold) {
+      checkedArr[i] = false;
+      removedCount++;
+    }
+  }
+
+  return { checkedArr, removedCount };
+}
+
+function computePHash(dataUrl, canvas, ctx, size) {
+  return new Promise(res => {
+    const img = new Image();
+    img.onload = () => {
+      ctx.drawImage(img, 0, 0, size, size);
+      const data   = ctx.getImageData(0, 0, size, size).data;
+      // 转灰度
+      const gray   = [];
+      for (let i = 0; i < size * size; i++) {
+        gray.push(0.299*data[i*4] + 0.587*data[i*4+1] + 0.114*data[i*4+2]);
+      }
+      // 均值哈希：高于均值为1，否则为0
+      const avg  = gray.reduce((a,b)=>a+b,0) / gray.length;
+      const hash = gray.map(v => v >= avg ? 1 : 0);
+      res(hash);
+    };
+    img.src = dataUrl;
   });
+}
+
+function hammingDistance(a, b) {
+  let d = 0;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) d++;
+  return d;
 }
 
 function makeFakeFrame(n, color) {
@@ -681,36 +1653,27 @@ function initEditor(urls) {
   buildThumbs();
   updateAll();
   goState(S.EDIT);
+  setTimeout(showFirstHint, 800);
+}
+
+function initEditorWithChecked(urls, checkedArr) {
+  frames  = urls;
+  checked = checkedArr.slice();
+  playIdx = 0; undoStack = [];
+  buildThumbs();
+  frames.forEach((_, i) => setThumbState(i));
+  updateAll();
+  goState(S.EDIT);
+  setTimeout(showFirstHint, 800);
 }
 
 /* ── 缩略图 ── */
-function buildThumbs() {
-  document.getElementById('thumbGrid').innerHTML = frames.map((src,i) => `
-    <div class="thumb-item" id="th${i}" onclick="toggleThumb(${i})">
-      <img class="thumb-img" src="${src}" loading="lazy">
-      <span class="thumb-num">${i+1}</span>
-      <div class="thumb-check"><span class="thumb-tick">✓</span></div>
-    </div>`).join('');
-}
-
 function setThumbState(i) {
   const el = document.getElementById(`th${i}`);
   if (!el) return;
   el.classList.toggle('is-off', !checked[i]);
 }
 
-function toggleThumb(i) {
-  snapshot();
-  checked[i] = !checked[i];
-  setThumbState(i);
-  /* 跳预览到该帧 */
-  if (checked[i]) {
-    const cl = checkedIdx();
-    const pos = cl.indexOf(i);
-    if (pos !== -1) { playIdx = pos; }
-  }
-  updatePreview(); updateStatus();
-}
 
 /* ── 已选帧索引列表 ── */
 function checkedIdx() {
@@ -720,10 +1683,10 @@ function checkedIdx() {
 /* ── 预览 ── */
 function updatePreview() {
   const cl  = checkedIdx();
-  const img = document.getElementById('previewImg');
   const emp = document.getElementById('previewEmpty');
   if (!cl.length) {
-    img.style.display = 'none'; emp.style.display = '';
+    if (_canvas) _canvas.style.display = 'none';
+    if (emp) emp.style.display = '';
     document.getElementById('cntCur').textContent = '0';
     document.getElementById('cntTot').textContent = '0';
     document.querySelectorAll('.thumb-item.is-active').forEach(e => e.classList.remove('is-active'));
@@ -731,10 +1694,10 @@ function updatePreview() {
   }
   playIdx = Math.max(0, Math.min(playIdx, cl.length-1));
   const ri = cl[playIdx];
-  img.src = frames[ri]; img.style.display = 'block'; emp.style.display = 'none';
+  drawFrameToCanvas(frames[ri]);
+  if (emp) emp.style.display = 'none';
   document.getElementById('cntCur').textContent = playIdx + 1;
   document.getElementById('cntTot').textContent = cl.length;
-  /* 高亮缩略图 */
   document.querySelectorAll('.thumb-item.is-active').forEach(e => e.classList.remove('is-active'));
   const th = document.getElementById(`th${ri}`);
   if (th) { th.classList.add('is-active'); th.scrollIntoView({block:'nearest',behavior:'smooth'}); }
@@ -826,8 +1789,8 @@ document.getElementById('speedSlider').addEventListener('input', function(){
    编辑操作
 ══════════════ */
 function snapshot() {
-  undoStack.push([...checked]);
-  if (undoStack.length > 60) undoStack.shift();
+  undoStack.push({ frames:[...frames], checked:[...checked] });
+  if (undoStack.length > 30) undoStack.shift();
 }
 
 document.getElementById('btnDel').addEventListener('click', ()=>{
@@ -840,24 +1803,225 @@ document.getElementById('btnDel').addEventListener('click', ()=>{
   updatePreview(); updateStatus();
 });
 
+// 克隆帧：在当前帧后面插入一个相同的帧
+document.getElementById('btnClone').addEventListener('click', ()=>{
+  const cl = checkedIdx(); if(!cl.length) return;
+  snapshot();
+  const ri = cl[playIdx]; // 当前帧的真实索引
+  // 插入帧到 ri+1 位置
+  frames.splice(ri+1, 0, frames[ri]);
+  checked.splice(ri+1, 0, true);
+  // 重建缩略图
+  buildThumbs();
+  frames.forEach((_,i) => setThumbState(i));
+  // 跳到克隆出来的那帧
+  const newCl = checkedIdx();
+  const newPos = newCl.indexOf(ri+1);
+  if (newPos !== -1) playIdx = newPos;
+  updateAll();
+  showToast('✓ 已克隆当前帧');
+});
+
 document.getElementById('btnUndo').addEventListener('click', ()=>{
   if(!undoStack.length) return;
-  checked = undoStack.pop();
+  // 撤销时要同时恢复frames和checked（克隆帧会改变frames）
+  const snap = undoStack.pop();
+  frames  = snap.frames;
+  checked = snap.checked;
+  buildThumbs();
   frames.forEach((_,i) => setThumbState(i));
   updateAll();
 });
 
+// 桌面端全选/全不选
 document.getElementById('btnSelAll').addEventListener('click', ()=>{
   snapshot(); checked.fill(true);
   frames.forEach((_,i) => setThumbState(i)); updateAll();
+  if (filterSelActive || filterSelActiveMob) enterFilterSel(); else applyFilterSel();
 });
 document.getElementById('btnDeselAll').addEventListener('click', ()=>{
   snapshot(); checked.fill(false);
   frames.forEach((_,i) => setThumbState(i)); updateAll();
+  if (filterSelActive || filterSelActiveMob) enterFilterSel(); else applyFilterSel();
 });
 
 /* ══════════════
-   智能去重
+   仅看已选（桌面 + 手机，进入时拍快照）
+══════════════ */
+let filterSelActive    = false;
+let filterSelActiveMob = false;
+let filterSelSnapshot  = null; // 进入时的勾选快照，决定哪些帧隐藏
+
+// 进入仅看已选：拍快照，隐藏进入时未勾选的帧
+function enterFilterSel() {
+  filterSelSnapshot = [...checked]; // 记录进入时的勾选状态
+  applyFilterSel();
+}
+
+// 退出仅看已选：清快照，显示全部帧
+function exitFilterSel() {
+  filterSelSnapshot = null;
+  applyFilterSel();
+}
+
+// 应用过滤：根据快照决定显示哪些帧（不依赖当前checked）
+function applyFilterSel() {
+  const active = filterSelActive || filterSelActiveMob;
+  document.querySelectorAll('.thumb-item').forEach((el, i) => {
+    if (active && filterSelSnapshot) {
+      // 进入时就未勾选的帧才隐藏，本次新取消的帧保持可见（只是变灰）
+      el.style.display = filterSelSnapshot[i] ? '' : 'none';
+    } else {
+      el.style.display = '';
+    }
+  });
+}
+
+// 统一切换仅看已选状态（桌面和手机共用同一个开关）
+function toggleFilterSel(isMob) {
+  const wasActive = filterSelActive || filterSelActiveMob;
+  filterSelActive    = !wasActive;
+  filterSelActiveMob = !wasActive;
+  const nowActive = filterSelActive;
+  // 同步三个按钮的active状态
+  ['btnFilterSel','btnFilterSelM','btnFilterSelM2'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('active', nowActive);
+  });
+  if (nowActive) enterFilterSel();
+  else           exitFilterSel();
+}
+
+document.getElementById('btnFilterSel').addEventListener('click',  ()=> toggleFilterSel(false));
+document.getElementById('btnFilterSelM').addEventListener('click',  ()=> toggleFilterSel(true));
+document.getElementById('btnFilterSelM2').addEventListener('click', ()=> toggleFilterSel(true));
+
+/* ══════════════
+   手机端勾选模式
+══════════════ */
+let selectModeOn = false;
+
+function enterSelectMode(autoSelectIdx) {
+  selectModeOn = true;
+  document.getElementById('thumbPanel').classList.add('select-mode');
+  document.getElementById('mobileBarBrowse').style.display = 'none';
+  document.getElementById('mobileBarSelect').style.display = 'flex';
+  if (playing) stopPlay();
+  if (autoSelectIdx !== undefined) {
+    snapshot();
+    checked[autoSelectIdx] = !checked[autoSelectIdx];
+    setThumbState(autoSelectIdx);
+    updateStatus();
+  }
+}
+
+function exitSelectMode() {
+  selectModeOn = false;
+  document.getElementById('thumbPanel').classList.remove('select-mode');
+  document.getElementById('mobileBarBrowse').style.display = 'flex';
+  document.getElementById('mobileBarSelect').style.display = 'none';
+}
+
+document.getElementById('btnEnterSelect').addEventListener('click', ()=> enterSelectMode());
+document.getElementById('btnDoneSelect').addEventListener('click',  ()=> exitSelectMode());
+document.getElementById('btnSelAllM').addEventListener('click', ()=>{
+  snapshot(); checked.fill(true);
+  frames.forEach((_,i) => setThumbState(i)); updateAll();
+  if (filterSelActive || filterSelActiveMob) enterFilterSel(); else applyFilterSel();
+});
+document.getElementById('btnDeselAllM').addEventListener('click', ()=>{
+  snapshot(); checked.fill(false);
+  frames.forEach((_,i) => setThumbState(i)); updateAll();
+  if (filterSelActive || filterSelActiveMob) enterFilterSel(); else applyFilterSel();
+});
+
+/* ══════════════
+   buildThumbs：桌面端点图片定位，点勾选框切换勾选
+               手机端浏览模式点图片定位，勾选模式点图片切换勾选
+               长按进入勾选模式
+══════════════ */
+function buildThumbs() {
+  document.getElementById('thumbGrid').innerHTML = frames.map((src,i) => `
+    <div class="thumb-item" id="th${i}">
+      <img class="thumb-img" src="${src}" loading="lazy" draggable="false">
+      <span class="thumb-num">${i+1}</span>
+      <div class="thumb-check" id="thk${i}"><span class="thumb-tick">✓</span></div>
+    </div>`).join('');
+
+  document.querySelectorAll('.thumb-item').forEach((el, i) => {
+    // 点击图片区域
+    el.querySelector('.thumb-img').addEventListener('click', ()=> onImgClick(i));
+
+    // 点击勾选框（桌面端用）
+    el.querySelector('.thumb-check').addEventListener('click', (e)=>{
+      e.stopPropagation();
+      onCheckClick(i);
+    });
+
+    // 长按进入勾选模式（手机端）
+    let longTimer = null;
+    el.addEventListener('touchstart', ()=>{
+      longTimer = setTimeout(()=>{
+        if (!selectModeOn) {
+          navigator.vibrate && navigator.vibrate(30);
+          enterSelectMode(i);
+        }
+      }, 300);
+    }, {passive:true});
+    el.addEventListener('touchend',  ()=> clearTimeout(longTimer));
+    el.addEventListener('touchmove', ()=> clearTimeout(longTimer), {passive:true});
+  });
+}
+
+function onImgClick(i) {
+  const isMobile = window.innerWidth < 768;
+  if (isMobile && selectModeOn) {
+    // 手机端勾选模式：切换勾选
+    onCheckClick(i);
+  } else {
+    // 桌面端 或 手机端浏览模式：定位预览
+    const cl  = checkedIdx();
+    const pos = cl.indexOf(i);
+    if (pos !== -1) {
+      playIdx = pos;
+      updatePreview();
+    } else {
+      // 未勾选帧也能预览（不更新计数）
+      drawFrameToCanvas(frames[i]);
+    }
+  }
+}
+
+function onCheckClick(i) {
+  snapshot();
+  checked[i] = !checked[i];
+  setThumbState(i);
+  if (checked[i]) {
+    const cl  = checkedIdx();
+    const pos = cl.indexOf(i);
+    if (pos !== -1) { playIdx = pos; }
+  }
+  updatePreview(); updateStatus();
+  applyFilterSel();
+}
+
+/* ══════════════
+   首次提示（手机端，只显示一次）
+══════════════ */
+function showFirstHint() {
+  if (window.innerWidth >= 768) return;
+  const key = 'mowo_editor_hint_v2';
+  if (localStorage.getItem(key)) return;
+  localStorage.setItem(key, '1');
+  const banner = document.getElementById('selectHintBanner');
+  if (banner) {
+    banner.classList.add('show');
+    setTimeout(() => banner.classList.remove('show'), 3500);
+  }
+}
+
+/* ══════════════
+   智能去重（升级为感知哈希）
 ══════════════ */
 document.querySelectorAll('[data-lv]').forEach(btn => {
   btn.addEventListener('click', function(){
@@ -866,18 +2030,40 @@ document.querySelectorAll('[data-lv]').forEach(btn => {
   });
 });
 
-document.getElementById('btnDedup').addEventListener('click', ()=>{
+document.getElementById('btnDedup').addEventListener('click', async ()=>{
   const cl = checkedIdx();
-  if (cl.length < 4) { alert('已选帧数太少，无法去重。'); return; }
+  if (cl.length < 4) { showToast('已选帧数太少，无法去重'); return; }
+
+  // 感知哈希阈值：轻/中/强
+  const threshMap = { low:3, mid:5, high:10 };
+  const thresh    = threshMap[dedupLv] || 5;
+
   snapshot();
-  const ratio = {low:.1, mid:.22, high:.38}[dedupLv];
-  const rem   = Math.max(1, Math.floor(cl.length * ratio));
-  const step  = Math.floor(cl.length / rem);
-  let removed = 0;
-  for (let i = step-1; i < cl.length && removed < rem; i += step) {
-    checked[cl[i]] = false; removed++;
+
+  // 只对已勾选的帧做去重
+  const selectedFrames = cl.map(i => frames[i]);
+  const size   = 8;
+  const cv     = document.createElement('canvas');
+  cv.width = cv.height = size;
+  const ct = cv.getContext('2d', { willReadFrequently: true });
+  const hashes = [];
+
+  for (let i = 0; i < selectedFrames.length; i++) {
+    hashes.push(await computePHash(selectedFrames[i], cv, ct, size));
+    if (i % 20 === 0) await new Promise(res => setTimeout(res, 0));
   }
-  frames.forEach((_,i) => setThumbState(i)); updateAll();
+
+  let removed = 0;
+  for (let i = 1; i < cl.length; i++) {
+    if (hammingDistance(hashes[i], hashes[i-1]) <= thresh) {
+      checked[cl[i]] = false;
+      removed++;
+    }
+  }
+
+  frames.forEach((_,i) => setThumbState(i));
+  updateAll();
+  showToast(`去重完成，取消勾选了 ${removed} 个相似帧`);
 });
 
 /* ══════════════
@@ -904,13 +2090,55 @@ document.getElementById('btnSample').addEventListener('click', ()=>{
 /* ══════════════
    下一步
 ══════════════ */
-document.getElementById('btnNextStep').addEventListener('click', ()=>{
+document.getElementById('btnNextStep').addEventListener('click', async ()=>{
   const cl = checkedIdx();
   const cnt = cl.length;
   /* 整除验证 */
   const validTargets = allowedFrames.filter(f => f >= cnt && cnt > 0 && f % cnt === 0);
   if (!validTargets.length) return;
-  /* 存帧数据 */
+
+  /* ── Creator 模式：保存到动画作品库后跳回 ── */
+  const urlParams  = new URLSearchParams(location.search);
+  const editorMode = urlParams.get('mode');
+  if (editorMode === 'creator') {
+    const editId   = urlParams.get('editId');
+    const returnTo = urlParams.get('returnTo') || 'creator-animations.html';
+    const token    = localStorage.getItem('mowo_token');
+    const CAPI     = (location.hostname==='127.0.0.1'?'http://127.0.0.1:3001':'http://localhost:3001');
+    const selectedUrls = cl.map(i => frames[i]);
+
+    document.getElementById('btnNextStep').disabled = true;
+    document.getElementById('btnNextStep').textContent = '保存中…';
+
+    try {
+      if (editId) {
+        // 更新已有动画
+        await fetch(`${CAPI}/api/custom-products/${encodeURIComponent(editId)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ animationFrames: JSON.stringify(selectedUrls), frameCount: cnt }),
+        });
+        location.href = returnTo;
+      } else {
+        // 新建动画
+        const res  = await fetch(`${CAPI}/api/custom-products`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ animationFrames: JSON.stringify(selectedUrls), frameCount: cnt }),
+        });
+        const json = await res.json();
+        const savedId = json.data?.id || '';
+        location.href = `${returnTo}${returnTo.includes('?') ? '&' : '?'}savedProductId=${savedId}`;
+      }
+    } catch(e) {
+      alert('保存失败，请重试');
+      document.getElementById('btnNextStep').disabled = false;
+      document.getElementById('btnNextStep').textContent = '确认 →';
+    }
+    return; /* 不走买家流程 */
+  }
+
+  /* ── 买家模式（原有流程）── */
   try {
     const urls = cl.map(i => frames[i]);
     localStorage.setItem('mowo_customize_frames', JSON.stringify(urls));
@@ -937,6 +2165,28 @@ document.addEventListener('keydown', e => {
     case 'z': if(e.metaKey||e.ctrlKey){ e.preventDefault(); document.getElementById('btnUndo').click(); } break;
   }
 });
+
+/* ══════════════
+   Toast 提示
+══════════════ */
+let _editorToastTimer;
+function showToast(msg) {
+  let t = document.getElementById('_editorToast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = '_editorToast';
+    t.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(12px);background:#111;color:#fff;font-weight:800;font-size:13px;padding:10px 22px;border-radius:999px;opacity:0;pointer-events:none;transition:all .3s;z-index:9000;white-space:nowrap;font-family:inherit;';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  t.style.transform = 'translateX(-50%) translateY(0)';
+  clearTimeout(_editorToastTimer);
+  _editorToastTimer = setTimeout(() => {
+    t.style.opacity = '0';
+    t.style.transform = 'translateX(-50%) translateY(12px)';
+  }, 2800);
+}
 
 /* ══════════════
    汉堡菜单
@@ -972,5 +2222,61 @@ if (window.matchMedia('(pointer:fine)').matches) {
 }
 </script>
 <script src="../js/auth.js"></script>
+<script>
+(function syncMobileAuth() {
+  function applyState() {
+    var navLoginBtn     = document.getElementById('navLoginBtn');
+    var mowoNavUser     = document.getElementById('mowoNavUser');
+    var mobileLoginBtn  = document.getElementById('mobileLoginBtn');
+    var mobileAvatar    = document.getElementById('mobileMenuAvatar');
+    var mobileAvatarBtn = document.getElementById('mobileMenuAvatarBtn');
+    var mobileAvatarName= document.getElementById('mobileMenuAvatarName');
+    if (!mobileLoginBtn) return;
+
+    var loggedIn = (navLoginBtn && navLoginBtn.style.display === 'none')
+                || (mowoNavUser && mowoNavUser.classList.contains('show'));
+
+    if (loggedIn) {
+      mobileLoginBtn.style.display = 'none';
+      if (mobileAvatar) mobileAvatar.style.display = 'flex';
+      var uname   = document.getElementById('mowoNavUname');
+      var initial = document.getElementById('mowoNavAvatarInitial');
+      if (mobileAvatarBtn) mobileAvatarBtn.textContent = (initial && initial.textContent) || '?';
+      if (mobileAvatarName) mobileAvatarName.textContent = (uname && uname.textContent) || '我的账户';
+      if (mobileAvatarBtn) mobileAvatarBtn.onclick = function() {
+        document.getElementById('mowoNavAvatarBtn')?.click();
+        closeMenu();
+      };
+    } else {
+      mobileLoginBtn.style.display = '';
+      if (mobileAvatar) mobileAvatar.style.display = 'none';
+      mobileLoginBtn.onclick = function() { closeMenu(); window.openAuthModal && window.openAuthModal(); };
+    }
+  }
+
+  function startObserving() {
+    var navLoginBtn = document.getElementById('navLoginBtn');
+    var mowoNavUser = document.getElementById('mowoNavUser');
+    if (navLoginBtn) {
+      new MutationObserver(applyState).observe(navLoginBtn, {
+        attributes: true, attributeFilter: ['style']
+      });
+    }
+    if (mowoNavUser) {
+      new MutationObserver(applyState).observe(mowoNavUser, {
+        attributes: true, attributeFilter: ['class']
+      });
+    }
+    applyState();
+  }
+
+  if (document.readyState === 'complete') {
+    startObserving();
+  } else {
+    window.addEventListener('load', startObserving);
+  }
+  setTimeout(applyState, 800);
+})();
+</script>
 </body>
 </html>

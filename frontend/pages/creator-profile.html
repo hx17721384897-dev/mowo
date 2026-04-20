@@ -50,27 +50,36 @@ button{font-family:var(--font);cursor:pointer;border:none;background:none;}
 .mobile-menu a:hover{color:var(--accent-y);}
 
 /* ══ HERO ══ */
-.hero{padding:calc(var(--nav-h) + 40px) var(--pad-mob) 0;max-width:1100px;margin:0 auto;}
-@media(min-width:1024px){.hero{padding:calc(var(--nav-h) + 56px) var(--pad-desk) 0;}}
+.hero{padding:calc(var(--nav-h) + 32px) var(--pad-mob) 0;max-width:1100px;margin:0 auto;}
+@media(min-width:1024px){
+  .hero{
+    padding:calc(var(--nav-h) + 40px) var(--pad-desk) 0;
+    display:grid;
+    grid-template-columns:1fr auto;
+    align-items:start;
+    gap:32px;
+  }
+}
 
 /* 顶部：头像 + 信息 + 关注 */
-.hero-top{display:flex;align-items:flex-start;gap:24px;margin-bottom:32px;flex-wrap:wrap;}
+.hero-top{display:flex;align-items:flex-start;gap:20px;margin-bottom:24px;flex-wrap:wrap;}
 @media(min-width:640px){.hero-top{flex-wrap:nowrap;}}
+@media(min-width:1024px){.hero-top{margin-bottom:0;}}
 .hero-avatar-wrap{flex-shrink:0;position:relative;}
-.hero-avatar{width:96px;height:96px;border-radius:28px;background:var(--accent-y);display:flex;align-items:center;justify-content:center;font-size:42px;border:3px solid var(--white);box-shadow:0 8px 32px rgba(0,0,0,.12);}
-@media(min-width:640px){.hero-avatar{width:112px;height:112px;border-radius:32px;font-size:50px;}}
-.cert-badge{position:absolute;bottom:-6px;right:-6px;width:28px;height:28px;border-radius:50%;background:var(--accent-y);border:2.5px solid var(--white);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:var(--black);}
+.hero-avatar{width:80px;height:80px;border-radius:24px;background:var(--accent-y);display:flex;align-items:center;justify-content:center;font-size:36px;border:3px solid var(--white);box-shadow:0 6px 24px rgba(0,0,0,.1);}
+@media(min-width:640px){.hero-avatar{width:96px;height:96px;border-radius:28px;font-size:44px;}}
+.cert-badge{position:absolute;bottom:-6px;right:-6px;width:24px;height:24px;border-radius:50%;background:var(--accent-y);border:2.5px solid var(--white);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:var(--black);}
 .hero-meta{flex:1;min-width:0;}
-.hero-name{font-weight:900;font-size:clamp(22px,4vw,32px);letter-spacing:-.02em;margin-bottom:4px;}
-.hero-handle{font-weight:700;font-size:13px;color:var(--gray3);margin-bottom:10px;}
-.hero-cert-row{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;background:rgba(143,214,148,.15);border:1px solid rgba(143,214,148,.3);margin-bottom:14px;}
+.hero-name{font-weight:900;font-size:clamp(20px,3vw,28px);letter-spacing:-.02em;margin-bottom:3px;}
+.hero-handle{font-weight:700;font-size:13px;color:var(--gray3);margin-bottom:8px;}
+.hero-cert-row{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;background:rgba(143,214,148,.15);border:1px solid rgba(143,214,148,.3);margin-bottom:12px;}
 .hero-cert-dot{width:6px;height:6px;border-radius:50%;background:var(--accent-g);}
 .hero-cert-text{font-weight:800;font-size:11px;color:#287030;letter-spacing:.04em;}
-.hero-bio{font-weight:700;font-size:14px;color:var(--gray3);line-height:1.8;max-width:560px;margin-bottom:16px;}
-.hero-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;}
+.hero-bio{font-weight:700;font-size:13px;color:var(--gray3);line-height:1.8;max-width:520px;margin-bottom:12px;}
+.hero-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
 .hero-tag{font-weight:800;font-size:11px;padding:4px 12px;border-radius:999px;background:var(--white);border:1.5px solid var(--gray1);color:var(--gray3);}
-.hero-socials{display:flex;gap:10px;flex-wrap:wrap;}
-.social-link{display:inline-flex;align-items:center;gap:5px;font-weight:800;font-size:12px;color:var(--gray3);padding:6px 12px;border-radius:999px;border:1.5px solid var(--gray1);background:var(--white);transition:all .2s;}
+.hero-socials{display:flex;gap:8px;flex-wrap:wrap;}
+.social-link{display:inline-flex;align-items:center;gap:5px;font-weight:800;font-size:12px;color:var(--gray3);padding:5px 10px;border-radius:999px;border:1.5px solid var(--gray1);background:var(--white);transition:all .2s;}
 .social-link:hover{border-color:var(--black);color:var(--black);}
 .hero-actions{display:flex;flex-direction:column;align-items:flex-end;gap:10px;flex-shrink:0;padding-top:4px;}
 @media(max-width:639px){.hero-actions{flex-direction:row;width:100%;}}
@@ -80,13 +89,22 @@ button{font-family:var(--font);cursor:pointer;border:none;background:none;}
 .follow-btn.following{background:var(--white);color:var(--gray3);border:2px solid var(--gray1);}
 .follow-btn.following:hover{border-color:var(--black);color:var(--black);}
 @media(max-width:639px){.follow-btn{flex:1;}}
-.share-btn-hero{width:48px;height:48px;border-radius:50%;border:1.5px solid var(--gray1);background:var(--white);display:flex;align-items:center;justify-content:center;font-size:16px;transition:all .2s;}
+.share-btn-hero{width:44px;height:44px;border-radius:50%;border:1.5px solid var(--gray1);background:var(--white);display:flex;align-items:center;justify-content:center;font-size:16px;transition:all .2s;}
 .share-btn-hero:hover{border-color:var(--black);}
 
 /* 数据栏 */
 .hero-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--gray1);border-radius:20px;overflow:hidden;border:1.5px solid var(--gray1);margin-bottom:0;}
-.stat-cell{background:var(--white);padding:18px 12px;text-align:center;}
-.stat-val{font-weight:900;font-size:clamp(20px,3vw,28px);letter-spacing:-.02em;margin-bottom:3px;}
+@media(min-width:1024px){
+  .hero-stats{
+    grid-template-columns:repeat(2,1fr);
+    grid-template-rows:repeat(2,1fr);
+    width:220px;
+    flex-shrink:0;
+    align-self:start;
+  }
+}
+.stat-cell{background:var(--white);padding:16px 12px;text-align:center;}
+.stat-val{font-weight:900;font-size:clamp(18px,2.5vw,24px);letter-spacing:-.02em;margin-bottom:3px;}
 .stat-val.yellow{color:#8A7200;}
 .stat-label{font-weight:700;font-size:11px;color:var(--gray3);}
 @media(max-width:480px){.hero-stats{grid-template-columns:repeat(2,1fr);}}
@@ -230,7 +248,7 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
 <div class="mobile-menu" id="mobileMenu">
   <a href="index.html">关于我们</a>
   <a href="products.html">产品介绍</a>
-  <a href="community.html" class="active">社区分享</a>
+  <a href="showcase.html" class="active">画师联名</a>
   <a href="customize-start.html">创作中心</a>
   <a href="contact.html">联络我们</a>
 </div>
@@ -244,7 +262,7 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
   <ul class="nav-links">
     <li><a href="about.html">关于我们</a></li>
     <li><a href="products.html">产品介绍</a></li>
-    <li><a href="community.html" class="active">社区分享</a></li>
+    <li><a href="showcase.html" class="active">画师联名</a></li>
     <li><a href="customize-start.html">创作中心</a></li>
     <li><a href="contact.html">联络我们</a></li>
   </ul>
@@ -259,7 +277,7 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
 <!-- ══ HERO ══ -->
 <div class="hero">
 
-  <!-- 顶部：头像 + 信息 + 操作 -->
+  <!-- 左侧：头像 + 信息 + 按钮 -->
   <div class="hero-top reveal">
     <div class="hero-avatar-wrap">
       <div class="hero-avatar" id="heroAvatar">🐱</div>
@@ -273,12 +291,8 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
         <span class="hero-cert-text">认证创作者 · 哞屋平台</span>
       </div>
       <p class="hero-bio" id="heroBio">热爱手绘动画的独立创作者，专注于日常生活中可爱的瞬间。每一帧都认真画，希望你看了也会微笑。</p>
-      <div class="hero-tags" id="heroTags">
-        <!-- JS 渲染 -->
-      </div>
-      <div class="hero-socials" id="heroSocials">
-        <!-- JS 渲染 -->
-      </div>
+      <div class="hero-tags" id="heroTags"></div>
+      <div class="hero-socials" id="heroSocials"></div>
     </div>
     <div class="hero-actions">
       <button class="follow-btn unfollow" id="followBtn" onclick="toggleFollow()">
@@ -288,7 +302,7 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
     </div>
   </div>
 
-  <!-- 数据栏 -->
+  <!-- 右侧（桌面）/ 底部（移动）：数据栏 -->
   <div class="hero-stats reveal d1" id="heroStats">
     <div class="stat-cell">
       <p class="stat-val" id="statWorks">—</p>
@@ -303,8 +317,8 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
       <p class="stat-label">累计销量</p>
     </div>
     <div class="stat-cell">
-      <p class="stat-val yellow" id="statRating">—</p>
-      <p class="stat-label">好评率</p>
+      <p class="stat-val yellow" id="statLikes">—</p>
+      <p class="stat-label">获赞数</p>
     </div>
   </div>
 
@@ -369,7 +383,7 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
     <div class="foot-links">
       <a href="about.html">关于我们</a>
       <a href="products.html">产品介绍</a>
-      <a href="community.html">社区分享</a>
+      <a href="showcase.html">画师联名</a>
       <a href="customize-start.html">创作中心</a>
       <a href="contact.html">联络我们</a>
     </div>
@@ -380,179 +394,210 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
 <div class="toast" id="toast"></div>
 
 <script>
+const MOWO_API = (location.hostname==='127.0.0.1'?'http://127.0.0.1:3001':'http://localhost:3001');
+
 /* ══════════════════════════════
-   全局常量（统一最顶部）
+   工具函数
 ══════════════════════════════ */
+function fmtNum(n) {
+  if (!n && n !== 0) return '0';
+  return n >= 10000 ? (n/10000).toFixed(1).replace(/\.0$/,'') + '万' :
+         n >= 1000  ? (n/1000).toFixed(1).replace(/\.0$/,'') + 'k' : String(n);
+}
 
-/* 演示创作者数据库 */
-const CREATORS = {
-  1: {
-    name: '小橘工作室', handle: '@xiao_ju_studio', avatar: '🐱',
-    bio: '热爱手绘动画的独立创作者，专注于日常生活中可爱的瞬间。每一帧都认真画，希望你看了也会微笑。',
-    tags: ['手绘插画','治愈系','日系动漫','可爱动物'],
-    socials: [
-      { icon:'🐦', label:'微博', url:'#' },
-      { icon:'📕', label:'小红书', url:'#' },
-      { icon:'🎨', label:'Bilibili', url:'#' },
-    ],
-    stats: { works:32, followers:14200, sales:312, rating:98.6 },
-  },
-  2: {
-    name: '深海动画室', handle: '@deep_ocean_anim', avatar: '🌊',
-    bio: '喜欢用动画记录大海和自然的律动，每套作品都是一次安静的旅行。',
-    tags: ['自然生态','极简线条','抽象几何'],
-    socials: [{ icon:'🐦', label:'微博', url:'#' }],
-    stats: { works:18, followers:5600, sales:124, rating:97.2 },
-  },
-};
-
-/* 演示作品数据 */
-const WORKS_DATA = [
-  { id:1, type:'animation', title:'奔跑的橘猫 · 12帧循环', date:'2025-03-10', likes:2401, colorHex:'#E8F4F8', size:'large', creatorId:1 },
-  { id:2, type:'article',   title:'手绘走马灯动画的创作心得：从第一帧开始',  date:'2025-03-05', likes:892,  colorHex:'', size:'normal', creatorId:1 },
-  { id:3, type:'animation', title:'睡觉的橘猫 · 8帧',   date:'2025-02-28', likes:1832, colorHex:'#D4B896', size:'large', creatorId:1 },
-  { id:4, type:'article',   title:'为什么我选择用椴木板做动画机外壳', date:'2025-02-20', likes:456,  colorHex:'', size:'normal', creatorId:1 },
-  { id:5, type:'animation', title:'猫咪洗脸循环 · 16帧', date:'2025-02-10', likes:1204, colorHex:'#F4C2C2', size:'large', creatorId:1 },
-  { id:6, type:'article',   title:'和大家聊聊我画的第 100 帧',     date:'2025-01-30', likes:321,  colorHex:'', size:'normal', creatorId:1 },
-  { id:7, type:'animation', title:'橘猫摇尾巴',         date:'2025-01-15', likes:987,  colorHex:'#9BA0A8', size:'large', creatorId:1 },
-  { id:8, type:'animation', title:'夜猫子系列 · Vol.1', date:'2024-12-20', likes:756,  colorHex:'#2A2A2A', size:'large', creatorId:1 },
-];
-
-/* 演示在售商品 */
-const PRODUCTS_DATA = [
-  { id:101, name:'奔跑的橘猫', type:'sale',    price:299, sold:87,  colorHex:'#E8F4F8', creatorId:1, machineType:'cylinder' },
-  { id:102, name:'睡觉的橘猫', type:'sale',    price:289, sold:64,  colorHex:'#D4B896', creatorId:1, machineType:'lantern'  },
-  { id:103, name:'猫咪洗脸循环',type:'bundle', price:549, sold:23,  colorHex:'#F4C2C2', creatorId:1, machineType:'cylinder' },
-  { id:104, name:'橘猫三件套', type:'bundle',  price:799, sold:15,  colorHex:'#9BA0A8', creatorId:1, machineType:'cylinder' },
-  { id:105, name:'橘猫盲盒系列',type:'blindbox',price:199,sold:41, colorHex:'#2A2A2A', creatorId:1, machineType:'hexagon'  },
-];
-
-/* 演示评价数据 */
-const REVIEWS_DATA = [
-  { id:1, user:'橘子爱跑步', avatar:'🏃', rating:5, product:'奔跑的橘猫', spec:'亚克力 · 透明', date:'2026-03-08', text:'收到实物那一刻真的感动到了！转起来的时候橘猫真的在跑，帧数非常流畅，包装也很精致。强烈推荐！', imgs:['📦','🐱'] },
-  { id:2, user:'静静的海风', avatar:'🌊', rating:5, product:'睡觉的橘猫', spec:'椴木板 · 原木色', date:'2026-03-05', text:'木质材质比我想象的要精细很多，有一种很安静的质感，和橘猫睡觉的主题非常搭。放在书桌上很好看。', imgs:[] },
-  { id:3, user:'动画爱好者99', avatar:'🎬', rating:4, product:'奔跑的橘猫', spec:'铝合金 · 哑光黑', date:'2026-02-28', text:'整体满意，金属款质感确实好。就是旋转的时候有一点点阻力，不知道是不是需要磨合？其他都很好。', imgs:['⚙️'] },
-  { id:4, user:'收藏控本控',  avatar:'📦', rating:5, product:'橘猫三件套', spec:'套装·多款', date:'2026-02-20', text:'三件套一起入手，每款颜色都不一样，摆在一排超好看！创作者的动画质量稳定，期待出新作品！', imgs:['✨','🐱','📦'] },
-];
-
-/* 评分分布（演示） */
-const RATING_DIST = { 5:78, 4:15, 3:5, 2:1, 1:1 };
+const MACHINE_NAMES = { cylinder:'圆筒款', lantern:'灯笼款', hexagon:'六棱柱款', 'flat-round':'扁圆款', mini:'迷你款' };
 
 /* ══════════════════════════════
    运行时状态
 ══════════════════════════════ */
-let creatorId  = 1;
+let creatorId   = null;
 let isFollowing = false;
 let worksFilter = 'all';
 let currentTab  = 0;
+let _articlesData  = [];
+let _productsData  = [];
 
 /* ══════════════════════════════
-   初始化
+   初始化：从API加载数据
 ══════════════════════════════ */
-(function init() {
+(async function init() {
   const params = new URLSearchParams(location.search);
-  creatorId = parseInt(params.get('id') || '1');
-  const creator = CREATORS[creatorId] || CREATORS[1];
+  creatorId = params.get('id');
 
-  renderHero(creator);
-  renderWorks();
-  renderProducts();
-  renderReviews();
+  if (!creatorId) {
+    showError('创作者不存在');
+    return;
+  }
+
+  try {
+    // 同时加载用户信息、文章列表、商品列表
+    const [userRes, articlesRes, productsRes] = await Promise.all([
+      fetch(`${MOWO_API}/api/users/${creatorId}`),
+      fetch(`${MOWO_API}/api/users/${creatorId}/articles`),
+      fetch(`${MOWO_API}/api/products?creatorId=${creatorId}`)
+    ]);
+
+    const [userData, articlesData, productsData] = await Promise.all([
+      userRes.json(), articlesRes.json(), productsRes.json()
+    ]);
+
+    if (!userData.success) { showError('创作者不存在'); return; }
+
+    const user = userData.data;
+    _articlesData = articlesData.success ? articlesData.data.articles : [];
+    _productsData = productsData.success ? productsData.data.products : [];
+
+    renderHero(user);
+    renderWorks();
+    renderProducts();
+
+    // 检查当前登录用户是否已关注
+    checkFollowStatus();
+
+  } catch(e) {
+    showError('加载失败，请刷新重试');
+    console.error(e);
+  }
 })();
+
+function showError(msg) {
+  document.getElementById('heroName').textContent = msg;
+}
 
 /* ══════════════════════════════
    渲染 Hero
 ══════════════════════════════ */
-function renderHero(c) {
-  document.title = `${c.name} — 哞屋 MOWO`;
-  document.getElementById('heroAvatar').textContent    = c.avatar;
-  document.getElementById('heroName').textContent      = c.name;
-  document.getElementById('heroHandle').textContent    = c.handle;
-  document.getElementById('heroBio').textContent       = c.bio;
+function renderHero(user) {
+  const profile  = user.profile || {};
+  const creator  = user.creatorProfile || {};
 
-  /* 标签 */
-  document.getElementById('heroTags').innerHTML =
-    c.tags.map(t => `<span class="hero-tag">${t}</span>`).join('');
+  document.title = `${profile.nickname || '创作者'} — 哞屋 MOWO`;
 
-  /* 社交链接 */
-  document.getElementById('heroSocials').innerHTML =
-    c.socials.map(s =>
-      `<a class="social-link" href="${s.url}">${s.icon} ${s.label}</a>`
-    ).join('');
+  // 头像
+  const avEl = document.getElementById('heroAvatar');
+  if (profile.avatarUrl) {
+    avEl.innerHTML = `<img src="${profile.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:28px;">`;
+  } else {
+    avEl.textContent = (profile.nickname || '创')[0];
+  }
 
-  /* 数字动画 */
-  animateNum('statWorks',     c.stats.works);
-  animateNum('statFollowers', c.stats.followers, v => v >= 10000 ? (v/10000).toFixed(1)+'万' : v.toLocaleString());
-  animateNum('statSales',     c.stats.sales);
-  animateNum('statRating',    c.stats.rating, v => v.toFixed(1)+'%', 0.1);
+  // 基本信息
+  document.getElementById('heroName').textContent   = profile.nickname || '未知创作者';
+  document.getElementById('heroHandle').textContent = `@${profile.nickname || ''}`;
+  document.getElementById('heroBio').textContent    = profile.bio || '这个创作者还没有填写简介';
 
-  /* Tab 计数 */
-  document.getElementById('tabCount0').textContent = WORKS_DATA.filter(w => w.creatorId === creatorId).length;
-  document.getElementById('tabCount1').textContent = PRODUCTS_DATA.filter(p => p.creatorId === creatorId).length;
+  // 标签
+  const tagsEl = document.getElementById('heroTags');
+  if (creator.styleTags) {
+    try {
+      const tags = JSON.parse(creator.styleTags);
+      tagsEl.innerHTML = tags.map(t => `<span class="hero-tag">${t}</span>`).join('');
+    } catch(e) { tagsEl.innerHTML = ''; }
+  }
+
+  // 社交链接
+  const socialsEl = document.getElementById('heroSocials');
+  const socials = [];
+  if (creator.weiboUrl)      socials.push({ icon:'🐦', label:'微博',    url:creator.weiboUrl });
+  if (creator.xiaohongshuUrl) socials.push({ icon:'📕', label:'小红书',  url:creator.xiaohongshuUrl });
+  if (creator.bilibiliUrl)   socials.push({ icon:'🎨', label:'Bilibili', url:creator.bilibiliUrl });
+  socialsEl.innerHTML = socials.map(s =>
+    `<a class="social-link" href="${s.url}" target="_blank">${s.icon} ${s.label}</a>`
+  ).join('');
+
+  // 数据统计
+  animateNum('statWorks',     _articlesData.length + _productsData.length);
+  animateNum('statFollowers', profile.followerCount || 0,
+    v => v >= 10000 ? (v/10000).toFixed(1)+'万' : Math.round(v).toLocaleString());
+  animateNum('statSales',     creator.totalSales || 0);
+  animateNum('statLikes',     profile.likedCount || 0,
+    v => v >= 10000 ? (v/10000).toFixed(1)+'万' : Math.round(v).toLocaleString());
+
+  // Tab 计数
+  document.getElementById('tabCount0').textContent = _articlesData.length + _productsData.length;
+  document.getElementById('tabCount1').textContent = _productsData.length;
 }
 
-function animateNum(elId, target, format, step) {
+function animateNum(elId, target, format) {
   const el  = document.getElementById(elId); if (!el) return;
   const dur = 1000, interval = 16;
-  let elapsed = 0, cur = 0;
+  let elapsed = 0;
   const fmt = format || (v => Math.round(v).toLocaleString());
   const ticker = setInterval(() => {
     elapsed += interval;
     const prog = Math.min(elapsed / dur, 1);
     const ease = 1 - Math.pow(1 - prog, 3);
-    cur = target * ease;
-    el.textContent = fmt(cur);
+    el.textContent = fmt(target * ease);
     if (prog >= 1) { clearInterval(ticker); el.textContent = fmt(target); }
   }, interval);
 }
 
 /* ══════════════════════════════
-   渲染作品列表
+   渲染作品列表（文章+商品混合）
 ══════════════════════════════ */
 function renderWorks() {
-  const data = WORKS_DATA
-    .filter(w => w.creatorId === creatorId)
-    .filter(w => worksFilter === 'all' || w.type === worksFilter);
+  // 合并文章和商品，按时间排序
+  const articles = _articlesData.map(a => ({ ...a, _kind:'article' }));
+  const products = _productsData.map(p => ({ ...p, _kind:'product' }));
+  let data = [...articles, ...products].sort((a,b) =>
+    new Date(b.createdAt) - new Date(a.createdAt)
+  );
+
+  // 筛选
+  if (worksFilter === 'article') data = articles;
+  if (worksFilter === 'product') data = products;
+
+  const grid = document.getElementById('worksGrid');
 
   if (!data.length) {
-    document.getElementById('worksGrid').innerHTML =
-      `<div class="empty-state" style="grid-column:1/-1;">
-        <span class="empty-icon">📭</span>
-        <p class="empty-title">暂无作品</p>
-        <p class="empty-desc">该创作者还没有发布内容</p>
-      </div>`;
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
+      <span class="empty-icon">📭</span>
+      <p class="empty-title">暂无作品</p>
+      <p class="empty-desc">该创作者还没有发布内容</p>
+    </div>`;
     return;
   }
 
-  document.getElementById('worksGrid').innerHTML = data.map(w => {
-    if (w.type === 'animation') {
-      return `<div class="anim-card reveal" onclick="goWork(${w.id},'animation')">
-        <div class="anim-preview" style="background:${w.colorHex}18;">
-          <div class="anim-ring" style="width:56px;height:56px;border-color:${w.colorHex};"></div>
+  grid.innerHTML = data.map(item => {
+    if (item._kind === 'product') {
+      const previewUrl = item.animation?.previewUrl;
+      return `<div class="product-card reveal" onclick="location.href='work-detail.html?type=product&id=${item.id}'">
+        <div class="product-card-media" style="background:#F5F3EF;">
+          <span class="product-badge sale">在售</span>
+          <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
+            ${previewUrl
+              ? `<img src="${previewUrl}" style="width:100%;height:100%;object-fit:cover;">`
+              : `<div class="anim-ring" style="width:60px;height:60px;border-color:#F5E642;"></div>`}
+          </div>
         </div>
-        <div class="anim-body">
-          <p class="anim-name">${w.title}</p>
-          <p class="anim-spec">${w.date} · ♥ ${w.likes.toLocaleString()}</p>
+        <div class="product-card-body">
+          <p class="product-card-name">${item.title}</p>
+          <div class="product-card-bottom">
+            <span class="product-price">¥${Number(item.finalPrice).toFixed(2)}</span>
+            <span class="product-sold">${item.salesCount || 0} 人购买</span>
+          </div>
         </div>
       </div>`;
     } else {
-      return `<div class="work-card reveal" onclick="goWork(${w.id},'article')">
-        <div class="work-card-media" style="background:#F0EDE8;display:flex;align-items:center;justify-content:center;">
+      const coverUrl = item.coverUrl;
+      return `<div class="work-card reveal" onclick="location.href='work-detail.html?type=article&id=${item.id}'">
+        <div class="work-card-media" style="background:#F0EDE8;display:flex;align-items:center;justify-content:center;overflow:hidden;">
           <span class="work-card-type article">文章</span>
-          <span style="font-size:32px;opacity:.18;">✏️</span>
+          ${coverUrl
+            ? `<img src="${coverUrl}" style="width:100%;height:100%;object-fit:cover;">`
+            : `<span style="font-size:32px;opacity:.18;">✏️</span>`}
         </div>
         <div class="work-card-body">
-          <p class="work-card-title">${w.title}</p>
+          <p class="work-card-title">${item.title}</p>
           <div class="work-card-meta">
-            <span class="work-card-date">${w.date}</span>
-            <span class="work-card-likes">♥ ${w.likes.toLocaleString()}</span>
+            <span class="work-card-date">${new Date(item.createdAt).toLocaleDateString('zh-CN',{month:'numeric',day:'numeric'})}</span>
+            <span class="work-card-likes">♥ ${fmtNum(item.likeCount || 0)}</span>
           </div>
         </div>
       </div>`;
     }
   }).join('');
 
-  /* 触发 reveal */
   requestAnimationFrame(() => {
     document.querySelectorAll('.reveal:not(.on)').forEach(el => rObs.observe(el));
   });
@@ -562,25 +607,38 @@ function renderWorks() {
    渲染在售商品
 ══════════════════════════════ */
 function renderProducts() {
-  const data = PRODUCTS_DATA.filter(p => p.creatorId === creatorId);
-  const BADGE = { sale:'在售', bundle:'套装', blindbox:'盲盒' };
-  document.getElementById('productsGrid').innerHTML = data.map(p => `
-    <div class="product-card reveal" onclick="goProduct(${p.id})">
-      <div class="product-card-media" style="background:${p.colorHex}18;">
-        <span class="product-badge ${p.type}">${BADGE[p.type]}</span>
+  const grid = document.getElementById('productsGrid');
+
+  if (!_productsData.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
+      <span class="empty-icon">🛍</span>
+      <p class="empty-title">暂无在售商品</p>
+      <p class="empty-desc">该创作者还没有上架商品</p>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = _productsData.map(p => {
+    const previewUrl = p.animation?.previewUrl;
+    return `<div class="product-card reveal" onclick="location.href='work-detail.html?type=product&id=${p.id}'">
+      <div class="product-card-media" style="background:#F5F3EF;">
+        <span class="product-badge sale">在售</span>
         <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
-          <div class="anim-ring" style="width:60px;height:60px;border-color:${p.colorHex};"></div>
+          ${previewUrl
+            ? `<img src="${previewUrl}" style="width:100%;height:100%;object-fit:cover;">`
+            : `<div class="anim-ring" style="width:60px;height:60px;border-color:#F5E642;"></div>`}
         </div>
       </div>
       <div class="product-card-body">
-        <p class="product-card-name">${p.name}</p>
+        <p class="product-card-name">${p.title}</p>
         <div class="product-card-bottom">
-          <span class="product-price">¥${p.price}</span>
-          <span class="product-sold">${p.sold} 人购买</span>
+          <span class="product-price">¥${Number(p.finalPrice).toFixed(2)}</span>
+          <span class="product-sold">${p.salesCount || 0} 人购买</span>
           <div class="product-card-add">+</div>
         </div>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 
   requestAnimationFrame(() => {
     document.querySelectorAll('.reveal:not(.on)').forEach(el => rObs.observe(el));
@@ -588,48 +646,54 @@ function renderProducts() {
 }
 
 /* ══════════════════════════════
-   渲染评价
+   关注/取消关注
 ══════════════════════════════ */
-function renderReviews() {
-  const total   = REVIEWS_DATA.length + 73; /* 演示：加上历史数量 */
-  const avgRating = 4.9;
+async function checkFollowStatus() {
+  const token = typeof getToken === 'function' ? getToken() : localStorage.getItem('mowo_token');
+  if (!token || !creatorId) return;
+  try {
+    const res  = await fetch(`${MOWO_API}/api/users/${creatorId}/follow-status`, {
+      headers: { Authorization:`Bearer ${token}` }
+    });
+    const json = await res.json();
+    if (json.success) {
+      isFollowing = json.data.following;
+      updateFollowBtn();
+    }
+  } catch(e) {}
+}
 
-  /* 评分大数字 */
-  document.getElementById('ratingBig').textContent   = avgRating.toFixed(1);
-  document.getElementById('ratingCount').textContent = `${total} 条评价`;
+function updateFollowBtn() {
+  const btn  = document.getElementById('followBtn');
+  const text = document.getElementById('followBtnText');
+  if (!btn || !text) return;
+  btn.className = 'follow-btn ' + (isFollowing ? 'following' : 'unfollow');
+  text.textContent = isFollowing ? '已关注' : '+ 关注';
+}
 
-  /* 星星 */
-  document.getElementById('ratingStars').innerHTML =
-    Array.from({length:5}, (_,i) =>
-      `<span class="star">${i < Math.round(avgRating) ? '★' : '☆'}</span>`
-    ).join('');
+async function toggleFollow() {
+  const token = typeof getToken === 'function' ? getToken() : localStorage.getItem('mowo_token');
+  if (!token) { showToast('请先登录'); if(typeof openAuthModal==='function') openAuthModal(); return; }
 
-  /* 分布条 */
-  document.getElementById('ratingBars').innerHTML =
-    [5,4,3,2,1].map(n => {
-      const pct = RATING_DIST[n] || 0;
-      return `<div class="rbar-row">
-        <span class="rbar-label">${n}</span>
-        <div class="rbar-track"><div class="rbar-fill" style="width:${pct}%"></div></div>
-        <span class="rbar-pct">${pct}%</span>
-      </div>`;
-    }).join('');
-
-  /* 评价列表 */
-  document.getElementById('reviewList').innerHTML = REVIEWS_DATA.map(r => `
-    <div class="review-item">
-      <div class="review-top">
-        <div class="review-av">${r.avatar}</div>
-        <div>
-          <p class="review-user">${r.user}</p>
-          <div class="review-stars">${Array.from({length:5},(_,i)=>`<span class="star">${i<r.rating?'★':'☆'}</span>`).join('')}</div>
-        </div>
-        <span class="review-date">${r.date}</span>
-      </div>
-      <p class="review-product">商品：<span>${r.product}</span> · ${r.spec}</p>
-      <p class="review-text">${r.text}</p>
-      ${r.imgs.length ? `<div class="review-imgs">${r.imgs.map(img=>`<div class="review-img">${img}</div>`).join('')}</div>` : ''}
-    </div>`).join('');
+  try {
+    const res  = await fetch(`${MOWO_API}/api/users/${creatorId}/follow`, {
+      method: 'POST',
+      headers: { Authorization:`Bearer ${token}` }
+    });
+    const json = await res.json();
+    if (json.success) {
+      isFollowing = json.data.following;
+      updateFollowBtn();
+      showToast(isFollowing ? '已关注，有新作品会通知你' : '已取消关注');
+      // 更新粉丝数显示
+      const el = document.getElementById('statFollowers');
+      if (el) {
+        const cur = parseInt(el.textContent.replace(/[^0-9]/g,'')) || 0;
+        const n = isFollowing ? cur+1 : cur-1;
+        el.textContent = n >= 10000 ? (n/10000).toFixed(1)+'万' : n.toLocaleString();
+      }
+    }
+  } catch(e) { showToast('操作失败，请重试'); }
 }
 
 /* ══════════════════════════════
@@ -651,38 +715,11 @@ function filterWorks(type, btn) {
   renderWorks();
 }
 
-function toggleFollow() {
-  isFollowing = !isFollowing;
-  const btn  = document.getElementById('followBtn');
-  const text = document.getElementById('followBtnText');
-  btn.className = 'follow-btn ' + (isFollowing ? 'following' : 'unfollow');
-  text.textContent = isFollowing ? '已关注' : '+ 关注';
-  showToast(isFollowing ? '已关注，有新作品会通知你' : '已取消关注');
-
-  /* 更新粉丝数 */
-  const creator = CREATORS[creatorId];
-  const el = document.getElementById('statFollowers');
-  const n  = creator.stats.followers + (isFollowing ? 1 : -1);
-  el.textContent = n >= 10000 ? (n/10000).toFixed(1)+'万' : n.toLocaleString();
-}
-
-function goWork(id, type) {
-  location.href = `work-detail.html?type=${type}&id=${id}`;
-}
-
-function goProduct(id) {
-  const p = PRODUCTS_DATA.find(x => x.id === id);
-  if (!p) return;
-  location.href = `work-detail.html?type=product&id=${id}&price=${p.price}&machine=${p.machineType}`;
-}
-
 function shareProfile() {
   try {
     navigator.clipboard.writeText(location.href);
     showToast('主页链接已复制');
-  } catch(e) {
-    showToast('复制失败，请手动复制地址栏链接');
-  }
+  } catch(e) { showToast('复制失败，请手动复制地址栏链接'); }
 }
 
 function toggleMenu() {

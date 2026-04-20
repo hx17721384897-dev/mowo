@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>活动管理 — 哞屋后台</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --white:#FFFFFF;--cream:#F5F3EF;--black:#111110;
+  --gray1:#EBEBEA;--gray2:#C4C3BF;--gray3:#787874;
+  --accent-y:#F5E642;--accent-o:#FF6B35;--accent-g:#8FD694;--accent-b:#7EC8E3;
+  --font:'Nunito','Noto Sans SC',sans-serif;
+  --sidebar-w:220px;--sidebar-collapsed:60px;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:var(--font);background:var(--cream);color:var(--black);min-height:100vh;display:flex;-webkit-font-smoothing:antialiased;}
+
+.sidebar{width:var(--sidebar-w);min-height:100vh;background:var(--black);display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;z-index:100;transition:width .3s cubic-bezier(0.22,1,0.36,1);overflow:hidden;}
+.sidebar.collapsed{width:var(--sidebar-collapsed);}
+.sidebar-logo{padding:24px 20px 20px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px;white-space:nowrap;overflow:hidden;}
+.sidebar-logo-icon{width:32px;height:32px;background:var(--accent-y);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.sidebar-logo-text{font-weight:900;font-size:15px;color:var(--white);}
+.sidebar-logo-sub{font-weight:700;font-size:10px;color:var(--gray3);letter-spacing:.1em;text-transform:uppercase;display:block;margin-top:1px;}
+.sidebar-toggle{position:absolute;top:26px;right:12px;width:28px;height:28px;background:rgba(255,255,255,.08);border:none;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--gray3);font-size:12px;transition:background .2s;}
+.sidebar-toggle:hover{background:rgba(255,255,255,.15);color:var(--white);}
+.sidebar-nav{flex:1;padding:16px 0;overflow-y:auto;overflow-x:hidden;}
+.nav-section-label{font-weight:800;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--gray3);padding:12px 20px 6px;white-space:nowrap;transition:opacity .2s;}
+.sidebar.collapsed .nav-section-label{opacity:0;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;transition:background .15s;white-space:nowrap;overflow:hidden;color:var(--gray3);font-weight:800;font-size:13px;text-decoration:none;position:relative;}
+.nav-item:hover{background:rgba(255,255,255,.06);color:var(--white);}
+.nav-item.active{background:rgba(245,230,66,.12);color:var(--accent-y);}
+.nav-item.active::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent-y);border-radius:0 2px 2px 0;}
+.nav-icon{font-size:16px;flex-shrink:0;width:20px;text-align:center;}
+.nav-label{transition:opacity .2s;}
+.sidebar.collapsed .nav-label{opacity:0;}
+.sidebar-footer{padding:16px 20px;border-top:1px solid rgba(255,255,255,.08);white-space:nowrap;overflow:hidden;}
+.sidebar-user{display:flex;align-items:center;gap:10px;}
+.sidebar-user-avatar{width:32px;height:32px;border-radius:50%;background:var(--accent-y);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:var(--black);flex-shrink:0;}
+.sidebar-user-name{font-weight:800;font-size:12px;color:var(--white);}
+.sidebar-user-role{font-weight:700;font-size:10px;color:var(--gray3);}
+.sidebar.collapsed .sidebar-user-info{display:none;}
+
+.main{margin-left:var(--sidebar-w);flex:1;min-height:100vh;transition:margin-left .3s cubic-bezier(0.22,1,0.36,1);display:flex;flex-direction:column;}
+.main.expanded{margin-left:var(--sidebar-collapsed);}
+.topbar{position:sticky;top:0;z-index:50;background:rgba(245,243,239,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--gray1);padding:0 32px;height:60px;display:flex;align-items:center;justify-content:space-between;}
+.topbar-title{font-weight:900;font-size:18px;}
+.topbar-right{display:flex;align-items:center;gap:12px;}
+.topbar-time{font-weight:700;font-size:12px;color:var(--gray3);}
+.content{padding:28px 32px;flex:1;}
+
+.btn{height:38px;padding:0 16px;border-radius:10px;font-family:var(--font);font-weight:800;font-size:13px;border:none;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+.btn:active{transform:scale(.96);}
+.btn-black{background:var(--black);color:var(--white);}
+.btn-black:hover{opacity:.85;}
+.btn-yellow{background:var(--accent-y);color:var(--black);}
+.btn-yellow:hover{opacity:.85;}
+.btn-ghost{background:var(--white);color:var(--black);border:1.5px solid var(--gray1);}
+.btn-ghost:hover{border-color:var(--black);}
+.btn-red{background:#FFE8E3;color:#C0320A;border:1.5px solid #FFCFC5;}
+.btn-red:hover{background:#FFD5CE;}
+.btn-green{background:#E8F5E9;color:#2E7D32;border:1.5px solid #C8E6C9;}
+.btn-green:hover{background:#C8E6C9;}
+.btn-sm{height:32px;padding:0 12px;font-size:12px;border-radius:8px;}
+.btn:disabled{opacity:.4;pointer-events:none;}
+
+/* 工具栏 */
+.toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:12px;}
+.filter-tabs{display:flex;gap:6px;flex-wrap:wrap;}
+.filter-tab{height:34px;padding:0 14px;border-radius:999px;font-family:var(--font);font-weight:800;font-size:12px;border:1.5px solid var(--gray1);background:var(--white);color:var(--gray3);cursor:pointer;transition:all .15s;}
+.filter-tab:hover{border-color:var(--black);color:var(--black);}
+.filter-tab.active{background:var(--black);color:var(--white);border-color:var(--black);}
+
+/* 活动卡片列表 */
+.activities-list{display:flex;flex-direction:column;gap:14px;}
+
+.activity-card{background:var(--white);border-radius:16px;border:1.5px solid var(--gray1);padding:20px 24px;display:flex;align-items:center;gap:20px;transition:box-shadow .2s;}
+.activity-card:hover{box-shadow:0 4px 20px rgba(0,0,0,.06);}
+.activity-card.inactive{opacity:.6;}
+
+/* 左侧分红率大字 */
+.activity-rate-block{
+  width:80px;height:80px;border-radius:16px;
+  background:var(--accent-y);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.activity-rate-num{font-weight:900;font-size:24px;color:var(--black);line-height:1;}
+.activity-rate-label{font-weight:800;font-size:10px;color:rgba(0,0,0,.5);letter-spacing:.06em;margin-top:2px;}
+
+/* 活动信息 */
+.activity-info{flex:1;min-width:0;}
+.activity-name{font-weight:900;font-size:16px;color:var(--black);margin-bottom:5px;display:flex;align-items:center;gap:8px;}
+.activity-desc{font-weight:700;font-size:13px;color:var(--gray3);margin-bottom:10px;line-height:1.5;}
+.activity-meta{display:flex;gap:16px;flex-wrap:wrap;}
+.activity-meta-item{display:flex;align-items:center;gap:5px;font-weight:700;font-size:12px;color:var(--gray3);}
+.activity-meta-item strong{color:var(--black);font-weight:800;}
+
+/* 状态标签 */
+.status-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;font-weight:800;font-size:11px;white-space:nowrap;}
+.status-active{background:#E8F5E9;color:#2E7D32;}
+.status-ended{background:var(--gray1);color:var(--gray3);}
+.status-upcoming{background:#E3F2FD;color:#1565C0;}
+.status-closed{background:#FFE8E3;color:#C0320A;}
+
+/* 进度条 */
+.activity-progress-wrap{margin-top:10px;}
+.activity-progress-label{display:flex;justify-content:space-between;font-weight:700;font-size:11px;color:var(--gray3);margin-bottom:5px;}
+.activity-progress-bar{height:6px;background:var(--gray1);border-radius:3px;overflow:hidden;}
+.activity-progress-fill{height:100%;background:var(--accent-y);border-radius:3px;transition:width .4s;}
+.activity-progress-fill.ended{background:var(--gray2);}
+.activity-progress-fill.active{background:var(--accent-g);}
+
+/* 右侧操作 */
+.activity-actions{display:flex;flex-direction:column;gap:8px;flex-shrink:0;align-items:flex-end;}
+
+/* 空状态 */
+.empty-state{padding:60px 20px;text-align:center;}
+.empty-icon{font-size:48px;margin-bottom:12px;}
+.empty-text{font-weight:800;font-size:15px;color:var(--gray3);}
+.loading-row{padding:40px;text-align:center;font-weight:700;font-size:14px;color:var(--gray3);}
+
+/* Modal */
+.modal-overlay{display:none;position:fixed;inset:0;z-index:300;background:rgba(17,17,16,.5);align-items:center;justify-content:center;padding:20px;}
+.modal-overlay.show{display:flex;}
+.modal{background:var(--white);border-radius:20px;padding:28px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;}
+.modal-title{font-weight:900;font-size:18px;margin-bottom:6px;}
+.modal-sub{font-weight:700;font-size:13px;color:var(--gray3);margin-bottom:20px;line-height:1.6;}
+.modal-actions{display:flex;gap:10px;margin-top:24px;}
+.modal-actions .btn{flex:1;height:46px;}
+
+.form-field{margin-bottom:16px;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;}
+.form-label{font-weight:800;font-size:12px;letter-spacing:.06em;color:var(--gray3);display:block;margin-bottom:6px;}
+.form-label em{font-style:normal;font-weight:700;color:var(--gray2);margin-left:4px;letter-spacing:0;text-transform:none;}
+.form-input{width:100%;height:44px;border:1.5px solid var(--gray1);border-radius:10px;padding:0 14px;font-family:var(--font);font-weight:700;font-size:14px;color:var(--black);outline:none;transition:border-color .2s;}
+.form-input:focus{border-color:var(--black);}
+.form-textarea{width:100%;min-height:72px;border:1.5px solid var(--gray1);border-radius:10px;padding:12px 14px;font-family:var(--font);font-weight:700;font-size:14px;color:var(--black);outline:none;resize:vertical;transition:border-color .2s;}
+.form-textarea:focus{border-color:var(--black);}
+
+/* 分红率输入特殊样式 */
+.rate-input-wrap{position:relative;}
+.rate-input{width:100%;height:44px;border:1.5px solid var(--gray1);border-radius:10px;padding:0 36px 0 14px;font-family:var(--font);font-weight:700;font-size:14px;color:var(--black);outline:none;transition:border-color .2s;}
+.rate-input:focus{border-color:var(--black);}
+.rate-input-suffix{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-weight:800;font-size:14px;color:var(--gray3);pointer-events:none;}
+
+/* 分红率预览 */
+.rate-preview{margin-top:8px;padding:10px 14px;background:var(--cream);border-radius:10px;display:flex;align-items:center;justify-content:space-between;}
+.rate-preview-label{font-weight:700;font-size:12px;color:var(--gray3);}
+.rate-preview-val{font-weight:900;font-size:18px;color:var(--black);}
+
+/* 警告提示 */
+.warn-box{background:#FFF8E1;border:1.5px solid #FFE082;border-radius:10px;padding:12px 14px;font-weight:700;font-size:12px;color:#B8860B;line-height:1.6;margin-bottom:14px;}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--black);color:var(--white);font-weight:800;font-size:13px;padding:10px 22px;border-radius:999px;opacity:0;pointer-events:none;transition:all .3s;z-index:9999;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%);}
+  .main{margin-left:0 !important;}
+  .content{padding:16px;}
+  .topbar{padding:0 16px;}
+  .activity-card{flex-direction:column;align-items:flex-start;}
+  .activity-actions{flex-direction:row;width:100%;}
+  .activity-actions .btn{flex:1;}
+  .form-row{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<aside class="sidebar" id="sidebar"></aside>
+
+<div class="main" id="main">
+  <header class="topbar">
+    <span class="topbar-title">活动管理</span>
+    <div class="topbar-right">
+      <span class="topbar-time" id="topbarTime"></span>
+      <button class="btn btn-ghost btn-sm" onclick="loadActivities()">↻ 刷新</button>
+    </div>
+  </header>
+
+  <div class="content">
+
+    <div class="toolbar">
+      <div class="filter-tabs" id="filterTabs">
+        <button class="filter-tab active" onclick="setFilter('all')">全部</button>
+        <button class="filter-tab" onclick="setFilter('active')">🟢 进行中</button>
+        <button class="filter-tab" onclick="setFilter('upcoming')">🔵 未开始</button>
+        <button class="filter-tab" onclick="setFilter('ended')">⚫ 已结束</button>
+      </div>
+      <button class="btn btn-black" onclick="openCreateModal()">＋ 新建活动</button>
+    </div>
+
+    <div class="activities-list" id="activitiesList">
+      <div class="loading-row">正在加载…</div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Modal：新建活动 -->
+<div class="modal-overlay" id="createModal">
+  <div class="modal">
+    <div class="modal-title">新建联名活动</div>
+    <div class="modal-sub">活动期间新上架的联名作品可以享受活动分红率（与新手期取较高者，可叠加独家）</div>
+
+    <div class="form-field">
+      <label class="form-label">活动名称 <em>必填</em></label>
+      <input class="form-input" id="cName" placeholder="如：端午节联名活动">
+    </div>
+
+    <div class="form-field">
+      <label class="form-label">活动说明 <em>选填</em></label>
+      <textarea class="form-textarea" id="cDesc" placeholder="简单说明活动背景和规则…"></textarea>
+    </div>
+
+    <div class="form-field">
+      <label class="form-label">活动分红率 <em>必填，0~25%</em></label>
+      <div class="rate-input-wrap">
+        <input class="rate-input" id="cRate" type="number" min="0" max="25" step="0.5"
+          placeholder="如：20" oninput="updateRatePreview()">
+        <span class="rate-input-suffix">%</span>
+      </div>
+      <div class="rate-preview" id="ratePreview" style="display:none;">
+        <span class="rate-preview-label">创作者最终分红率（含独家8%上限25%）</span>
+        <span class="rate-preview-val" id="ratePreviewVal">—</span>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div>
+        <label class="form-label">开始时间 <em>必填</em></label>
+        <input class="form-input" id="cStartAt" type="datetime-local">
+      </div>
+      <div>
+        <label class="form-label">结束时间 <em>必填</em></label>
+        <input class="form-input" id="cEndAt" type="datetime-local">
+      </div>
+    </div>
+
+    <div class="warn-box">
+      ⚠️ 活动创建后分红率不可修改，只能调整结束时间或提前关闭活动。请仔细确认分红率再提交。
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeCreateModal()">取消</button>
+      <button class="btn btn-black" onclick="submitCreate()">创建活动</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal：编辑活动（只能改结束时间和说明） -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <div class="modal-title" id="editModalTitle">编辑活动</div>
+    <div class="modal-sub">活动分红率创建后不可修改，仅可调整结束时间和说明</div>
+
+    <div class="form-field">
+      <label class="form-label">活动说明</label>
+      <textarea class="form-textarea" id="eDesc" placeholder="活动说明…"></textarea>
+    </div>
+
+    <div class="form-field">
+      <label class="form-label">结束时间</label>
+      <input class="form-input" id="eEndAt" type="datetime-local">
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeEditModal()">取消</button>
+      <button class="btn btn-black" onclick="submitEdit()">保存修改</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal：确认关闭活动 -->
+<div class="modal-overlay" id="closeModal">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-title">确认关闭活动</div>
+    <div class="modal-sub" id="closeModalSub">关闭后活动立即结束，已参与的作品分红率快照不受影响，新申请联名的作品不再享有此活动分红率。</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeCloseModal()">取消</button>
+      <button class="btn btn-red" onclick="submitClose()">确认关闭</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = (location.hostname==='127.0.0.1'?'http://127.0.0.1:3001':'http://localhost:3001')
+const ROLE_LABEL = { 0:'用户', 1:'生产端', 2:'管理员', 3:'超级管理员' }
+
+let _token       = localStorage.getItem('mowo_token') || ''
+window.addEventListener('mowoTokenRefreshed', () => { _token = localStorage.getItem('mowo_token') || ''; });
+let _activities  = []
+let _filter      = 'all'
+let _editId      = null
+let _closeId     = null
+
+// ══ 初始化 ══
+window.addEventListener('DOMContentLoaded', async () => {
+  setInterval(() => {
+    document.getElementById('topbarTime').textContent =
+      new Date().toLocaleTimeString('zh-CN', { hour:'2-digit', minute:'2-digit', second:'2-digit' })
+  }, 1000)
+
+  if (!_token) { location.href = 'index.html'; return }
+  try {
+    const p = JSON.parse(atob(_token.split('.')[1]))
+    if ((p.role ?? 0) < 2) { alert('权限不足'); location.href = 'index.html'; return }
+    document.getElementById('sidebarName').textContent   = p.phone || '管理员'
+    document.getElementById('sidebarRole').textContent   = ROLE_LABEL[p.role] || '管理员'
+    document.getElementById('sidebarAvatar').textContent = (p.phone || '管')[0]
+  } catch { location.href = 'index.html'; return }
+
+  await loadActivities()
+})
+
+// ══ 加载活动列表 ══
+async function loadActivities() {
+  document.getElementById('activitiesList').innerHTML = '<div class="loading-row">正在加载…</div>'
+  try {
+    const res  = await fetch(`${API}/api/admin/collab/activities`, {
+      headers: { Authorization: `Bearer ${_token}` }
+    })
+    const json = await res.json()
+    if (!json.success) throw new Error()
+    _activities = json.data
+    renderList()
+  } catch {
+    document.getElementById('activitiesList').innerHTML =
+      '<div class="empty-state"><div class="empty-icon">❌</div><div class="empty-text">加载失败，请刷新重试</div></div>'
+  }
+}
+
+// ══ 渲染列表 ══
+function renderList() {
+  const now = new Date()
+
+  // 筛选
+  let list = _activities.filter(a => {
+    const start = new Date(a.startAt)
+    const end   = new Date(a.endAt)
+    if (_filter === 'active')   return a.isActive && start <= now && end > now
+    if (_filter === 'upcoming') return a.isActive && start > now
+    if (_filter === 'ended')    return !a.isActive || end <= now
+    return true
+  })
+
+  const container = document.getElementById('activitiesList')
+  if (!list.length) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">🎪</div><div class="empty-text">暂无活动</div></div>'
+    return
+  }
+
+  container.innerHTML = list.map(a => {
+    const start    = new Date(a.startAt)
+    const end      = new Date(a.endAt)
+    const isActive = a.isActive && start <= now && end > now
+    const isUpcoming = a.isActive && start > now
+    const isEnded  = !a.isActive || end <= now
+
+    // 状态
+    let statusHtml = ''
+    if (!a.isActive) statusHtml = '<span class="status-badge status-closed">已关闭</span>'
+    else if (isUpcoming) statusHtml = '<span class="status-badge status-upcoming">🔵 未开始</span>'
+    else if (isActive)   statusHtml = '<span class="status-badge status-active">🟢 进行中</span>'
+    else                 statusHtml = '<span class="status-badge status-ended">⚫ 已结束</span>'
+
+    // 进度条
+    const totalMs    = end - start
+    const elapsedMs  = Math.min(Math.max(now - start, 0), totalMs)
+    const progress   = totalMs > 0 ? Math.round((elapsedMs / totalMs) * 100) : 0
+    const fillClass  = isActive ? 'active' : 'ended'
+    const startStr   = start.toLocaleDateString('zh-CN', { month:'2-digit', day:'2-digit', year:'2-digit' })
+    const endStr     = end.toLocaleDateString('zh-CN', { month:'2-digit', day:'2-digit', year:'2-digit' })
+
+    // 剩余时间
+    let remainStr = ''
+    if (isActive) {
+      const diffMs = end - now
+      const diffD  = Math.floor(diffMs / 86400000)
+      const diffH  = Math.floor((diffMs % 86400000) / 3600000)
+      remainStr = diffD > 0 ? `还剩 ${diffD} 天 ${diffH} 小时` : `还剩 ${diffH} 小时`
+    } else if (isUpcoming) {
+      const diffMs = start - now
+      const diffD  = Math.floor(diffMs / 86400000)
+      remainStr = `${diffD} 天后开始`
+    }
+
+    return `
+    <div class="activity-card ${isEnded || !a.isActive ? 'inactive' : ''}">
+      <div class="activity-rate-block">
+        <div class="activity-rate-num">${(a.revenueRate * 100).toFixed(0)}%</div>
+        <div class="activity-rate-label">分红率</div>
+      </div>
+      <div class="activity-info">
+        <div class="activity-name">
+          ${esc(a.name)}
+          ${statusHtml}
+        </div>
+        ${a.description ? `<div class="activity-desc">${esc(a.description)}</div>` : ''}
+        <div class="activity-meta">
+          <div class="activity-meta-item">📅 <strong>${startStr}</strong> 至 <strong>${endStr}</strong></div>
+          ${remainStr ? `<div class="activity-meta-item">⏱ ${remainStr}</div>` : ''}
+        </div>
+        <div class="activity-progress-wrap">
+          <div class="activity-progress-label">
+            <span>活动进度</span>
+            <span>${progress}%</span>
+          </div>
+          <div class="activity-progress-bar">
+            <div class="activity-progress-fill ${fillClass}" style="width:${progress}%;"></div>
+          </div>
+        </div>
+      </div>
+      <div class="activity-actions">
+        ${a.isActive && !isEnded ? `
+          <button class="btn btn-ghost btn-sm" onclick="openEditModal('${a.id}')">编辑</button>
+          <button class="btn btn-red btn-sm" onclick="openCloseModal('${a.id}','${esc(a.name)}')">关闭活动</button>
+        ` : `
+          <span style="font-weight:700;font-size:12px;color:var(--gray3);">已结束</span>
+        `}
+      </div>
+    </div>`
+  }).join('')
+}
+
+// ══ 筛选 ══
+function setFilter(f) {
+  _filter = f
+  document.querySelectorAll('.filter-tab').forEach((t, i) => {
+    const vals = ['all', 'active', 'upcoming', 'ended']
+    t.classList.toggle('active', vals[i] === f)
+  })
+  renderList()
+}
+
+// ══ 分红率预览 ══
+function updateRatePreview() {
+  const rate = parseFloat(document.getElementById('cRate').value)
+  const preview = document.getElementById('ratePreview')
+  const previewVal = document.getElementById('ratePreviewVal')
+  if (isNaN(rate) || rate <= 0) { preview.style.display = 'none'; return }
+  preview.style.display = 'flex'
+  const withExclusive = Math.min(rate + 8, 25)
+  previewVal.textContent = `${rate}% ~ ${withExclusive}%`
+}
+
+// ══ Modal：新建活动 ══
+function openCreateModal() {
+  document.getElementById('cName').value    = ''
+  document.getElementById('cDesc').value    = ''
+  document.getElementById('cRate').value    = ''
+  document.getElementById('cStartAt').value = ''
+  document.getElementById('cEndAt').value   = ''
+  document.getElementById('ratePreview').style.display = 'none'
+
+  // 默认开始时间为现在，结束时间为7天后
+  const now     = new Date()
+  const in7days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+  document.getElementById('cStartAt').value = toDatetimeLocal(now)
+  document.getElementById('cEndAt').value   = toDatetimeLocal(in7days)
+
+  document.getElementById('createModal').classList.add('show')
+}
+function closeCreateModal() { document.getElementById('createModal').classList.remove('show') }
+
+async function submitCreate() {
+  const name   = document.getElementById('cName').value.trim()
+  const desc   = document.getElementById('cDesc').value.trim()
+  const rateRaw = parseFloat(document.getElementById('cRate').value)
+  const startAt = document.getElementById('cStartAt').value
+  const endAt   = document.getElementById('cEndAt').value
+
+  if (!name)               { showToast('请填写活动名称'); return }
+  if (isNaN(rateRaw) || rateRaw <= 0 || rateRaw > 25) {
+    showToast('分红率须在 0~25% 之间'); return
+  }
+  if (!startAt) { showToast('请选择开始时间'); return }
+  if (!endAt)   { showToast('请选择结束时间'); return }
+  if (new Date(endAt) <= new Date(startAt)) {
+    showToast('结束时间必须晚于开始时间'); return
+  }
+
+  try {
+    const res  = await fetch(`${API}/api/admin/collab/activities`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${_token}` },
+      body: JSON.stringify({
+        name,
+        description: desc || null,
+        revenueRate: rateRaw / 100,
+        startAt: new Date(startAt).toISOString(),
+        endAt:   new Date(endAt).toISOString(),
+      })
+    })
+    const json = await res.json()
+    if (json.success) {
+      showToast('✓ 活动已创建')
+      closeCreateModal()
+      await loadActivities()
+    } else {
+      showToast('创建失败：' + json.message)
+    }
+  } catch { showToast('网络错误') }
+}
+
+// ══ Modal：编辑活动 ══
+function openEditModal(activityId) {
+  _editId = activityId
+  const a = _activities.find(x => x.id === activityId)
+  if (!a) return
+  document.getElementById('editModalTitle').textContent = `编辑：${a.name}`
+  document.getElementById('eDesc').value  = a.description || ''
+  document.getElementById('eEndAt').value = toDatetimeLocal(new Date(a.endAt))
+  document.getElementById('editModal').classList.add('show')
+}
+function closeEditModal() { document.getElementById('editModal').classList.remove('show') }
+
+async function submitEdit() {
+  if (!_editId) return
+  const desc  = document.getElementById('eDesc').value.trim()
+  const endAt = document.getElementById('eEndAt').value
+
+  if (!endAt) { showToast('请选择结束时间'); return }
+
+  const a = _activities.find(x => x.id === _editId)
+  if (a && new Date(endAt) <= new Date(a.startAt)) {
+    showToast('结束时间必须晚于开始时间'); return
+  }
+
+  try {
+    const res  = await fetch(`${API}/api/admin/collab/activities/${_editId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${_token}` },
+      body: JSON.stringify({
+        description: desc || null,
+        endAt: new Date(endAt).toISOString(),
+      })
+    })
+    const json = await res.json()
+    if (json.success) {
+      showToast('✓ 活动已更新')
+      closeEditModal()
+      await loadActivities()
+    } else {
+      showToast('更新失败：' + json.message)
+    }
+  } catch { showToast('网络错误') }
+}
+
+// ══ Modal：关闭活动 ══
+function openCloseModal(activityId, name) {
+  _closeId = activityId
+  document.getElementById('closeModalSub').textContent =
+    `确认关闭活动「${name}」？关闭后活动立即结束，新申请联名的作品不再享有此活动分红率，已审核通过作品的分红率快照不受影响。`
+  document.getElementById('closeModal').classList.add('show')
+}
+function closeCloseModal() { document.getElementById('closeModal').classList.remove('show') }
+
+async function submitClose() {
+  if (!_closeId) return
+  try {
+    const res  = await fetch(`${API}/api/admin/collab/activities/${_closeId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${_token}` },
+      body: JSON.stringify({ isActive: false })
+    })
+    const json = await res.json()
+    if (json.success) {
+      showToast('✓ 活动已关闭')
+      closeCloseModal()
+      await loadActivities()
+    } else {
+      showToast('操作失败：' + json.message)
+    }
+  } catch { showToast('网络错误') }
+}
+
+
+
+// ══ Toast ══
+let _toastTimer
+function showToast(msg) {
+  const t = document.getElementById('toast')
+  t.textContent = msg
+  t.classList.add('show')
+  clearTimeout(_toastTimer)
+  _toastTimer = setTimeout(() => t.classList.remove('show'), 2800)
+}
+
+// ══ 工具 ══
+function toDatetimeLocal(date) {
+  const d = new Date(date)
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset())
+  return d.toISOString().slice(0, 16)
+}
+
+function esc(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+}
+</script>
+<script src="../js/auth.js"></script>
+<script src="../js/admin-sidebar.js"></script>
+</body>
+</html>

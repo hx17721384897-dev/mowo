@@ -86,19 +86,42 @@ a { text-decoration:none; color:inherit; }
 .nav-links a:hover { color:var(--black); }
 .nav-links a:hover::after { transform:scaleX(1); }
 
+.nav-right {
+  display:flex; align-items:center; gap:8px;
+}
+
 .nav-login {
   font-weight:800; font-size:13px; letter-spacing:.03em;
   padding:10px 22px; background:var(--black); color:var(--white);
   border-radius:999px; min-height:44px; display:flex; align-items:center;
-  transition:opacity .2s;
+  transition:opacity .2s; border:none; cursor:pointer; font-family:var(--font);
 }
 .nav-login:hover { opacity:.8; }
+
+/* 用户头像（登录后显示） */
+.nav-avatar {
+  width:36px; height:36px; border-radius:50%;
+  background:var(--accent-y); color:var(--black);
+  font-weight:900; font-size:14px;
+  display:flex; align-items:center; justify-content:center;
+  border:none; cursor:pointer; transition:opacity .2s;
+  flex-shrink:0;
+}
+.nav-avatar:hover { opacity:.8; }
+
+/* 桌面端隐藏登录按钮右边的汉堡，移动端隐藏登录文字按钮 */
+@media (max-width:1023px) {
+  .nav-login-text { display:none; }
+}
+@media (min-width:1024px) {
+  .nav-login-text { display:flex; }
+}
 
 /* Burger */
 .burger {
   display:flex; flex-direction:column; gap:5px;
   cursor:pointer; padding:8px; min-width:44px; min-height:44px;
-  justify-content:center; align-items:center;
+  justify-content:center; align-items:center; flex-shrink:0;
 }
 @media (min-width:1024px) { .burger { display:none; } }
 .burger span {
@@ -122,6 +145,33 @@ a { text-decoration:none; color:inherit; }
   color:var(--white); letter-spacing:-.01em; transition:color .2s;
 }
 .mobile-menu a:hover { color:var(--accent-y); }
+
+/* Mobile menu 底部登录区 */
+.mobile-menu-footer {
+  position:absolute; bottom:48px; left:0; right:0;
+  display:flex; flex-direction:column; align-items:center; gap:12px;
+}
+.mobile-login-btn {
+  font-family:var(--font); font-weight:900; font-size:16px; letter-spacing:.05em;
+  padding:14px 48px; background:var(--accent-y); color:var(--black);
+  border-radius:999px; border:none; cursor:pointer;
+  transition:opacity .2s; min-height:52px;
+}
+.mobile-login-btn:hover { opacity:.85; }
+.mobile-menu-avatar {
+  display:flex; flex-direction:column; align-items:center; gap:8px;
+}
+.mobile-menu-avatar-btn {
+  width:56px; height:56px; border-radius:50%;
+  background:var(--accent-y); color:var(--black);
+  font-weight:900; font-size:22px;
+  display:flex; align-items:center; justify-content:center;
+  border:none; cursor:pointer; transition:opacity .2s;
+}
+.mobile-menu-avatar-btn:hover { opacity:.8; }
+.mobile-menu-avatar-name {
+  font-weight:700; font-size:13px; color:rgba(255,255,255,.5); letter-spacing:.05em;
+}
 
 /* ════════════════════════════
    HERO — desktop: left/right split
@@ -740,9 +790,19 @@ footer {
 <div class="mobile-menu" id="mobileMenu">
   <a href="about.html" onclick="closeMenu()">关于我们</a>
   <a href="products.html" onclick="closeMenu()">产品介绍</a>
-  <a href="community.html" onclick="closeMenu()">社区分享</a>
+  <a href="showcase.html" onclick="closeMenu()">画师联名</a>
   <a href="customize-start.html" onclick="closeMenu()">创作中心</a>
   <a href="contact.html" onclick="closeMenu()">联络我们</a>
+  <!-- 底部：未登录显示登录按钮，已登录显示头像 -->
+  <div class="mobile-menu-footer">
+    <!-- 未登录 -->
+    <button class="mobile-login-btn" id="mobileLoginBtn" onclick="closeMenu()">登录 / 注册</button>
+    <!-- 已登录（由 auth.js 控制） -->
+    <div class="mobile-menu-avatar" id="mobileMenuAvatar" style="display:none">
+      <button class="mobile-menu-avatar-btn" id="mobileMenuAvatarBtn" onclick="closeMenu()"></button>
+      <span class="mobile-menu-avatar-name" id="mobileMenuAvatarName"></span>
+    </div>
+  </div>
 </div>
 
 <!-- NAV -->
@@ -754,12 +814,14 @@ footer {
   <ul class="nav-links">
     <li><a href="about.html">关于我们</a></li>
     <li><a href="products.html">产品介绍</a></li>
-    <li><a href="community.html">社区分享</a></li>
+    <li><a href="showcase.html">画师联名</a></li>
     <li><a href="customize-start.html">创作中心</a></li>
     <li><a href="contact.html">联络我们</a></li>
   </ul>
   <div class="nav-right">
-    <button class="nav-login nav-login-btn" id="navLoginBtn">登录</button>
+    <!-- 未登录：显示登录按钮（仅桌面端） -->
+    <button class="nav-login nav-login-btn nav-login-text" id="navLoginBtn">登录</button>
+    <!-- 汉堡菜单（仅移动端） -->
     <div class="burger" id="burger" onclick="toggleMenu()">
       <span></span><span></span><span></span>
     </div>
@@ -891,7 +953,7 @@ footer {
         <span class="cta-tag">📦 收藏 · 送礼</span>
         <h3 class="cta-title">让动画，<br>从屏幕走到手心</h3>
         <p class="cta-desc">成千上万款作品等你挑选。送礼、收藏——情绪不需要理由。</p>
-        <a href="community.html" class="btn btn-secondary btn-sm">浏览社区作品 →</a>
+        <a href="showcase.html" class="btn btn-secondary btn-sm">浏览画师联名 →</a>
       </div>
     </div>
     <div class="cta-card reveal d1">
@@ -982,7 +1044,7 @@ footer {
 <section id="community">
   <div class="comm-head reveal">
     <h2 class="sec-title" style="margin:0">创作者故事</h2>
-    <a href="community.html">进入社区 →</a>
+    <a href="showcase.html">查看联名 →</a>
   </div>
   <div class="spot-grid">
     <div class="spot-card reveal">
@@ -1015,7 +1077,7 @@ footer {
       <p class="foot-desc">让每一帧热爱，都能被触摸。<br>为动画创作者和热爱者而生。</p>
       <div class="foot-ctas">
         <a href="customize-start.html" class="foot-btn foot-btn-white">开始创作</a>
-        <a href="community.html" class="foot-btn foot-btn-ghost">浏览社区</a>
+        <a href="showcase.html" class="foot-btn foot-btn-ghost">画师联名</a>
       </div>
     </div>
     <div class="foot-col">
@@ -1023,7 +1085,7 @@ footer {
       <ul>
         <li><a href="about.html">关于我们</a></li>
         <li><a href="products.html">产品介绍</a></li>
-        <li><a href="community.html">社区分享</a></li>
+        <li><a href="showcase.html">画师联名</a></li>
         <li><a href="customize-start.html">创作中心</a></li>
       </ul>
     </div>
@@ -1092,5 +1154,61 @@ if (window.matchMedia('(pointer:fine)').matches) {
 }
 </script>
 <script src="../js/auth.js"></script>
+<script>
+(function syncMobileAuth() {
+  function applyState() {
+    var navLoginBtn     = document.getElementById('navLoginBtn');
+    var mowoNavUser     = document.getElementById('mowoNavUser');
+    var mobileLoginBtn  = document.getElementById('mobileLoginBtn');
+    var mobileAvatar    = document.getElementById('mobileMenuAvatar');
+    var mobileAvatarBtn = document.getElementById('mobileMenuAvatarBtn');
+    var mobileAvatarName= document.getElementById('mobileMenuAvatarName');
+    if (!mobileLoginBtn) return;
+
+    var loggedIn = (navLoginBtn && navLoginBtn.style.display === 'none')
+                || (mowoNavUser && mowoNavUser.classList.contains('show'));
+
+    if (loggedIn) {
+      mobileLoginBtn.style.display = 'none';
+      if (mobileAvatar) mobileAvatar.style.display = 'flex';
+      var uname   = document.getElementById('mowoNavUname');
+      var initial = document.getElementById('mowoNavAvatarInitial');
+      if (mobileAvatarBtn) mobileAvatarBtn.textContent = (initial && initial.textContent) || '?';
+      if (mobileAvatarName) mobileAvatarName.textContent = (uname && uname.textContent) || '我的账户';
+      if (mobileAvatarBtn) mobileAvatarBtn.onclick = function() {
+        document.getElementById('mowoNavAvatarBtn')?.click();
+        closeMenu();
+      };
+    } else {
+      mobileLoginBtn.style.display = '';
+      if (mobileAvatar) mobileAvatar.style.display = 'none';
+      mobileLoginBtn.onclick = function() { closeMenu(); window.openAuthModal && window.openAuthModal(); };
+    }
+  }
+
+  function startObserving() {
+    var navLoginBtn = document.getElementById('navLoginBtn');
+    var mowoNavUser = document.getElementById('mowoNavUser');
+    if (navLoginBtn) {
+      new MutationObserver(applyState).observe(navLoginBtn, {
+        attributes: true, attributeFilter: ['style']
+      });
+    }
+    if (mowoNavUser) {
+      new MutationObserver(applyState).observe(mowoNavUser, {
+        attributes: true, attributeFilter: ['class']
+      });
+    }
+    applyState();
+  }
+
+  if (document.readyState === 'complete') {
+    startObserving();
+  } else {
+    window.addEventListener('load', startObserving);
+  }
+  setTimeout(applyState, 800);
+})();
+</script>
 </body>
 </html>

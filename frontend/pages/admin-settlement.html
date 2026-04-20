@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>分红结算 — 哞屋后台</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --white:#FFFFFF; --cream:#F5F3EF; --black:#111110;
+  --gray1:#EBEBEA; --gray2:#C4C3BF; --gray3:#787874;
+  --accent-y:#F5E642; --accent-o:#FF6B35; --accent-g:#8FD694; --accent-b:#7EC8E3;
+  --font:'Nunito','Noto Sans SC',sans-serif;
+  --sidebar-w:220px; --sidebar-collapsed:60px;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:var(--font);background:var(--cream);color:var(--black);min-height:100vh;display:flex;-webkit-font-smoothing:antialiased;}
+.sidebar{width:var(--sidebar-w);min-height:100vh;background:var(--black);display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;z-index:100;transition:width .3s cubic-bezier(0.22,1,0.36,1);overflow:hidden;}
+.sidebar.collapsed{width:var(--sidebar-collapsed);}
+.sidebar-logo{padding:24px 20px 20px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px;white-space:nowrap;overflow:hidden;}
+.sidebar-logo-icon{width:32px;height:32px;background:var(--accent-y);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.sidebar-logo-text{font-weight:900;font-size:15px;color:var(--white);}
+.sidebar-logo-sub{font-weight:700;font-size:10px;color:var(--gray3);letter-spacing:.1em;text-transform:uppercase;display:block;margin-top:1px;}
+.sidebar-toggle{position:absolute;top:26px;right:12px;width:28px;height:28px;background:rgba(255,255,255,.08);border:none;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--gray3);font-size:12px;transition:background .2s;}
+.sidebar-toggle:hover{background:rgba(255,255,255,.15);color:var(--white);}
+.sidebar-nav{flex:1;padding:16px 0;overflow-y:auto;overflow-x:hidden;}
+.nav-section-label{font-weight:800;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--gray3);padding:12px 20px 6px;white-space:nowrap;overflow:hidden;opacity:1;transition:opacity .2s;}
+.sidebar.collapsed .nav-section-label{opacity:0;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;transition:background .15s;white-space:nowrap;overflow:hidden;color:var(--gray3);font-weight:800;font-size:13px;text-decoration:none;position:relative;}
+.nav-item:hover{background:rgba(255,255,255,.06);color:var(--white);}
+.nav-item.active{background:rgba(245,230,66,.12);color:var(--accent-y);}
+.nav-item.active::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent-y);border-radius:0 2px 2px 0;}
+.nav-icon{font-size:16px;flex-shrink:0;width:20px;text-align:center;}
+.nav-label{transition:opacity .2s;}
+.sidebar.collapsed .nav-label{opacity:0;}
+.nav-group-header{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;transition:background .15s;white-space:nowrap;overflow:hidden;color:var(--gray3);font-weight:800;font-size:13px;position:relative;user-select:none;}
+.nav-group-header:hover{background:rgba(255,255,255,.06);color:var(--white);}
+.nav-group-header.open{color:var(--accent-y);}
+.nav-group-arrow{margin-left:auto;font-size:10px;transition:transform .2s;flex-shrink:0;}
+.nav-group-header.open .nav-group-arrow{transform:rotate(180deg);}
+.sidebar.collapsed .nav-group-arrow{opacity:0;}
+.nav-sub{max-height:0;overflow:hidden;transition:max-height .3s ease;}
+.nav-sub.open{max-height:400px;}
+.sidebar.collapsed .nav-sub{max-height:0;}
+.nav-sub-item{display:flex;align-items:center;gap:6px;padding:7px 20px 7px 44px;cursor:pointer;transition:background .15s;white-space:nowrap;overflow:hidden;color:var(--gray3);font-weight:700;font-size:12px;text-decoration:none;position:relative;}
+.nav-sub-item:hover{background:rgba(255,255,255,.06);color:var(--white);}
+.sidebar-footer{padding:16px 20px;border-top:1px solid rgba(255,255,255,.08);white-space:nowrap;overflow:hidden;}
+.sidebar-user{display:flex;align-items:center;gap:10px;}
+.sidebar-user-avatar{width:32px;height:32px;border-radius:50%;background:var(--accent-y);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:var(--black);flex-shrink:0;}
+.sidebar-user-name{font-weight:800;font-size:12px;color:var(--white);}
+.sidebar-user-role{font-weight:700;font-size:10px;color:var(--gray3);}
+.sidebar.collapsed .sidebar-user-info{display:none;}
+.main{margin-left:var(--sidebar-w);flex:1;min-height:100vh;transition:margin-left .3s cubic-bezier(0.22,1,0.36,1);display:flex;flex-direction:column;}
+.main.expanded{margin-left:var(--sidebar-collapsed);}
+.topbar{position:sticky;top:0;z-index:50;background:rgba(245,243,239,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--gray1);padding:0 32px;height:60px;display:flex;align-items:center;justify-content:space-between;}
+.topbar-title{font-weight:900;font-size:18px;}
+.topbar-right{display:flex;align-items:center;gap:12px;}
+.topbar-week{font-weight:800;font-size:12px;color:var(--gray3);background:var(--gray1);padding:4px 10px;border-radius:6px;}
+.content{padding:28px 32px;flex:1;}
+.btn{height:38px;padding:0 16px;border-radius:10px;font-family:var(--font);font-weight:800;font-size:13px;border:none;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+.btn:active{transform:scale(.96);}
+.btn-black{background:var(--black);color:var(--white);}
+.btn-black:hover{opacity:.85;}
+.btn-yellow{background:var(--accent-y);color:var(--black);}
+.btn-yellow:hover{opacity:.85;}
+.btn-ghost{background:var(--white);color:var(--black);border:1.5px solid var(--gray1);}
+.btn-ghost:hover{border-color:var(--black);}
+.btn-sm{height:32px;padding:0 12px;font-size:12px;border-radius:8px;}
+.btn:disabled{opacity:.4;pointer-events:none;}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;}
+.stat-card{background:var(--white);border-radius:14px;padding:18px 20px;border:1.5px solid var(--gray1);}
+.stat-label{font-weight:800;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gray3);margin-bottom:8px;}
+.stat-num{font-weight:900;font-size:28px;letter-spacing:-.02em;line-height:1;}
+.stat-num.green{color:#1a7a3c;}
+.stat-num.orange{color:var(--accent-o);}
+.stat-sub{font-weight:700;font-size:11px;color:var(--gray3);margin-top:4px;}
+.view-tabs{display:flex;gap:4px;background:var(--white);border:1.5px solid var(--gray1);border-radius:12px;padding:4px;width:fit-content;margin-bottom:20px;}
+.view-tab{padding:8px 20px;border-radius:8px;border:none;background:transparent;font-family:var(--font);font-weight:800;font-size:13px;cursor:pointer;color:var(--gray3);transition:all .15s;}
+.view-tab.active{background:var(--black);color:var(--white);}
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+.form-input,.form-select{height:38px;border:1.5px solid var(--gray1);border-radius:10px;padding:0 12px;font-family:var(--font);font-weight:700;font-size:13px;color:var(--black);background:var(--white);outline:none;transition:border-color .2s;}
+.form-input:focus,.form-select:focus{border-color:var(--black);}
+.table-wrap{background:var(--white);border-radius:16px;border:1.5px solid var(--gray1);overflow:hidden;}
+.creator-header{display:grid;grid-template-columns:1fr 80px 110px 120px 170px;padding:12px 20px;background:var(--cream);border-bottom:1.5px solid var(--gray1);font-weight:800;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gray3);}
+.creator-row{border-bottom:1px solid var(--gray1);}
+.creator-row:last-child{border-bottom:none;}
+.creator-main{display:grid;grid-template-columns:1fr 80px 110px 120px 170px;padding:16px 20px;align-items:center;cursor:pointer;transition:background .15s;}
+.creator-main:hover{background:var(--cream);}
+.creator-info{display:flex;align-items:center;gap:12px;}
+.avatar{width:38px;height:38px;border-radius:50%;background:var(--gray1);object-fit:cover;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;color:var(--gray3);flex-shrink:0;}
+.creator-name{font-weight:900;font-size:14px;}
+.creator-id{font-weight:700;font-size:11px;color:var(--gray3);font-family:monospace;margin-top:1px;}
+.amount{font-weight:900;font-size:15px;}
+.amount.payout{color:#1a7a3c;}
+.order-cnt{font-weight:700;font-size:13px;color:var(--gray3);}
+.row-actions{display:flex;gap:8px;align-items:center;}
+.order-detail{display:none;background:#FAFAF8;border-top:1px solid var(--gray1);}
+.order-detail.open{display:block;}
+.order-detail-inner{padding:0 20px 12px 70px;}
+.detail-thead{display:grid;grid-template-columns:1fr 72px 64px 90px 90px 100px;padding:10px 0 6px;font-weight:800;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--gray3);border-bottom:1px solid var(--gray1);}
+.detail-row{display:grid;grid-template-columns:1fr 72px 64px 90px 90px 100px;padding:9px 0;border-bottom:1px solid var(--gray1);align-items:center;font-weight:700;font-size:12px;}
+.detail-row:last-child{border-bottom:none;}
+.history-table{width:100%;border-collapse:collapse;font-size:13px;}
+.history-table th{padding:12px 16px;text-align:left;font-weight:800;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--gray3);background:var(--cream);border-bottom:1.5px solid var(--gray1);}
+.history-table td{padding:14px 16px;border-bottom:1px solid var(--gray1);font-weight:700;}
+.history-table tr:last-child td{border-bottom:none;}
+.history-table tbody tr:hover td{background:#FAFAF8;}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;font-weight:800;font-size:11px;}
+.badge-paid{background:#D4EDDA;color:#1a5c2e;}
+.badge-pending{background:#FFF3CD;color:#856404;}
+.badge-failed{background:#FFE0DC;color:#9b1c1c;}
+.modal-overlay{display:none;position:fixed;inset:0;z-index:300;background:rgba(17,17,16,.5);align-items:center;justify-content:center;}
+.modal-overlay.show{display:flex;}
+.modal{background:var(--white);border-radius:20px;padding:32px;width:420px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,.15);}
+.modal-title{font-weight:900;font-size:18px;margin-bottom:4px;}
+.modal-sub{font-weight:700;font-size:12px;color:var(--gray3);margin-bottom:20px;}
+.modal-amount-row{background:var(--cream);border-radius:12px;padding:16px 20px;margin-bottom:16px;}
+.modal-amount{font-weight:900;font-size:32px;color:#1a7a3c;letter-spacing:-.02em;}
+.modal-amount-detail{font-weight:700;font-size:12px;color:var(--gray3);margin-top:4px;}
+.form-label{font-weight:800;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gray3);display:block;margin-bottom:6px;}
+.form-textarea{width:100%;border:1.5px solid var(--gray1);border-radius:10px;padding:10px 12px;font-family:var(--font);font-weight:700;font-size:13px;resize:vertical;outline:none;transition:border-color .2s;}
+.form-textarea:focus{border-color:var(--black);}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;}
+.empty-state{padding:48px 20px;text-align:center;}
+.empty-icon{font-size:36px;margin-bottom:10px;}
+.empty-text{font-weight:800;font-size:14px;color:var(--gray3);}
+.loading-row{padding:32px 20px;text-align:center;font-weight:700;font-size:13px;color:var(--gray3);}
+.pagination{padding:14px 16px;border-top:1px solid var(--gray1);display:flex;align-items:center;justify-content:space-between;}
+.pagination-info{font-weight:700;font-size:12px;color:var(--gray3);}
+.pagination-btns{display:flex;gap:4px;}
+.page-btn{width:32px;height:32px;border-radius:8px;font-family:var(--font);font-weight:800;font-size:12px;border:1.5px solid var(--gray1);background:var(--white);cursor:pointer;transition:all .15s;}
+.page-btn:hover{border-color:var(--black);}
+.page-btn.active{background:var(--black);color:var(--white);border-color:var(--black);}
+.page-btn:disabled{opacity:.4;pointer-events:none;}
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--black);color:var(--white);padding:12px 22px;border-radius:12px;font-weight:800;font-size:13px;opacity:0;transition:all .3s;z-index:999;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<aside class="sidebar" id="sidebar"></aside>
+
+<div class="main" id="main">
+  <header class="topbar">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span class="topbar-title">分红结算</span>
+    </div>
+    <div class="topbar-right">
+      <span class="topbar-week" id="topbarWeek">—</span>
+      <button class="btn btn-ghost btn-sm" onclick="loadPending()">↻ 刷新</button>
+    </div>
+  </header>
+
+  <div class="content">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">本周待打款</div>
+        <div class="stat-num green" id="statPayout">¥0.00</div>
+        <div class="stat-sub" id="statPayoutSub">0 位创作者</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">待结算订单</div>
+        <div class="stat-num" id="statOrders">0</div>
+        <div class="stat-sub">笔联名订单</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">历史累计打款</div>
+        <div class="stat-num orange" id="statHistory">¥0.00</div>
+        <div class="stat-sub">全部已结算</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">本周已结算</div>
+        <div class="stat-num" id="statWeekDone">0</div>
+        <div class="stat-sub">位已完成</div>
+      </div>
+    </div>
+
+    <div class="view-tabs">
+      <button class="view-tab active" id="tabPending" onclick="switchTab('pending')">待结算</button>
+      <button class="view-tab" id="tabHistory" onclick="switchTab('history')">历史记录</button>
+    </div>
+
+    <div id="panelPending">
+      <div class="table-wrap">
+        <div class="creator-header">
+          <div>创作者</div><div>订单数</div><div>应付分红</div><div>实际打款</div><div>操作</div>
+        </div>
+        <div id="pendingList"><div class="loading-row">正在加载…</div></div>
+      </div>
+    </div>
+
+    <div id="panelHistory" style="display:none;">
+      <div class="toolbar">
+        <input class="form-input" id="filterWeek" type="text" placeholder="周次，如 2026-W14" style="width:160px;">
+        <select class="form-select" id="filterStatus" style="width:120px;">
+          <option value="">全部状态</option>
+          <option value="paid">已打款</option>
+          <option value="pending">待打款</option>
+          <option value="failed">失败</option>
+        </select>
+        <button class="btn btn-black btn-sm" onclick="loadHistory(1)">筛选</button>
+      </div>
+      <div class="table-wrap">
+        <table class="history-table">
+          <thead><tr>
+            <th>创作者</th><th>结算周</th><th>订单数</th>
+            <th>应付分红</th><th>储备金扣除</th><th>实际打款</th>
+            <th>状态</th><th>操作人</th><th>打款时间</th><th>备注</th>
+          </tr></thead>
+          <tbody id="historyBody"><tr><td colspan="10" class="loading-row">正在加载…</td></tr></tbody>
+        </table>
+        <div class="pagination" id="historyPagination" style="display:none;">
+          <span class="pagination-info" id="historyPaginationInfo"></span>
+          <div class="pagination-btns" id="historyPaginationBtns"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="settleModal">
+  <div class="modal">
+    <div class="modal-title">确认打款</div>
+    <div class="modal-sub" id="modalSub">将向该创作者打款</div>
+    <div class="modal-amount-row">
+      <div class="modal-amount" id="modalAmount">¥0.00</div>
+      <div class="modal-amount-detail" id="modalDetail"></div>
+    </div>
+    <label class="form-label">备注（选填）</label>
+    <textarea class="form-textarea" id="modalNote" rows="3" placeholder="灵活用工平台任务单号、备注信息等"></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">取消</button>
+      <button class="btn btn-yellow" id="confirmBtn" onclick="confirmSettle()">确认打款</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="../js/auth.js"></script>
+<script>
+const API = (location.hostname==='127.0.0.1'?'http://127.0.0.1:3001':'http://localhost:3001')
+let currentCreatorId = null
+
+function showToast(msg, duration) {
+  duration = duration || 2500
+  const t = document.getElementById('toast')
+  t.textContent = msg
+  t.classList.add('show')
+  setTimeout(function(){ t.classList.remove('show') }, duration)
+}
+
+function getToken(){ return localStorage.getItem('mowo_token') }
+
+async function apiFetch(path, opts) {
+  opts = opts || {}
+  const res = await fetch(API + path, Object.assign({}, opts, {
+    headers: Object.assign({'Content-Type':'application/json','Authorization':'Bearer '+getToken()}, opts.headers||{})
+  }))
+  return res.json()
+}
+
+function escHtml(str){
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+}
+
+
+
+function toggleNavGroup(key){
+  const sub = document.getElementById('navSub-'+key)
+  if(!sub) return
+  const hdr = sub.previousElementSibling
+  sub.classList.toggle('open')
+  if(hdr) hdr.classList.toggle('open')
+}
+
+function switchTab(tab){
+  document.getElementById('tabPending').classList.toggle('active', tab==='pending')
+  document.getElementById('tabHistory').classList.toggle('active', tab==='history')
+  document.getElementById('panelPending').style.display = tab==='pending' ? '' : 'none'
+  document.getElementById('panelHistory').style.display = tab==='history' ? '' : 'none'
+  if(tab==='history') loadHistory(1)
+}
+
+async function loadPending(){
+  document.getElementById('pendingList').innerHTML = '<div class="loading-row">正在加载…</div>'
+  const data = await apiFetch('/api/admin/settlement/pending')
+  if(!data.success){ showToast('加载失败：'+data.message); return }
+  const d = data.data
+  document.getElementById('topbarWeek').textContent = d.currentWeek
+  document.getElementById('statPayout').textContent = '¥'+d.totalPayout.toFixed(2)
+  document.getElementById('statPayoutSub').textContent = d.creators.length+' 位创作者'
+  document.getElementById('statOrders').textContent = d.orderCount
+  if(d.creators.length===0){
+    document.getElementById('pendingList').innerHTML = '<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-text">暂无待结算订单，本周所有创作者均已结算</div></div>'
+    return
+  }
+  document.getElementById('pendingList').innerHTML = d.creators.map(function(c){
+    return '<div class="creator-row" id="row-'+c.creatorId+'">'+
+      '<div class="creator-main" onclick="toggleDetail(\''+c.creatorId+'\')">'+
+        '<div class="creator-info">'+
+          (c.avatarUrl ? '<img class="avatar" src="'+escHtml(c.avatarUrl)+'" alt="">' :
+            '<div class="avatar">'+escHtml((c.nickname||'?')[0].toUpperCase())+'</div>')+
+          '<div><div class="creator-name">'+escHtml(c.nickname)+'</div>'+
+          '<div class="creator-id">…'+c.creatorId.slice(-8)+'</div></div>'+
+        '</div>'+
+        '<div class="order-cnt">'+c.orderCount+' 笔</div>'+
+        '<div class="amount">¥'+c.totalRevenue.toFixed(2)+'</div>'+
+        '<div class="amount payout">¥'+c.totalPayout.toFixed(2)+'</div>'+
+        '<div class="row-actions" onclick="event.stopPropagation()">'+
+          '<button class="btn btn-ghost btn-sm" onclick="toggleDetail(\''+c.creatorId+'\')">明细 ▾</button>'+
+          '<button class="btn btn-yellow btn-sm" onclick="openModal(\''+c.creatorId+'\',\''+escHtml(c.nickname)+'\','+c.totalPayout+','+c.orderCount+','+c.totalRevenue+','+c.totalReserve+')">打款</button>'+
+        '</div>'+
+      '</div>'+
+      '<div class="order-detail" id="detail-'+c.creatorId+'">'+
+        '<div class="order-detail-inner">'+
+          '<div class="detail-thead"><span>作品名称</span><span>售价</span><span>分红率</span><span>应付分红</span><span>储备金</span><span>实际到账</span></div>'+
+          c.orders.map(function(o){
+            return '<div class="detail-row">'+
+              '<span style="font-weight:900;">'+escHtml(o.workTitle)+'</span>'+
+              '<span>¥'+o.salePrice.toFixed(2)+'</span>'+
+              '<span>'+(o.revenueRate*100).toFixed(0)+'%</span>'+
+              '<span>¥'+o.revenueAmount.toFixed(2)+'</span>'+
+              '<span style="color:var(--gray3);">-¥'+o.reserveAmount.toFixed(2)+'</span>'+
+              '<span style="color:#1a7a3c;font-weight:900;">¥'+o.payoutAmount.toFixed(2)+'</span>'+
+            '</div>'
+          }).join('')+
+        '</div>'+
+      '</div>'+
+    '</div>'
+  }).join('')
+}
+
+function toggleDetail(id){
+  const el = document.getElementById('detail-'+id)
+  if(el) el.classList.toggle('open')
+}
+
+function openModal(creatorId, nickname, payout, orderCount, revenue, reserve){
+  currentCreatorId = creatorId
+  document.getElementById('modalSub').textContent = '将向创作者「'+nickname+'」打款'
+  document.getElementById('modalAmount').textContent = '¥'+payout.toFixed(2)
+  document.getElementById('modalDetail').textContent = '共 '+orderCount+' 笔订单 · 应付分红 ¥'+revenue.toFixed(2)+' · 储备金扣除 ¥'+reserve.toFixed(2)
+  document.getElementById('modalNote').value = ''
+  const btn = document.getElementById('confirmBtn')
+  btn.disabled = false
+  btn.textContent = '确认打款'
+  document.getElementById('settleModal').classList.add('show')
+}
+
+function closeModal(){
+  document.getElementById('settleModal').classList.remove('show')
+  currentCreatorId = null
+}
+
+async function confirmSettle(){
+  if(!currentCreatorId) return
+  const btn = document.getElementById('confirmBtn')
+  const note = document.getElementById('modalNote').value.trim()
+  btn.disabled = true
+  btn.textContent = '处理中…'
+  const data = await apiFetch('/api/admin/settlement/settle',{
+    method:'POST',
+    body:JSON.stringify({creatorId:currentCreatorId, note:note||undefined})
+  })
+  if(data.success){
+    closeModal()
+    showToast('✅ 结算成功，已打款 ¥'+data.data.payoutAmount.toFixed(2))
+    loadPending()
+    loadHistoryStat()
+  } else {
+    showToast('❌ 结算失败：'+data.message)
+    btn.disabled = false
+    btn.textContent = '确认打款'
+  }
+}
+
+async function loadHistory(page){
+  page = page || 1
+  const week = document.getElementById('filterWeek').value.trim()
+  const status = document.getElementById('filterStatus').value
+  let url = '/api/admin/settlement/history?page='+page+'&limit=20'
+  if(week) url += '&settlementWeek='+encodeURIComponent(week)
+  if(status) url += '&status='+status
+  document.getElementById('historyBody').innerHTML = '<tr><td colspan="10" class="loading-row">正在加载…</td></tr>'
+  const data = await apiFetch(url)
+  if(!data.success){ showToast('加载失败'); return }
+  const records = data.data.records
+  const pagination = data.data.pagination
+  if(records.length===0){
+    document.getElementById('historyBody').innerHTML = '<tr><td colspan="10"><div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">暂无结算记录</div></div></td></tr>'
+    document.getElementById('historyPagination').style.display = 'none'
+    return
+  }
+  const statusLabel = {paid:'已打款',pending:'待打款',failed:'失败'}
+  document.getElementById('historyBody').innerHTML = records.map(function(r){
+    return '<tr>'+
+      '<td><div style="font-weight:900;">'+escHtml(r.nickname)+'</div><div style="font-size:11px;color:var(--gray3);font-family:monospace;">…'+r.creatorId.slice(-8)+'</div></td>'+
+      '<td style="font-family:monospace;font-size:12px;">'+r.settlementWeek+'</td>'+
+      '<td>'+r.orderCount+'</td>'+
+      '<td>¥'+r.totalRevenue.toFixed(2)+'</td>'+
+      '<td style="color:var(--gray3);">-¥'+r.reserveDeducted.toFixed(2)+'</td>'+
+      '<td style="font-weight:900;color:#1a7a3c;">¥'+r.payoutAmount.toFixed(2)+'</td>'+
+      '<td><span class="badge badge-'+r.status+'">'+(statusLabel[r.status]||r.status)+'</span></td>'+
+      '<td>'+escHtml(r.settledBy||'-')+'</td>'+
+      '<td style="color:var(--gray3);font-size:12px;">'+(r.settledAt ? new Date(r.settledAt).toLocaleDateString('zh-CN') : '-')+'</td>'+
+      '<td style="color:var(--gray3);font-size:12px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+escHtml(r.note||'')+'">'+escHtml(r.note||'-')+'</td>'+
+    '</tr>'
+  }).join('')
+  const pg = document.getElementById('historyPagination')
+  if(pagination.totalPages<=1){ pg.style.display='none'; return }
+  pg.style.display = 'flex'
+  document.getElementById('historyPaginationInfo').textContent = '共 '+pagination.total+' 条'
+  let btns = '<button class="page-btn" '+(page<=1?'disabled':'')+' onclick="loadHistory('+(page-1)+')">‹</button>'
+  for(let i=1;i<=pagination.totalPages;i++){
+    if(i===1||i===pagination.totalPages||Math.abs(i-page)<=1)
+      btns += '<button class="page-btn '+(i===page?'active':'')+'" onclick="loadHistory('+i+')">'+i+'</button>'
+    else if(Math.abs(i-page)===2)
+      btns += '<span style="padding:0 2px;color:var(--gray3);">…</span>'
+  }
+  btns += '<button class="page-btn" '+(page>=pagination.totalPages?'disabled':'')+' onclick="loadHistory('+(page+1)+')">›</button>'
+  document.getElementById('historyPaginationBtns').innerHTML = btns
+}
+
+async function loadHistoryStat(){
+  const data = await apiFetch('/api/admin/settlement/history?limit=500&status=paid')
+  if(!data.success) return
+  const total = data.data.records.reduce(function(s,r){ return s+r.payoutAmount },0)
+  document.getElementById('statHistory').textContent = '¥'+total.toFixed(2)
+  const week = document.getElementById('topbarWeek').textContent
+  const weekDone = data.data.records.filter(function(r){ return r.settlementWeek===week }).length
+  document.getElementById('statWeekDone').textContent = weekDone
+}
+
+window.addEventListener('DOMContentLoaded', async function(){
+  const userStr = localStorage.getItem('mowo_user')
+  if(userStr){
+    try{
+      const u = JSON.parse(userStr)
+      document.getElementById('sidebarName').textContent = u.nickname||u.phone||'管理员'
+      document.getElementById('sidebarAvatar').textContent = (u.nickname||'管')[0].toUpperCase()
+      const roleMap = {0:'用户',1:'生产端',2:'管理员',3:'超管'}
+      document.getElementById('sidebarRole').textContent = roleMap[u.role]||'—'
+    }catch(e){}
+  }
+  await loadPending()
+  loadHistoryStat()
+})
+</script>
+<script src="../js/admin-sidebar.js"></script>
+</body>
+</html>

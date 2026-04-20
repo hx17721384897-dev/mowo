@@ -5,11 +5,101 @@ import archiver from 'archiver'
 import https    from 'https'
 import http     from 'http'
 import bwipjs   from 'bwip-js'
+import crypto   from 'crypto'
 import { Document, Packer, Paragraph, Table, TableRow, TableCell,
          ImageRun, AlignmentType, WidthType, BorderStyle,
          VerticalAlign, TextRun, ShadingType } from 'docx'
+import { startWipFrame, makeIdempotencyKey } from '../lib/inventory.js'
 
 export default async function adminRoutes(fastify) {
+
+  // ── 辅助函数：订单确认收货时处理联名分红 ──
+  // 在 adminRoutes 函数内部定义，供状态更新接口调用
+  async function handleReceivedOrder(tx, order) {
+    // 只处理联名订单
+    if (order.sourceType !== 'collab' || !order.collabWorkId) return
+
+    // 查联名作品信息（获取分红率）
+    const collabWork = await tx.collabWork.findUnique({
+      where: { id: order.collabWorkId },
+      select: { id: true, creatorId: true, revenueRate: true, status: true }
+    })
+    if (!collabWork || collabWork.status !== 'approved') return
+
+    // 防重复：检查该订单是否已有 collab_order 记录
+    const existing = await tx.collabOrder.findFirst({
+      where: { orderId: order.id }
+    })
+    if (existing) return
+
+    // 计算分红金额
+    // salePrice 用 SKU 价格，如果取不到就用0（后续完善）
+    const sku = order.skuId ? await tx.machineModelSku.findUnique({
+      where: { id: order.skuId },
+      select: { price: true }
+    }) : null
+    const salePrice     = sku ? Number(sku.price) : 0
+    const revenueRate   = collabWork.revenueRate || 0
+    const revenueAmount = +(salePrice * revenueRate).toFixed(4)
+    const reserveRate   = 0.15
+    const reserveAmount = +(revenueAmount * reserveRate).toFixed(4)
+    const payoutAmount  = +(revenueAmount - reserveAmount).toFixed(4)
+    const coolingEndAt  = new Date(Date.now() + 15 * 24 * 3600 * 1000) // 15天后
+    const now           = new Date()
+
+    // 1. 创建 collab_order 记录，状态为冷却中
+    const collabOrder = await tx.collabOrder.create({
+      data: {
+        orderId:         order.id,
+        collabWorkId:    order.collabWorkId,
+        creatorId:       collabWork.creatorId,
+        salePrice,
+        revenueRate,
+        revenueAmount,
+        reserveRate,
+        reserveAmount,
+        payoutAmount,
+        revenueStatus:   'cooling',   // 确认收货 → 冷却中
+        coolingEndAt,
+        settlementStatus: 'pending'
+      }
+    })
+
+    // 2. 写储备金扣入记录
+    // upsert creator_reserve（如果没有则自动创建）
+    const reserve = await tx.creatorReserve.upsert({
+      where:  { creatorId: collabWork.creatorId },
+      create: {
+        creatorId:        collabWork.creatorId,
+        totalReserved:    reserveAmount,
+        frozenAmount:     0,
+        releasableAmount: reserveAmount,
+        releasedAmount:   0,
+        nextReleaseAt:    new Date(coolingEndAt.getTime() + 75 * 24 * 3600 * 1000), // 冷却15天+储备金90天
+        nextReleaseAmount: reserveAmount
+      },
+      update: {
+        totalReserved:    { increment: reserveAmount },
+        releasableAmount: { increment: reserveAmount }
+      }
+    })
+
+    // 写储备金流水
+    if (reserveAmount > 0) {
+      await tx.reserveLog.create({
+        data: {
+          creatorId:     collabWork.creatorId,
+          reserveId:     reserve.id,
+          collabOrderId: collabOrder.id,
+          actionType:    'deduct',
+          amount:        reserveAmount,
+          balanceAfter:  reserve.releasableAmount,
+          releaseAt:     new Date(coolingEndAt.getTime() + 75 * 24 * 3600 * 1000), // 收货+90天解冻
+          note:          `订单 ${order.orderNo} 联名分红储备金`
+        }
+      })
+    }
+  }
 
   // GET /api/admin/stats — 订单统计
   fastify.get('/stats', {
@@ -258,26 +348,41 @@ export default async function adminRoutes(fastify) {
     if (!order) return reply.code(404).send({ success: false, message: '订单不存在' })
 
     const oldStatus = order.status
-    const updated   = await fastify.prisma.customizeOrder.update({
-      where: { orderNo }, data: { status },
-      select: { orderNo: true, status: true, updatedAt: true }
+
+    await fastify.prisma.$transaction(async (tx) => {
+      // 1. 更新订单状态
+      await tx.customizeOrder.update({
+        where: { orderNo }, data: { status }
+      })
+
+      // 2. 订单变为「已收货」时，触发联名分红逻辑
+      if (status === 'received' && oldStatus !== 'received') {
+        await handleReceivedOrder(tx, order)
+      }
+
+      // 3. 写审计日志
+      try {
+        await tx.operationLog.create({
+          data: {
+            userId: request.user.userId, userRole: request.user.role ?? 0,
+            method: 'PUT', path: request.url,
+            action: `将订单 ${orderNo} 状态从「${statusLabel[oldStatus]}」修改为「${statusLabel[status]}」`,
+            targetId: orderNo,
+            before: JSON.stringify({ status: oldStatus }),
+            after:  JSON.stringify({ status }),
+            ip: request.ip || null
+          }
+        })
+      } catch(e) {}
     })
 
-    try {
-      await fastify.prisma.operationLog.create({
-        data: {
-          userId: request.user.userId, userRole: request.user.role ?? 0,
-          method: 'PUT', path: request.url,
-          action: `将订单 ${orderNo} 状态从「${statusLabel[oldStatus]}」修改为「${statusLabel[status]}」`,
-          targetId: orderNo,
-          before: JSON.stringify({ status: oldStatus }),
-          after:  JSON.stringify({ status }),
-          ip: request.ip || null
-        }
-      })
-    } catch(e) {}
-
-    return reply.send({ success: true, message: '状态已更新', data: updated })
+    return reply.send({
+      success: true,
+      message: status === 'received' && order.sourceType === 'collab'
+        ? '状态已更新，联名分红已进入15天冷却期'
+        : '状态已更新',
+      data: { orderNo, status }
+    })
   })
 
   // PUT /api/admin/orders/batch-status — 批量更新状态
@@ -647,9 +752,18 @@ export default async function adminRoutes(fastify) {
     await Promise.all(seqUpdates.map(({ orderNo, seqNo }) =>
       fastify.prisma.customizeOrder.update({
         where: { orderNo },
-        data:  { status: 'locked', seqNo, batchId }
+        data:  { status: 'locked', seqNo, batchId, lockStatus: 'LOCKED' }
       })
     ))
+
+    // 9.5 创建 Production_Batch 记录（若不存在）
+    try {
+      await fastify.prisma.productionBatch.upsert({
+        where:  { id: batchId },
+        create: { id: batchId, operatorId: req.user.userId, status: 'Open' },
+        update: {}
+      })
+    } catch(e) {}
 
     try {
       const exportedNos = seqUpdates.map(u => u.orderNo)
@@ -828,6 +942,17 @@ export default async function adminRoutes(fastify) {
     })
     if (!orders.length)
       return reply.code(400).send({ success: false, message: '没有找到待生产订单' })
+
+    // ── 授权到期检查：CBR SKU 过期则拒绝导出 ──
+    const allSkuIdsForCheck = [...new Set(orders.map(o => o.skuId).filter(Boolean))]
+    const expiredSkus = await fastify.prisma.machineModelSku.findMany({
+      where: { id: { in: allSkuIdsForCheck }, licenseStatus: 'Expired' },
+      select: { id: true, skuCode: true }
+    })
+    if (expiredSkus.length) {
+      const codes = expiredSkus.map(s => s.skuCode || s.id).join(', ')
+      return reply.code(400).send({ success: false, message: `以下 CBR SKU 授权已过期，无法导出：${codes}`, code: 'LICENSE_EXPIRED' })
+    }
 
     // 用订单的 batchId 命名（与导出地址保持一致）
     // 取第一个有 batchId 的订单，如果没有则用当前时间兜底
@@ -1123,11 +1248,67 @@ export default async function adminRoutes(fastify) {
 
     await archive.finalize()
 
+    // ── 导出后处理：Production_Batch / Batch_Item / Frame_Instance / InventoryService ──
+    try {
+      // (a) 确保 Production_Batch 存在，状态置为 Locked
+      await fastify.prisma.productionBatch.upsert({
+        where:  { id: ts },
+        create: { id: ts, operatorId: request.user.userId, status: 'Locked' },
+        update: { status: 'Locked' }
+      })
+
+      // (b) 聚合各 SKU 计划数量 → Batch_Item
+      const skuQtyMap = {}
+      for (const o of orders) {
+        skuQtyMap[o.skuId] = (skuQtyMap[o.skuId] || 0) + 1
+      }
+      for (const [skuId, qty] of Object.entries(skuQtyMap)) {
+        const skuInfo = await fastify.prisma.machineModelSku.findUnique({ where: { id: skuId } })
+        await fastify.prisma.batchItem.upsert({
+          where:  { batchId_skuId: { batchId: ts, skuId } },
+          create: { batchId: ts, skuId, skuCode: skuInfo?.skuCode ?? null, plannedQty: qty },
+          update: { plannedQty: { increment: qty } }
+        })
+      }
+
+      // (c) 创建 Frame_Instance 并锁定（content_hash 用 ossPath 计算）
+      for (const o of orders) {
+        const ossPath   = o.ossPath || ''
+        const frameUrls = (() => { try { return JSON.parse(o.frameUrls) } catch { return [] } })()
+        const hashInput = `${o.id}:${ossPath}:${frameUrls.join(',')}`
+        const contentHash = crypto.createHash('sha256').update(hashInput).digest('hex')
+
+        await fastify.prisma.frameInstance.upsert({
+          where:  { id: `fi_${o.id}` },
+          create: {
+            id: `fi_${o.id}`,
+            orderId:         o.id,
+            templateSkuCode: (await fastify.prisma.machineModelSku.findUnique({ where: { id: o.skuId } }))?.skuCode ?? '',
+            imageUrl:        frameUrls[0] ?? null,
+            printFileUrl:    ossPath || null,
+            contentHash,
+            status:          'Locked'
+          },
+          update: { contentHash, status: 'Locked' }
+        })
+      }
+
+      // (d) 通过 InventoryService 将 locked → wip_frame + wip_kit（各1件/单）
+      for (const [skuId, qty] of Object.entries(skuQtyMap)) {
+        const batchOrderNos = orders.filter(o => o.skuId === skuId).map(o => o.orderNo).join(',')
+        await startWipFrame(fastify.prisma, skuId, qty, ts, makeIdempotencyKey('wip_frame', ts, skuId))
+          .catch(() => {})
+      }
+    } catch(e) {
+      // 后处理失败不影响已发送的 ZIP，仅记录日志
+      fastify.log.error('batch-export-frames post-processing error:', e)
+    }
+
     // 更新状态为生产中
     try {
       await fastify.prisma.customizeOrder.updateMany({
         where: { orderNo: { in: orders.map(o => o.orderNo) } },
-        data:  { status: 'producing' }
+        data:  { status: 'producing', lockStatus: 'LOCKED' }
       })
     } catch(e) {}
 
@@ -1533,5 +1714,163 @@ export default async function adminRoutes(fastify) {
     })
   })
 
+  // ══════════════════════════════════════════
+  // Batch_Item 生产看板
+  // ══════════════════════════════════════════
+
+  // GET /api/admin/batches/:batchId/progress
+  // 返回批次内各SKU的 planned/actual/defect/remaining
+  fastify.get('/batches/:batchId/progress', {
+    preHandler: [fastify.requireRole(1)]
+  }, async (req, reply) => {
+    const { batchId } = req.params
+    const items = await fastify.prisma.batchItem.findMany({
+      where: { batchId },
+      orderBy: { skuCode: 'asc' }
+    })
+    if (!items.length)
+      return reply.code(404).send({ success: false, message: '批次不存在或无 Batch_Item 记录' })
+
+    const result = items.map(item => ({
+      ...item,
+      remaining: Math.max(0, item.plannedQty - item.actualQty - item.defectQty),
+      completePct: item.plannedQty > 0 ? Math.round(item.actualQty / item.plannedQty * 100) : 0
+    }))
+
+    const total = result.reduce((acc, i) => {
+      acc.planned += i.plannedQty
+      acc.actual  += i.actualQty
+      acc.defect  += i.defectQty
+      return acc
+    }, { planned: 0, actual: 0, defect: 0 })
+
+    return reply.send({ success: true, data: { batchId, items: result, total } })
+  })
+
+  // POST /api/admin/batches/:batchId/items/:skuId/defect
+  // 生产端点击「报废重制」：defect_qty +1
+  fastify.post('/batches/:batchId/items/:skuId/defect', {
+    preHandler: [fastify.requireRole(1)]
+  }, async (req, reply) => {
+    const { batchId, skuId } = req.params
+    const item = await fastify.prisma.batchItem.findUnique({
+      where: { batchId_skuId: { batchId, skuId } }
+    })
+    if (!item) return reply.code(404).send({ success: false, message: 'Batch_Item 记录不存在' })
+
+    const updated = await fastify.prisma.batchItem.update({
+      where: { batchId_skuId: { batchId, skuId } },
+      data:  { defectQty: { increment: 1 } }
+    })
+    return reply.send({ success: true, data: updated })
+  })
+
+  // POST /api/admin/batches/:batchId/items/:skuId/complete
+  // 扫码配对成功：actual_qty +1（生产端调用）
+  fastify.post('/batches/:batchId/items/:skuId/complete', {
+    preHandler: [fastify.requireRole(1)]
+  }, async (req, reply) => {
+    const { batchId, skuId } = req.params
+    const item = await fastify.prisma.batchItem.findUnique({
+      where: { batchId_skuId: { batchId, skuId } }
+    })
+    if (!item) return reply.code(404).send({ success: false, message: 'Batch_Item 记录不存在' })
+
+    const updated = await fastify.prisma.batchItem.update({
+      where: { batchId_skuId: { batchId, skuId } },
+      data:  { actualQty: { increment: 1 } }
+    })
+    return reply.send({ success: true, data: updated })
+  })
+
+  // ══════════════════════════════════════════
+  // 正版验证码打印接口（auth_codes）
+  // ══════════════════════════════════════════
+
+  // GET /api/admin/auth-codes/order/:orderId
+  // 查看单个订单的正版验证码
+  fastify.get('/auth-codes/order/:orderId', {
+    preHandler: [fastify.requireRole(2)]
+  }, async (req, reply) => {
+    const { orderId } = req.params
+    const codes = await fastify.prisma.authCode.findMany({
+      where: { orderId },
+      orderBy: { issuedAt: 'desc' }
+    })
+    return reply.send({ success: true, data: codes })
+  })
+
+  // GET /api/admin/auth-codes/batch/:batchId
+  // 导出批次所有正版验证码（用于批量打印）
+  // Query: ?format=csv（默认 JSON）
+  fastify.get('/auth-codes/batch/:batchId', {
+    preHandler: [fastify.requireRole(2)]
+  }, async (req, reply) => {
+    const { batchId }    = req.params
+    const { format = 'json' } = req.query
+
+    // 找到该批次所有订单
+    const orders = await fastify.prisma.customizeOrder.findMany({
+      where:  { batchId },
+      select: { id: true, orderNo: true, receiverName: true, skuId: true }
+    })
+    if (!orders.length)
+      return reply.code(404).send({ success: false, message: '批次不存在或无订单' })
+
+    const orderIds = orders.map(o => o.id)
+    const codes    = await fastify.prisma.authCode.findMany({ where: { orderId: { in: orderIds } } })
+
+    const orderMap = Object.fromEntries(orders.map(o => [o.id, o]))
+    const skuIds   = [...new Set(orders.map(o => o.skuId))]
+    const skus     = await fastify.prisma.machineModelSku.findMany({ where: { id: { in: skuIds } } })
+    const skuMap   = Object.fromEntries(skus.map(s => [s.id, s]))
+
+    const result = codes.map(c => ({
+      code:         c.code,
+      orderNo:      orderMap[c.orderId]?.orderNo ?? '—',
+      receiverName: orderMap[c.orderId]?.receiverName ?? '—',
+      skuCode:      skuMap[orderMap[c.orderId]?.skuId]?.skuCode ?? '—',
+      issuedAt:     c.issuedAt,
+    }))
+
+    if (format === 'csv') {
+      const header = '验证码,订单号,收件人,SKU编码,发货时间'
+      const lines  = result.map(r =>
+        [r.code, r.orderNo, r.receiverName, r.skuCode, r.issuedAt?.toISOString() ?? ''].join(',')
+      )
+      const csv = '\uFEFF' + header + '\n' + lines.join('\n')
+      reply.raw.setHeader('Content-Type', 'text/csv; charset=utf-8')
+      reply.raw.setHeader('Content-Disposition', `attachment; filename="auth_codes_${batchId}.csv"`)
+      return reply.send(csv)
+    }
+
+    return reply.send({ success: true, data: result })
+  })
+
+  // POST /api/admin/auth-codes/generate/:orderId
+  // 手动生成正版验证码（发货时未自动生成的补救）
+  fastify.post('/auth-codes/generate/:orderId', {
+    preHandler: [fastify.requireRole(2)]
+  }, async (req, reply) => {
+    const { orderId } = req.params
+
+    const order = await fastify.prisma.customizeOrder.findUnique({ where: { id: orderId } })
+    if (!order) return reply.code(404).send({ success: false, message: '订单不存在' })
+
+    // 已有则直接返回
+    const existing = await fastify.prisma.authCode.findFirst({ where: { orderId } })
+    if (existing) return reply.send({ success: true, data: existing, message: '该订单已有验证码' })
+
+    const sku       = await fastify.prisma.machineModelSku.findUnique({ where: { id: order.skuId } })
+    const year      = new Date().getFullYear().toString().slice(2)
+    const random    = Math.random().toString(36).slice(2, 8).toUpperCase()
+    const checkChar = String.fromCharCode(65 + ((order.orderNo?.length ?? 0) + (sku?.id?.length ?? 0)) % 26)
+    const code      = `${year}${random}${checkChar}`
+
+    const authCode = await fastify.prisma.authCode.create({
+      data: { code, orderId, skuId: order.skuId, issuedAt: new Date() }
+    })
+    return reply.send({ success: true, data: authCode })
+  })
 
 }

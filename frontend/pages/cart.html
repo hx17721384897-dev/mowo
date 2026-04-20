@@ -73,6 +73,12 @@ a{text-decoration:none;}
 .cart-layout{display:grid;gap:24px;align-items:start;}
 @media(min-width:1024px){.cart-layout{grid-template-columns:1fr 340px;}}
 
+/* TABS */
+.cart-tabs{display:flex;gap:6px;margin-bottom:20px;}
+.tab-btn{padding:8px 20px;border-radius:999px;border:2px solid var(--gray1);font-weight:800;font-size:13px;color:var(--gray3);transition:all .18s;background:var(--white);cursor:pointer;}
+.tab-btn:hover{border-color:var(--gray2);color:var(--black);}
+.tab-btn.active{background:var(--black);color:var(--white);border-color:var(--black);}
+
 /* TOOLBAR */
 .toolbar{display:flex;align-items:center;gap:14px;padding:0 0 16px;border-bottom:1.5px solid var(--gray1);margin-bottom:16px;}
 .chk{width:22px;height:22px;border-radius:7px;border:2px solid var(--gray2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .18s;}
@@ -86,58 +92,49 @@ a{text-decoration:none;}
 .btn-batch-del:hover{color:var(--red);}
 .btn-batch-del:disabled{opacity:.3;cursor:not-allowed;}
 
-/* CART ITEMS */
-.cart-list{display:flex;flex-direction:column;gap:12px;}
+/* CART LIST */
+.cart-list{display:flex;flex-direction:column;gap:16px;}
 
-.cart-item{
-  background:var(--white);border-radius:20px;
-  border:1.5px solid var(--gray1);
-  padding:16px;
-  display:flex;align-items:center;gap:14px;
-  transition:border-color .2s,box-shadow .2s;
-}
-.cart-item.sel{border-color:var(--black);box-shadow:0 0 0 1px var(--black);}
+/* GROUP CARD */
+.cart-group{background:var(--white);border-radius:20px;border:1.5px solid var(--gray1);overflow:hidden;transition:border-color .2s,box-shadow .2s;}
+.cart-group.has-sel{border-color:var(--black);box-shadow:0 0 0 1px var(--black);}
 
-.item-chk{width:22px;height:22px;border-radius:7px;border:2px solid var(--gray2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .18s;}
-.item-chk.on{background:var(--black);border-color:var(--black);}
-.item-chk.on::after{content:'✓';font-size:12px;font-weight:900;color:var(--white);}
+.group-header{display:flex;align-items:center;gap:12px;padding:14px 16px 12px;}
+.group-thumb{width:56px;height:56px;border-radius:12px;overflow:hidden;flex-shrink:0;background:var(--cream);display:flex;align-items:center;justify-content:center;font-size:24px;position:relative;}
+.group-thumb img{width:100%;height:100%;object-fit:cover;}
+.diy-badge{position:absolute;bottom:3px;right:3px;background:var(--accent-y);color:var(--black);font-weight:900;font-size:9px;padding:1px 5px;border-radius:4px;line-height:1.5;letter-spacing:.04em;}
+.creator-av{width:56px;height:56px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--accent-y);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:20px;color:var(--black);}
+.creator-av img{width:100%;height:100%;object-fit:cover;}
+.group-label{flex:1;min-width:0;}
+.group-label-main{font-weight:900;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.group-label-sub{font-size:11px;font-weight:700;color:var(--gray3);margin-top:3px;}
+.group-chk-wrap{flex-shrink:0;}
+.group-divider{height:1px;background:var(--gray1);margin:0;}
 
-/* Clickable cover → work detail */
-.item-cover{
-  width:76px;height:76px;border-radius:14px;overflow:hidden;
-  flex-shrink:0;cursor:pointer;
-  transition:transform .22s var(--ease),box-shadow .22s;
-  position:relative;
-}
-.item-cover:hover{transform:scale(1.04);box-shadow:0 4px 14px rgba(0,0,0,.12);}
-.item-cover-inner{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:32px;}
-.item-cover-hint{
-  position:absolute;inset:0;background:rgba(17,17,16,.45);
-  display:flex;align-items:center;justify-content:center;
-  font-size:11px;font-weight:900;color:var(--white);letter-spacing:.04em;
-  opacity:0;transition:opacity .2s;border-radius:14px;
-}
-.item-cover:hover .item-cover-hint{opacity:1;}
-
-.item-info{flex:1;min-width:0;}
-.item-title{
-  font-weight:900;font-size:14px;line-height:1.4;margin-bottom:5px;
-  cursor:pointer;transition:color .18s;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-}
-.item-title:hover{color:var(--accent-o);}
-.item-machine{display:inline-flex;align-items:center;gap:5px;background:var(--cream);border:1px solid var(--gray1);border-radius:999px;padding:3px 10px;font-weight:800;font-size:11px;color:var(--gray3);margin-bottom:10px;}
-.item-prices{display:flex;align-items:baseline;gap:10px;}
-.item-unit{font-weight:700;font-size:12px;color:var(--gray3);}
-.item-sub{font-weight:900;font-size:16px;}
-
-.item-right{display:flex;flex-direction:column;align-items:flex-end;gap:10px;flex-shrink:0;}
-.qty-row{display:flex;align-items:center;gap:10px;}
-.qty-btn{width:32px;height:32px;border-radius:50%;border:1.5px solid var(--gray1);font-weight:900;font-size:16px;display:flex;align-items:center;justify-content:center;transition:border-color .18s,background .18s;}
+/* CHILD ITEMS */
+.child-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid var(--gray1);transition:background .15s;}
+.child-item.sel{background:#FAFAFA;}
+.child-item.invalid{opacity:.45;}
+.child-chk{width:20px;height:20px;border-radius:6px;border:2px solid var(--gray2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .18s;}
+.child-chk.on{background:var(--black);border-color:var(--black);}
+.child-chk.on::after{content:'✓';font-size:10px;font-weight:900;color:var(--white);}
+.child-cover{width:44px;height:44px;border-radius:9px;overflow:hidden;background:var(--cream);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;}
+.child-cover img{width:100%;height:100%;object-fit:cover;}
+.child-info{flex:1;min-width:0;}
+.child-title{font-weight:800;font-size:13px;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.child-tag{display:inline-flex;align-items:center;background:var(--cream);border:1px solid var(--gray1);border-radius:999px;padding:2px 8px;font-weight:800;font-size:10px;color:var(--gray3);}
+.child-tag.warn{background:#FFF3F3;border-color:#FFCECE;color:var(--red);}
+.child-tag.price{background:#FFF8EC;border-color:#FFE0A0;color:#A06000;}
+.child-prices{display:flex;align-items:baseline;gap:8px;margin-top:5px;}
+.child-unit{font-weight:700;font-size:11px;color:var(--gray3);}
+.child-sub{font-weight:900;font-size:14px;}
+.child-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0;}
+.qty-row{display:flex;align-items:center;gap:8px;}
+.qty-btn{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--gray1);font-weight:900;font-size:14px;display:flex;align-items:center;justify-content:center;transition:border-color .18s;cursor:pointer;}
 .qty-btn:hover{border-color:var(--black);}
 .qty-btn:disabled{opacity:.3;cursor:not-allowed;}
-.qty-n{font-weight:900;font-size:16px;min-width:22px;text-align:center;}
-.btn-del{font-weight:800;font-size:12px;color:var(--gray3);transition:color .18s;}
+.qty-n{font-weight:900;font-size:14px;min-width:20px;text-align:center;}
+.btn-del{font-weight:800;font-size:11px;color:var(--gray3);transition:color .18s;cursor:pointer;}
 .btn-del:hover{color:var(--red);}
 
 /* SUMMARY (sticky) */
@@ -212,7 +209,7 @@ a{text-decoration:none;}
   <ul class="nav-links">
     <li><a href="about.html">关于我们</a></li>
     <li><a href="products.html">产品介绍</a></li>
-    <li><a href="community.html">社区分享</a></li>
+    <li><a href="showcase.html">画师联名</a></li>
     <li><a href="customize-start.html">创作中心</a></li>
     <li><a href="contact.html">联络我们</a></li>
   </ul>
@@ -233,6 +230,13 @@ a{text-decoration:none;}
 
   <!-- Cart content (shown when non-empty) -->
   <div id="cartContent">
+    <!-- Tabs -->
+    <div class="cart-tabs reveal d1">
+      <button class="tab-btn active" id="tabAll"    onclick="setTab('all')">全部</button>
+      <button class="tab-btn"        id="tabCustom" onclick="setTab('custom')">✏️ 定制款</button>
+      <button class="tab-btn"        id="tabMarket" onclick="setTab('market')">🎨 联名款</button>
+    </div>
+
     <div class="cart-layout">
       <!-- Left: items -->
       <div>
@@ -252,7 +256,7 @@ a{text-decoration:none;}
         <div class="sum-row"><span>件数</span><span id="sumQty">0 件</span></div>
         <div class="sum-row total"><span>总计</span><span id="sumTotal">¥0</span></div>
         <button class="btn-checkout" id="checkoutBtn" onclick="openConfirm()" disabled>去结算</button>
-        <button class="btn-back-fav" onclick="goFav()">← 继续逛收藏夹</button>
+        <button class="btn-back-fav" onclick="goFav()">← 继续定制</button>
       </div>
     </div>
   </div>
@@ -261,8 +265,8 @@ a{text-decoration:none;}
   <div class="empty-state" id="cartEmpty" style="display:none">
     <div class="empty-icon">🛒</div>
     <div class="empty-title">购物车还是空的</div>
-    <div class="empty-desc">在社区或收藏夹选好作品和机型<br>加入购物车后就可以在这里结算</div>
-    <a href="favorites.html" class="btn-go">去收藏夹看看 →</a>
+    <div class="empty-desc">在定制流程选配好框架后加入购物车<br>或在联名展示页选喜欢的作品</div>
+    <a href="customize-start.html" class="btn-go">去定制 →</a>
   </div>
 </main>
 
@@ -283,187 +287,457 @@ a{text-decoration:none;}
 <div class="toast" id="toast"></div>
 
 <script>
-/* ─── DATA ─── */
-let cartItems=[
-  {id:'ci1',workId:'w1',title:'奔跑的橘猫 · 12帧循环',bg:'#FFF3EC',em:'🐈',machine:'经典圆筒款',unitPrice:288,qty:1},
-  {id:'ci2',workId:'w2',title:'夏日海浪 · 8帧',bg:'#EBF5FF',em:'🌊',machine:'扁圆盒款',unitPrice:258,qty:2},
-  {id:'ci3',workId:'w1',title:'奔跑的橘猫 · 12帧循环',bg:'#FFF3EC',em:'🐈',machine:'木质方框款',unitPrice:318,qty:1},
-];
-let selected=new Set();
+const MOWO_API = location.hostname === '127.0.0.1' ? 'http://127.0.0.1:3001' : 'http://localhost:3001';
+
+/* ─── STATE ─── */
+let groups = [];        // [{groupId, type, previewUrl, label, subLabel, creatorAvatar, items:[...]}]
+let allFlatItems = [];  // flat list of all CartItems
+let selected = new Set();
+let activeTab = 'all'; // 'all' | 'custom' | 'market'
+
+/* ─── LOAD FROM API ─── */
+async function loadCart() {
+  const token = localStorage.getItem('mowo_token');
+  if (!token) { showEmpty(); return; }
+
+  try {
+    const res = await fetch(`${MOWO_API}/api/cart`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const json = await res.json();
+    if (!json.success) { showEmpty(); return; }
+
+    const rawItems = json.data.items || [];
+    const creatorProfiles = json.data.creatorProfiles || {};
+
+    // Map raw API items → internal flat items
+    allFlatItems = rawItems.map(item => ({
+      id: item.id,
+      itemType: item.itemType,      // 'CUSTOM' | 'MARKET'
+      title: item.snapshotTitle || (item.itemType === 'CUSTOM' ? '定制款' : '联名款'),
+      machine: buildMachineLabel(item),
+      unitPrice: item.currentPrice != null ? Number(item.currentPrice) : Number(item.snapshotPrice || 0),
+      qty: item.quantity,
+      coverUrl: item.coverUrl || item.snapshotPreviewUrl || null,
+      status: item.status,
+      contentId: item.contentId,
+      customProductId: item.customProductId || null,
+      sessionGroupId: item.sessionGroupId || null,
+      creatorId: item.creatorId || null,
+      isSelected: item.selected,
+      configJson: item.configSnapshotJson || null,
+    }));
+
+    // Restore selected state
+    selected = new Set(allFlatItems.filter(c => c.isSelected).map(c => c.id));
+
+    // Build groups
+    const groupMap = new Map(); // groupKey → group object
+    for (const item of allFlatItems) {
+      let gKey, gType;
+      if (item.itemType === 'CUSTOM') {
+        gKey = 'c_' + (item.sessionGroupId || item.customProductId || item.id);
+        gType = 'CUSTOM';
+      } else {
+        gKey = 'm_' + (item.creatorId || item.contentId || item.id);
+        gType = 'MARKET';
+      }
+
+      if (!groupMap.has(gKey)) {
+        const cp = item.creatorId ? (creatorProfiles[item.creatorId] || null) : null;
+        groupMap.set(gKey, {
+          groupId: gKey,
+          type: gType,
+          previewUrl: item.coverUrl,
+          label: gType === 'CUSTOM'
+            ? ('我的定制' + (item.machine ? ' · ' + (item.machine.split(' · ')[0] || '') : ''))
+            : (cp ? cp.nickname : '未知创作者'),
+          subLabel: null,
+          creatorAvatar: cp ? cp.avatarUrl : null,
+          items: [],
+        });
+      }
+      groupMap.get(gKey).items.push(item);
+    }
+
+    // Finalize groups: update subLabels, sort
+    groups = [...groupMap.values()];
+    groups.forEach(g => {
+      if (g.type === 'CUSTOM') {
+        g.subLabel = g.items.length + ' 款配置';
+        // Use first item's cover as group preview
+        if (!g.previewUrl) g.previewUrl = g.items[0]?.coverUrl || null;
+      }
+    });
+    // Sort: CUSTOM first, then by newest item
+    groups.sort((a, b) => {
+      if (a.type !== b.type) return a.type === 'CUSTOM' ? -1 : 1;
+      return 0;
+    });
+
+    render();
+  } catch(e) {
+    console.error('购物车加载失败', e);
+    showEmpty();
+  }
+}
+
+function buildMachineLabel(item) {
+  if (item.configSnapshotJson) {
+    try {
+      const cfg = JSON.parse(item.configSnapshotJson);
+      const parts = [];
+      if (cfg.frameCount) parts.push(cfg.frameCount + '帧');
+      if (cfg.size) parts.push(cfg.size);
+      if (cfg.material) parts.push(cfg.material);
+      if (cfg.colorName) parts.push(cfg.colorName);
+      if (parts.length) return parts.join(' · ');
+    } catch(e) {}
+  }
+  return item.hardwareSkuCode || '';
+}
+
+function showEmpty() {
+  document.getElementById('cartContent').style.display = 'none';
+  document.getElementById('cartEmpty').style.display = 'block';
+}
+
+/* ─── TAB ─── */
+function setTab(tab) {
+  activeTab = tab;
+  ['All','Custom','Market'].forEach(t => {
+    const btn = document.getElementById('tab' + t);
+    if (btn) btn.classList.toggle('active', tab === t.toLowerCase());
+  });
+  render();
+}
 
 /* ─── RENDER ─── */
-function render(){
-  const list=document.getElementById('cartList');
-  const empty=document.getElementById('cartEmpty');
-  const content=document.getElementById('cartContent');
-  const badge=document.getElementById('cartBdg');
-  const totalQty=cartItems.reduce((s,c)=>s+c.qty,0);
-  badge.textContent=totalQty;
-  badge.classList.toggle('zero',totalQty===0);
+function render() {
+  const list = document.getElementById('cartList');
+  const empty = document.getElementById('cartEmpty');
+  const content = document.getElementById('cartContent');
+  const badge = document.getElementById('cartBdg');
+  const totalQty = allFlatItems.reduce((s, c) => s + c.qty, 0);
+  if (badge) { badge.textContent = totalQty; badge.classList.toggle('zero', totalQty === 0); }
 
-  if(!cartItems.length){content.style.display='none';empty.style.display='block';return;}
-  content.style.display='';empty.style.display='none';
+  if (!allFlatItems.length) { content.style.display = 'none'; empty.style.display = 'block'; return; }
+  content.style.display = ''; empty.style.display = 'none';
 
-  list.innerHTML=cartItems.map(item=>`
-    <div class="cart-item${selected.has(item.id)?' sel':''}" id="item-${item.id}">
-      <div class="item-chk${selected.has(item.id)?' on':''}" onclick="toggleItem('${item.id}')"></div>
-      <div class="item-cover" style="background:${item.bg}" onclick="goWork('${item.workId}')">
-        <div class="item-cover-inner">${item.em}</div>
-        <div class="item-cover-hint">查看详情</div>
-      </div>
-      <div class="item-info">
-        <div class="item-title" onclick="goWork('${item.workId}')">${item.title}</div>
-        <div class="item-machine">⚙ ${item.machine}</div>
-        <div class="item-prices">
-          <span class="item-unit">¥${item.unitPrice}/件</span>
-          <span class="item-sub">¥${item.unitPrice*item.qty}</span>
-        </div>
-      </div>
-      <div class="item-right">
-        <div class="qty-row">
-          <button class="qty-btn" onclick="changeQty('${item.id}',-1)" ${item.qty<=1?'disabled':''}>−</button>
-          <span class="qty-n">${item.qty}</span>
-          <button class="qty-btn" onclick="changeQty('${item.id}',1)">+</button>
-        </div>
-        <button class="btn-del" onclick="deleteItem('${item.id}')">删除</button>
-      </div>
-    </div>`).join('');
+  // Filter groups by tab
+  const visibleGroups = groups.filter(g => {
+    if (activeTab === 'custom') return g.type === 'CUSTOM';
+    if (activeTab === 'market') return g.type === 'MARKET';
+    return true;
+  });
 
+  list.innerHTML = visibleGroups.map(g => renderGroup(g)).join('');
   updateSummary();
 }
 
-function toggleItem(id){
-  if(selected.has(id))selected.delete(id); else selected.add(id);
+function renderGroup(g) {
+  const groupSel = g.items.every(i => selected.has(i.id));
+  const groupPartSel = !groupSel && g.items.some(i => selected.has(i.id));
+  const hasSel = g.items.some(i => selected.has(i.id));
+  const chkCls = 'chk' + (groupSel ? ' on' : groupPartSel ? ' partial' : '');
+
+  // Group thumb
+  let thumbHtml;
+  if (g.type === 'CUSTOM') {
+    const imgSrc = g.previewUrl;
+    thumbHtml = `<div class="group-thumb">
+      ${imgSrc ? `<img src="${imgSrc}" onerror="this.style.display='none'">` : '<span style="font-size:24px">✏️</span>'}
+      <span class="diy-badge">DIY</span>
+    </div>`;
+  } else {
+    // MARKET: creator avatar
+    const av = g.creatorAvatar;
+    thumbHtml = `<div class="creator-av">
+      ${av ? `<img src="${av}" onerror="this.parentElement.textContent='🎨'">` : '🎨'}
+    </div>`;
+  }
+
+  const childrenHtml = g.items.map(item => renderChildItem(item, g.groupId)).join('');
+
+  return `<div class="cart-group${hasSel ? ' has-sel' : ''}" id="group-${g.groupId.replace(/[^a-zA-Z0-9_]/g,'-')}">
+  <div class="group-header">
+    ${thumbHtml}
+    <div class="group-label">
+      <div class="group-label-main">${g.label}</div>
+      ${g.subLabel ? `<div class="group-label-sub">${g.subLabel}</div>` : ''}
+    </div>
+    <div class="group-chk-wrap">
+      <div class="${chkCls}" onclick="toggleGroupAll('${g.groupId}')"></div>
+    </div>
+  </div>
+  ${childrenHtml}
+</div>`;
+}
+
+function buildChildDisplayTitle(item) {
+  if (item.itemType === 'CUSTOM') {
+    // 尝试从 configSnapshotJson 拼出完整规格标题
+    if (item.configJson) {
+      try {
+        const cfg = JSON.parse(item.configJson);
+        const spec = [
+          cfg.modelName || null,
+          cfg.size     || null,
+          cfg.frameCount ? cfg.frameCount + '帧' : null,
+          cfg.material  || null,
+          cfg.colorName || null,
+        ].filter(Boolean);
+        if (spec.length) {
+          // 格式：定制款 · 标准款 8x8cm 12帧椴木板原色
+          // modelName 和 size 之间加空格，size 和 frameCount 之间加空格，其余紧连
+          const [model, size, frame, material, color] = [
+            cfg.modelName, cfg.size,
+            cfg.frameCount ? cfg.frameCount + '帧' : null,
+            cfg.material, cfg.colorName
+          ];
+          let specStr = [model, size].filter(Boolean).join(' ');
+          if (frame)    specStr += (specStr ? ' ' : '') + frame;
+          if (material) specStr += material;
+          if (color)    specStr += color;
+          return '定制款' + (specStr ? ' · ' + specStr : '');
+        }
+      } catch(e) {}
+    }
+    // 回退到 snapshotTitle
+    return item.title || '定制款';
+  }
+  return item.title;
+}
+
+function renderChildItem(item, groupId) {
+  const isSel = selected.has(item.id);
+  const isInvalid = item.status === 'invalid' || item.status === 'stock_out';
+  const priceChanged = item.status === 'price_changed';
+
+  const displayTitle = buildChildDisplayTitle(item);
+
+  let tagHtml = '';
+  if (isInvalid) tagHtml = `<span class="child-tag warn">已失效</span>`;
+  else if (priceChanged) tagHtml = `<span class="child-tag price">价格已变动</span>`;
+
+  const escapedGroupId = groupId.replace(/'/g, "\\'");
+
+  return `<div class="child-item${isSel ? ' sel' : ''}${isInvalid ? ' invalid' : ''}" id="child-${item.id}">
+  <div class="child-chk${isSel ? ' on' : ''}" onclick="toggleChild('${item.id}','${escapedGroupId}')"></div>
+  <div class="child-info">
+    <div class="child-title">${displayTitle}</div>
+    ${tagHtml}
+    <div class="child-prices">
+      <span class="child-unit">¥${item.unitPrice}/件</span>
+      <span class="child-sub" style="font-weight:900;font-size:13px;margin-left:6px;">¥${(item.unitPrice * item.qty).toFixed(0)}</span>
+    </div>
+  </div>
+  <div class="child-right">
+    <div class="qty-row">
+      <button class="qty-btn" onclick="changeQty('${item.id}',-1)" ${item.qty<=1?'disabled':''}>−</button>
+      <span class="qty-n">${item.qty}</span>
+      <button class="qty-btn" onclick="changeQty('${item.id}',1)">+</button>
+    </div>
+    <button class="btn-del" onclick="deleteItem('${item.id}')">删除</button>
+  </div>
+</div>`;
+}
+
+/* ─── SELECTION ─── */
+function toggleChild(id, groupId) {
+  const nowSelected = !selected.has(id);
+  if (nowSelected) selected.add(id); else selected.delete(id);
+  render();
+  const token = localStorage.getItem('mowo_token');
+  if (token) {
+    fetch(`${MOWO_API}/api/cart/item/${id}/update`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ selected: nowSelected })
+    }).catch(() => {});
+  }
+}
+
+function toggleGroupAll(groupId) {
+  const g = groups.find(g => g.groupId === groupId);
+  if (!g) return;
+  const allSel = g.items.every(i => selected.has(i.id));
+  const token = localStorage.getItem('mowo_token');
+  g.items.forEach(i => {
+    if (allSel) selected.delete(i.id); else selected.add(i.id);
+    if (token) {
+      fetch(`${MOWO_API}/api/cart/item/${i.id}/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ selected: !allSel })
+      }).catch(() => {});
+    }
+  });
   render();
 }
 
-function toggleSelectAll(){
-  const allIds=cartItems.map(c=>c.id);
-  const allSel=allIds.every(id=>selected.has(id));
-  if(allSel)selected.clear(); else allIds.forEach(id=>selected.add(id));
+function toggleSelectAll() {
+  const allIds = allFlatItems.map(c => c.id);
+  const allSel = allIds.length > 0 && allIds.every(id => selected.has(id));
+  const token = localStorage.getItem('mowo_token');
+  if (allSel) selected.clear(); else allIds.forEach(id => selected.add(id));
   render();
+  if (token) {
+    allIds.forEach(id => {
+      fetch(`${MOWO_API}/api/cart/item/${id}/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ selected: !allSel })
+      }).catch(() => {});
+    });
+  }
 }
 
-function batchDelete(){
-  cartItems=cartItems.filter(c=>!selected.has(c.id));
-  selected.clear(); render(); toast('已删除所选商品');
+/* ─── DELETE / QTY ─── */
+function _removeItemsLocally(ids) {
+  const idSet = new Set(ids);
+  allFlatItems = allFlatItems.filter(c => !idSet.has(c.id));
+  ids.forEach(id => selected.delete(id));
+  // Remove from group items; prune empty groups
+  groups.forEach(g => { g.items = g.items.filter(i => !idSet.has(i.id)); });
+  groups = groups.filter(g => g.items.length > 0);
+  // Update subLabels
+  groups.forEach(g => {
+    if (g.type === 'CUSTOM') g.subLabel = g.items.length + ' 款配置';
+  });
 }
 
-function deleteItem(id){
-  cartItems=cartItems.filter(c=>c.id!==id);
-  selected.delete(id); render();
+async function batchDelete() {
+  const token = localStorage.getItem('mowo_token');
+  const toDelete = [...selected];
+  if (!toDelete.length) return;
+  await Promise.all(toDelete.map(id =>
+    token ? fetch(`${MOWO_API}/api/cart/item/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    }).catch(() => {}) : Promise.resolve()
+  ));
+  _removeItemsLocally(toDelete);
+  render(); toast('已删除所选商品');
 }
 
-function changeQty(id,d){
-  const item=cartItems.find(c=>c.id===id);
-  if(item){item.qty=Math.max(1,item.qty+d); render();}
+async function deleteItem(id) {
+  const token = localStorage.getItem('mowo_token');
+  if (token) {
+    await fetch(`${MOWO_API}/api/cart/item/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    }).catch(() => {});
+  }
+  _removeItemsLocally([id]);
+  render(); toast('已移除');
 }
 
-function updateSummary(){
-  const sel=cartItems.filter(c=>selected.has(c.id));
-  const total=sel.reduce((s,c)=>s+c.unitPrice*c.qty,0);
-  const qty=sel.reduce((s,c)=>s+c.qty,0);
-  const allIds=cartItems.map(c=>c.id);
-  const allOn=allIds.length>0&&allIds.every(id=>selected.has(id));
-  const partOn=allIds.some(id=>selected.has(id))&&!allOn;
+async function changeQty(id, d) {
+  const item = allFlatItems.find(c => c.id === id);
+  if (!item) return;
+  const newQty = Math.max(1, item.qty + d);
+  if (newQty === item.qty) return;
+  item.qty = newQty;
+  render();
+  const token = localStorage.getItem('mowo_token');
+  if (token) {
+    fetch(`${MOWO_API}/api/cart/item/${id}/update`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ quantity: newQty })
+    }).catch(() => {});
+  }
+}
 
-  // Select all checkbox state
-  const sac=document.getElementById('selectAllChk');
-  sac.className='chk'+(allOn?' on':partOn?' partial':'');
+/* ─── SUMMARY ─── */
+function updateSummary() {
+  const sel = allFlatItems.filter(c => selected.has(c.id) && c.status !== 'invalid' && c.status !== 'stock_out');
+  const total = sel.reduce((s, c) => s + c.unitPrice * c.qty, 0);
+  const qty = sel.reduce((s, c) => s + c.qty, 0);
+  const allIds = allFlatItems.map(c => c.id);
+  const allOn = allIds.length > 0 && allIds.every(id => selected.has(id));
+  const partOn = allIds.some(id => selected.has(id)) && !allOn;
 
-  document.getElementById('selInfo').textContent=`已选 ${selected.size} 件商品`;
-  document.getElementById('batchDelBtn').disabled=selected.size===0;
-  document.getElementById('sumSubtotal').textContent=`¥${total}`;
-  document.getElementById('sumQty').textContent=`${qty} 件`;
-  document.getElementById('sumTotal').textContent=`¥${total}`;
-  document.getElementById('checkoutBtn').disabled=sel.length===0;
+  const sac = document.getElementById('selectAllChk');
+  sac.className = 'chk' + (allOn ? ' on' : partOn ? ' partial' : '');
 
-  document.getElementById('sumItems').innerHTML=sel.length
-    ? sel.map(c=>`
+  document.getElementById('selInfo').textContent = `已选 ${selected.size} 件`;
+  document.getElementById('batchDelBtn').disabled = selected.size === 0;
+  document.getElementById('sumSubtotal').textContent = `¥${total.toFixed(0)}`;
+  document.getElementById('sumQty').textContent = `${qty} 件`;
+  document.getElementById('sumTotal').textContent = `¥${total.toFixed(0)}`;
+  document.getElementById('checkoutBtn').disabled = sel.length === 0;
+
+  document.getElementById('sumItems').innerHTML = sel.length
+    ? sel.map(c => `
         <div class="sum-item">
-          <div class="sum-ic" style="background:${c.bg}">${c.em}</div>
-          <span class="sum-name">${c.title} · ${c.machine} ×${c.qty}</span>
-          <span class="sum-price">¥${c.unitPrice*c.qty}</span>
+          <div class="sum-ic" style="background:#F5F3EF">${c.itemType==='CUSTOM'?'✏️':'🎨'}</div>
+          <span class="sum-name">${buildChildDisplayTitle(c)} ×${c.qty}</span>
+          <span class="sum-price">¥${(c.unitPrice * c.qty).toFixed(0)}</span>
         </div>`).join('')
     : '<div class="sum-hint">勾选左侧商品后显示</div>';
 }
 
-function goWork(workId){
-  const item = cartItems.find(c => c.workId === workId);
-  const qs = new URLSearchParams();
-  qs.set('type', 'product');
-  qs.set('id', workId);
-  if (item && item.unitPrice) qs.set('price', String(item.unitPrice));
-  window.location.href = `work-detail.html?${qs.toString()}`;
-}
-
 /* ─── CHECKOUT CONFIRM ─── */
-function openConfirm(){
-  const sel=cartItems.filter(c=>selected.has(c.id));
-  const total=sel.reduce((s,c)=>s+c.unitPrice*c.qty,0);
-  const qty=sel.reduce((s,c)=>s+c.qty,0);
-  document.getElementById('cfmSumBox').innerHTML=`
+function openConfirm() {
+  const sel = allFlatItems.filter(c => selected.has(c.id) && c.status !== 'invalid' && c.status !== 'stock_out');
+  const total = sel.reduce((s, c) => s + c.unitPrice * c.qty, 0);
+  const qty = sel.reduce((s, c) => s + c.qty, 0);
+  document.getElementById('cfmSumBox').innerHTML = `
     <div class="cfm-row"><span>商品件数</span><span>${qty} 件</span></div>
     <div class="cfm-row"><span>配送方式</span><span>快递包邮</span></div>
-    <div class="cfm-row"><span>应付总额</span><span>¥${total}</span></div>`;
+    <div class="cfm-row"><span>应付总额</span><span>¥${total.toFixed(0)}</span></div>`;
   document.getElementById('confirmBg').classList.add('open');
-  document.body.style.overflow='hidden';
+  document.body.style.overflow = 'hidden';
 }
-function closeConfirm(){
+function closeConfirm() {
   document.getElementById('confirmBg').classList.remove('open');
-  document.body.style.overflow='';
+  document.body.style.overflow = '';
 }
-function handleConfirmBg(e){if(e.target.id==='confirmBg')closeConfirm();}
-function goCheckout(){closeConfirm();window.location.href='checkout.html';}
+function handleConfirmBg(e) { if (e.target.id === 'confirmBg') closeConfirm(); }
+function goCheckout() {
+  closeConfirm();
+  const selIds = allFlatItems.filter(c => selected.has(c.id) && c.status !== 'invalid').map(c => c.id);
+  sessionStorage.setItem('mowo_checkout_items', JSON.stringify(selIds));
+  window.location.href = 'checkout.html';
+}
 
 /* ─── NAV ─── */
-function goFav(){window.location.href='favorites.html';}
-function toggleDD(){
-  const dd=document.getElementById('userDD'),btn=document.getElementById('navBtn');
-  const o=dd.classList.toggle('open');
-  btn.classList.toggle('open',o);
-  if(o)setTimeout(()=>document.addEventListener('click',outsideDD),0);
-}
-function closeDD(){
-  document.getElementById('userDD').classList.remove('open');
-  document.getElementById('navBtn').classList.remove('open');
-  document.removeEventListener('click',outsideDD);
-}
-function outsideDD(e){
-  if(!document.getElementById('navBtn').contains(e.target)&&!document.getElementById('userDD').contains(e.target))closeDD();
-}
+function goFav() { window.location.href = 'customize-start.html'; }
 
 /* ─── TOAST ─── */
 let tT;
-function toast(msg){
-  const t=document.getElementById('toast');
-  t.textContent=msg; t.classList.add('show');
-  clearTimeout(tT); tT=setTimeout(()=>t.classList.remove('show'),2600);
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(tT); tT = setTimeout(() => t.classList.remove('show'), 2600);
 }
 
 /* ─── REVEAL ─── */
-const revObs=new IntersectionObserver(entries=>{
-  entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('on');revObs.unobserve(e.target);}});
-},{threshold:0.06});
-document.querySelectorAll('.reveal').forEach(el=>revObs.observe(el));
+const revObs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('on'); revObs.unobserve(e.target); } });
+}, { threshold: 0.06 });
+document.querySelectorAll('.reveal').forEach(el => revObs.observe(el));
 
 /* ─── CURSOR ─── */
-if(window.matchMedia('(pointer:fine)').matches){
-  const dot=document.createElement('div');dot.id='cdot';
-  const ring=document.createElement('div');ring.id='cring';
-  document.body.append(dot,ring);
-  document.body.style.cursor='none';
+if (window.matchMedia('(pointer:fine)').matches) {
+  const dot = document.createElement('div'); dot.id = 'cdot';
+  const ring = document.createElement('div'); ring.id = 'cring';
+  document.body.append(dot, ring);
+  document.body.style.cursor = 'none';
+  window._ring = ring;
   let mx=0,my=0,rx=0,ry=0;
-  document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;dot.style.left=mx+'px';dot.style.top=my+'px';});
-  (function tick(){rx+=(mx-rx)*.12;ry+=(my-ry)*.12;ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(tick);})();
-  document.querySelectorAll('a,button,.item-cover,.item-title').forEach(el=>{
-    el.addEventListener('mouseenter',()=>{ring.style.width='48px';ring.style.height='48px';});
-    el.addEventListener('mouseleave',()=>{ring.style.width='32px';ring.style.height='32px';});
+  document.addEventListener('mousemove', e => { mx=e.clientX; my=e.clientY; dot.style.left=mx+'px'; dot.style.top=my+'px'; });
+  (function tick() { rx+=(mx-rx)*.12; ry+=(my-ry)*.12; ring.style.left=rx+'px'; ring.style.top=ry+'px'; requestAnimationFrame(tick); })();
+  document.querySelectorAll('a,button,.child-cover,.child-title').forEach(el => {
+    el.addEventListener('mouseenter', () => { ring.style.width='48px'; ring.style.height='48px'; });
+    el.addEventListener('mouseleave', () => { ring.style.width='32px'; ring.style.height='32px'; });
   });
 }
 
 /* ─── INIT ─── */
-render();
+loadCart();
 </script>
 <script src="../js/auth.js"></script>
 </body>

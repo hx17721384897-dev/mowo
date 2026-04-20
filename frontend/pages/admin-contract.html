@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>商务合同 — 哞屋后台</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--white:#FFFFFF;--cream:#F5F3EF;--black:#111110;--gray1:#EBEBEA;--gray2:#C4C3BF;--gray3:#787874;--accent-y:#F5E642;--accent-o:#FF6B35;--accent-g:#8FD694;--accent-b:#7EC8E3;--font:'Nunito','Noto Sans SC',sans-serif;--sidebar-w:220px;--sidebar-collapsed:60px;}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:var(--font);background:var(--cream);color:var(--black);min-height:100vh;display:flex;-webkit-font-smoothing:antialiased;}
+.sidebar{width:var(--sidebar-w);min-height:100vh;background:var(--black);display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;z-index:100;transition:width .3s cubic-bezier(0.22,1,0.36,1);overflow:hidden;}
+.sidebar.collapsed{width:var(--sidebar-collapsed);}
+.sidebar-logo{padding:24px 20px 20px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px;white-space:nowrap;overflow:hidden;}
+.sidebar-logo-icon{width:32px;height:32px;background:var(--accent-y);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.sidebar-logo-text{font-weight:900;font-size:15px;color:var(--white);}
+.sidebar-logo-sub{font-weight:700;font-size:10px;color:var(--gray3);letter-spacing:.1em;text-transform:uppercase;display:block;margin-top:1px;}
+.sidebar-toggle{position:absolute;top:26px;right:12px;width:28px;height:28px;background:rgba(255,255,255,.08);border:none;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--gray3);font-size:12px;}
+.sidebar-toggle:hover{background:rgba(255,255,255,.15);color:var(--white);}
+.sidebar-nav{flex:1;padding:16px 0;overflow-y:auto;overflow-x:hidden;}
+.nav-section-label{font-weight:800;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--gray3);padding:12px 20px 6px;white-space:nowrap;}
+.sidebar.collapsed .nav-section-label{opacity:0;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;transition:background .15s;white-space:nowrap;color:var(--gray3);font-weight:800;font-size:13px;text-decoration:none;position:relative;}
+.nav-item:hover{background:rgba(255,255,255,.06);color:var(--white);}
+.nav-item.active{background:rgba(245,230,66,.12);color:var(--accent-y);}
+.nav-item.active::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent-y);border-radius:0 2px 2px 0;}
+.nav-icon{font-size:16px;flex-shrink:0;width:20px;text-align:center;}
+.nav-label{transition:opacity .2s;}
+.sidebar.collapsed .nav-label{opacity:0;}
+.nav-group-header{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;transition:background .15s;color:var(--gray3);font-weight:800;font-size:13px;user-select:none;}
+.nav-group-header:hover{background:rgba(255,255,255,.06);color:var(--white);}
+.nav-group-header.open{color:var(--accent-y);}
+.nav-group-arrow{margin-left:auto;font-size:10px;transition:transform .2s;flex-shrink:0;}
+.nav-group-header.open .nav-group-arrow{transform:rotate(180deg);}
+.nav-sub{max-height:0;overflow:hidden;transition:max-height .3s ease;}
+.nav-sub.open{max-height:400px;}
+.nav-sub-item{display:flex;align-items:center;gap:6px;padding:7px 20px 7px 44px;cursor:pointer;transition:background .15s;color:var(--gray3);font-weight:700;font-size:12px;text-decoration:none;}
+.nav-sub-item:hover{background:rgba(255,255,255,.06);color:var(--white);}
+.sidebar-footer{padding:16px 20px;border-top:1px solid rgba(255,255,255,.08);white-space:nowrap;}
+.sidebar-user{display:flex;align-items:center;gap:10px;}
+.sidebar-user-avatar{width:32px;height:32px;border-radius:50%;background:var(--accent-y);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:var(--black);flex-shrink:0;}
+.sidebar-user-name{font-weight:800;font-size:12px;color:var(--white);}
+.sidebar-user-role{font-weight:700;font-size:10px;color:var(--gray3);}
+.sidebar.collapsed .sidebar-user-info{display:none;}
+.main{margin-left:var(--sidebar-w);flex:1;min-height:100vh;transition:margin-left .3s cubic-bezier(0.22,1,0.36,1);display:flex;flex-direction:column;}
+.main.expanded{margin-left:var(--sidebar-collapsed);}
+.topbar{position:sticky;top:0;z-index:50;background:rgba(245,243,239,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--gray1);padding:0 32px;height:60px;display:flex;align-items:center;justify-content:space-between;}
+.topbar-title{font-weight:900;font-size:18px;}
+.topbar-right{display:flex;align-items:center;gap:12px;}
+.content{padding:28px 32px;flex:1;}
+.btn{height:38px;padding:0 16px;border-radius:10px;font-family:var(--font);font-weight:800;font-size:13px;border:none;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+.btn:active{transform:scale(.96);}
+.btn-black{background:var(--black);color:var(--white);}
+.btn-black:hover{opacity:.85;}
+.btn-yellow{background:var(--accent-y);color:var(--black);}
+.btn-yellow:hover{opacity:.85;}
+.btn-ghost{background:var(--white);color:var(--black);border:1.5px solid var(--gray1);}
+.btn-ghost:hover{border-color:var(--black);}
+.btn-sm{height:32px;padding:0 12px;font-size:12px;border-radius:8px;}
+.btn:disabled{opacity:.4;pointer-events:none;}
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
+.form-input,.form-select{height:38px;border:1.5px solid var(--gray1);border-radius:10px;padding:0 12px;font-family:var(--font);font-weight:700;font-size:13px;color:var(--black);background:var(--white);outline:none;transition:border-color .2s;}
+.form-input:focus,.form-select:focus{border-color:var(--black);}
+
+/* 合同卡片 */
+.contract-card{background:var(--white);border-radius:16px;border:1.5px solid var(--gray1);padding:20px 24px;margin-bottom:12px;transition:border-color .2s,box-shadow .2s;}
+.contract-card:hover{border-color:var(--gray2);box-shadow:0 4px 16px rgba(0,0,0,.06);}
+.contract-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;}
+.contract-name{font-weight:900;font-size:16px;margin-bottom:4px;}
+.contract-id{font-weight:700;font-size:11px;color:var(--gray3);font-family:monospace;}
+.contract-badges{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.type-badge{padding:4px 12px;border-radius:999px;font-weight:800;font-size:12px;}
+.type-revenue{background:rgba(143,214,148,.15);color:#1a5c2e;}
+.type-guarantee{background:rgba(127,200,227,.15);color:#1565a0;}
+.type-buyout{background:rgba(245,230,66,.2);color:#6a5200;}
+.type-custom{background:var(--gray1);color:var(--gray3);}
+.status-badge{padding:4px 10px;border-radius:999px;font-weight:800;font-size:11px;}
+.st-active{background:#D4EDDA;color:#1a5c2e;}
+.st-expired{background:var(--gray1);color:var(--gray3);}
+.st-terminated{background:#FFE0DC;color:#993C1D;}
+.contract-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px;}
+@media(max-width:720px){.contract-grid{grid-template-columns:1fr 1fr;}}
+.contract-item-label{font-weight:800;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--gray3);margin-bottom:3px;}
+.contract-item-val{font-weight:900;font-size:15px;}
+.contract-item-val.green{color:#1a7a3c;}
+.contract-item-val.orange{color:var(--accent-o);}
+.contract-actions{display:flex;gap:8px;flex-wrap:wrap;}
+
+/* 抽屉 */
+.drawer-overlay{display:none;position:fixed;inset:0;z-index:200;background:rgba(17,17,16,.4);}
+.drawer-overlay.show{display:block;}
+.drawer{position:fixed;top:0;right:-580px;bottom:0;width:580px;max-width:100vw;background:var(--white);z-index:201;display:flex;flex-direction:column;transition:right .35s cubic-bezier(0.22,1,0.36,1);box-shadow:-8px 0 40px rgba(0,0,0,.12);}
+.drawer.open{right:0;}
+.drawer-header{padding:20px 24px;border-bottom:1.5px solid var(--gray1);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.drawer-title{font-weight:900;font-size:16px;}
+.drawer-close{width:36px;height:36px;border-radius:10px;background:var(--gray1);border:none;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;}
+.drawer-close:hover{background:var(--gray2);}
+.drawer-body{flex:1;overflow-y:auto;padding:24px;}
+.drawer-footer{padding:16px 24px;border-top:1.5px solid var(--gray1);display:flex;gap:10px;flex-shrink:0;}
+.form-section{margin-bottom:20px;}
+.form-section-title{font-weight:900;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--gray3);margin-bottom:12px;}
+.form-row{margin-bottom:12px;}
+.form-label{font-weight:800;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gray3);display:block;margin-bottom:5px;}
+.form-field{width:100%;height:40px;border:1.5px solid var(--gray1);border-radius:10px;padding:0 12px;font-family:var(--font);font-weight:700;font-size:13px;color:var(--black);background:var(--white);outline:none;transition:border-color .2s;}
+.form-field:focus{border-color:var(--black);}
+.form-textarea{width:100%;border:1.5px solid var(--gray1);border-radius:10px;padding:10px 12px;font-family:var(--font);font-weight:700;font-size:13px;resize:vertical;outline:none;min-height:80px;transition:border-color .2s;}
+.form-textarea:focus{border-color:var(--black);}
+.form-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+
+/* 打款记录 */
+.settle-log{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--gray1);}
+.settle-log:last-child{border-bottom:none;}
+.settle-icon{width:36px;height:36px;border-radius:10px;background:#EBF9F0;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.settle-info{flex:1;}
+.settle-amount{font-weight:900;font-size:15px;color:#1a7a3c;}
+.settle-note{font-weight:700;font-size:12px;color:var(--gray3);margin-top:2px;}
+.settle-date{font-weight:700;font-size:11px;color:var(--gray3);}
+
+.empty-state{padding:48px 20px;text-align:center;}
+.empty-icon{font-size:36px;margin-bottom:10px;}
+.empty-text{font-weight:800;font-size:14px;color:var(--gray3);}
+.loading-row{padding:32px;text-align:center;font-weight:700;font-size:13px;color:var(--gray3);}
+.pagination{padding:14px;display:flex;align-items:center;justify-content:space-between;}
+.pagination-info{font-weight:700;font-size:12px;color:var(--gray3);}
+.pagination-btns{display:flex;gap:4px;}
+.page-btn{width:32px;height:32px;border-radius:8px;font-family:var(--font);font-weight:800;font-size:12px;border:1.5px solid var(--gray1);background:var(--white);cursor:pointer;}
+.page-btn:hover{border-color:var(--black);}
+.page-btn.active{background:var(--black);color:var(--white);border-color:var(--black);}
+.page-btn:disabled{opacity:.4;pointer-events:none;}
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--black);color:var(--white);padding:12px 22px;border-radius:12px;font-weight:800;font-size:13px;opacity:0;transition:all .3s;z-index:999;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<aside class="sidebar" id="sidebar"></aside>
+
+<div class="main" id="main">
+  <header class="topbar">
+    <span class="topbar-title">商务合同</span>
+    <div class="topbar-right">
+      <button class="btn btn-yellow" onclick="openNewDrawer()">＋ 新建合同</button>
+    </div>
+  </header>
+  <div class="content">
+    <div class="toolbar">
+      <input class="form-input" id="searchInput" type="text" placeholder="搜索合作方名称…" style="width:200px;" oninput="onSearch()">
+      <select class="form-select" id="statusFilter" style="width:120px;" onchange="loadContracts(1)">
+        <option value="">全部状态</option>
+        <option value="active">生效中</option>
+        <option value="expired">已到期</option>
+        <option value="terminated">已终止</option>
+      </select>
+      <select class="form-select" id="typeFilter" style="width:140px;" onchange="loadContracts(1)">
+        <option value="">全部类型</option>
+        <option value="revenue_share">纯分红</option>
+        <option value="guarantee_plus">保底+分红</option>
+        <option value="buyout">买断</option>
+        <option value="custom">自定义</option>
+      </select>
+    </div>
+    <div id="contractList"><div class="loading-row">正在加载…</div></div>
+    <div id="paginationWrap"></div>
+  </div>
+</div>
+
+<!-- 抽屉（新建/编辑/详情） -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <div class="drawer-title" id="drawerTitle">新建合同</div>
+    <button class="drawer-close" onclick="closeDrawer()">✕</button>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+  <div class="drawer-footer" id="drawerFooter"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="../js/auth.js"></script>
+<script>
+const API = (location.hostname==='127.0.0.1'?'http://127.0.0.1:3001':'http://localhost:3001')
+let currentPage = 1, searchTimer = null, currentContractId = null
+
+const TYPE_LABELS  = {revenue_share:'纯分红',guarantee_plus:'保底+分红',buyout:'买断',custom:'自定义'}
+const TYPE_CLS     = {revenue_share:'type-revenue',guarantee_plus:'type-guarantee',buyout:'type-buyout',custom:'type-custom'}
+const STATUS_LABELS= {active:'生效中',expired:'已到期',terminated:'已终止'}
+const STATUS_CLS   = {active:'st-active',expired:'st-expired',terminated:'st-terminated'}
+
+function showToast(msg,dur){dur=dur||2500;const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show')},dur)}
+function getToken(){return localStorage.getItem('mowo_token')}
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function fmtDate(d){if(!d)return'—';return new Date(d).toLocaleDateString('zh-CN',{year:'numeric',month:'numeric',day:'numeric'})}
+
+async function apiFetch(path,opts){
+  opts=opts||{}
+  const res=await fetch(API+path,Object.assign({},opts,{headers:Object.assign({'Content-Type':'application/json','Authorization':'Bearer '+getToken()},opts.headers||{})}))
+  return res.json()
+}
+
+
+function toggleNavGroup(key){const sub=document.getElementById('navSub-'+key);if(!sub)return;sub.classList.toggle('open');sub.previousElementSibling?.classList.toggle('open')}
+function onSearch(){clearTimeout(searchTimer);searchTimer=setTimeout(function(){loadContracts(1)},400)}
+
+async function loadContracts(page){
+  currentPage=page
+  document.getElementById('contractList').innerHTML='<div class="loading-row">正在加载…</div>'
+  const keyword=document.getElementById('searchInput').value.trim()
+  const status=document.getElementById('statusFilter').value
+  const type=document.getElementById('typeFilter').value
+  let url='/api/admin/contracts?page='+page+'&limit=20'
+  if(status) url+='&status='+status
+  if(type)   url+='&contractType='+type
+  if(keyword)url+='&keyword='+encodeURIComponent(keyword)
+
+  const data=await apiFetch(url)
+  if(!data.success){showToast('加载失败');return}
+  const contracts=data.data.contracts
+  const pg=data.data.pagination
+
+  if(contracts.length===0){
+    document.getElementById('contractList').innerHTML='<div class="empty-state"><div class="empty-icon">📝</div><div class="empty-text">暂无合同记录</div></div>'
+    document.getElementById('paginationWrap').innerHTML=''
+    return
+  }
+
+  document.getElementById('contractList').innerHTML=contracts.map(function(c){
+    return '<div class="contract-card">'+
+      '<div class="contract-header">'+
+        '<div>'+
+          '<div class="contract-name">'+escHtml(c.creatorName)+'</div>'+
+          '<div class="contract-id">'+c.id.slice(-8)+'</div>'+
+        '</div>'+
+        '<div class="contract-badges">'+
+          '<span class="type-badge '+(TYPE_CLS[c.contractType]||'type-custom')+'">'+(TYPE_LABELS[c.contractType]||c.contractType)+'</span>'+
+          '<span class="status-badge '+(STATUS_CLS[c.status]||'st-active')+'">'+(STATUS_LABELS[c.status]||c.status)+'</span>'+
+        '</div>'+
+      '</div>'+
+      '<div class="contract-grid">'+
+        '<div>'+
+          '<div class="contract-item-label">合同期限</div>'+
+          '<div class="contract-item-val">'+fmtDate(c.startAt)+' ~ '+(c.endAt?fmtDate(c.endAt):'长期')+'</div>'+
+        '</div>'+
+        (c.revenueRate!=null?'<div><div class="contract-item-label">分红比例</div><div class="contract-item-val green">'+(c.revenueRate*100).toFixed(0)+'%</div></div>':'')+
+        (c.guaranteeAmount!=null?'<div><div class="contract-item-label">保底金额</div><div class="contract-item-val orange">¥'+c.guaranteeAmount.toLocaleString()+'</div></div>':'')+
+        (c.buyoutAmount!=null?'<div><div class="contract-item-label">买断金额</div><div class="contract-item-val">¥'+c.buyoutAmount.toLocaleString()+'</div></div>':'')+
+        '<div><div class="contract-item-label">累计打款</div><div class="contract-item-val green">¥'+c.totalPaid.toLocaleString()+'</div></div>'+
+        '<div><div class="contract-item-label">打款记录</div><div class="contract-item-val">'+c.settlementLogs.length+' 笔</div></div>'+
+        '<div><div class="contract-item-label">录入人</div><div class="contract-item-val">'+escHtml(c.createdBy||'—')+'</div></div>'+
+      '</div>'+
+      '<div class="contract-actions">'+
+        '<button class="btn btn-ghost btn-sm" onclick="openDetailDrawer(\''+c.id+'\')">详情 / 编辑</button>'+
+        '<button class="btn btn-black btn-sm" onclick="openSettleDrawer(\''+c.id+'\',\''+escHtml(c.creatorName)+'\')">录入打款</button>'+
+        (c.status==='active'?'<button class="btn btn-sm" style="background:#FFE0DC;color:#993C1D;" onclick="updateStatus(\''+c.id+'\',\'terminated\')">终止</button>':'')+
+      '</div>'+
+    '</div>'
+  }).join('')
+
+  // 分页
+  const pw=document.getElementById('paginationWrap')
+  if(pg.totalPages<=1){pw.innerHTML='';return}
+  let btns='<button class="page-btn" '+(page<=1?'disabled':'')+' onclick="loadContracts('+(page-1)+')">‹</button>'
+  for(let i=1;i<=pg.totalPages;i++){
+    if(i===1||i===pg.totalPages||Math.abs(i-page)<=1)
+      btns+='<button class="page-btn '+(i===page?'active':'')+'" onclick="loadContracts('+i+')">'+i+'</button>'
+    else if(Math.abs(i-page)===2)
+      btns+='<span style="padding:0 2px;color:var(--gray3);">…</span>'
+  }
+  btns+='<button class="page-btn" '+(page>=pg.totalPages?'disabled':'')+' onclick="loadContracts('+(page+1)+')">›</button>'
+  pw.innerHTML='<div class="pagination"><span class="pagination-info">共 '+pg.total+' 份合同</span><div class="pagination-btns">'+btns+'</div></div>'
+}
+
+// ── 新建合同抽屉 ──
+function openNewDrawer(){
+  currentContractId=null
+  document.getElementById('drawerTitle').textContent='新建合同'
+  document.getElementById('drawerBody').innerHTML=contractForm(null)
+  document.getElementById('drawerFooter').innerHTML=
+    '<button class="btn btn-yellow" onclick="saveContract()">保存合同</button>'+
+    '<button class="btn btn-ghost" onclick="closeDrawer()">取消</button>'
+  openDrawer()
+}
+
+// ── 详情/编辑抽屉 ──
+async function openDetailDrawer(id){
+  currentContractId=id
+  document.getElementById('drawerTitle').textContent='合同详情'
+  document.getElementById('drawerBody').innerHTML='<div class="loading-row">正在加载…</div>'
+  document.getElementById('drawerFooter').innerHTML=''
+  openDrawer()
+
+  const data=await apiFetch('/api/admin/contracts/'+id)
+  if(!data.success){document.getElementById('drawerBody').innerHTML='<div class="loading-row">加载失败</div>';return}
+  const c=data.data
+
+  // 打款记录
+  const settleHtml=c.settlementLogs.length>0
+    ? c.settlementLogs.map(function(l){
+        return '<div class="settle-log"><div class="settle-icon">💰</div>'+
+          '<div class="settle-info"><div class="settle-amount">¥'+l.amount.toLocaleString()+'</div>'+
+          '<div class="settle-note">'+(l.note||'—')+'</div></div>'+
+          '<div class="settle-date">'+fmtDate(l.settledAt)+'</div></div>'
+      }).join('')
+    : '<div style="padding:16px 0;text-align:center;font-weight:700;font-size:13px;color:var(--gray3);">暂无打款记录</div>'
+
+  document.getElementById('drawerBody').innerHTML=
+    contractForm(c)+
+    '<div style="margin-top:20px;"><div style="font-weight:900;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--gray3);margin-bottom:10px;">打款记录（共 ¥'+c.totalPaid.toLocaleString()+'）</div>'+
+    settleHtml+'</div>'
+
+  document.getElementById('drawerFooter').innerHTML=
+    '<button class="btn btn-yellow" onclick="saveContract()">保存修改</button>'+
+    '<button class="btn btn-ghost" onclick="closeDrawer()">关闭</button>'
+}
+
+// ── 合同表单 HTML ──
+function contractForm(c){
+  const v=function(field,def){return c&&c[field]!=null?c[field]:(def||'')}
+  const dt=function(d){if(!d)return'';const dd=new Date(d);return dd.getFullYear()+'-'+(String(dd.getMonth()+1).padStart(2,'0'))+'-'+(String(dd.getDate()).padStart(2,'0'))}
+  return '<div class="form-section">'+
+    '<div class="form-section-title">基本信息</div>'+
+    '<div class="form-grid-2">'+
+      '<div class="form-row"><label class="form-label">合作方名称</label>'+
+        '<input class="form-field" id="fName" value="'+escHtml(v('creatorName'))+'" placeholder="IP方/创作者名称" maxlength="100"></div>'+
+      '<div class="form-row"><label class="form-label">合作类型</label>'+
+        '<select class="form-field" id="fType">'+
+          ['revenue_share','guarantee_plus','buyout','custom'].map(function(t){
+            return '<option value="'+t+'" '+(v('contractType')===t?'selected':'')+'>'+TYPE_LABELS[t]+'</option>'
+          }).join('')+
+        '</select></div>'+
+    '</div>'+
+    '<div class="form-grid-3">'+
+      '<div class="form-row"><label class="form-label">分红比例（%）</label>'+
+        '<input class="form-field" id="fRate" type="number" min="0" max="100" step="0.1" value="'+(c&&c.revenueRate!=null?(c.revenueRate*100).toFixed(1):'')+'" placeholder="如 25"></div>'+
+      '<div class="form-row"><label class="form-label">保底金额（元）</label>'+
+        '<input class="form-field" id="fGuarantee" type="number" min="0" value="'+v('guaranteeAmount')+'" placeholder="无则留空"></div>'+
+      '<div class="form-row"><label class="form-label">买断金额（元）</label>'+
+        '<input class="form-field" id="fBuyout" type="number" min="0" value="'+v('buyoutAmount')+'" placeholder="无则留空"></div>'+
+    '</div>'+
+    '<div class="form-grid-2">'+
+      '<div class="form-row"><label class="form-label">合同开始日期</label>'+
+        '<input class="form-field" id="fStartAt" type="date" value="'+dt(v('startAt'))+'"></div>'+
+      '<div class="form-row"><label class="form-label">合同结束日期（留空=长期）</label>'+
+        '<input class="form-field" id="fEndAt" type="date" value="'+dt(v('endAt'))+'"></div>'+
+    '</div>'+
+  '</div>'+
+  '<div class="form-section">'+
+    '<div class="form-section-title">条款与备注</div>'+
+    '<div class="form-row"><label class="form-label">核心条款摘要</label>'+
+      '<textarea class="form-textarea" id="fTerms" rows="4" placeholder="录入合同核心条款，如分红计算方式、结算周期、排他约定等">'+escHtml(v('terms'))+'</textarea></div>'+
+    '<div class="form-row"><label class="form-label">内部备注</label>'+
+      '<textarea class="form-textarea" id="fNote" rows="2" placeholder="内部备注">'+escHtml(v('note'))+'</textarea></div>'+
+  '</div>'
+}
+
+// ── 保存合同 ──
+async function saveContract(){
+  const name     = document.getElementById('fName').value.trim()
+  const type     = document.getElementById('fType').value
+  const rateVal  = document.getElementById('fRate').value
+  const guarantee= document.getElementById('fGuarantee').value
+  const buyout   = document.getElementById('fBuyout').value
+  const startAt  = document.getElementById('fStartAt').value
+  const endAt    = document.getElementById('fEndAt').value
+  const terms    = document.getElementById('fTerms').value.trim()
+  const note     = document.getElementById('fNote').value.trim()
+
+  if(!name)   { showToast('请填写合作方名称'); return }
+  if(!startAt){ showToast('请选择合同开始日期'); return }
+
+  const body={
+    creatorName:  name,
+    contractType: type,
+    startAt,
+    endAt:        endAt||undefined,
+    terms:        terms||undefined,
+    note:         note||undefined
+  }
+  if(rateVal)   body.revenueRate     = parseFloat(rateVal)/100
+  if(guarantee) body.guaranteeAmount = parseFloat(guarantee)
+  if(buyout)    body.buyoutAmount    = parseFloat(buyout)
+
+  const url  = currentContractId ? '/api/admin/contracts/'+currentContractId : '/api/admin/contracts'
+  const method = currentContractId ? 'PUT' : 'POST'
+
+  const data=await apiFetch(url,{method,body:JSON.stringify(body)})
+  if(data.success){
+    showToast(currentContractId?'✅ 已更新':'✅ 合同已创建')
+    closeDrawer()
+    loadContracts(currentPage)
+  } else {
+    showToast('❌ '+data.message)
+  }
+}
+
+// ── 录入打款抽屉 ──
+function openSettleDrawer(id,name){
+  currentContractId=id
+  document.getElementById('drawerTitle').textContent='录入打款 — '+name
+  document.getElementById('drawerBody').innerHTML=
+    '<div class="form-row"><label class="form-label">打款金额（元）</label>'+
+      '<input class="form-field" id="sAmount" type="number" min="0" step="0.01" placeholder="0.00"></div>'+
+    '<div class="form-row"><label class="form-label">备注</label>'+
+      '<input class="form-field" id="sNote" type="text" placeholder="如：2026年4月份结算" maxlength="200"></div>'+
+    '<div class="form-row"><label class="form-label">打款日期</label>'+
+      '<input class="form-field" id="sDate" type="date" value="'+new Date().toISOString().slice(0,10)+'"></div>'
+  document.getElementById('drawerFooter').innerHTML=
+    '<button class="btn btn-yellow" onclick="submitSettle()">确认录入</button>'+
+    '<button class="btn btn-ghost" onclick="closeDrawer()">取消</button>'
+  openDrawer()
+}
+
+async function submitSettle(){
+  const amount=parseFloat(document.getElementById('sAmount').value)
+  const note=document.getElementById('sNote').value.trim()
+  const settledAt=document.getElementById('sDate').value
+
+  if(!amount||amount<=0){showToast('请填写打款金额');return}
+
+  const data=await apiFetch('/api/admin/contracts/'+currentContractId+'/settle',{
+    method:'POST',
+    body:JSON.stringify({amount,note:note||undefined,settledAt})
+  })
+  if(data.success){
+    showToast('✅ 打款记录已录入，累计 ¥'+data.data.totalPaid.toLocaleString())
+    closeDrawer()
+    loadContracts(currentPage)
+  } else {
+    showToast('❌ '+data.message)
+  }
+}
+
+// 更新状态
+async function updateStatus(id,status){
+  const labels={terminated:'终止'}
+  if(!confirm('确认将合同状态改为「'+(STATUS_LABELS[status]||status)+'」？')) return
+  const data=await apiFetch('/api/admin/contracts/'+id+'/status',{method:'PUT',body:JSON.stringify({status})})
+  if(data.success){showToast('✅ '+data.message);loadContracts(currentPage)}
+  else showToast('❌ '+data.message)
+}
+
+function openDrawer(){document.getElementById('drawerOverlay').classList.add('show');document.getElementById('drawer').classList.add('open')}
+function closeDrawer(){document.getElementById('drawerOverlay').classList.remove('show');document.getElementById('drawer').classList.remove('open');currentContractId=null}
+
+window.addEventListener('DOMContentLoaded',async function(){
+  const userStr=localStorage.getItem('mowo_user')
+  if(userStr){try{const u=JSON.parse(userStr);document.getElementById('sidebarName').textContent=u.nickname||u.phone||'管理员';document.getElementById('sidebarAvatar').textContent=(u.nickname||'管')[0].toUpperCase();const rm={0:'用户',1:'生产端',2:'管理员',3:'超管'};document.getElementById('sidebarRole').textContent=rm[u.role]||'—'}catch(e){}}
+  loadContracts(1)
+})
+</script>
+<script src="../js/admin-sidebar.js"></script>
+</body>
+</html>

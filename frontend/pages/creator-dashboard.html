@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数据总览 — 哞屋创作者中心</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Noto+Sans+SC:wght@300;400;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --white:#FFFFFF;--cream:#F5F3EF;--black:#111110;
+  --gray1:#EBEBEA;--gray2:#C4C3BF;--gray3:#787874;
+  --accent-y:#F5E642;--accent-o:#FF6B35;--accent-g:#8FD694;--accent-b:#7EC8E3;
+  --font:'Nunito','Noto Sans SC',sans-serif;
+  --ease:cubic-bezier(0.22,1,0.36,1);
+  --sidebar-w:240px;--topbar-h:60px;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:var(--font);background:var(--cream);color:var(--black);overflow-x:hidden;-webkit-font-smoothing:antialiased;}
+a{text-decoration:none;color:inherit;}
+button{font-family:var(--font);cursor:pointer;border:none;background:none;}
+input,select{font-family:var(--font);}
+
+/* ── 侧栏 ── */
+.sidebar{width:var(--sidebar-w);background:var(--black);position:fixed;top:0;left:0;bottom:0;display:flex;flex-direction:column;z-index:800;transition:transform .35s var(--ease);}
+@media(max-width:1023px){.sidebar{transform:translateX(-100%);}.sidebar.open{transform:none;}}
+.sidebar-logo{padding:20px 20px 16px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:12px;flex-shrink:0;}
+.sidebar-logo-mark{width:36px;height:36px;border-radius:10px;background:var(--accent-y);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;color:var(--black);flex-shrink:0;}
+.sidebar-logo-cn{font-weight:900;font-size:16px;color:var(--white);}
+.sidebar-logo-sub{font-weight:700;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:rgba(255,255,255,.35);}
+.sidebar-user{padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:12px;flex-shrink:0;}
+.sidebar-avatar{width:36px;height:36px;border-radius:50%;background:var(--accent-y);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:var(--black);flex-shrink:0;border:2px solid rgba(255,255,255,.1);}
+.sidebar-user-name{font-weight:800;font-size:13px;color:var(--white);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sidebar-user-badge{display:inline-flex;align-items:center;gap:3px;margin-top:2px;font-weight:800;font-size:10px;letter-spacing:.06em;padding:1px 7px;border-radius:999px;background:rgba(143,214,148,.15);color:var(--accent-g);}
+.sidebar-nav{flex:1;overflow-y:auto;padding:12px 10px;}
+.sidebar-nav::-webkit-scrollbar{width:0;}
+.nav-sec{font-weight:800;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.25);padding:8px 10px 4px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;font-weight:800;font-size:13px;color:rgba(255,255,255,.55);transition:background .15s,color .15s;position:relative;white-space:nowrap;margin-bottom:2px;}
+.nav-item:hover{background:rgba(255,255,255,.07);color:rgba(255,255,255,.85);}
+.nav-item.active{background:rgba(255,255,255,.1);color:var(--white);}
+.nav-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:20px;border-radius:0 3px 3px 0;background:var(--accent-y);}
+.nav-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;background:rgba(255,255,255,.05);}
+.nav-item.active .nav-icon{background:rgba(245,230,66,.15);}
+.sidebar-bottom{padding:12px 10px 20px;border-top:1px solid rgba(255,255,255,.08);flex-shrink:0;}
+.bull-card{background:rgba(245,230,66,.08);border:1px solid rgba(245,230,66,.15);border-radius:14px;padding:12px 14px;}
+.bull-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.bull-level-name{font-weight:900;font-size:13px;color:var(--accent-y);}
+.bull-coeff{font-weight:800;font-size:11px;color:rgba(245,230,66,.6);background:rgba(245,230,66,.12);padding:2px 8px;border-radius:999px;}
+.bull-bar-wrap{height:5px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden;margin-bottom:6px;}
+.bull-bar-fill{height:100%;background:var(--accent-y);border-radius:3px;transition:width .8s var(--ease);}
+.bull-bar-label{font-weight:700;font-size:10px;color:rgba(255,255,255,.3);}
+.backdrop{display:none;position:fixed;inset:0;z-index:799;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);}
+.backdrop.show{display:block;}
+
+/* ── 顶栏 ── */
+.topbar{position:fixed;top:0;right:0;left:var(--sidebar-w);z-index:700;height:var(--topbar-h);background:rgba(245,243,239,.95);backdrop-filter:blur(20px);border-bottom:1px solid var(--gray1);display:flex;align-items:center;justify-content:space-between;padding:0 32px;}
+@media(max-width:1023px){.topbar{left:0;padding:0 20px;}}
+.topbar-left{display:flex;align-items:center;gap:14px;}
+.menu-btn{width:36px;height:36px;border-radius:10px;background:var(--gray1);display:none;align-items:center;justify-content:center;font-size:16px;}
+@media(max-width:1023px){.menu-btn{display:flex;}}
+.bc-home{font-weight:700;font-size:13px;color:var(--gray3);transition:color .2s;}
+.bc-home:hover{color:var(--black);}
+.bc-sep{color:var(--gray2);font-size:12px;margin:0 6px;}
+.bc-cur{font-weight:900;font-size:14px;color:var(--black);}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.topbar-avatar{width:34px;height:34px;border-radius:50%;background:var(--accent-y);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:var(--black);border:2px solid var(--gray1);}
+
+/* ── 主区 ── */
+.main{margin-left:var(--sidebar-w);padding-top:var(--topbar-h);}
+@media(max-width:1023px){.main{margin-left:0;}}
+.inner{padding:32px;max-width:1060px;}
+@media(max-width:640px){.inner{padding:20px 16px 60px;}}
+
+/* ── 通用 ── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;font-family:var(--font);font-weight:800;font-size:13px;padding:10px 22px;border-radius:999px;min-height:44px;transition:all .2s;cursor:pointer;border:none;white-space:nowrap;}
+.btn:active{transform:scale(.97);}
+.btn-ghost{background:var(--white);color:var(--black);border:1.5px solid var(--gray1);}
+.btn-ghost:hover{border-color:var(--black);}
+.btn-black{background:var(--black);color:var(--white);}
+.btn-black:hover{opacity:.85;}
+.btn-yellow{background:var(--accent-y);color:var(--black);box-shadow:0 3px 0 #C8BB00;}
+.btn-yellow:hover{box-shadow:0 5px 0 #C8BB00;transform:translateY(-1px);}
+.btn-sm{font-size:12px;padding:7px 16px;min-height:36px;}
+.btn:disabled{opacity:.4;cursor:not-allowed;pointer-events:none;}
+.page-title{font-weight:900;font-size:26px;letter-spacing:-.02em;margin-bottom:6px;}
+.page-sub{font-weight:700;font-size:13px;color:var(--gray3);}
+.reveal{opacity:0;transform:translateY(16px);transition:opacity .55s var(--ease),transform .55s var(--ease);}
+.reveal.on{opacity:1;transform:none;}
+.d1{transition-delay:.06s}.d2{transition-delay:.12s}.d3{transition-delay:.18s}.d4{transition-delay:.24s}.d5{transition-delay:.30s}
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
+.section-title{font-weight:900;font-size:17px;letter-spacing:-.01em;}
+
+/* ── 余额横幅 ── */
+.balance-banner{background:var(--black);border-radius:28px;padding:32px 36px;margin-bottom:24px;display:grid;grid-template-columns:1fr auto;gap:24px;align-items:center;overflow:hidden;position:relative;}
+@media(max-width:720px){.balance-banner{grid-template-columns:1fr;padding:24px;}}
+.bb-noise{position:absolute;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;opacity:.5;}
+.bb-accent{position:absolute;top:-60px;right:-60px;width:240px;height:240px;border-radius:50%;background:radial-gradient(circle,rgba(245,230,66,.18) 0%,transparent 70%);pointer-events:none;}
+.bb-label{font-weight:800;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.4);margin-bottom:10px;}
+.bb-amount{font-weight:900;font-size:52px;letter-spacing:-.04em;color:var(--white);line-height:1;margin-bottom:4px;}
+.bb-amount span{font-size:24px;font-weight:700;opacity:.5;margin-right:4px;}
+.bb-pending{font-weight:700;font-size:13px;color:rgba(255,255,255,.45);margin-top:8px;}
+.bb-pending strong{color:var(--accent-y);font-weight:900;}
+.bb-right{display:flex;flex-direction:column;gap:14px;}
+@media(max-width:720px){.bb-right{flex-direction:row;flex-wrap:wrap;}}
+.bb-stat{background:rgba(255,255,255,.07);border-radius:18px;padding:16px 20px;min-width:140px;}
+.bb-stat-label{font-weight:800;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:6px;}
+.bb-stat-val{font-weight:900;font-size:22px;color:var(--white);letter-spacing:-.02em;}
+.bb-stat-val span{font-size:13px;font-weight:700;opacity:.5;}
+.bb-stat-sub{font-weight:700;font-size:11px;color:rgba(255,255,255,.3);margin-top:4px;}
+
+/* ── 快捷入口 ── */
+.quick-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px;}
+@media(max-width:720px){.quick-row{grid-template-columns:1fr;}}
+.quick-card{background:var(--white);border-radius:22px;border:1.5px solid var(--gray1);padding:22px 24px;display:flex;align-items:center;gap:16px;transition:border-color .2s,box-shadow .2s;cursor:pointer;}
+.quick-card:hover{border-color:var(--gray2);box-shadow:0 4px 20px rgba(0,0,0,.07);}
+.quick-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+.quick-icon.y{background:rgba(245,230,66,.18);}
+.quick-icon.g{background:rgba(143,214,148,.18);}
+.quick-icon.b{background:rgba(127,200,227,.18);}
+.quick-card-text{flex:1;min-width:0;}
+.quick-title{font-weight:900;font-size:15px;margin-bottom:3px;}
+.quick-desc{font-weight:700;font-size:12px;color:var(--gray3);}
+.quick-arrow{font-size:18px;color:var(--gray2);transition:color .2s,transform .2s;}
+.quick-card:hover .quick-arrow{color:var(--black);transform:translateX(3px);}
+
+/* ── 分红状态四格 ── */
+.status-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;}
+@media(max-width:640px){.status-grid{grid-template-columns:1fr 1fr;}}
+.status-card{background:var(--white);border-radius:20px;border:1.5px solid var(--gray1);padding:18px 20px;transition:border-color .2s;}
+.status-card:hover{border-color:var(--gray2);}
+.status-card-icon{font-size:20px;margin-bottom:8px;}
+.status-card-label{font-weight:800;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gray3);margin-bottom:6px;}
+.status-card-num{font-weight:900;font-size:22px;letter-spacing:-.02em;}
+.status-card-num.cooling{color:#1565a0;}
+.status-card-num.available{color:#1a7a3c;}
+.status-card-num.orange{color:var(--accent-o);}
+.status-card-count{font-weight:700;font-size:11px;color:var(--gray3);margin-top:3px;}
+
+/* ── 储备金卡片 ── */
+.reserve-banner{background:var(--white);border-radius:24px;border:1.5px solid var(--gray1);padding:24px;margin-bottom:24px;}
+.reserve-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
+.reserve-title{font-weight:900;font-size:15px;}
+.reserve-desc{font-weight:700;font-size:12px;color:var(--gray3);}
+.reserve-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;}
+@media(max-width:640px){.reserve-grid{grid-template-columns:1fr 1fr;}}
+.rv-item{text-align:center;padding:0 16px;border-right:1px solid var(--gray1);}
+.rv-item:last-child{border-right:none;}
+@media(max-width:640px){.rv-item:nth-child(2n){border-right:none;}}
+.rv-label{font-weight:800;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--gray3);margin-bottom:6px;}
+.rv-num{font-weight:900;font-size:20px;}
+.rv-num.orange{color:var(--accent-o);}
+.rv-num.green{color:#1a7a3c;}
+.rv-sub{font-weight:700;font-size:11px;color:var(--gray3);margin-top:3px;}
+.reserve-next{margin-top:20px;background:var(--cream);border-radius:14px;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.reserve-next-info{font-weight:700;font-size:12px;color:var(--gray3);}
+.reserve-next-info strong{color:var(--black);font-weight:900;}
+
+/* ── 作品卡片列表 ── */
+.works-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:24px;}
+@media(max-width:720px){.works-grid{grid-template-columns:1fr;}}
+.work-card{background:var(--white);border-radius:22px;border:1.5px solid var(--gray1);overflow:hidden;display:flex;gap:0;transition:border-color .2s,box-shadow .2s;}
+.work-card:hover{border-color:var(--gray2);box-shadow:0 4px 20px rgba(0,0,0,.06);}
+.work-cover{width:90px;flex-shrink:0;background:var(--gray1);object-fit:cover;}
+.work-cover-ph{width:90px;flex-shrink:0;background:var(--gray1);display:flex;align-items:center;justify-content:center;font-size:32px;}
+.work-body{flex:1;padding:16px 18px;min-width:0;}
+.work-title{font-weight:900;font-size:14px;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.work-meta{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;}
+.work-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:999px;font-weight:800;font-size:10px;}
+.work-badge.newbie{background:rgba(245,230,66,.2);color:#8a6a00;}
+.work-badge.active{background:rgba(143,214,148,.2);color:#1a5c2e;}
+.work-badge.pending{background:var(--gray1);color:var(--gray3);}
+.work-rate{font-weight:700;font-size:11px;color:var(--gray3);}
+.work-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;}
+.work-stat-item{text-align:center;}
+.work-stat-val{font-weight:900;font-size:15px;}
+.work-stat-label{font-weight:700;font-size:10px;color:var(--gray3);}
+
+/* 空状态 */
+.empty{padding:48px 20px;text-align:center;background:var(--white);border-radius:24px;border:1.5px solid var(--gray1);}
+.empty-icon{font-size:40px;margin-bottom:12px;}
+.empty-text{font-weight:900;font-size:15px;margin-bottom:6px;}
+.empty-sub{font-weight:700;font-size:12px;color:var(--gray3);}
+
+/* 加载 */
+.loading{padding:32px;text-align:center;font-weight:700;font-size:13px;color:var(--gray3);}
+
+/* Toast */
+.toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--black);color:var(--white);font-weight:800;font-size:13px;padding:10px 22px;border-radius:999px;opacity:0;pointer-events:none;transition:all .3s var(--ease);z-index:9000;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<div class="backdrop" id="backdrop" onclick="closeSidebar()"></div>
+
+<!-- ── 侧栏 ── -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="sidebar-logo-mark">哞</div>
+    <div style="line-height:1.2;">
+      <p class="sidebar-logo-cn">创作者中心</p>
+      <p class="sidebar-logo-sub">MOWO Studio</p>
+    </div>
+  </div>
+  <div class="sidebar-user">
+    <div class="sidebar-avatar" id="sidebarAvatar">创</div>
+    <div style="flex:1;min-width:0;">
+      <p class="sidebar-user-name" id="sidebarName">加载中…</p>
+      <span class="sidebar-user-badge">✦ 认证创作者</span>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <p class="nav-sec">数据中心</p>
+    <a href="creator-dashboard.html" class="nav-item active">
+      <span class="nav-icon">📊</span>数据总览
+    </a>
+    <a href="creator-earnings.html" class="nav-item">
+      <span class="nav-icon">💰</span>收益明细
+    </a>
+    <p class="nav-sec" style="margin-top:12px;">创作管理</p>
+    <a href="creator-animations.html" class="nav-item">
+      <span class="nav-icon">🎬</span>我的动画
+    </a>
+    <a href="creator-collab.html" class="nav-item">
+      <span class="nav-icon">🎨</span>我的联名
+    </a>
+    <a href="creator-links.html" class="nav-item">
+      <span class="nav-icon">🔗</span>引流链接
+    </a>
+  </nav>
+  <div class="sidebar-bottom">
+    <!-- 牛量等级卡片（阶段2接入真实数据） -->
+    <div class="bull-card">
+      <div class="bull-card-top">
+        <span class="bull-level-name" id="bullLevelName">萌牛 Lv.1</span>
+        <span class="bull-coeff" id="bullCoeff">× 1.0</span>
+      </div>
+      <div class="bull-bar-wrap">
+        <div class="bull-bar-fill" id="bullBarFill" style="width:20%;"></div>
+      </div>
+      <p class="bull-bar-label" id="bullBarLabel">牛量积分 — / —</p>
+    </div>
+  </div>
+</aside>
+
+<!-- ── 顶栏 ── -->
+<header class="topbar">
+  <div class="topbar-left">
+    <button class="menu-btn" onclick="openSidebar()">☰</button>
+    <div style="display:flex;align-items:center;">
+      <a href="index.html" class="bc-home">哞屋</a>
+      <span class="bc-sep">›</span>
+      <span class="bc-cur">数据总览</span>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="topbar-avatar" id="topbarAvatar"></div>
+  </div>
+</header>
+
+<!-- ── 主内容 ── -->
+<main class="main">
+  <div class="inner">
+
+    <div style="margin-bottom:24px;" class="reveal">
+      <h1 class="page-title">数据总览</h1>
+      <p class="page-sub" id="pageSubDate">加载中…</p>
+    </div>
+
+    <!-- 余额横幅 -->
+    <div class="balance-banner reveal d1">
+      <div class="bb-noise"></div>
+      <div class="bb-accent"></div>
+      <div style="position:relative;">
+        <p class="bb-label">可提现余额</p>
+        <p class="bb-amount"><span>¥</span><span id="balanceNum">0</span></p>
+        <p class="bb-pending">冷却中 <strong id="coolingNum">¥—</strong> · 预估中 <strong id="estimatedNum">¥—</strong></p>
+      </div>
+      <div class="bb-right" style="position:relative;">
+        <div class="bb-stat">
+          <p class="bb-stat-label">累计已提现</p>
+          <p class="bb-stat-val"><span>¥</span><span id="withdrawnNum">—</span></p>
+          <p class="bb-stat-sub">历史提现总额</p>
+        </div>
+        <div class="bb-stat">
+          <p class="bb-stat-label">储备金待释放</p>
+          <p class="bb-stat-val"><span>¥</span><span id="releasableNum">—</span></p>
+          <p class="bb-stat-sub" id="nextReleaseLabel">90天后释放</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 快捷入口 -->
+    <div class="quick-row reveal d2">
+      <a href="creator-earnings.html" class="quick-card">
+        <div class="quick-icon y">💸</div>
+        <div class="quick-card-text">
+          <p class="quick-title">收益明细</p>
+          <p class="quick-desc">每笔分红的完整记录</p>
+        </div>
+        <span class="quick-arrow">→</span>
+      </a>
+      <a href="creator-collab.html" class="quick-card">
+        <div class="quick-icon g">🎨</div>
+        <div class="quick-card-text">
+          <p class="quick-title">我的联名</p>
+          <p class="quick-desc">作品销量与分红率</p>
+        </div>
+        <span class="quick-arrow">→</span>
+      </a>
+      <a href="creator-links.html" class="quick-card">
+        <div class="quick-icon b">🔗</div>
+        <div class="quick-card-text">
+          <p class="quick-title">引流链接</p>
+          <p class="quick-desc">专属推广链接管理</p>
+        </div>
+        <span class="quick-arrow">→</span>
+      </a>
+    </div>
+
+    <!-- 分红四状态 -->
+    <div class="reveal d3">
+      <div class="section-head">
+        <p class="section-title">分红状态</p>
+        <a href="creator-earnings.html" class="btn btn-ghost btn-sm">查看明细 →</a>
+      </div>
+      <div class="status-grid">
+        <div class="status-card">
+          <div class="status-card-icon">⏳</div>
+          <p class="status-card-label">预估中</p>
+          <p class="status-card-num" id="stEstimated">¥0.00</p>
+          <p class="status-card-count" id="stEstimatedCnt">0 笔</p>
+        </div>
+        <div class="status-card">
+          <div class="status-card-icon">❄️</div>
+          <p class="status-card-label">冷却中</p>
+          <p class="status-card-num cooling" id="stCooling">¥0.00</p>
+          <p class="status-card-count" id="stCoolingCnt">0 笔</p>
+        </div>
+        <div class="status-card">
+          <div class="status-card-icon">✅</div>
+          <p class="status-card-label">可提现</p>
+          <p class="status-card-num available" id="stAvailable">¥0.00</p>
+          <p class="status-card-count" id="stAvailableCnt">0 笔</p>
+        </div>
+        <div class="status-card">
+          <div class="status-card-icon">💳</div>
+          <p class="status-card-label">已提现</p>
+          <p class="status-card-num" id="stWithdrawn">¥0.00</p>
+          <p class="status-card-count" id="stWithdrawnCnt">0 笔</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 储备金 -->
+    <div class="reveal d4">
+      <div class="section-head">
+        <p class="section-title">储备金</p>
+        <a href="creator-earnings.html#reserve" class="btn btn-ghost btn-sm">流水记录 →</a>
+      </div>
+      <div class="reserve-banner">
+        <div class="reserve-top">
+          <div>
+            <p class="reserve-title">储备金账户</p>
+            <p class="reserve-desc">每笔分红扣除 15%，收货后 90 天自动释放回余额</p>
+          </div>
+        </div>
+        <div class="reserve-grid">
+          <div class="rv-item">
+            <p class="rv-label">累计扣入</p>
+            <p class="rv-num" id="rvTotal">¥0.00</p>
+            <p class="rv-sub">历史总计</p>
+          </div>
+          <div class="rv-item">
+            <p class="rv-label">待释放</p>
+            <p class="rv-num orange" id="rvReleasable">¥0.00</p>
+            <p class="rv-sub">90天内解冻</p>
+          </div>
+          <div class="rv-item">
+            <p class="rv-label">冻结中</p>
+            <p class="rv-num" id="rvFrozen">¥0.00</p>
+            <p class="rv-sub">风控处理中</p>
+          </div>
+          <div class="rv-item">
+            <p class="rv-label">已释放</p>
+            <p class="rv-num green" id="rvReleased">¥0.00</p>
+            <p class="rv-sub">已回余额</p>
+          </div>
+        </div>
+        <div class="reserve-next" id="reserveNextRow" style="display:none;">
+          <div class="reserve-next-info">
+            最近一批解冻：<strong id="rvNextDate">—</strong>
+          </div>
+          <div class="reserve-next-info">
+            解冻金额：<strong id="rvNextAmount">¥0.00</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 近期联名作品 -->
+    <div class="reveal d5">
+      <div class="section-head">
+        <p class="section-title">联名作品</p>
+        <a href="creator-collab.html" class="btn btn-ghost btn-sm">查看全部 →</a>
+      </div>
+      <div id="worksArea"><div class="loading">正在加载…</div></div>
+    </div>
+
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+<script src="../js/auth.js"></script>
+<script>
+const API = (location.hostname==='127.0.0.1'?'http://127.0.0.1:3001':'http://localhost:3001')
+
+function showToast(msg, dur) {
+  dur = dur || 2500
+  const t = document.getElementById('toast')
+  t.textContent = msg
+  t.classList.add('show')
+  setTimeout(function(){ t.classList.remove('show') }, dur)
+}
+function getToken(){ return localStorage.getItem('mowo_token') }
+async function apiFetch(path){
+  const res = await fetch(API+path,{headers:{'Authorization':'Bearer '+getToken()}})
+  return res.json()
+}
+
+// 侧栏开关
+function openSidebar(){
+  document.getElementById('sidebar').classList.add('open')
+  document.getElementById('backdrop').classList.add('show')
+}
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('open')
+  document.getElementById('backdrop').classList.remove('show')
+}
+
+// 数字滚动动画
+function animateNum(id, target, prefix, decimals) {
+  prefix = prefix || ''
+  decimals = decimals === undefined ? 2 : decimals
+  const el = document.getElementById(id)
+  if (!el) return
+  const dur = 1000, step = 16
+  let elapsed = 0
+  const ticker = setInterval(function(){
+    elapsed += step
+    const p = Math.min(elapsed/dur, 1)
+    const ease = 1 - Math.pow(1-p, 4)
+    const cur = target * ease
+    el.textContent = prefix + cur.toFixed(decimals)
+    if (p >= 1) {
+      clearInterval(ticker)
+      el.textContent = prefix + target.toFixed(decimals)
+    }
+  }, step)
+}
+
+// reveal 动画
+function initReveal() {
+  const els = document.querySelectorAll('.reveal')
+  const io = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('on') })
+  }, {threshold:0.1})
+  els.forEach(function(el){ io.observe(el) })
+}
+
+// 格式化日期
+function fmtDate(d){
+  if(!d) return '—'
+  return new Date(d).toLocaleDateString('zh-CN',{year:'numeric',month:'numeric',day:'numeric'})
+}
+function escHtml(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+}
+
+// ── 加载收益总览 ──
+async function loadSummary(){
+  const data = await apiFetch('/api/creator/settlement/summary')
+  if(!data.success) return
+  const d = data.data
+
+  // 大横幅
+  animateNum('balanceNum', d.balance.availableAmount)
+  setTimeout(function(){
+    document.getElementById('coolingNum').textContent = '¥'+d.cooling.amount.toFixed(2)
+    document.getElementById('estimatedNum').textContent = '¥'+d.estimated.amount.toFixed(2)
+    animateNum('withdrawnNum', d.balance.withdrawnAmount)
+    animateNum('releasableNum', d.reserve.releasableAmount)
+  }, 200)
+
+  // 解冻时间
+  if(d.reserve.nextReleaseAt){
+    document.getElementById('nextReleaseLabel').textContent = fmtDate(d.reserve.nextReleaseAt)+' 释放'
+  }
+
+  // 四状态
+  document.getElementById('stEstimated').textContent = '¥'+d.estimated.amount.toFixed(2)
+  document.getElementById('stEstimatedCnt').textContent = d.estimated.count+' 笔'
+  document.getElementById('stCooling').textContent = '¥'+d.cooling.amount.toFixed(2)
+  document.getElementById('stCoolingCnt').textContent = d.cooling.count+' 笔'
+  document.getElementById('stAvailable').textContent = '¥'+d.available.amount.toFixed(2)
+  document.getElementById('stAvailableCnt').textContent = d.available.count+' 笔'
+  document.getElementById('stWithdrawn').textContent = '¥'+d.withdrawn.amount.toFixed(2)
+  document.getElementById('stWithdrawnCnt').textContent = d.withdrawn.count+' 笔'
+
+  // 储备金
+  const rv = d.reserve
+  document.getElementById('rvTotal').textContent = '¥'+rv.totalReserved.toFixed(2)
+  document.getElementById('rvReleasable').textContent = '¥'+rv.releasableAmount.toFixed(2)
+  document.getElementById('rvFrozen').textContent = '¥'+rv.frozenAmount.toFixed(2)
+  document.getElementById('rvReleased').textContent = '¥'+rv.releasedAmount.toFixed(2)
+  if(rv.nextReleaseAt){
+    document.getElementById('reserveNextRow').style.display = 'flex'
+    document.getElementById('rvNextDate').textContent = fmtDate(rv.nextReleaseAt)
+    document.getElementById('rvNextAmount').textContent = '¥'+rv.nextReleaseAmount.toFixed(2)
+  }
+}
+
+// ── 加载牛量状态（侧栏底部卡片）──
+async function loadBullStatus(){
+  const data = await apiFetch('/api/creator/bull/status')
+  if(!data.success) return
+  const d = data.data
+
+  const levelNames  = {1:'萌牛',2:'勤牛',3:'红牛',4:'神牛',5:'牛王'}
+  const levelCoeffs = {1:'× 1.0',2:'× 1.2',3:'× 1.5',4:'× 1.8',5:'× 2.0'}
+  // 每级满分对应的下一级门槛，用于进度条百分比估算
+  const levelMaxScore = {1:30, 2:55, 3:75, 4:90, 5:100}
+
+  const lv    = d.bullLevel || 1
+  const score = d.bullScore || 0
+  const maxS  = levelMaxScore[lv] || 100
+  const pct   = Math.min(Math.round(score / maxS * 100), 100)
+
+  document.getElementById('bullLevelName').textContent = (levelNames[lv]||'萌牛') + ' Lv.' + lv
+  document.getElementById('bullCoeff').textContent     = levelCoeffs[lv] || '× 1.0'
+  document.getElementById('bullBarFill').style.width   = pct + '%'
+
+  // 进度条标签：显示当前积分，以及下一等级需要什么
+  const next = d.nextLevelRequirements
+  if(lv < 5 && next){
+    const hints = []
+    if(next.orders > 0) hints.push('订单 '+next.orders+' 笔')
+    if(next.views  > 0) hints.push('播放 '+(next.views>=10000?(next.views/10000).toFixed(0)+'万':next.views))
+    if(next.posts  > 0) hints.push('投稿 '+next.posts+' 篇')
+    document.getElementById('bullBarLabel').textContent =
+      '积分 '+score.toFixed(0)+' · 升'+(d.nextLevelName||'')+' 需 '+hints.join(' / ')
+  } else if(lv === 5) {
+    document.getElementById('bullBarLabel').textContent = '积分 '+score.toFixed(0)+' · 已达最高等级 🎉'
+  } else {
+    document.getElementById('bullBarLabel').textContent = '牛量积分 '+score.toFixed(0)
+  }
+}
+
+// ── 加载联名作品 ──
+async function loadWorks(){
+  const data = await apiFetch('/api/creator/settlement/orders?page=1&limit=4')
+  if(!data.success){ document.getElementById('worksArea').innerHTML = ''; return }
+  const orders = data.data.orders
+
+  if(orders.length === 0){
+    document.getElementById('worksArea').innerHTML =
+      '<div class="empty"><div class="empty-icon">🎨</div>'+
+      '<div class="empty-text">暂无联名作品</div>'+
+      '<div class="empty-sub">提交作品申请联名后，数据将显示在这里</div></div>'
+    return
+  }
+
+  // 按 collabWork 去重，展示近期有销量的作品
+  const seen = {}, cards = []
+  for(const o of orders){
+    if(!seen[o.workTitle]){
+      seen[o.workTitle] = true
+      cards.push(o)
+    }
+  }
+
+  const statusLabel = {estimated:'预估中',cooling:'冷却中',available:'可提现',withdrawn:'已提现'}
+  const statusCls   = {estimated:'pending',cooling:'active',available:'active',withdrawn:'pending'}
+
+  document.getElementById('worksArea').innerHTML =
+    '<div class="works-grid">'+
+    cards.map(function(o){
+      return '<div class="work-card">'+
+        (o.workCover
+          ? '<img class="work-cover" src="'+escHtml(o.workCover)+'" alt="">'
+          : '<div class="work-cover-ph">🎨</div>')+
+        '<div class="work-body">'+
+          '<p class="work-title">'+escHtml(o.workTitle)+'</p>'+
+          '<div class="work-meta">'+
+            '<span class="work-badge '+(statusCls[o.revenueStatus]||'pending')+'">'+
+              (statusLabel[o.revenueStatus]||o.revenueStatus)+
+            '</span>'+
+            '<span class="work-rate">分红率 '+(o.revenueRate*100).toFixed(0)+'%</span>'+
+          '</div>'+
+          '<div class="work-stats">'+
+            '<div class="work-stat-item">'+
+              '<p class="work-stat-val">¥'+o.salePrice.toFixed(0)+'</p>'+
+              '<p class="work-stat-label">售价</p>'+
+            '</div>'+
+            '<div class="work-stat-item">'+
+              '<p class="work-stat-val">¥'+o.revenueAmount.toFixed(0)+'</p>'+
+              '<p class="work-stat-label">应付分红</p>'+
+            '</div>'+
+            '<div class="work-stat-item">'+
+              '<p class="work-stat-val" style="color:#1a7a3c;">¥'+o.payoutAmount.toFixed(0)+'</p>'+
+              '<p class="work-stat-label">实际到账</p>'+
+            '</div>'+
+          '</div>'+
+        '</div>'+
+      '</div>'
+    }).join('')+
+    '</div>'
+}
+
+// ── 初始化 ──
+window.addEventListener('DOMContentLoaded', async function(){
+  initReveal()
+
+  // 用户信息
+  const userStr = localStorage.getItem('mowo_user')
+  if(userStr){
+    try{
+      const u = JSON.parse(userStr)
+      const name = u.nickname || u.phone || '创作者'
+      const initial = name[0].toUpperCase()
+      document.getElementById('sidebarName').textContent = name
+      document.getElementById('sidebarAvatar').textContent = initial
+      document.getElementById('topbarAvatar').textContent = initial
+    }catch(e){}
+  }
+
+  // 日期副标题
+  document.getElementById('pageSubDate').textContent =
+    '截至 '+new Date().toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric'})
+
+  await loadSummary()
+  loadBullStatus()
+  loadWorks()
+})
+</script>
+</body>
+</html>

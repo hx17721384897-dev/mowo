@@ -599,7 +599,7 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
 <div class="mobile-menu" id="mobileMenu">
   <a href="about.html">关于我们</a>
   <a href="products.html">产品介绍</a>
-  <a href="community.html" class="active">社区分享</a>
+  <a href="showcase.html" class="active">画师联名</a>
   <a href="customize-start.html">创作中心</a>
   <a href="contact.html">联络我们</a>
 </div>
@@ -612,7 +612,7 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
   <ul class="nav-links">
     <li><a href="about.html">关于我们</a></li>
     <li><a href="products.html">产品介绍</a></li>
-    <li><a href="community.html" class="active">社区分享</a></li>
+    <li><a href="showcase.html" class="active">画师联名</a></li>
     <li><a href="customize-start.html">创作中心</a></li>
     <li><a href="contact.html">联络我们</a></li>
   </ul>
@@ -626,7 +626,7 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
 
 <!-- Breadcrumb -->
 <div class="breadcrumb">
-  <a href="community.html" class="back-btn">
+  <a href="showcase.html" class="back-btn">
     <span class="back-arrow">←</span>
     <span>返回社区</span>
   </a>
@@ -856,7 +856,7 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
 <section class="related reveal">
   <div class="related-header">
     <h2 class="related-title">同作者的其他作品</h2>
-    <a href="community.html" class="related-more">查看全部 →</a>
+    <a href="showcase.html" class="related-more">查看全部 →</a>
   </div>
   <div class="related-grid">
     <div class="rel-card" onclick="window.location.href='work-detail.html?type=article'">
@@ -895,7 +895,7 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
     <span class="foot-logo">哞屋 MOWO</span>
     <div class="foot-links">
       <a href="about.html">关于我们</a><a href="products.html">产品介绍</a>
-      <a href="community.html">社区分享</a><a href="customize-start.html">创作中心</a><a href="contact.html">联络我们</a>
+      <a href="showcase.html">画师联名</a><a href="customize-start.html">创作中心</a><a href="contact.html">联络我们</a>
     </div>
   </div>
   <p class="foot-copy">© 2025 哞屋 MOWO. All rights reserved.</p>
@@ -1008,7 +1008,7 @@ function toggleCollect(btn){
 /* ══════════════════════════════
    页面初始化：从API加载真实数据
 ══════════════════════════════ */
-const MOWO_API = 'http://localhost:3001';
+const MOWO_API = (location.hostname==='127.0.0.1'?'http://127.0.0.1:3001':'http://localhost:3001');
 
 // 格式化数字
 function fmtNum(n) {
@@ -1082,8 +1082,20 @@ function renderArticle(data) {
   window._contentId   = id;
   window._contentType = 'article';
 
-  // 检查当前用户是否已点赞/收藏
-  checkUserActions(id, 'article');
+  // 从API返回的数据直接设置点赞/收藏状态
+  if (data.isLiked) {
+    const likeBtn = document.getElementById('likeBigBtn');
+    if (likeBtn) {
+      likeBtn.classList.add('liked');
+      likeBtn.querySelector('.like-big-icon').textContent = '♥';
+    }
+  }
+  if (data.isCollected) {
+    const collectBtn = document.getElementById('collectBtn');
+    if (collectBtn) {
+      collectBtn.classList.add('collected');
+    }
+  }
 
   // 关联商品卡片
   renderRelatedProducts(articleProducts);
@@ -1403,7 +1415,8 @@ async function toggleCollect(btn) {
       ? `${MOWO_API}/api/products/${id}`
       : `${MOWO_API}/api/articles/${id}`;
 
-    const res  = await fetch(url);
+    const token = typeof getToken === 'function' ? getToken() : localStorage.getItem('mowo_token');
+    const res  = await fetch(url, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined);
     const json = await res.json();
 
     if (!json.success) {

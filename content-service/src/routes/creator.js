@@ -36,7 +36,7 @@ export default async function creatorRoutes(fastify) {
    * 查看自己所有联名作品
    * 查询参数：status / page / limit
    */
-  fastify.get('/creator/collab/works', { preHandler: requireCreator }, async (req, reply) => {
+  fastify.get('/collab/works', { preHandler: requireCreator }, async (req, reply) => {
     const { status, page = 1, limit = 20 } = req.query
     const skip  = (Number(page) - 1) * Number(limit)
     const where = { creatorId: req.user.userId }
@@ -67,7 +67,7 @@ export default async function creatorRoutes(fastify) {
    * GET /api/creator/collab/works/:id
    * 查看自己某个联名作品详情（含帧图预签名URL）
    */
-  fastify.get('/creator/collab/works/:id', { preHandler: requireCreator }, async (req, reply) => {
+  fastify.get('/collab/works/:id', { preHandler: requireCreator }, async (req, reply) => {
     const work = await prisma.collabWork.findUnique({
       where: { id: req.params.id },
       include: { framePacks: true },
@@ -101,7 +101,7 @@ export default async function creatorRoutes(fastify) {
    * 获取帧素材包上传的OSS预签名URL
    * 创作者拿到URL后直接PUT上传zip文件到OSS
    */
-  fastify.get('/creator/collab/works/:id/frame-packs/:size/upload-url', {
+  fastify.get('/collab/works/:id/frame-packs/:size/upload-url', {
     preHandler: requireCreator
   }, async (req, reply) => {
     const { id } = req.params
@@ -132,7 +132,7 @@ export default async function creatorRoutes(fastify) {
    * 确认上传完成，更新数据库记录
    * Body: { ossKey }
    */
-  fastify.post('/creator/collab/works/:id/frame-packs/:size/confirm-upload', {
+  fastify.post('/collab/works/:id/frame-packs/:size/confirm-upload', {
     preHandler: requireCreator
   }, async (req, reply) => {
     const { id }   = req.params
@@ -167,7 +167,7 @@ export default async function creatorRoutes(fastify) {
    * GET /api/creator/collab/works/:id/frame-packs
    * 查看自己作品的所有帧素材包
    */
-  fastify.get('/creator/collab/works/:id/frame-packs', {
+  fastify.get('/collab/works/:id/frame-packs', {
     preHandler: requireCreator
   }, async (req, reply) => {
     const work = await prisma.collabWork.findUnique({ where: { id: req.params.id } })
@@ -191,7 +191,7 @@ export default async function creatorRoutes(fastify) {
    * GET /api/creator/collab/stats
    * 创作者自己的销量和收益概览
    */
-  fastify.get('/creator/collab/stats', { preHandler: requireCreator }, async (req, reply) => {
+  fastify.get('/collab/stats', { preHandler: requireCreator }, async (req, reply) => {
     const creatorId = req.user.userId
 
     const [totalWorks, approvedWorks, onShelfWorks] = await Promise.all([

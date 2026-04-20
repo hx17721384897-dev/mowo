@@ -1,189 +1,288 @@
 # FRONTEND.md — 前端页面清单与规范
 
+---
+
 ## 重要说明
 
-- 所有前端页面已完成，**未经确认不得修改**
-- CSS / JS 全部内联在各 HTML 文件中，暂不拆分
-- 所有演示数据（localStorage、硬编码数组）待后端完成后统一替换为 API 调用
+- CSS/JS 全部内联在各 HTML 文件中，不拆分公共文件
+- 唯一公共JS：`frontend/js/auth.js`（登录状态管理）
+- 所有页面在 `</body>` 前引入 auth.js
+- **前端分阶段交付**：初期只上线展示+定制，社群页面代码保留但不在导航显示
+
+---
+
+## 合规说明（初期版本）
+
+初期网页端只展示以下功能，不涉及在线支付和社交互动：
+- 产品介绍（静态页）
+- 案例展示（showcase.html，联名作品展示，无评论无购买）
+- 定制流程（工具属性，不直接收费）
+- 联络我们（需登录才能提交）
+- 管理后台（内部工具）
 
 ---
 
 ## 页面清单
 
-### 主站页面
+### 主站页面（初期上线）
 
-| 文件名 | 页面 | 说明 |
+| 文件名 | 页面 | 状态 |
 |--------|------|------|
-| `index.html` | 主页 | 原名 mowo-homepage.html |
-| `about.html` | 关于我们 | 原名 mowo-about.html |
-| `products.html` | 产品介绍 | 原名 mowo-product.html，含五款机型详细介绍 |
-| `community.html` | 社区分享 | 原名 mowo-community.html，含实时搜索过滤 |
-| `contact.html` | 联络我们 | 原名 mowo-contact.html |
+| `index.html` | 主页/落地页 | ✅ 保留 |
+| `about.html` | 关于我们 | ✅ 静态，保留 |
+| `products.html` | 产品介绍 | ✅ 静态，保留 |
+| `contact.html` | 联络我们 | ✅ 已完成 |
+| `showcase.html` | 案例展示（联名作品，无评论无购买） | ⬜ 待开发 |
 
-### 内容详情页
+### 定制流程（初期上线）
 
-| 文件名 | 页面 | URL 参数 |
-|--------|------|---------|
-| `work-detail.html` | 作品/商品详情 | `?type=article` 文章模式，`?type=product&price=299&machine=cylinder` 商品模式 |
-| `creator-profile.html` | 创作者公开主页 | `?id=1` 创作者 ID |
-
-### 定制购买流程
-
-| 文件名 | 页面 | 说明 |
+| 文件名 | 页面 | 状态 |
 |--------|------|------|
-| `customize-start.html` | 选型号 | 五款机型选择，选完跳转编辑器 |
-| `customize-editor.html` | 上传与筛帧 | 上传动画帧，URL 参数 `?type=cylinder` |
-| `customize-confirm.html` | 选款式规格 | 选颜色材质，多款式加购逻辑 |
-| `checkout.html` | 结算页 | 演示券码：MOWO20 / MOWO50 / CREATOR10 |
+| `customize-start.html` | 选款式 | ✅ 已重写（走马灯+详情弹窗） |
+| `customize-editor.html` | 上传与筛帧 | ✅ 已对接 |
+| `customize-confirm.html` | 选配+提交 | ✅ 已对接 |
 
-### 用户中心
+### 管理后台（内部使用）
 
-| 文件名 | 页面 | 说明 |
+| 文件名 | 页面 | 权限 | 状态 |
+|--------|------|------|------|
+| `admin-orders.html` | 定制订单四视图 | role≥2 | ✅ |
+| `admin-collab-works.html` | 联名作品管理 | role≥2 | ✅ |
+| `admin-collab.html` | 联名作品审核 | role≥2 | ✅ |
+| `admin-collab-activities.html` | 活动管理 | role≥2 | ✅ |
+| `admin-users.html` | 用户管理（支持?highlight=userId高亮定位） | role≥2 | ✅ |
+| `admin-logs.html` | 审计日志 | role=3 | ✅ |
+| `admin-models.html` | 款式管理 | role≥2 | ✅ |
+| `admin-inventory.html` | 库存管理 | role≥2 | ✅ |
+| `admin-contact.html` | 联络留言管理 | role≥2 | ✅ |
+| `admin-settlement.html` | 分红结算（待打款/历史记录/确认打款） | role≥2 | ✅ 新增 |
+| `admin-bull.html` | 牛量管理（创作者列表/参数配置） | role≥2 | ✅ 新增 |
+| `admin-links.html` | 引流链接审核（外部视频审核/声量系数） | role≥2 | ✅ 新增 |
+| `admin-contract.html` | 商务合同（大IP合同管理/打款记录） | role≥2 | ✅ 新增 |
+
+### 创作者中心
+
+| 文件名 | 页面 | 状态 |
 |--------|------|------|
-| `auth.html` | 登录 / 注册 | 含右上角下拉菜单模块 |
-| `cart.html` | 购物车 | |
-| `favorites.html` | 我的收藏 | |
-| `orders.html` | 我的订单 | |
-| `order-detail.html` | 订单详情 / 物流 | 含退货入口 |
+| `creator-dashboard.html` | 数据总览（余额/分红状态/储备金/牛量） | ✅ 新增 |
+| `creator-earnings.html` | 收益与提现（分红明细/储备金流水/提现申请） | ✅ 新增 |
+| `creator-links.html` | 引流链接（专属推广链接/外部视频提交） | ✅ 新增 |
+| `creator-collab.html` | 我的联名（已有，侧栏已接入） | ✅ |
 
-### 创作者后台
+### 生产端
 
-> 创作者后台无页脚，有固定黑色左侧边栏导航
-
-| 文件名 | 页面 | 说明 |
+| 文件名 | 页面 | 状态 |
 |--------|------|------|
-| `creator-works.html` | 我的作品 | Tab 切换文章/动画机，网格展示 |
-| `creator-article-stats.html` | 文章数据 | Canvas 折线图，时间范围切换 |
-| `creator-product-stats.html` | 商品数据 | 收益折线图 + 销量饼图 |
-| `creator-product-edit.html` | 商品编辑 | 四种入口模式，三个视图状态，SKU 配置 |
-| `creator-earnings.html` | 收益与提现 | 余额展示，提现操作，收益明细 |
-| `creator-certify.html` | 创作者认证 | 四步流程：创作者信息→实名认证→版权声明→协议提交 |
+| `production-scan.html` | 扫码查询+发货双模式 | ✅ |
 
 ---
 
-## 页面跳转关系
+## contact.html 功能说明 ✅ 新增
 
 ```
-index.html
-  ├── community.html
-  │     └── work-detail.html?type=article   (文章详情)
-  │           └── creator-profile.html?id=x
-  │                 └── work-detail.html?type=product  (商品详情)
-  │                       └── checkout.html
-  │
-  ├── customize-start.html
-  │     └── customize-editor.html?type=cylinder
-  │           └── customize-confirm.html
-  │                 └── checkout.html
-  │
-  └── auth.html (右上角)
-        ├── cart.html → checkout.html
-        ├── favorites.html
-        ├── orders.html → order-detail.html
-        └── creator-works.html (创作者后台入口)
-              ├── creator-article-stats.html
-              ├── creator-product-stats.html
-              │     └── creator-product-edit.html
-              ├── creator-earnings.html
-              └── creator-certify.html
-```
+六张角色卡片（3+3布局）：
+  第一行：画师/IP联名 · 媒体/博主合作 · 反馈&创意共建
+  第二行：线下渠道合作 · 厂家合作 · 加入哞屋
 
----
+未登录保护：
+  点击任意卡片 → 检查登录状态
+  未登录 → 弹「请先登录」提示框（点「去登录」调起auth.js登录弹窗）
+  已登录 → 正常打开对应表单弹窗
 
-## creator-product-edit.html 四种入口模式
+各角色必填字段：
+  artist：  姓名、联系邮箱、IP/作品介绍
+  channel： 联系人、邮箱、公司/门店、城市、合作想法
+  media：   姓名、邮箱、主要平台、合作方向
+  join：    姓名、邮箱、应聘方向、上传简历（必传）
+  feedback：反馈类型、描述内容
+  factory： 联系人、联系方式、公司名、城市、生产品类、年产能
 
-| 入口 | URL 参数 | 行为 |
-|------|---------|------|
-| 从「我的作品」点「上架」 | `?animId=1` | 直接进编辑视图，自动弹出选配弹窗 |
-| 从「商品数据」点「编辑」 | `?id=101` | 进编辑视图，预填已有数据 |
-| 组合上架 | `?mode=bundle` | 进选品视图（多选 ≥2 件） |
-| 盲盒上架 | `?mode=blindbox` | 进选品视图（多选 ≥6 件） |
-| 直接点导航 | 无参数 | 进商品列表视图 |
+文件上传（走OSS预签名，需登录）：
+  artist：作品集文件（PDF/图片/ZIP，可多选，最大20MB）
+  join：  简历（PDF/Word，最大10MB）
 
----
+提交时自动带入：
+  submitterUserId（从localStorage mowo_user 读取）
 
-## 本地存储约定
-
-```javascript
-// 登录 token
-localStorage.getItem('mowo_token')
-// 结构：{ userId, name, is_creator, exp }
-
-// 购物车
-localStorage.getItem('mowo_cart')
-// 结构：[{ id, name, spec, colorHex, price, qty }]
-
-// 立即购买数据（跨页传递）
-localStorage.getItem('mowo_pending_order')
-// 结构：{ items: [...], from: 'product-detail' | 'customize' }
-
-// 定制流程（customize-editor → customize-confirm）
-localStorage.getItem('mowo_customize_frames')  // 帧图 URL 数组
-localStorage.getItem('mowo_customize_meta')
-// 结构：{ type, frameCount, selectedVariant, basePrice, validTargets, cart, cartTotal }
-// 注意：定制流程结束后必须清理这两个 key
+成功后显示对应成功弹窗，表单关闭时自动重置
 ```
 
 ---
 
-## 机型规格常量
+## admin-settlement.html 功能说明 ✅ 新增
 
-前端各页面内联了以下常量，后端需保持一致：
+```
+顶部统计卡片：本周待打款金额 / 待结算订单数 / 涉及创作者数 / 历史累计打款
+Tab1 待结算：按创作者分组，展示应付分红/实际打款，可展开查看每笔订单明细
+  → 点「打款」弹出确认弹窗，填备注（灵活用工平台任务单号等）确认
+Tab2 历史记录：可按周次/状态筛选，展示每笔结算凭证
 
-```javascript
-const MACHINE_SPECS = {
-  cylinder: {
-    label: '经典圆筒款',
-    frames: [12, 16, 24],
-    materials: ['acrylic', 'wood', 'alum'],
-    colors: {
-      acrylic: ['transparent', 'frost', 'smoke', 'rose'],
-      wood:    ['natural', 'walnut', 'white'],
-      alum:    ['black', 'silver', 'gold'],
-    }
-  },
-  lantern: {
-    label: '手提灯笼款',
-    frames: [12, 16],
-    materials: ['wood', 'acrylic'],
-    colors: { wood: ['natural', 'walnut'], acrylic: ['transparent', 'rose'] }
-  },
-  hexagon: {
-    label: '六棱柱款',
-    frames: [6, 12],
-    materials: ['alum', 'acrylic'],
-    colors: { alum: ['black', 'silver'], acrylic: ['transparent', 'smoke'] }
-  },
-  'flat-round': {
-    label: '扁圆盒款',
-    frames: [12, 24],
-    materials: ['acrylic', 'wood'],
-    colors: { acrylic: ['transparent', 'frost'], wood: ['natural', 'walnut'] }
-  },
-  'mini-pendant': {
-    label: '迷你挂件款',
-    frames: [12],
-    materials: ['acrylic'],
-    colors: { acrylic: ['transparent', 'rose', 'smoke'] }
-  },
-}
+打款逻辑：
+  订单 received → 冷却15天（定时任务每小时检查）→ revenueStatus=available
+  → 管理员在此页汇总确认 → collab_orders.settlementStatus=settled
+  → payoutAmount 写入 balances.availableAmount
+```
+
+## admin-bull.html 功能说明 ✅ 新增
+
+```
+顶部统计卡片：全部/萌牛/勤牛/红牛/神牛+牛王，点击筛选
+Tab1 创作者列表：等级徽章/牛量系数/积分进度条/近30天订单数
+  → 点「详情」打开右侧抽屉：三维度积分卡片/近30天折线趋势图/等级变动记录/手动调整表单
+  → 点「重算」立即触发单个创作者重新计算
+Tab2 参数配置：13项阈值全部展示为可编辑输入框，保存后次日批处理生效
+```
+
+## admin-links.html 功能说明 ✅ 新增
+
+```
+默认显示「待审核」状态
+统计卡片：全部/待审核/已通过/不符合，点击筛选
+列表展示：创作者昵称/平台/视频链接/标题
+  → 点「审核」展开内联表单：
+    - 填写播放量、点赞数
+    - 设置声量系数（0.5~2.0，影响牛量声量维度得分）
+    - 勾选是否有品牌提及
+    - 填审核备注
+    - 点「通过」或「不符合」一步完成
+    → 通过后自动同步到该创作者最新 bull_score.socialManualMod
+```
+
+## admin-contract.html 功能说明 ✅ 新增
+
+```
+大IP/商务合作合同管理（独立于标准分红体系）
+支持四种合同类型：纯分红 / 保底+分红 / 买断 / 自定义
+合同列表：合作方名称/类型/合同期限/分红比例/累计打款
+  → 点「详情/编辑」打开右侧抽屉：编辑合同信息 + 查看打款历史记录
+  → 点「录入打款」打开打款抽屉：填金额/备注/日期，追加到打款记录列表
+  → 点「终止」更新合同状态
+```
+
+## creator-dashboard.html 功能说明 ✅ 新增
+
+```
+入口：头像下拉菜单（需 certifyStatus=2）
+黑色大横幅：可提现余额（数字滚动动画）+ 冷却中/预估中金额
+快捷入口卡片：收益明细 / 我的联名 / 引流链接
+分红四状态卡片：预估中/冷却中/可提现/已提现
+储备金区块：累计扣入/待释放/冻结中/已释放 + 最近解冻时间
+近期联名作品卡片
+侧栏底部牛量卡片：等级/进度条/升级条件提示（接真实API）
+```
+
+## creator-earnings.html 功能说明 ✅ 新增
+
+```
+黑色大横幅：可提现余额 + 冷却中/预估中金额
+快捷入口：立即提现 / 分红明细（锚点滚动）
+申请提现：选择收款账户（支付宝/银行卡）/ 金额预设按钮 / 提现备注
+  → 调用 /api/earnings/withdraw，灵活用工平台API占位
+提现记录：对接真实提现历史
+分红明细表格：状态筛选/公式拆解（售价×分红率-储备金=实际到账）/ 冷却进度
+储备金流水：变动类型图标（扣入/释放/冻结/解冻/没收）/ 余额变化
+```
+
+## creator-links.html 功能说明 ✅ 新增
+
+```
+顶部黑色横幅：专属推广链接（一键复制）+ 累计点击/订单/销售额统计
+外部视频链接列表：平台标签/审核状态/视频标题/链接
+  → 点「＋ 添加链接」展开表单：选平台/填链接/填说明
+  → 审核通过后显示：播放量/点赞数/声量系数
+  → pending 状态可删除，已审核不可修改（删除后重新提交）
+```
+
+## admin-contact.html 功能说明 ✅ 新增
+
+```
+两行筛选卡片（点击筛选，再点取消，可叠加）：
+  第一行（等宽5格）：待处理 · 处理中 · 已处理 · 垃圾信息 · ⭐星标
+  第二行（横向滚动）：画师联名 · 线下渠道 · 媒体合作 · 加入哞屋 · 反馈创意 · 厂家合作
+
+搜索栏：关键词搜索（姓名/联系方式/内容），筛选条件以标签显示可单独清除
+
+列表操作：
+  状态下拉选择器（始终显示全部状态，随时可改回任意状态）
+  ⭐ 按钮（独立toggle，与状态无关，点亮/熄灭，不影响处理状态）
+
+详情弹窗：
+  状态选择器（可改回任意状态，杜绝误触无法撤销）
+  ⭐ 加星标按钮（独立，随时切换）
+  完整字段展示（各角色不同字段全部显示）
+  附件下载（简历/作品集，OSS预签名URL，1小时有效）
+  内部备注（独立保存）
+  系统信息：提交账号（点击跳转admin-users.html?highlight=userId）+ 提交IP
+
+admin-users.html 支持：
+  URL参数 ?highlight=userId → 自动翻页找到该用户 → 黄色高亮3秒后恢复
 ```
 
 ---
 
-## 待对接 API 清单（前端当前使用演示数据的位置）
+## 管理后台侧边栏导航结构（统一）
 
-对接后端时需逐一替换以下演示逻辑：
+```
+生产管理
+  └── 定制订单 → admin-orders.html
 
-| 页面 | 当前演示数据 | 需对接的 API |
-|------|------------|-------------|
-| `auth.html` | 本地校验 | `POST /api/auth/login` `POST /api/auth/register` |
-| `community.html` | 硬编码帖子数组 | `GET /api/community/posts` |
-| `work-detail.html` | 硬编码作品数据 | `GET /api/works/:id` |
-| `creator-profile.html` | CREATORS 常量 | `GET /api/creators/:id` |
-| `cart.html` | localStorage | `GET/POST /api/shop/cart` (CRMEB) |
-| `orders.html` | 硬编码订单 | `GET /api/shop/orders` (CRMEB) |
-| `creator-works.html` | 硬编码作品 | `GET /api/works/mine` |
-| `creator-product-edit.html` | 本地状态 | `POST /api/products` `PUT /api/products/:id` |
-| `creator-earnings.html` | 硬编码收益 | `GET /api/earnings/summary` |
-| `creator-certify.html` | 模拟核验 | `POST /api/certify/apply` |
+款式管理
+  ├── 款式管理 → admin-models.html
+  └── 库存管理 → admin-inventory.html
+
+联名系统
+  ├── 联名作品 → admin-collab-works.html
+  ├── 联名审核 → admin-collab.html
+  └── 活动管理 → admin-collab-activities.html
+
+运营
+  ├── 联络留言 → admin-contact.html
+  ├── 分红结算 → admin-settlement.html    ✅ 新增
+  ├── 牛量管理 → admin-bull.html          ✅ 新增
+  ├── 引流审核 → admin-links.html         ✅ 新增
+  └── 商务合同 → admin-contract.html      ✅ 新增
+
+用户管理
+  └── 用户列表 → admin-users.html
+
+系统
+  ├── 审计日志 → admin-logs.html
+  └── 返回前台 → index.html
+```
+
+---
+
+## 创作者中心页面（头像下拉菜单入口，需 certifyStatus=2）✅ 新增
+
+```
+数据中心
+  ├── 数据总览   → creator-dashboard.html  （牛量卡片/收益总览/分红四状态/储备金）
+  └── 收益与提现 → creator-earnings.html   （余额横幅/提现/分红明细/储备金流水）
+
+创作管理
+  ├── 我的联名   → creator-collab.html     （已有，后续扩充）
+  └── 引流链接   → creator-links.html      （专属推广链接/外部视频链接提交）
+```
+
+```
+mowo_token              — JWT登录token
+mowo_user               — 用户信息缓存（JSON，含userId）
+mowo_customize_frames   — 定制帧图数组（提交后清除）
+mowo_customize_meta     — 定制元数据（提交后清除）
+mowo_editor_hint_v2     — 编辑器首次提示标记
+mowo_sku_sizes          — 款式管理自定义尺寸选项
+mowo_sku_materials      — 款式管理自定义材质选项
+mowo_sku_frames         — 款式管理自定义帧数选项
+mowo_sku_colors         — 款式管理自定义颜色选项
+```
+
+---
+
+## production-scan.html 功能说明
+
+```
+查询模式：扫材料包/订单码/快递单号自动识别
+发货模式：扫面单→逐件扫订单码→配齐确认→shipped
+等候区：未配齐跳过，被扫到时弹出确认归属
+批次追溯：按batchId过滤
+```

@@ -5,904 +5,658 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>确认订单 — 哞屋 MOWO</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Noto+Sans+SC:wght@300;400;700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
-:root {
-  --white:    #FFFFFF;
-  --cream:    #F5F3EF;
-  --black:    #111110;
-  --gray1:    #EBEBEA;
-  --gray2:    #C4C3BF;
-  --gray3:    #787874;
-  --accent-y: #F5E642;
-  --accent-o: #FF6B35;
-  --accent-g: #8FD694;
-  --accent-b: #7EC8E3;
-  --font:     'Nunito','Noto Sans SC',sans-serif;
-  --ease:     cubic-bezier(0.22,1,0.36,1);
-  --pad-m:    24px;
-  --pad-d:    72px;
-  --nav-h:    61px;
+:root{
+  --white:#FFFFFF;--cream:#F5F3EF;--black:#111110;
+  --gray1:#EBEBEA;--gray2:#C4C3BF;--gray3:#787874;
+  --accent-y:#F5E642;--accent-o:#FF6B35;--accent-g:#8FD694;
+  --red:#E03030;--font:'Nunito','Noto Sans SC',sans-serif;
+  --ease:cubic-bezier(0.22,1,0.36,1);--nav-h:65px;
 }
-@media(min-width:1024px){ :root{ --nav-h:73px; } }
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:var(--font);background:var(--cream);color:var(--black);-webkit-font-smoothing:antialiased;}
+button{font-family:var(--font);cursor:pointer;border:none;background:none;}
+a{text-decoration:none;}
+input,select{font-family:var(--font);}
 
-*,*::before,*::after{ margin:0;padding:0;box-sizing:border-box; }
-html{ scroll-behavior:smooth; }
-body{ font-family:var(--font);background:var(--cream);color:var(--black);overflow-x:hidden;-webkit-font-smoothing:antialiased; }
-a{ text-decoration:none;color:inherit; }
-button{ font-family:var(--font); }
+/* NAV */
+.nav{position:fixed;top:0;left:0;right:0;z-index:600;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:var(--nav-h);background:rgba(245,243,239,.96);backdrop-filter:blur(20px);border-bottom:1.5px solid var(--gray1);}
+@media(min-width:1024px){.nav{padding:0 48px;}}
+.nav-logo-cn{font-weight:900;font-size:22px;color:var(--black);}
+.nav-logo-en{font-weight:700;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--gray3);display:block;}
+.nav-right{display:flex;align-items:center;gap:8px;}
+.nav-login-btn{font-weight:900;font-size:14px;padding:9px 20px;border-radius:999px;background:var(--accent-y);color:var(--black);}
+.nav-avatar{width:34px;height:34px;border-radius:50%;background:var(--accent-y);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:var(--black);}
+.nav-user{position:relative;}
+.nav-avatar-btn{display:flex;align-items:center;gap:8px;padding:5px 12px 5px 5px;border-radius:999px;border:2px solid transparent;}
+.user-dropdown{position:absolute;top:calc(100% + 10px);right:0;width:232px;background:var(--white);border-radius:20px;border:1.5px solid var(--gray1);box-shadow:0 8px 40px rgba(0,0,0,.12);padding:8px;opacity:0;pointer-events:none;transform:translateY(-8px) scale(.97);transform-origin:top right;transition:opacity .25s var(--ease),transform .25s var(--ease);z-index:100;}
+.user-dropdown.open{opacity:1;pointer-events:all;transform:none;}
+.di{display:flex;align-items:center;gap:11px;padding:10px 14px;border-radius:12px;font-weight:800;font-size:13px;color:var(--black);transition:background .15s;width:100%;text-align:left;}
+.di:hover{background:var(--cream);}
 
-/* ── NAV ── */
-.nav{
-  position:fixed;top:0;left:0;right:0;z-index:900;
-  display:flex;align-items:center;justify-content:space-between;
-  padding:14px var(--pad-m);
-  background:rgba(255,255,255,.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-  border-bottom:1px solid rgba(0,0,0,.06);height:var(--nav-h);
-}
-@media(min-width:1024px){ .nav{ padding:20px var(--pad-d); } }
-.nav-logo{ line-height:1; }
-.nav-logo-cn{ font-weight:900;font-size:22px;letter-spacing:-.01em; }
-.nav-logo-en{ font-weight:700;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--gray3);display:block;margin-top:1px; }
-.nav-back{
-  font-weight:800;font-size:13px;color:var(--gray3);
-  display:flex;align-items:center;gap:6px;
-  transition:color .2s;
-}
-.nav-back:hover{ color:var(--black); }
+/* LAYOUT */
+.main{max-width:780px;margin:0 auto;padding:calc(var(--nav-h) + 28px) 20px 40px;}
+@media(min-width:1024px){.main{padding:calc(var(--nav-h) + 40px) 24px 60px;}}
 
-/* ── 通用按钮 ── */
-.btn{
-  display:inline-flex;align-items:center;justify-content:center;gap:8px;
-  font-family:var(--font);font-weight:800;font-size:15px;letter-spacing:.02em;
-  padding:14px 28px;border-radius:999px;min-height:52px;
-  transition:transform .2s,box-shadow .2s,opacity .2s;
-  cursor:pointer;border:none;width:100%;
-}
-.btn:active{ transform:scale(.97); }
-.btn-primary{ background:var(--black);color:var(--white);box-shadow:0 4px 0 rgba(0,0,0,.25); }
-.btn-primary:hover{ box-shadow:0 6px 0 rgba(0,0,0,.25);transform:translateY(-2px); }
-.btn-secondary{ background:var(--white);color:var(--black);border:2px solid var(--gray1);box-shadow:0 4px 0 var(--gray1); }
-.btn-secondary:hover{ border-color:var(--gray2);box-shadow:0 6px 0 var(--gray2);transform:translateY(-2px); }
-.btn-wechat{ background:#07C160;color:var(--white);box-shadow:0 4px 0 #059447; }
-.btn-wechat:hover{ box-shadow:0 6px 0 #059447;transform:translateY(-2px); }
-.btn-alipay{ background:#1677FF;color:var(--white);box-shadow:0 4px 0 #0E5ACC; }
-.btn-alipay:hover{ box-shadow:0 6px 0 #0E5ACC;transform:translateY(-2px); }
-.btn:disabled{ opacity:.4;cursor:not-allowed;pointer-events:none; }
-.btn-sm{ font-size:13px;padding:10px 20px;min-height:44px; }
-.btn-xs{ font-size:12px;padding:7px 14px;min-height:34px; }
+.page-title{font-weight:900;font-size:24px;margin-bottom:24px;display:flex;align-items:center;gap:10px;}
+.back-link{color:var(--gray3);font-size:13px;font-weight:800;display:flex;align-items:center;gap:4px;margin-bottom:16px;}
+.back-link:hover{color:var(--black);}
 
-/* ── 页面主体 ── */
-.page-wrap{
-  padding-top:calc(var(--nav-h) + 32px);
-  padding-bottom:120px;
-  min-height:100vh;
-}
+/* CARD */
+.card{background:var(--white);border-radius:20px;border:1.5px solid var(--gray1);padding:20px 24px;margin-bottom:16px;}
+.card-title{font-weight:900;font-size:15px;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.card-title .step-dot{width:22px;height:22px;border-radius:50%;background:var(--black);color:var(--white);font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 
-.checkout-layout{
-  display:flex;flex-direction:column;gap:20px;
-  max-width:1100px;margin:0 auto;
-  padding:0 var(--pad-m);
-}
-@media(min-width:1024px){
-  .checkout-layout{ flex-direction:row;align-items:flex-start;gap:32px;padding:0 var(--pad-d); }
-}
+/* PRODUCT LIST */
+.product-list{display:flex;flex-direction:column;gap:12px;}
+.product-row{display:grid;grid-template-columns:64px 1fr auto;gap:12px;align-items:center;}
+.product-cover{width:64px;height:64px;border-radius:10px;background:var(--gray1);overflow:hidden;}
+.product-cover img{width:100%;height:100%;object-fit:cover;}
+.product-cover .cover-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:24px;}
+.product-name{font-weight:900;font-size:13px;line-height:1.3;margin-bottom:4px;}
+.product-meta{font-size:11px;font-weight:700;color:var(--gray3);}
+.product-price{font-weight:900;font-size:15px;text-align:right;}
+.product-qty{font-size:11px;font-weight:700;color:var(--gray3);text-align:right;}
 
-/* ── 通用卡片 ── */
-.card{
-  background:var(--white);border-radius:24px;
-  border:1px solid var(--gray1);overflow:hidden;
-}
-.card-head{
-  padding:20px 24px 16px;
-  border-bottom:1px solid var(--gray1);
-  display:flex;align-items:center;justify-content:space-between;gap:12px;
-}
-.card-title{
-  font-weight:900;font-size:16px;letter-spacing:-.01em;
-  display:flex;align-items:center;gap:8px;
-}
-.card-title-num{
-  width:22px;height:22px;border-radius:50%;
-  background:var(--black);color:var(--white);
-  font-size:11px;font-weight:900;
-  display:flex;align-items:center;justify-content:center;flex-shrink:0;
-}
-.card-body{ padding:20px 24px; }
+/* FORM */
+.form-grid{display:grid;gap:12px;}
+@media(min-width:600px){.form-grid.cols2{grid-template-columns:1fr 1fr;}}
+.form-field{display:flex;flex-direction:column;gap:5px;}
+.form-label{font-size:12px;font-weight:800;color:var(--gray3);}
+.form-input{width:100%;padding:11px 14px;border:1.5px solid var(--gray1);border-radius:12px;font-size:14px;font-weight:700;background:var(--cream);transition:border-color .2s;}
+.form-input:focus{outline:none;border-color:var(--black);}
+.form-input.error{border-color:var(--red);}
+.error-msg{font-size:11px;font-weight:800;color:var(--red);}
 
-/* ── 左栏 ── */
-.left-col{ flex:1;min-width:0;display:flex;flex-direction:column;gap:16px; }
+/* COST BREAKDOWN */
+.cost-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--gray1);font-size:13px;font-weight:700;}
+.cost-row:last-child{border-bottom:none;}
+.cost-row.total{font-size:16px;font-weight:900;padding-top:12px;}
+.cost-row.free{color:var(--accent-g);}
 
-/* 地址卡 */
-.addr-list{ display:flex;flex-direction:column;gap:10px; }
-.addr-item{
-  padding:14px 16px;border-radius:16px;
-  border:2px solid var(--gray1);cursor:pointer;
-  transition:border-color .2s,box-shadow .2s;
-  display:flex;align-items:flex-start;gap:12px;
-  position:relative;
-}
-.addr-item:hover{ border-color:var(--gray2); }
-.addr-item.selected{
-  border-color:var(--black);
-  box-shadow:0 0 0 1px var(--black);
-}
-.addr-radio{
-  width:18px;height:18px;border-radius:50%;
-  border:2px solid var(--gray2);flex-shrink:0;margin-top:2px;
-  display:flex;align-items:center;justify-content:center;
-  transition:border-color .2s;
-}
-.addr-item.selected .addr-radio{ border-color:var(--black);background:var(--black); }
-.addr-item.selected .addr-radio::after{ content:''; width:6px;height:6px;border-radius:50%;background:var(--white); }
-.addr-info{ flex:1;min-width:0; }
-.addr-name-row{ display:flex;align-items:center;gap:8px;margin-bottom:4px; }
-.addr-name{ font-weight:900;font-size:14px; }
-.addr-phone{ font-weight:700;font-size:13px;color:var(--gray3); }
-.addr-tag{
-  font-weight:800;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
-  padding:2px 8px;border-radius:999px;background:var(--gray1);color:var(--gray3);
-}
-.addr-detail{ font-weight:700;font-size:13px;color:var(--gray3);line-height:1.6; }
-.addr-edit{
-  font-weight:800;font-size:12px;color:var(--gray3);
-  background:none;border:none;cursor:pointer;padding:4px;
-  transition:color .2s;flex-shrink:0;
-}
-.addr-edit:hover{ color:var(--black); }
+/* CUSTOM CONFIRM */
+.custom-confirm-box{background:#FFF8E1;border:1.5px solid #FFD54F;border-radius:14px;padding:14px 16px;margin-bottom:16px;display:flex;gap:10px;align-items:flex-start;}
+.custom-confirm-icon{font-size:20px;flex-shrink:0;}
+.custom-confirm-text{font-size:12px;font-weight:700;color:#856404;line-height:1.5;}
+.custom-confirm-check{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;font-weight:800;color:var(--black);}
+.custom-confirm-check input{width:16px;height:16px;accent-color:var(--black);}
 
-/* 新增地址按钮 */
-.btn-add-addr{
-  display:flex;align-items:center;justify-content:center;gap:8px;
-  padding:12px;border-radius:16px;
-  border:2px dashed var(--gray2);background:transparent;
-  font-family:var(--font);font-weight:800;font-size:13px;color:var(--gray3);
-  cursor:pointer;transition:all .2s;width:100%;
-}
-.btn-add-addr:hover{ border-color:var(--black);color:var(--black);background:var(--cream); }
+/* PAY BUTTON */
+.btn-pay{width:100%;background:var(--black);color:var(--white);font-weight:900;font-size:16px;padding:16px;border-radius:16px;transition:background .2s,transform .1s;}
+.btn-pay:hover{background:#333;}
+.btn-pay:active{transform:scale(.99);}
+.btn-pay:disabled{background:var(--gray2);cursor:not-allowed;}
 
-/* 新增地址表单（折叠） */
-.addr-form{
-  display:none;flex-direction:column;gap:12px;
-  padding:16px;border-radius:16px;background:var(--cream);
-  border:1px solid var(--gray1);
-}
-.addr-form.open{ display:flex; }
-.form-row{ display:flex;gap:12px; }
-.form-group{ display:flex;flex-direction:column;gap:6px;flex:1; }
-.form-label{ font-weight:800;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--gray3); }
-.form-input{
-  font-family:var(--font);font-weight:700;font-size:14px;color:var(--black);
-  padding:10px 14px;border-radius:12px;
-  border:1.5px solid var(--gray1);background:var(--white);outline:none;
-  transition:border-color .2s;
-}
-.form-input:focus{ border-color:var(--black); }
-.form-input::placeholder{ color:var(--gray2); }
-.form-actions{ display:flex;gap:8px;justify-content:flex-end; }
-.form-actions .btn{ width:auto;min-height:40px;padding:10px 20px;font-size:13px; }
+/* PAYMENT STATUS */
+.pay-status-box{text-align:center;padding:40px 24px;}
+.pay-status-icon{font-size:56px;margin-bottom:16px;}
+.pay-status-title{font-weight:900;font-size:22px;margin-bottom:8px;}
+.pay-status-desc{color:var(--gray3);font-size:14px;font-weight:700;margin-bottom:24px;}
+.pay-timer{font-size:14px;font-weight:800;color:var(--accent-o);}
+.btn-secondary{display:inline-block;background:var(--gray1);color:var(--black);font-weight:900;font-size:14px;padding:12px 28px;border-radius:999px;margin-top:12px;}
 
-/* 优惠券卡 */
-.coupon-row{
-  display:flex;gap:8px;align-items:stretch;
-}
-.coupon-input{
-  flex:1;font-family:var(--font);font-weight:700;font-size:14px;
-  padding:12px 16px;border-radius:14px;
-  border:1.5px solid var(--gray1);background:var(--white);outline:none;
-  transition:border-color .2s;color:var(--black);
-}
-.coupon-input:focus{ border-color:var(--black); }
-.coupon-input::placeholder{ color:var(--gray2); }
-.btn-coupon{
-  font-family:var(--font);font-weight:800;font-size:13px;
-  padding:0 20px;border-radius:14px;
-  background:var(--black);color:var(--white);border:none;cursor:pointer;
-  transition:opacity .2s;white-space:nowrap;
-}
-.btn-coupon:hover{ opacity:.8; }
+/* MOCK PAY BUTTON (dev only) */
+.btn-mock-pay{background:#8FD694;color:var(--black);font-weight:900;font-size:14px;padding:12px 24px;border-radius:14px;border:2px dashed #5aaf60;margin-top:12px;width:100%;display:none;}
 
-.coupon-result{
-  margin-top:10px;padding:12px 16px;border-radius:14px;
-  display:none;align-items:center;gap:10px;
-  font-weight:700;font-size:13px;
-}
-.coupon-result.ok{ background:#DFF5E1;color:#2A6B30;display:flex; }
-.coupon-result.err{ background:#FFE8E3;color:#C0320A;display:flex; }
-.coupon-result-remove{
-  margin-left:auto;font-size:12px;font-weight:800;
-  background:none;border:none;cursor:pointer;color:inherit;opacity:.6;
-}
-.coupon-result-remove:hover{ opacity:1; }
+/* TOAST */
+.toast{position:fixed;top:80px;left:50%;transform:translateX(-50%) translateY(-20px);background:var(--black);color:var(--white);font-weight:800;font-size:13px;padding:10px 20px;border-radius:999px;z-index:2000;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
-/* 备注卡 */
-.remark-input{
-  width:100%;font-family:var(--font);font-weight:700;font-size:14px;
-  padding:12px 16px;border-radius:14px;
-  border:1.5px solid var(--gray1);background:var(--white);outline:none;
-  resize:none;color:var(--black);line-height:1.7;
-  transition:border-color .2s;
-}
-.remark-input:focus{ border-color:var(--black); }
-.remark-input::placeholder{ color:var(--gray2); }
-.remark-count{ text-align:right;font-weight:700;font-size:11px;color:var(--gray2);margin-top:6px; }
-
-/* 支付方式卡 */
-.pay-options{ display:flex;gap:10px; }
-.pay-opt{
-  flex:1;padding:16px 12px;border-radius:16px;
-  border:2px solid var(--gray1);cursor:pointer;
-  display:flex;flex-direction:column;align-items:center;gap:8px;
-  transition:all .2s var(--ease);
-}
-.pay-opt:hover{ border-color:var(--gray2);transform:translateY(-2px); }
-.pay-opt.selected{ border-color:var(--black);box-shadow:0 0 0 1px var(--black); }
-.pay-icon{ font-size:28px;line-height:1; }
-.pay-name{ font-weight:900;font-size:13px;letter-spacing:-.01em; }
-.pay-desc{ font-weight:700;font-size:11px;color:var(--gray3);text-align:center; }
-/* 微信选中 */
-.pay-opt[data-pay="wechat"].selected{ border-color:#07C160;box-shadow:0 0 0 1px #07C160;background:#F0FBF4; }
-.pay-opt[data-pay="wechat"].selected .pay-name{ color:#07C160; }
-/* 支付宝选中 */
-.pay-opt[data-pay="alipay"].selected{ border-color:#1677FF;box-shadow:0 0 0 1px #1677FF;background:#F0F6FF; }
-.pay-opt[data-pay="alipay"].selected .pay-name{ color:#1677FF; }
-
-/* ── 右栏 ── */
-.right-col{
-  width:100%;
-}
-@media(min-width:1024px){
-  .right-col{
-    width:340px;flex-shrink:0;
-    position:sticky;top:calc(var(--nav-h) + 24px);
-  }
-}
-
-/* 订单摘要卡 */
-.order-items{ display:flex;flex-direction:column;gap:0; }
-.order-item{
-  display:flex;align-items:center;gap:12px;
-  padding:14px 0;border-bottom:1px solid var(--gray1);
-}
-.order-item:last-child{ border-bottom:none; }
-.order-item-swatch{
-  width:40px;height:40px;border-radius:10px;
-  border:1.5px solid rgba(0,0,0,.07);flex-shrink:0;
-}
-.order-item-info{ flex:1;min-width:0; }
-.order-item-name{ font-weight:800;font-size:13px;color:var(--black);line-height:1.4; }
-.order-item-sub{ font-weight:700;font-size:11px;color:var(--gray3);margin-top:2px; }
-.order-item-price{ font-weight:900;font-size:14px;color:var(--black);white-space:nowrap; }
-
-/* 价格汇总 */
-.price-summary{ display:flex;flex-direction:column;gap:10px;padding:16px 24px;border-top:1px solid var(--gray1); }
-.summary-row{ display:flex;align-items:center;justify-content:space-between;gap:8px; }
-.summary-label{ font-weight:700;font-size:13px;color:var(--gray3); }
-.summary-val{ font-weight:800;font-size:13px;color:var(--black); }
-.summary-val.free{ color:var(--accent-g); }
-.summary-val.discount{ color:var(--accent-o); }
-.summary-divider{ height:1px;background:var(--gray1); }
-.summary-total .summary-label{ font-weight:900;font-size:15px;color:var(--black); }
-.summary-total .summary-val{ font-weight:900;font-size:22px;color:var(--black); }
-
-/* 提交区 */
-.submit-area{
-  padding:16px 24px 20px;
-  display:flex;flex-direction:column;gap:10px;
-  border-top:1px solid var(--gray1);
-}
-.submit-hint{
-  font-weight:700;font-size:11px;color:var(--gray3);
-  text-align:center;line-height:1.6;
-}
-.submit-hint a{ color:var(--black);font-weight:800;border-bottom:1px solid var(--gray2); }
-
-/* 移动端底部浮动 */
-.mob-submit{
-  position:fixed;bottom:0;left:0;right:0;z-index:700;
-  background:var(--white);border-top:1px solid var(--gray1);
-  padding:14px var(--pad-m) calc(14px + env(safe-area-inset-bottom));
-  display:flex;align-items:center;justify-content:space-between;gap:16px;
-}
-@media(min-width:1024px){ .mob-submit{ display:none; } }
-.mob-total-info .mob-total-label{ font-weight:700;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gray3);margin-bottom:3px; }
-.mob-total-info .mob-total-val{ font-weight:900;font-size:22px;letter-spacing:-.02em; }
-.mob-submit-btn{ flex-shrink:0; }
-.mob-submit-btn .btn{ width:auto;min-height:48px;padding:12px 24px; }
-
-/* 空购物车 */
-.empty-cart{
-  text-align:center;padding:60px 24px;
-  display:flex;flex-direction:column;align-items:center;gap:16px;
-}
-.empty-cart-icon{ font-size:52px;opacity:.3; }
-.empty-cart-text{ font-weight:800;font-size:16px;color:var(--gray3); }
-
-/* ── Toast ── */
-.toast{
-  position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(16px);
-  background:var(--black);color:var(--white);
-  font-weight:800;font-size:13px;padding:10px 20px;border-radius:999px;
-  opacity:0;pointer-events:none;transition:all .3s var(--ease);z-index:9000;white-space:nowrap;
-}
-.toast.show{ opacity:1;transform:translateX(-50%) translateY(0); }
-
-/* ── reveal ── */
-.reveal{ opacity:0;transform:translateY(20px);transition:opacity .6s var(--ease),transform .6s var(--ease); }
-.reveal.on{ opacity:1;transform:none; }
-.d1{transition-delay:.06s} .d2{transition-delay:.12s} .d3{transition-delay:.18s} .d4{transition-delay:.24s}
+/* ADDRESS SELECTOR */
+.addr-cards{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;}
+.addr-card-sel{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:1.5px solid var(--gray1);border-radius:14px;cursor:pointer;transition:border-color .2s,background .2s;}
+.addr-card-sel:hover{border-color:var(--gray2);}
+.addr-card-sel.selected{border-color:var(--black);background:var(--cream);}
+.addr-radio{width:18px;height:18px;border:2px solid var(--gray2);border-radius:50%;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;transition:border-color .2s;}
+.addr-card-sel.selected .addr-radio{border-color:var(--black);}
+.addr-radio-dot{width:8px;height:8px;border-radius:50%;background:var(--black);display:none;}
+.addr-card-sel.selected .addr-radio-dot{display:block;}
+.addr-info{}
+.addr-name{font-weight:900;font-size:14px;}
+.addr-phone{font-size:12px;font-weight:700;color:var(--gray3);margin-left:8px;}
+.addr-text{font-size:12px;font-weight:700;color:var(--gray3);margin-top:2px;}
+.addr-default-tag{background:var(--accent-y);font-size:10px;font-weight:900;padding:1px 6px;border-radius:999px;margin-left:6px;color:var(--black);}
+.btn-use-new{display:flex;align-items:center;gap:6px;font-weight:800;font-size:13px;color:var(--black);padding:8px 0;border-bottom:1.5px dashed var(--gray1);}
+.btn-use-new::before{content:'＋';font-size:16px;}
+.new-addr-form{display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--gray1);}
+.new-addr-form.open{display:block;}
+.smart-row{display:flex;gap:8px;margin-bottom:12px;}
+.smart-input{flex:1;padding:9px 12px;border:1.5px solid var(--gray1);border-radius:10px;font-size:13px;font-family:var(--font);font-weight:700;background:var(--white);outline:none;transition:border-color .2s;}
+.smart-input:focus{border-color:var(--black);}
+.btn-smart-parse{padding:9px 14px;border-radius:10px;background:var(--black);color:var(--white);font-weight:900;font-size:12px;white-space:nowrap;flex-shrink:0;}
+.save-addr-check{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;color:var(--gray3);margin-top:8px;cursor:pointer;}
+.save-addr-check input{accent-color:var(--black);}
+.form-row-addr{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+@media(max-width:480px){.form-row-addr{grid-template-columns:1fr;}}
+.form-row-addr.full{grid-template-columns:1fr;}
+.form-sel{width:100%;padding:9px 12px;border:1.5px solid var(--gray1);border-radius:10px;font-size:13px;font-family:var(--font);font-weight:700;background:var(--white);color:var(--black);outline:none;transition:border-color .2s;}
+.form-sel:focus{border-color:var(--black);}
+.form-sel:disabled{color:var(--gray2);background:var(--cream);}
 </style>
 </head>
 <body>
 
-<!-- 导航 -->
+<!-- NAV -->
 <nav class="nav">
-  <a href="index.html" class="nav-logo">
+  <a href="../index.html" class="nav-logo">
     <span class="nav-logo-cn">哞屋</span>
-    <span class="nav-logo-en">MOWO</span>
+    <span class="nav-logo-en">MOWOBOX</span>
   </a>
-  <a href="javascript:history.back()" class="nav-back">← 返回修改</a>
+  <div class="nav-right">
+    <div class="nav-user" id="navUserArea">
+      <button class="nav-login nav-login-btn" id="navLoginBtn">登录</button>
+    </div>
+  </div>
 </nav>
 
-<!-- 主体 -->
-<div class="page-wrap">
-  <div class="checkout-layout">
+<main class="main">
+  <a href="./cart.html" class="back-link">← 返回购物车</a>
+  <h1 class="page-title">确认订单</h1>
 
-    <!-- 左栏 -->
-    <div class="left-col">
-
-      <!-- ① 收货地址 -->
-      <div class="card reveal">
-        <div class="card-head">
-          <span class="card-title">
-            <span class="card-title-num">1</span>
-            收货地址
-          </span>
-          <button class="btn-add-addr btn-xs" style="width:auto;padding:6px 14px;border-radius:10px;border:1.5px solid var(--gray1);background:var(--white);font-family:var(--font);font-weight:800;font-size:12px;color:var(--gray3);cursor:pointer;transition:all .2s;" onclick="toggleAddrForm()">+ 新增地址</button>
-        </div>
-        <div class="card-body" style="display:flex;flex-direction:column;gap:12px;">
-
-          <!-- 新增地址表单 -->
-          <div class="addr-form" id="addrForm">
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">姓名</label>
-                <input class="form-input" id="fName" type="text" placeholder="收货人姓名">
-              </div>
-              <div class="form-group">
-                <label class="form-label">手机号</label>
-                <input class="form-input" id="fPhone" type="tel" placeholder="11位手机号">
-              </div>
-            </div>
-            <div class="form-group">
-              <label class="form-label">省市区</label>
-              <input class="form-input" id="fRegion" type="text" placeholder="例：广东省 深圳市 南山区">
-            </div>
-            <div class="form-group">
-              <label class="form-label">详细地址</label>
-              <input class="form-input" id="fDetail" type="text" placeholder="街道、楼栋、门牌号">
-            </div>
-            <div class="form-actions">
-              <button class="btn btn-secondary" style="width:auto;min-height:40px;padding:10px 20px;font-size:13px;" onclick="toggleAddrForm()">取消</button>
-              <button class="btn btn-primary" style="width:auto;min-height:40px;padding:10px 20px;font-size:13px;" onclick="saveNewAddr()">保存地址</button>
-            </div>
-          </div>
-
-          <!-- 地址列表 -->
-          <div class="addr-list" id="addrList">
-            <!-- 由 JS 渲染 -->
-          </div>
-
-        </div>
-      </div>
-
-      <!-- ② 优惠券 -->
-      <div class="card reveal d1">
-        <div class="card-head">
-          <span class="card-title">
-            <span class="card-title-num">2</span>
-            优惠券
-          </span>
-        </div>
-        <div class="card-body">
-          <div class="coupon-row">
-            <input class="coupon-input" id="couponInput" type="text" placeholder="输入优惠券码">
-            <button class="btn-coupon" onclick="applyCoupon()">使用</button>
-          </div>
-          <div class="coupon-result" id="couponResult">
-            <span id="couponMsg"></span>
-            <button class="coupon-result-remove" onclick="removeCoupon()">✕ 移除</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- ③ 备注 -->
-      <div class="card reveal d2">
-        <div class="card-head">
-          <span class="card-title">
-            <span class="card-title-num">3</span>
-            订单备注
-            <span style="font-weight:700;font-size:11px;color:var(--gray3);letter-spacing:0;">（选填）</span>
-          </span>
-        </div>
-        <div class="card-body">
-          <textarea class="remark-input" id="remarkInput" rows="3"
-            placeholder="如有特殊要求，可在此备注，例：外包装请勿透露价格"
-            maxlength="100" oninput="updateRemarkCount()"></textarea>
-          <p class="remark-count"><span id="remarkCount">0</span> / 100</p>
-        </div>
-      </div>
-
-      <!-- ④ 支付方式 -->
-      <div class="card reveal d3">
-        <div class="card-head">
-          <span class="card-title">
-            <span class="card-title-num">4</span>
-            支付方式
-          </span>
-        </div>
-        <div class="card-body">
-          <div class="pay-options">
-            <div class="pay-opt selected" data-pay="wechat" onclick="selectPay(this)">
-              <span class="pay-icon">💚</span>
-              <span class="pay-name">微信支付</span>
-              <span class="pay-desc">推荐</span>
-            </div>
-            <div class="pay-opt" data-pay="alipay" onclick="selectPay(this)">
-              <span class="pay-icon">💙</span>
-              <span class="pay-name">支付宝</span>
-              <span class="pay-desc">安全快捷</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- 右栏：订单摘要 -->
-    <div class="right-col">
-      <div class="card reveal d1">
-
-        <div class="card-head">
-          <span class="card-title">订单明细</span>
-          <span style="font-weight:700;font-size:12px;color:var(--gray3);" id="itemCountLabel">—</span>
-        </div>
-
-        <!-- 商品列表 -->
-        <div style="padding:0 24px;">
-          <div class="order-items" id="orderItems">
-            <!-- 由 JS 渲染 -->
-          </div>
-        </div>
-
-        <!-- 价格汇总 -->
-        <div class="price-summary">
-          <div class="summary-row">
-            <span class="summary-label">商品小计</span>
-            <span class="summary-val" id="sumSubtotal">—</span>
-          </div>
-          <div class="summary-row">
-            <span class="summary-label">运费</span>
-            <span class="summary-val free" id="sumShipping">包邮</span>
-          </div>
-          <div class="summary-row" id="couponRow" style="display:none;">
-            <span class="summary-label">优惠券</span>
-            <span class="summary-val discount" id="sumCoupon">—</span>
-          </div>
-          <div class="summary-divider"></div>
-          <div class="summary-row summary-total">
-            <span class="summary-label">应付总计</span>
-            <span class="summary-val" id="sumTotal">—</span>
-          </div>
-        </div>
-
-        <!-- 提交按钮（桌面端） -->
-        <div class="submit-area" id="desktopSubmit">
-          <button class="btn btn-wechat" id="btnSubmitWechat" onclick="submitOrder()">
-            <span>💚</span> 微信支付
-          </button>
-          <button class="btn btn-alipay" id="btnSubmitAlipay" style="display:none;" onclick="submitOrder()">
-            <span>💙</span> 支付宝支付
-          </button>
-          <p class="submit-hint">
-            提交即代表你同意 <a href="#">用户协议</a> 及 <a href="#">隐私政策</a>，<br>
-            定制品一旦开始生产不支持退款。
-          </p>
-        </div>
-
-      </div>
-    </div>
-
+  <div id="pageContent">
+    <div style="text-align:center;padding:60px 0;color:var(--gray3);font-weight:700;">加载中...</div>
   </div>
-</div>
+</main>
 
-<!-- 移动端底部 -->
-<div class="mob-submit">
-  <div class="mob-total-info">
-    <p class="mob-total-label">应付总计</p>
-    <p class="mob-total-val">¥<span id="mobTotal">—</span></p>
-  </div>
-  <div class="mob-submit-btn">
-    <button class="btn btn-primary" id="mobBtnSubmit" onclick="submitOrder()">提交订单 →</button>
-  </div>
-</div>
-
-<!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<script src="../js/auth.js"></script>
+<script type="module">
+// 地址工具模块（联级下拉 + 智能解析）
+import { initCascadeSelects, smartParseAddress, loadRegions } from '../js/address-utils.js'
+
+let _regions = null
+
+// 初始化新地址表单的联级下拉
+window._initCheckoutCascade = async function() {
+  const provinceEl  = document.getElementById('newProvince')
+  const cityEl      = document.getElementById('newCity')
+  const districtEl  = document.getElementById('newDistrict')
+  if (!provinceEl || !cityEl || !districtEl) return
+
+  if (!_regions) _regions = await loadRegions()
+  initCascadeSelects({ provinceEl, cityEl, districtEl, regions: _regions })
+}
+
+// 智能解析（在 checkout 页中使用）
+window._smartParseCheckout = async function(text) {
+  if (!_regions) _regions = await loadRegions()
+  const parsed = smartParseAddress(text, _regions)
+
+  if (parsed.name)  { const el = document.getElementById('newName');  if (el) el.value = parsed.name }
+  if (parsed.phone) { const el = document.getElementById('newPhone'); if (el) el.value = parsed.phone }
+  if (parsed.detail){ const el = document.getElementById('newDetail'); if (el) el.value = parsed.detail }
+
+  if (parsed.province) {
+    const pEl = document.getElementById('newProvince')
+    const cEl = document.getElementById('newCity')
+    const dEl = document.getElementById('newDistrict')
+    if (pEl) {
+      // 确保联级已初始化
+      if (!pEl.options || pEl.options.length <= 1) await window._initCheckoutCascade()
+      pEl.value = parsed.province
+      pEl.dispatchEvent(new Event('change'))
+      setTimeout(() => {
+        if (cEl && parsed.city) {
+          cEl.value = parsed.city
+          cEl.dispatchEvent(new Event('change'))
+          setTimeout(() => {
+            if (dEl && parsed.district) dEl.value = parsed.district
+          }, 0)
+        }
+      }, 0)
+    }
+  }
+
+  // 显示置信度提示
+  const conf = parsed.confidence
+  const smartInput = document.getElementById('smartInput')
+  if (smartInput) {
+    if (conf === 'high') {
+      smartInput.style.borderColor = 'var(--accent-g)'
+    } else if (conf === 'medium') {
+      smartInput.style.borderColor = '#FFD54F'
+    }
+  }
+
+}
+</script>
 <script>
-/* ══════════════════════════════
-   演示辅助（后端接入后删除）
-══════════════════════════════ */
-function mockLogin() {
-  /* 写入模拟 token，避免后续逻辑报错 */
-  if (!localStorage.getItem('mowo_token')) {
-    localStorage.setItem('mowo_token', JSON.stringify({ uid:1, name:'演示用户', is_creator:false }));
+const API = (location.hostname==='127.0.0.1'?'http://127.0.0.1:3001':'http://localhost:3001')
+let cartItemIds = []
+let cartItems = []
+let preOrderId = null
+let pollTimer = null
+let savedAddresses = []
+let selectedAddressId = null
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const token = localStorage.getItem('mowo_token')
+  if (!token) {
+    window.location.href = './cart.html'
+    return
   }
-  /* 写入演示购物车（若无数据） */
+
+  // 从 sessionStorage 获取待结算的 CartItem IDs
   try {
-    const meta = JSON.parse(localStorage.getItem('mowo_customize_meta') || '{}');
-    if (!meta.cart || !meta.cart.length) {
-      meta.name = '经典圆筒款';
-      meta.cart = [
-        { id:1, frame:16, matName:'亚克力', colorName:'哑光黑', colorHex:'#1A1A1A', price:254, summary:'16帧 · 亚克力 · 哑光黑' },
-        { id:2, frame:24, matName:'铝合金', colorName:'香槟金', colorHex:'#C8A96E', price:324, summary:'24帧 · 铝合金 · 香槟金' },
-      ];
-      localStorage.setItem('mowo_customize_meta', JSON.stringify(meta));
-    }
-  } catch(e) {}
+    const stored = sessionStorage.getItem('mowo_checkout_items')
+    if (stored) cartItemIds = JSON.parse(stored)
+  } catch {}
+
+  if (!cartItemIds.length) {
+    window.location.href = './cart.html'
+    return
+  }
+
+  // 并行加载购物车和地址数据
+  await Promise.all([
+    loadCartItems(token),
+    loadSavedAddresses(token)
+  ])
+})
+
+async function loadCartItems(token) {
+  try {
+    const res = await fetch(`${API}/api/cart`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    const data = await res.json()
+    if (!data.success) throw new Error('加载失败')
+    cartItems = (data.data.items || []).filter(i => cartItemIds.includes(i.id))
+    renderCheckoutPage()
+  } catch(e) {
+    document.getElementById('pageContent').innerHTML = `<div style="text-align:center;padding:60px;color:var(--red);font-weight:700;">加载失败，请返回购物车重试</div>`
+  }
 }
 
-/* ══════════════════════════════
-   状态
-══════════════════════════════ */
-let CART         = [];   /* 从 localStorage 读取 */
-let ADDRESSES    = [];   /* 地址列表 */
-let selectedAddr = null; /* 当前选中地址 id */
-let selectedPay  = 'wechat';
-let couponCode   = '';
-let couponDiscount = 0;
-let remark       = '';
-
-const MACHINE_NAMES = {
-  cylinder:'经典圆筒款', lantern:'手提灯笼款',
-  hexagon:'六棱柱款', 'flat-round':'扁圆盒款', 'mini-pendant':'迷你挂件款',
-};
-
-/* ══════════════════════════════
-   初始化
-══════════════════════════════ */
-(function init() {
-  /* 登录检查
-     TODO: 后端接入后取消注释下方跳转逻辑，删除 mockLogin()
+async function loadSavedAddresses(token) {
   try {
-    const token = JSON.parse(localStorage.getItem('mowo_token') || 'null');
-    if (!token) {
-      location.href = 'auth.html?redirect=' + encodeURIComponent(location.href);
-      return;
+    const res = await fetch(`${API}/api/addresses`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    const data = await res.json()
+    if (data.success) {
+      savedAddresses = data.data || []
+      // 默认选中默认地址
+      const def = savedAddresses.find(a => a.isDefault)
+      if (def) selectedAddressId = def.id
+      else if (savedAddresses.length) selectedAddressId = savedAddresses[0].id
     }
   } catch(e) {
-    location.href = 'auth.html?redirect=' + encodeURIComponent(location.href);
-    return;
+    // 地址加载失败不阻断结算
+    savedAddresses = []
   }
-  */
-  /* 演示模式：模拟已登录状态 */
-  mockLogin();
-
-  /* 读取购物车 */
-  try {
-    const meta = JSON.parse(localStorage.getItem('mowo_customize_meta') || '{}');
-    CART = meta.cart || [];
-  } catch(e) {}
-
-  /* 读取已保存地址（模拟数据） */
-  try {
-    const saved = JSON.parse(localStorage.getItem('mowo_addresses') || '[]');
-    ADDRESSES = saved.length ? saved : getDefaultAddresses();
-  } catch(e) {
-    ADDRESSES = getDefaultAddresses();
-  }
-  if (ADDRESSES.length) selectedAddr = ADDRESSES[0].id;
-
-  renderCart();
-  renderAddresses();
-  updateSummary();
-})();
-
-/* ── 默认演示地址 ── */
-function getDefaultAddresses() {
-  return [
-    { id:1, name:'张三', phone:'138 0000 0001', tag:'家', region:'广东省 深圳市 南山区', detail:'科技园南区 B栋 1201室', isDefault:true },
-    { id:2, name:'张三（公司）', phone:'138 0000 0001', tag:'公司', region:'广东省 深圳市 福田区', detail:'CBD 中心广场 A座 2003', isDefault:false },
-  ];
 }
 
-/* ══════════════════════════════
-   购物车渲染
-══════════════════════════════ */
-function renderCart() {
-  const list  = document.getElementById('orderItems');
-  const label = document.getElementById('itemCountLabel');
-
-  if (!CART.length) {
-    list.innerHTML = `
-      <div class="empty-cart">
-        <span class="empty-cart-icon">🛒</span>
-        <p class="empty-cart-text">购物车是空的</p>
-        <a href="customize-start.html" class="btn btn-secondary" style="width:auto;min-height:44px;padding:10px 24px;font-size:14px;">去定制 →</a>
-      </div>`;
-    label.textContent = '0 件商品';
-    return;
+function renderAddressSelector() {
+  if (savedAddresses.length === 0) {
+    // 无已保存地址，直接显示新地址表单（展开状态）
+    return `<div id="newAddrForm" class="new-addr-form open">${buildNewAddrFormHtml()}</div>`
   }
 
-  label.textContent = `${CART.length} 件商品`;
-
-  const machineName = (() => {
-    try { return JSON.parse(localStorage.getItem('mowo_customize_meta') || '{}').name || '动画机'; } catch(e) { return '动画机'; }
-  })();
-
-  list.innerHTML = CART.map(item => `
-    <div class="order-item">
-      <div class="order-item-swatch" style="background:${item.colorHex || '#eee'}"></div>
-      <div class="order-item-info">
-        <p class="order-item-name">${machineName}</p>
-        <p class="order-item-sub">${item.summary || '—'}</p>
-      </div>
-      <span class="order-item-price">¥${item.price}</span>
-    </div>
-  `).join('');
-}
-
-/* ══════════════════════════════
-   价格汇总
-══════════════════════════════ */
-function updateSummary() {
-  const subtotal = CART.reduce((s, v) => s + v.price, 0);
-  const total    = Math.max(0, subtotal - couponDiscount);
-
-  document.getElementById('sumSubtotal').textContent = subtotal ? `¥${subtotal}` : '—';
-  document.getElementById('sumTotal').textContent    = subtotal ? `¥${total}` : '—';
-  document.getElementById('mobTotal').textContent    = subtotal ? total : '—';
-
-  /* 优惠券行 */
-  if (couponDiscount > 0) {
-    document.getElementById('couponRow').style.display = 'flex';
-    document.getElementById('sumCoupon').textContent   = `-¥${couponDiscount}`;
-  } else {
-    document.getElementById('couponRow').style.display = 'none';
-  }
-
-  /* 提交按钮禁用状态 */
-  const canSubmit = CART.length > 0 && selectedAddr !== null;
-  document.getElementById('btnSubmitWechat').disabled = !canSubmit;
-  document.getElementById('btnSubmitAlipay').disabled = !canSubmit;
-  document.getElementById('mobBtnSubmit').disabled    = !canSubmit;
-}
-
-/* ══════════════════════════════
-   地址管理
-══════════════════════════════ */
-function renderAddresses() {
-  const list = document.getElementById('addrList');
-  if (!ADDRESSES.length) {
-    list.innerHTML = `<p style="font-weight:700;font-size:13px;color:var(--gray3);">暂无保存地址，请新增</p>`;
-    return;
-  }
-  list.innerHTML = ADDRESSES.map(a => `
-    <div class="addr-item ${a.id === selectedAddr ? 'selected' : ''}"
-         onclick="selectAddr(${a.id})">
-      <div class="addr-radio"></div>
+  // 有已保存地址，渲染卡片列表 + 折叠的新地址表单
+  let html = `<div class="addr-cards" id="addrCardList">`
+  for (const addr of savedAddresses) {
+    const mid = addr.phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2')
+    const sel = addr.id === selectedAddressId ? ' selected' : ''
+    html += `<div class="addr-card-sel${sel}" onclick="selectAddress('${escHtml(addr.id)}')">
+      <div class="addr-radio"><div class="addr-radio-dot"></div></div>
       <div class="addr-info">
-        <div class="addr-name-row">
-          <span class="addr-name">${a.name}</span>
-          <span class="addr-phone">${a.phone}</span>
-          ${a.tag ? `<span class="addr-tag">${a.tag}</span>` : ''}
-        </div>
-        <p class="addr-detail">${a.region} ${a.detail}</p>
+        <div><span class="addr-name">${escHtml(addr.name)}</span><span class="addr-phone">${escHtml(mid)}</span>${addr.isDefault ? '<span class="addr-default-tag">默认</span>' : ''}</div>
+        <div class="addr-text">${escHtml(addr.province + addr.city + addr.district + ' ' + addr.detail)}</div>
       </div>
-      <button class="addr-edit" onclick="event.stopPropagation();editAddr(${a.id})">编辑</button>
+    </div>`
+  }
+  html += `</div>`
+  html += `<button class="btn-use-new" onclick="toggleNewAddressForm()">使用新地址</button>`
+  html += `<div id="newAddrForm" class="new-addr-form">${buildNewAddrFormHtml()}</div>`
+  return html
+}
+
+function buildNewAddrFormHtml() {
+  return `
+    <div class="smart-row">
+      <input type="text" class="smart-input" id="smartInput" placeholder="粘贴完整收货地址，一键识别姓名/手机/省市区">
+      <button class="btn-smart-parse" onclick="doCheckoutSmartParse()">识别</button>
     </div>
-  `).join('');
+    <div class="form-row-addr">
+      <div class="form-field">
+        <label class="form-label">收件人</label>
+        <input type="text" class="form-input" id="newName" placeholder="姓名">
+      </div>
+      <div class="form-field">
+        <label class="form-label">手机号</label>
+        <input type="text" class="form-input" id="newPhone" placeholder="11位手机号" maxlength="11">
+      </div>
+    </div>
+    <div class="form-row-addr" style="grid-template-columns:1fr 1fr 1fr;">
+      <div class="form-field">
+        <label class="form-label">省/直辖市</label>
+        <select class="form-sel" id="newProvince"><option value="">请选择省/直辖市</option></select>
+      </div>
+      <div class="form-field">
+        <label class="form-label">市/州</label>
+        <select class="form-sel" id="newCity" disabled><option value="">请选择市/州</option></select>
+      </div>
+      <div class="form-field">
+        <label class="form-label">区/县</label>
+        <select class="form-sel" id="newDistrict" disabled><option value="">请选择区/县</option></select>
+      </div>
+    </div>
+    <div class="form-row-addr full">
+      <div class="form-field">
+        <label class="form-label">详细地址</label>
+        <input type="text" class="form-input" id="newDetail" placeholder="街道、楼号、门牌号等">
+      </div>
+    </div>
+    <label class="save-addr-check">
+      <input type="checkbox" id="saveAddrCheck" checked>
+      保存到地址簿，下次直接使用
+    </label>`
 }
 
-function selectAddr(id) {
-  selectedAddr = id;
-  renderAddresses();
-  updateSummary();
+window.selectAddress = function(id) {
+  selectedAddressId = id
+  // 更新卡片选中样式
+  document.querySelectorAll('.addr-card-sel').forEach(el => el.classList.remove('selected'))
+  event.currentTarget.classList.add('selected')
+  // 折叠新地址表单
+  const newForm = document.getElementById('newAddrForm')
+  if (newForm) newForm.classList.remove('open')
 }
 
-function toggleAddrForm() {
-  const form = document.getElementById('addrForm');
-  form.classList.toggle('open');
-  if (form.classList.contains('open')) {
-    document.getElementById('fName').focus();
+window.toggleNewAddressForm = function() {
+  const newForm = document.getElementById('newAddrForm')
+  if (!newForm) return
+  const isOpen = newForm.classList.toggle('open')
+  if (isOpen) {
+    // 展开新地址表单时取消选中已保存地址
+    selectedAddressId = null
+    document.querySelectorAll('.addr-card-sel').forEach(el => el.classList.remove('selected'))
+    // 初始化联级下拉（通知 module script）
+    if (window._initCheckoutCascade) window._initCheckoutCascade()
   }
 }
 
-function saveNewAddr() {
-  const name   = document.getElementById('fName').value.trim();
-  const phone  = document.getElementById('fPhone').value.trim();
-  const region = document.getElementById('fRegion').value.trim();
-  const detail = document.getElementById('fDetail').value.trim();
-  if (!name || !phone || !region || !detail) {
-    showToast('请填写完整的收货信息');
-    return;
-  }
-  if (!/^1[3-9]\d{9}$/.test(phone.replace(/\s/g,''))) {
-    showToast('手机号格式不正确');
-    return;
-  }
-  const newAddr = { id: Date.now(), name, phone, tag:'', region, detail, isDefault:false };
-  ADDRESSES.push(newAddr);
-  selectedAddr = newAddr.id;
-  try { localStorage.setItem('mowo_addresses', JSON.stringify(ADDRESSES)); } catch(e) {}
-  /* 清空表单并折叠 */
-  ['fName','fPhone','fRegion','fDetail'].forEach(id => document.getElementById(id).value = '');
-  toggleAddrForm();
-  renderAddresses();
-  updateSummary();
-  showToast('地址已保存');
-}
-
-function editAddr(id) {
-  /* 简单实现：填入表单并打开 */
-  const a = ADDRESSES.find(a => a.id === id);
-  if (!a) return;
-  document.getElementById('fName').value   = a.name;
-  document.getElementById('fPhone').value  = a.phone;
-  document.getElementById('fRegion').value = a.region;
-  document.getElementById('fDetail').value = a.detail;
-  /* 删除旧地址，存为新地址 */
-  ADDRESSES = ADDRESSES.filter(x => x.id !== id);
-  document.getElementById('addrForm').classList.add('open');
-}
-
-/* ══════════════════════════════
-   优惠券
-══════════════════════════════ */
-/* 模拟有效券码，后端接入后替换 */
-const VALID_COUPONS = {
-  'MOWO20':   { desc:'新人优惠 -¥20',  discount:20 },
-  'MOWO50':   { desc:'满200减50',      discount:50 },
-  'CREATOR10':{ desc:'创作者专属 -¥10', discount:10 },
-};
-
-function applyCoupon() {
-  const code = document.getElementById('couponInput').value.trim().toUpperCase();
-  const result = document.getElementById('couponResult');
-  const msg    = document.getElementById('couponMsg');
-
-  if (!code) { showToast('请输入优惠券码'); return; }
-
-  if (VALID_COUPONS[code]) {
-    const c = VALID_COUPONS[code];
-    couponCode     = code;
-    couponDiscount = c.discount;
-    msg.textContent = `✓ 已使用「${code}」— ${c.desc}`;
-    result.className = 'coupon-result ok';
-    showToast(`优惠券使用成功，减 ¥${c.discount}`);
+window.doCheckoutSmartParse = function() {
+  const text = document.getElementById('smartInput')?.value || ''
+  if (!text.trim()) return showToast('请先粘贴地址文本')
+  if (window._smartParseCheckout) {
+    window._smartParseCheckout(text)
   } else {
-    couponCode     = '';
-    couponDiscount = 0;
-    msg.textContent = '优惠券码无效或已过期';
-    result.className = 'coupon-result err';
-    /* err 状态隐藏移除按钮 */
-    result.querySelector('.coupon-result-remove').style.display = 'none';
+    showToast('识别模块加载中，请稍后重试')
   }
-  updateSummary();
 }
 
-function removeCoupon() {
-  couponCode     = '';
-  couponDiscount = 0;
-  document.getElementById('couponInput').value = '';
-  document.getElementById('couponResult').className = 'coupon-result';
-  updateSummary();
-  showToast('已移除优惠券');
+function renderCheckoutPage() {
+  const hasCustom = cartItems.some(i => i.itemType === 'CUSTOM')
+  const totalAmount = cartItems.reduce((s, i) => {
+    const p = i.currentPrice !== null && i.currentPrice !== undefined ? Number(i.currentPrice) : Number(i.snapshotPrice || 0)
+    return s + p * i.quantity
+  }, 0)
+
+  let html = `
+  <!-- 商品列表 -->
+  <div class="card">
+    <div class="card-title"><span class="step-dot">1</span> 商品确认</div>
+    <div class="product-list">`
+
+  for (const item of cartItems) {
+    const price = item.currentPrice !== null && item.currentPrice !== undefined
+      ? Number(item.currentPrice) : Number(item.snapshotPrice || 0)
+    const cover = item.snapshotPreviewUrl || item.coverUrl
+    html += `<div class="product-row">
+      <div class="product-cover">${cover
+        ? `<img src="${escHtml(cover)}" alt="" onerror="this.parentElement.innerHTML='<div class=cover-placeholder>🎨</div>'">`
+        : `<div class="cover-placeholder">${item.itemType === 'CUSTOM' ? '🎨' : '🎁'}</div>`}
+      </div>
+      <div>
+        <div class="product-name">${escHtml(item.snapshotTitle)}</div>
+        <div class="product-meta">${item.itemType === 'CUSTOM' ? 'DIY 定制款' : '联名成品'} · ×${item.quantity}</div>
+      </div>
+      <div>
+        <div class="product-price">¥${price.toFixed(2)}</div>
+        <div class="product-qty">×${item.quantity}</div>
+      </div>
+    </div>`
+  }
+  html += `</div></div>`
+
+  // 收货信息（地址选择器）
+  html += `
+  <div class="card">
+    <div class="card-title"><span class="step-dot">2</span> 收货信息</div>
+    <div id="addrSelectorArea">${renderAddressSelector()}</div>
+  </div>`
+
+  // 费用明细
+  html += `
+  <div class="card">
+    <div class="card-title"><span class="step-dot">3</span> 费用明细</div>
+    <div class="cost-row"><span>商品小计</span><span>¥${totalAmount.toFixed(2)}</span></div>
+    <div class="cost-row free"><span>运费</span><span>包邮 ¥0</span></div>
+    <div class="cost-row total"><span>合计</span><span id="checkoutTotal">¥${totalAmount.toFixed(2)}</span></div>
+  </div>`
+
+  // 定制品确认提示
+  if (hasCustom) {
+    html += `
+    <div class="custom-confirm-box">
+      <span class="custom-confirm-icon">⚠️</span>
+      <div>
+        <div class="custom-confirm-text">您的订单包含 DIY 定制款。定制品一旦开始生产，原则上不支持退款。请在付款前确认您的动画内容和规格选择无误。</div>
+        <label class="custom-confirm-check">
+          <input type="checkbox" id="customConfirmCheck" onchange="checkPayable()">
+          我已确认定制内容无误
+        </label>
+      </div>
+    </div>`
+  }
+
+  // 付款按钮
+  html += `
+  <button class="btn-pay" id="btnPay" onclick="submitPayment()" ${hasCustom ? 'disabled' : ''}>
+    立即支付 ¥${totalAmount.toFixed(2)}
+  </button>
+  <button class="btn-mock-pay" id="btnMockPay" onclick="mockPay()">
+    🧪 开发模式：模拟支付成功
+  </button>`
+
+  document.getElementById('pageContent').innerHTML = html
+
+  // 开发模式显示 mock 按钮
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    document.getElementById('btnMockPay').style.display = 'block'
+  }
+
+  // 若无已保存地址（新地址表单直接展开），初始化联级下拉
+  if (savedAddresses.length === 0 && window._initCheckoutCascade) {
+    window._initCheckoutCascade()
+  }
 }
 
-document.getElementById('couponInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') applyCoupon();
-});
-
-/* ══════════════════════════════
-   备注
-══════════════════════════════ */
-function updateRemarkCount() {
-  const val = document.getElementById('remarkInput').value;
-  document.getElementById('remarkCount').textContent = val.length;
-  remark = val;
+function checkPayable() {
+  const check = document.getElementById('customConfirmCheck')
+  document.getElementById('btnPay').disabled = check ? !check.checked : false
 }
 
-/* ══════════════════════════════
-   支付方式
-══════════════════════════════ */
-function selectPay(el) {
-  document.querySelectorAll('.pay-opt').forEach(o => o.classList.remove('selected'));
-  el.classList.add('selected');
-  selectedPay = el.dataset.pay;
-  /* 切换桌面端提交按钮 */
-  document.getElementById('btnSubmitWechat').style.display = selectedPay === 'wechat' ? '' : 'none';
-  document.getElementById('btnSubmitAlipay').style.display = selectedPay === 'alipay' ? '' : 'none';
-  /* 移动端按钮文字 */
-  const mobBtn = document.getElementById('mobBtnSubmit');
-  mobBtn.textContent = selectedPay === 'wechat' ? '微信支付 →' : '支付宝支付 →';
-}
+async function submitPayment() {
+  // 获取收货地址
+  let receiverName = '', receiverPhone = '', receiverAddress = '', receiverCity = ''
 
-/* ══════════════════════════════
-   提交订单
-══════════════════════════════ */
-function submitOrder() {
-  if (!CART.length) { showToast('购物车是空的'); return; }
-  if (!selectedAddr) { showToast('请选择收货地址'); return; }
+  if (selectedAddressId) {
+    // 使用已保存地址
+    const addr = savedAddresses.find(a => a.id === selectedAddressId)
+    if (!addr) return showToast('请选择收货地址')
+    receiverName    = addr.name
+    receiverPhone   = addr.phone
+    receiverCity    = addr.city
+    receiverAddress = addr.province + addr.city + addr.district + ' ' + addr.detail
+  } else if (document.getElementById('newAddrForm')?.classList.contains('open')) {
+    // 使用新填地址
+    receiverName    = (document.getElementById('newName')?.value || '').trim()
+    receiverPhone   = (document.getElementById('newPhone')?.value || '').trim()
+    const province  = document.getElementById('newProvince')?.value || ''
+    const city      = document.getElementById('newCity')?.value || ''
+    const district  = document.getElementById('newDistrict')?.value || ''
+    const detail    = (document.getElementById('newDetail')?.value || '').trim()
+    receiverCity    = city
+    receiverAddress = [province, city, district, detail].filter(Boolean).join(' ')
 
-  const addr  = ADDRESSES.find(a => a.id === selectedAddr);
-  const subtotal = CART.reduce((s, v) => s + v.price, 0);
-  const total    = Math.max(0, subtotal - couponDiscount);
+    if (!receiverName) return showToast('请填写收件人姓名')
+    if (!/^1[3-9]\d{9}$/.test(receiverPhone)) return showToast('手机号格式不正确')
+    if (!province) return showToast('请选择省份')
+    if (!city) return showToast('请选择城市')
+    if (!detail || detail.length < 5) return showToast('详细地址不少于5个字符')
 
-  /* 构建订单对象，后端接入后替换为 API 调用 */
-  const order = {
-    items:      CART,
-    address:    addr,
-    pay:        selectedPay,
-    coupon:     couponCode,
-    discount:   couponDiscount,
-    subtotal,
-    total,
-    remark,
-    createdAt:  new Date().toISOString(),
-  };
+    // 如果勾选了「保存到地址簿」
+    if (document.getElementById('saveAddrCheck')?.checked) {
+      const token = localStorage.getItem('mowo_token')
+      await fetch(`${API}/api/addresses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name: receiverName, phone: receiverPhone, province, city, district, detail })
+      }).catch(() => {})
+    }
+  } else {
+    return showToast('请选择或填写收货地址')
+  }
+
+  const token = localStorage.getItem('mowo_token')
+  const btn = document.getElementById('btnPay')
+  btn.disabled = true
+  btn.textContent = '提交中...'
 
   try {
-    localStorage.setItem('mowo_pending_order', JSON.stringify(order));
-  } catch(e) {}
+    const res = await fetch(`${API}/api/cart/checkout`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        cartItemIds,
+        receiverName:    receiverName || null,
+        receiverPhone:   receiverPhone || null,
+        receiverAddress: receiverAddress || null,
+        receiverCity:    receiverCity || null
+      })
+    })
+    const data = await res.json()
+    if (!data.success) {
+      showToast(data.message || '提交失败')
+      btn.disabled = false
+      btn.textContent = `立即支付`
+      return
+    }
 
-  /* 跳转到支付（实际对接时换成微信/支付宝支付 URL） */
-  showToast(`正在跳转${selectedPay === 'wechat' ? '微信' : '支付宝'}支付…`);
-  setTimeout(() => {
-    /* 模拟跳转：实际替换为 CRMEB 返回的支付链接 */
-    location.href = `orders.html?status=pending&pay=${selectedPay}`;
-  }, 1200);
+    preOrderId = data.data.id
+    // 跳转到支付等待页面（当前直接渲染 pending 状态）
+    renderPaymentPending(data.data)
+
+  } catch(e) {
+    showToast('网络错误，请重试')
+    btn.disabled = false
+  }
 }
 
-/* ══════════════════════════════
-   Toast
-══════════════════════════════ */
-let toastTimer;
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+function renderPaymentPending(preOrder) {
+  const totalAmount = preOrder.totalAmount
+  const expiresAt = new Date(preOrder.expiresAt)
+
+  document.getElementById('pageContent').innerHTML = `
+  <div class="card">
+    <div class="pay-status-box">
+      <div class="pay-status-icon">⏳</div>
+      <div class="pay-status-title">等待支付</div>
+      <div class="pay-status-desc">订单金额 ¥${Number(totalAmount).toFixed(2)}<br>请在 10 分钟内完成支付</div>
+      <div class="pay-timer" id="payTimer">剩余时间: 计算中...</div>
+      <p style="margin-top:16px;font-size:12px;font-weight:700;color:var(--gray3);">
+        实际支付请前往小程序完成（微信支付集成中）
+      </p>
+      <button class="btn-mock-pay" id="btnMockPay2" onclick="mockPay()" style="${(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'display:block' : 'display:none'}">
+        🧪 开发模式：模拟支付成功
+      </button>
+      <a href="./cart.html" class="btn-secondary">返回购物车</a>
+    </div>
+  </div>`
+
+  // 倒计时
+  const tick = () => {
+    const remaining = Math.max(0, expiresAt - new Date())
+    const m = Math.floor(remaining / 60000)
+    const s = Math.floor((remaining % 60000) / 1000)
+    const el = document.getElementById('payTimer')
+    if (!el) { clearInterval(pollTimer); return }
+    if (remaining <= 0) {
+      el.textContent = '订单已超时，请重新结算'
+      el.style.color = 'var(--red)'
+      clearInterval(pollTimer)
+    } else {
+      el.textContent = `剩余时间: ${m}:${s.toString().padStart(2,'0')}`
+    }
+  }
+  tick()
+  pollTimer = setInterval(tick, 1000)
+
+  // 轮询支付状态
+  const pollStatus = async () => {
+    if (!preOrderId) return
+    const token = localStorage.getItem('mowo_token')
+    const res = await fetch(`${API}/api/payment/status/${preOrderId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    const data = await res.json()
+    if (data.data?.status === 'paid') {
+      clearInterval(pollTimer)
+      renderPaymentSuccess()
+    } else if (data.data?.status === 'expired' || data.data?.expired) {
+      clearInterval(pollTimer)
+    }
+  }
+  setInterval(pollStatus, 5000)
 }
 
-/* ══════════════════════════════
-   Reveal
-══════════════════════════════ */
-const obs = new IntersectionObserver(entries => {
-  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('on'); obs.unobserve(e.target); } });
-}, { threshold:0.06 });
-document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+function renderPaymentSuccess() {
+  clearInterval(pollTimer)
+  sessionStorage.removeItem('mowo_checkout_items')
+  document.getElementById('pageContent').innerHTML = `
+  <div class="card">
+    <div class="pay-status-box">
+      <div class="pay-status-icon">🎉</div>
+      <div class="pay-status-title">支付成功！</div>
+      <div class="pay-status-desc">您的订单已提交，我们将尽快安排生产～<br>请关注客服微信获取生产进度</div>
+      <a href="./customize-start.html" class="btn-secondary">继续定制</a>
+      <a href="./showcase.html" class="btn-secondary" style="margin-left:8px">看看联名作品</a>
+    </div>
+  </div>`
+}
 
-/* ══════════════════════════════
-   自定义光标
-══════════════════════════════ */
-if (window.matchMedia('(pointer:fine)').matches) {
-  const c = document.createElement('div');
-  const r = document.createElement('div');
-  const cs = 'position:fixed;border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%)';
-  c.style.cssText = cs + ';width:8px;height:8px;background:#111';
-  r.style.cssText = cs + ';width:32px;height:32px;border:1.5px solid rgba(17,17,16,.3);transition:width .3s,height .3s,opacity .3s';
-  document.body.append(c, r);
-  document.body.style.cursor = 'none';
-  let mx=0,my=0,rx=0,ry=0;
-  document.addEventListener('mousemove', e => { mx=e.clientX;my=e.clientY;c.style.left=mx+'px';c.style.top=my+'px'; });
-  (function tick(){ rx+=(mx-rx)*.12;ry+=(my-ry)*.12;r.style.left=rx+'px';r.style.top=ry+'px';requestAnimationFrame(tick); })();
-  document.querySelectorAll('a,button,.pay-opt,.addr-item').forEach(el => {
-    el.addEventListener('mouseenter',()=>{ r.style.width='44px';r.style.height='44px';r.style.opacity='.4'; });
-    el.addEventListener('mouseleave',()=>{ r.style.width='32px';r.style.height='32px';r.style.opacity='1'; });
-  });
+async function mockPay() {
+  if (!preOrderId) {
+    showToast('请先提交订单')
+    return
+  }
+  const token = localStorage.getItem('mowo_token')
+  const res = await fetch(`${API}/api/payment/mock-pay/${preOrderId}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` }
+  })
+  const data = await res.json()
+  if (data.success) {
+    renderPaymentSuccess()
+  } else {
+    showToast(data.message || 'Mock 支付失败')
+  }
+}
+
+function showToast(msg, duration = 2500) {
+  const el = document.getElementById('toast')
+  el.textContent = msg
+  el.classList.add('show')
+  setTimeout(() => el.classList.remove('show'), duration)
+}
+function escHtml(s) {
+  if (!s) return ''
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')
 }
 </script>
 </body>

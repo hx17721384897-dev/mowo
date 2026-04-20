@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的联名 — 哞屋创作者中心</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Noto+Sans+SC:wght@300;400;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --white:#FFFFFF;--cream:#F5F3EF;--black:#111110;
+  --gray1:#EBEBEA;--gray2:#C4C3BF;--gray3:#787874;
+  --accent-y:#F5E642;--accent-o:#FF6B35;--accent-g:#8FD694;--accent-b:#7EC8E3;
+  --font:'Nunito','Noto Sans SC',sans-serif;
+  --ease:cubic-bezier(0.22,1,0.36,1);
+  --sidebar-w:240px;--topbar-h:60px;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:var(--font);background:var(--cream);color:var(--black);overflow-x:hidden;-webkit-font-smoothing:antialiased;}
+a{text-decoration:none;color:inherit;}
+button{font-family:var(--font);cursor:pointer;border:none;background:none;}
+input,select,textarea{font-family:var(--font);}
+
+/* ── 侧栏 ── */
+.sidebar{width:var(--sidebar-w);background:var(--black);position:fixed;top:0;left:0;bottom:0;display:flex;flex-direction:column;z-index:800;transition:transform .35s var(--ease);}
+@media(max-width:1023px){.sidebar{transform:translateX(-100%);}.sidebar.open{transform:none;}}
+.sidebar-logo{padding:20px 20px 16px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:12px;flex-shrink:0;}
+.sidebar-logo-mark{width:36px;height:36px;border-radius:10px;background:var(--accent-y);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;color:var(--black);flex-shrink:0;}
+.sidebar-logo-cn{font-weight:900;font-size:16px;color:var(--white);}
+.sidebar-logo-sub{font-weight:700;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:rgba(255,255,255,.35);}
+.sidebar-user{padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:12px;flex-shrink:0;}
+.sidebar-avatar{width:36px;height:36px;border-radius:50%;background:var(--accent-y);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:var(--black);flex-shrink:0;border:2px solid rgba(255,255,255,.1);}
+.sidebar-user-name{font-weight:800;font-size:13px;color:var(--white);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sidebar-user-badge{display:inline-flex;align-items:center;gap:3px;margin-top:2px;font-weight:800;font-size:10px;letter-spacing:.06em;padding:1px 7px;border-radius:999px;background:rgba(143,214,148,.15);color:var(--accent-g);}
+.sidebar-nav{flex:1;overflow-y:auto;padding:12px 10px;}
+.sidebar-nav::-webkit-scrollbar{width:0;}
+.nav-sec{font-weight:800;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.25);padding:8px 10px 4px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;font-weight:800;font-size:13px;color:rgba(255,255,255,.55);transition:background .15s,color .15s;position:relative;white-space:nowrap;margin-bottom:2px;}
+.nav-item:hover{background:rgba(255,255,255,.07);color:rgba(255,255,255,.85);}
+.nav-item.active{background:rgba(255,255,255,.1);color:var(--white);}
+.nav-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:20px;border-radius:0 3px 3px 0;background:var(--accent-y);}
+.nav-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;background:rgba(255,255,255,.05);}
+.nav-item.active .nav-icon{background:rgba(245,230,66,.15);}
+.sidebar-bottom{padding:12px 10px 20px;border-top:1px solid rgba(255,255,255,.08);flex-shrink:0;}
+.cert-v{background:rgba(143,214,148,.08);border:1px solid rgba(143,214,148,.15);border-radius:14px;padding:12px 14px;}
+.cert-vt{font-weight:900;font-size:13px;color:var(--accent-g);}
+.cert-vd{font-weight:700;font-size:11px;color:rgba(255,255,255,.35);margin-top:2px;}
+.cert-vb{margin-top:8px;padding:5px 14px;border-radius:999px;background:rgba(143,214,148,.15);color:var(--accent-g);font-weight:800;font-size:11px;cursor:default;}
+.backdrop{display:none;position:fixed;inset:0;z-index:799;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);}
+.backdrop.show{display:block;}
+
+/* ── 顶栏 ── */
+.topbar{position:fixed;top:0;right:0;left:var(--sidebar-w);z-index:700;height:var(--topbar-h);background:rgba(245,243,239,.95);backdrop-filter:blur(20px);border-bottom:1px solid var(--gray1);display:flex;align-items:center;justify-content:space-between;padding:0 32px;}
+@media(max-width:1023px){.topbar{left:0;padding:0 20px;}}
+.topbar-left{display:flex;align-items:center;gap:14px;}
+.menu-btn{width:36px;height:36px;border-radius:10px;background:var(--gray1);display:none;align-items:center;justify-content:center;font-size:16px;}
+@media(max-width:1023px){.menu-btn{display:flex;}}
+.bc-home{font-weight:700;font-size:13px;color:var(--gray3);transition:color .2s;}
+.bc-home:hover{color:var(--black);}
+.bc-sep{color:var(--gray2);font-size:12px;margin:0 6px;}
+.bc-cur{font-weight:900;font-size:14px;color:var(--black);}
+.topbar-avatar{width:34px;height:34px;border-radius:50%;background:var(--accent-y);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:var(--black);border:2px solid var(--gray1);}
+
+/* ── 主区 ── */
+.main{margin-left:var(--sidebar-w);padding-top:var(--topbar-h);}
+@media(max-width:1023px){.main{margin-left:0;}}
+.inner{padding:32px;max-width:900px;}
+@media(max-width:640px){.inner{padding:20px 16px 60px;}}
+
+/* ── 通用 ── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;font-family:var(--font);font-weight:800;font-size:13px;padding:10px 22px;border-radius:999px;min-height:44px;transition:all .2s;cursor:pointer;border:none;white-space:nowrap;}
+.btn:active{transform:scale(.97);}
+.btn-ghost{background:var(--white);color:var(--black);border:1.5px solid var(--gray1);}
+.btn-ghost:hover{border-color:var(--black);}
+.btn-black{background:var(--black);color:var(--white);}
+.btn-black:hover{opacity:.85;}
+.btn-yellow{background:var(--accent-y);color:var(--black);box-shadow:0 3px 0 #C8BB00;}
+.btn-yellow:hover{box-shadow:0 5px 0 #C8BB00;transform:translateY(-1px);}
+.btn-sm{font-size:12px;padding:7px 16px;min-height:34px;}
+.btn:disabled{opacity:.4;cursor:not-allowed;pointer-events:none;}
+.reveal{opacity:0;transform:translateY(16px);transition:opacity .55s var(--ease),transform .55s var(--ease);}
+.reveal.on{opacity:1;transform:none;}
+.d1{transition-delay:.06s}.d2{transition-delay:.12s}.d3{transition-delay:.18s}.d4{transition-delay:.24s}
+
+/* ── Tab 栏 ── */
+.tab-bar{display:flex;gap:4px;background:var(--gray1);border-radius:16px;padding:4px;margin-bottom:28px;}
+.tab-btn{flex:1;padding:10px;border-radius:12px;font-weight:800;font-size:13px;color:var(--gray3);transition:all .2s;text-align:center;}
+.tab-btn.active{background:var(--white);color:var(--black);box-shadow:0 2px 8px rgba(0,0,0,.07);}
+.tab-pane{display:none;}
+.tab-pane.active{display:block;}
+
+/* ── 作品卡片（Tab 1）── */
+.work-card{background:var(--white);border-radius:22px;border:1.5px solid var(--gray1);overflow:hidden;margin-bottom:16px;transition:border-color .2s,box-shadow .2s;}
+.work-card:hover{border-color:var(--gray2);box-shadow:0 4px 20px rgba(0,0,0,.06);}
+.work-head{display:flex;gap:16px;padding:18px 20px 0;align-items:flex-start;}
+.work-preview{width:72px;height:72px;border-radius:12px;background:var(--gray1);flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:28px;}
+.work-preview img{width:100%;height:100%;object-fit:contain;}
+.work-info{flex:1;min-width:0;}
+.work-title{font-weight:900;font-size:15px;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.work-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:999px;font-weight:800;font-size:10px;letter-spacing:.03em;}
+.badge-pending{background:var(--gray1);color:var(--gray3);}
+.badge-approved{background:rgba(143,214,148,.2);color:#1a5c2e;}
+.badge-rejected{background:rgba(255,107,53,.15);color:#c23a00;}
+.badge-onshelf{background:rgba(245,230,66,.2);color:#7a6800;}
+.work-desc{font-weight:700;font-size:12px;color:var(--gray3);margin-top:6px;line-height:1.5;}
+
+.work-body{padding:14px 20px 18px;}
+.work-reject-reason{background:#FFF8F5;border:1px solid #FFDDCC;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-weight:700;font-size:12px;color:var(--accent-o);line-height:1.5;}
+.work-reject-reason strong{color:#c23a00;}
+
+/* ── 帧素材包上传 ── */
+.pack-section{background:var(--cream);border-radius:14px;padding:14px 16px;}
+.pack-title{font-weight:900;font-size:13px;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.pack-title-badge{font-weight:800;font-size:10px;padding:2px 8px;border-radius:999px;background:rgba(143,214,148,.2);color:#1a5c2e;}
+.pack-grid{display:flex;flex-wrap:wrap;gap:8px;}
+.pack-size-item{background:var(--white);border:1.5px solid var(--gray1);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:10px;min-width:180px;}
+.pack-size-name{font-weight:900;font-size:13px;flex:1;}
+.pack-size-status{font-weight:700;font-size:11px;color:var(--gray3);}
+.pack-size-status.done{color:#1a7a3c;}
+.pack-upload-btn{padding:5px 12px;border-radius:8px;font-weight:800;font-size:11px;background:var(--black);color:var(--white);transition:opacity .2s;}
+.pack-upload-btn:hover{opacity:.8;}
+.pack-upload-btn.done{background:rgba(143,214,148,.2);color:#1a5c2e;}
+
+/* ── 申请表单（Tab 2）── */
+.form-card{background:var(--white);border-radius:22px;border:1.5px solid var(--gray1);padding:24px;}
+.form-section{margin-bottom:24px;}
+.form-section-title{font-weight:900;font-size:14px;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.form-section-title .num{width:22px;height:22px;border-radius:50%;background:var(--black);color:var(--white);font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.form-row{margin-bottom:14px;}
+.form-label{font-weight:800;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gray3);display:block;margin-bottom:6px;}
+.form-label .req{color:var(--accent-o);}
+.form-field{width:100%;height:42px;border:1.5px solid var(--gray1);border-radius:12px;padding:0 14px;font-family:var(--font);font-weight:700;font-size:13px;color:var(--black);background:var(--white);outline:none;transition:border-color .2s;}
+.form-field:focus{border-color:var(--black);}
+.form-field.err{border-color:#FF6B35;}
+.form-textarea{width:100%;min-height:80px;border:1.5px solid var(--gray1);border-radius:12px;padding:10px 14px;font-family:var(--font);font-weight:700;font-size:13px;resize:vertical;outline:none;transition:border-color .2s;line-height:1.6;}
+.form-textarea:focus{border-color:var(--black);}
+.form-hint{font-weight:700;font-size:11px;color:var(--gray3);margin-top:5px;}
+
+/* ── 动画来源卡片 ── */
+.source-card{background:var(--cream);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:14px;border:1.5px solid var(--gray1);}
+.source-preview{width:56px;height:56px;border-radius:10px;background:var(--gray1);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:24px;overflow:hidden;}
+.source-preview img{width:100%;height:100%;object-fit:contain;}
+.source-info{flex:1;min-width:0;}
+.source-name{font-weight:900;font-size:14px;margin-bottom:3px;}
+.source-meta{font-weight:700;font-size:12px;color:var(--gray3);}
+.source-change{font-weight:800;font-size:12px;color:var(--gray3);text-decoration:underline;cursor:pointer;flex-shrink:0;}
+.source-change:hover{color:var(--black);}
+
+/* ── SKU 多选 ── */
+.sku-grid{display:flex;flex-wrap:wrap;gap:8px;}
+.sku-chip{padding:7px 14px;border-radius:10px;font-weight:800;font-size:12px;border:1.5px solid var(--gray1);color:var(--black);background:var(--white);cursor:pointer;transition:all .15s;user-select:none;}
+.sku-chip:hover{border-color:var(--gray2);}
+.sku-chip.selected{border-color:var(--black);background:var(--black);color:var(--white);}
+.sku-chip.selected:hover{background:rgba(17,17,16,.85);}
+.sku-loading{font-weight:700;font-size:13px;color:var(--gray3);padding:12px 0;}
+
+/* ── 协议勾选 ── */
+.agreement-box{background:var(--cream);border-radius:14px;padding:14px 16px;border:1.5px solid var(--gray1);}
+.agreement-text{font-weight:700;font-size:12px;color:var(--gray3);line-height:1.7;margin-bottom:10px;}
+.agreement-check{display:flex;align-items:flex-start;gap:10px;cursor:pointer;}
+.agreement-check input{width:16px;height:16px;border-radius:4px;margin-top:1px;flex-shrink:0;cursor:pointer;accent-color:var(--black);}
+.agreement-check-text{font-weight:800;font-size:13px;color:var(--black);}
+
+/* ── 空状态 ── */
+.empty{padding:64px 20px;text-align:center;background:var(--white);border-radius:22px;border:1.5px dashed var(--gray2);}
+.empty-icon{font-size:48px;margin-bottom:12px;}
+.empty-text{font-weight:900;font-size:15px;margin-bottom:6px;}
+.empty-sub{font-weight:700;font-size:13px;color:var(--gray3);margin-bottom:20px;line-height:1.6;}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--black);color:var(--white);font-weight:800;font-size:13px;padding:10px 22px;border-radius:999px;opacity:0;pointer-events:none;transition:all .3s var(--ease);z-index:9000;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ── 加载骨架 ── */
+.skeleton{background:linear-gradient(90deg,var(--gray1) 25%,var(--cream) 50%,var(--gray1) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;}
+@keyframes shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+.sk-card{background:var(--white);border-radius:22px;border:1.5px solid var(--gray1);padding:18px 20px;margin-bottom:16px;}
+.sk-line{height:14px;border-radius:6px;margin-bottom:10px;}
+
+/* 文件上传隐藏 */
+.pack-file-input{display:none;}
+</style>
+</head>
+<body>
+
+<div class="backdrop" id="backdrop" onclick="closeSidebar()"></div>
+
+<!-- ── 侧栏 ── -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="sidebar-logo-mark">哞</div>
+    <div style="line-height:1.2;"><p class="sidebar-logo-cn">创作者中心</p><p class="sidebar-logo-sub">MOWO Studio</p></div>
+  </div>
+  <div class="sidebar-user">
+    <div class="sidebar-avatar" id="sidebarAvatar">创</div>
+    <div style="flex:1;min-width:0;">
+      <p class="sidebar-user-name" id="sidebarName">加载中…</p>
+      <span class="sidebar-user-badge">✦ 认证创作者</span>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <p class="nav-sec">数据中心</p>
+    <a href="creator-dashboard.html" class="nav-item"><span class="nav-icon">📊</span>数据总览</a>
+    <a href="creator-earnings.html"  class="nav-item"><span class="nav-icon">💰</span>收益与提现</a>
+    <p class="nav-sec" style="margin-top:12px;">创作管理</p>
+    <a href="creator-animations.html" class="nav-item"><span class="nav-icon">🎬</span>我的动画</a>
+    <a href="creator-collab.html"     class="nav-item active"><span class="nav-icon">🎨</span>我的联名</a>
+    <a href="creator-links.html"      class="nav-item"><span class="nav-icon">🔗</span>引流链接</a>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="cert-v">
+      <p class="cert-vt">✦ 已认证创作者</p>
+      <p class="cert-vd">创作者认证有效</p>
+      <button class="cert-vb">认证有效 ✓</button>
+    </div>
+  </div>
+</aside>
+
+<!-- ── 顶栏 ── -->
+<header class="topbar">
+  <div class="topbar-left">
+    <button class="menu-btn" onclick="openSidebar()">☰</button>
+    <div style="display:flex;align-items:center;">
+      <a href="index.html" class="bc-home">哞屋</a>
+      <span class="bc-sep">›</span>
+      <span class="bc-cur">我的联名</span>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="topbar-avatar" id="topbarAvatar"></div>
+  </div>
+</header>
+
+<!-- ── 主内容 ── -->
+<main class="main">
+  <div class="inner">
+
+    <div style="margin-bottom:24px;" class="reveal">
+      <h1 style="font-weight:900;font-size:26px;letter-spacing:-.02em;margin-bottom:6px;">我的联名</h1>
+      <p style="font-weight:700;font-size:13px;color:var(--gray3);">管理联名申请、上传帧素材包，让更多用户爱上你的设计</p>
+    </div>
+
+    <!-- Tab 栏 -->
+    <div class="tab-bar reveal d1" id="tabBar">
+      <button class="tab-btn active" onclick="switchTab('works')" id="tabWorks">📋 我的申请</button>
+      <button class="tab-btn" onclick="switchTab('apply')" id="tabApply">🚀 提交申请</button>
+    </div>
+
+    <!-- ── Tab 1: 我的申请 ── -->
+    <div class="tab-pane active reveal d2" id="paneWorks">
+      <!-- 骨架屏 -->
+      <div id="workSkeleton">
+        <div class="sk-card"><div class="sk-line skeleton" style="width:55%"></div><div class="sk-line skeleton" style="width:35%"></div></div>
+        <div class="sk-card"><div class="sk-line skeleton" style="width:70%"></div><div class="sk-line skeleton" style="width:40%"></div></div>
+      </div>
+      <!-- 列表 -->
+      <div id="workList" style="display:none;"></div>
+      <!-- 空状态 -->
+      <div class="empty" id="workEmpty" style="display:none;">
+        <div class="empty-icon">🎨</div>
+        <p class="empty-text">还没有联名申请</p>
+        <p class="empty-sub">选择一个动画作品，填写申请信息，提交给哞屋审核</p>
+        <button class="btn btn-yellow" onclick="switchTab('apply')">去提交申请 →</button>
+      </div>
+    </div>
+
+    <!-- ── Tab 2: 提交申请 ── -->
+    <div class="tab-pane reveal d2" id="paneApply">
+      <div class="form-card">
+
+        <!-- 1. 动画来源 -->
+        <div class="form-section">
+          <p class="form-section-title"><span class="num">1</span>选择动画来源</p>
+          <!-- 有 animationId 时显示卡片，否则显示输入框 -->
+          <div id="sourceFromAnim" style="display:none;">
+            <div class="source-card" id="sourceAnimCard">
+              <div class="source-preview" id="sourceAnimPreview">🎬</div>
+              <div class="source-info">
+                <p class="source-name" id="sourceAnimName">加载中…</p>
+                <p class="source-meta" id="sourceAnimMeta">—</p>
+              </div>
+              <span class="source-change" onclick="clearAnimSource()">更换</span>
+            </div>
+          </div>
+          <div id="sourceFromOrder" style="display:none;">
+            <div class="form-row">
+              <label class="form-label">定制订单号 <span class="req">*</span></label>
+              <input class="form-field" id="inputOrderNo" type="text" placeholder="输入你的定制订单号">
+              <p class="form-hint">从「我的订单」页面找到订单号（格式：MW开头）</p>
+            </div>
+          </div>
+          <div id="sourceChoose">
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button class="btn btn-ghost btn-sm" onclick="goPickAnimation()">📂 从我的动画库选择</button>
+              <button class="btn btn-ghost btn-sm" onclick="useOrderMode()">📦 使用定制订单号</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. 作品信息 -->
+        <div class="form-section">
+          <p class="form-section-title"><span class="num">2</span>作品信息</p>
+          <div class="form-row">
+            <label class="form-label">作品标题 <span class="req">*</span></label>
+            <input class="form-field" id="inputTitle" type="text" placeholder="给你的联名作品起个响亮的名字" maxlength="50">
+          </div>
+          <div class="form-row">
+            <label class="form-label">作品描述</label>
+            <textarea class="form-textarea" id="inputDesc" placeholder="介绍一下这个设计的灵感和故事（选填）" rows="3" maxlength="500"></textarea>
+          </div>
+        </div>
+
+        <!-- 3. 支持款式 -->
+        <div class="form-section">
+          <p class="form-section-title"><span class="num">3</span>申请适配款式 <span style="font-weight:700;font-size:12px;color:var(--gray3);letter-spacing:0;text-transform:none;">（至少选1款）</span></p>
+          <p style="font-weight:700;font-size:12px;color:var(--gray3);margin-bottom:12px;">选择你希望这个联名作品适配的哞屋机型规格</p>
+          <div class="sku-grid" id="skuGrid">
+            <p class="sku-loading">加载款式信息…</p>
+          </div>
+        </div>
+
+        <!-- 4. 授权协议 -->
+        <div class="form-section" style="margin-bottom:28px;">
+          <p class="form-section-title"><span class="num">4</span>授权协议</p>
+          <div class="agreement-box">
+            <p class="agreement-text">
+              提交申请即表示你同意将此动画作品授权给哞屋（mowobox）用于生产联名产品，并按照创作者分红协议获取收益。审核通过后，作品将进入联名展示库，用户可购买实体产品。你保留该动画作品的原始著作权。
+            </p>
+            <label class="agreement-check">
+              <input type="checkbox" id="checkAgreement" onchange="updateSubmitBtn()">
+              <span class="agreement-check-text">我已阅读并同意以上授权协议</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- 提交按钮 -->
+        <div style="display:flex;gap:12px;justify-content:flex-end;">
+          <button class="btn btn-ghost" onclick="resetForm()">重置</button>
+          <button class="btn btn-yellow" id="btnSubmit" onclick="submitApply()" disabled>提交联名申请</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- 帧素材包上传的隐藏文件输入 -->
+<input type="file" class="pack-file-input" id="packFileInput" accept=".zip">
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ─────────────────────────────────────────
+   常量 & 状态
+───────────────────────────────────────── */
+const CAPI = (location.hostname==='127.0.0.1'?'http://127.0.0.1:3001':'http://localhost:3001')
+const BASE = location.pathname.includes('/pages/') ? '../pages/' : './'
+
+let currentAnimId  = null     // 动画库来源的 customProduct.id
+let selectedSkus   = new Set()
+let allSkus        = []
+let packUploadTarget = null   // { workId, size }
+
+/* ─────────────────────────────────────────
+   Auth 守卫
+───────────────────────────────────────── */
+function getToken() { return localStorage.getItem('mowo_token') }
+
+function requireCreator() {
+  const raw = localStorage.getItem('mowo_user')
+  if (!raw) { location.href = BASE + 'auth.html'; return false }
+  const u = JSON.parse(raw)
+  if (u.certifyStatus !== 2) { location.href = BASE + 'index.html'; return false }
+  const nick = u.nickname || u.phone || '创'
+  const char = nick.slice(-1).toUpperCase()
+  ;['topbarAvatar','sidebarAvatar'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.textContent = char
+  })
+  const nameEl = document.getElementById('sidebarName')
+  if (nameEl) nameEl.textContent = nick
+  return true
+}
+
+/* ─────────────────────────────────────────
+   侧栏 & Toast
+───────────────────────────────────────── */
+function openSidebar()  { document.getElementById('sidebar').classList.add('open'); document.getElementById('backdrop').classList.add('show') }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('backdrop').classList.remove('show') }
+
+let toastTimer
+function showToast(msg, dur = 2400) {
+  const el = document.getElementById('toast')
+  el.textContent = msg; el.classList.add('show')
+  clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => el.classList.remove('show'), dur)
+}
+
+/* ─────────────────────────────────────────
+   Tab 切换
+───────────────────────────────────────── */
+function switchTab(tab) {
+  const tabMap = { works: 'paneWorks', apply: 'paneApply' }
+  const btnMap = { works: 'tabWorks', apply: 'tabApply' }
+  Object.keys(tabMap).forEach(k => {
+    document.getElementById(tabMap[k]).classList.toggle('active', k === tab)
+    document.getElementById(btnMap[k]).classList.toggle('active', k === tab)
+  })
+}
+
+/* ─────────────────────────────────────────
+   加载我的联名作品
+───────────────────────────────────────── */
+async function loadMyWorks() {
+  try {
+    const res  = await fetch(`${CAPI}/api/creator/collab/works?limit=50`, {
+      headers: { Authorization: `Bearer ${getToken()}` }
+    })
+    const json = await res.json()
+    document.getElementById('workSkeleton').style.display = 'none'
+
+    if (!json.success) throw new Error(json.message)
+    const works = json.data.works || []
+
+    if (works.length === 0) {
+      document.getElementById('workEmpty').style.display = ''
+    } else {
+      document.getElementById('workList').style.display = ''
+      document.getElementById('workList').innerHTML = works.map(renderWorkCard).join('')
+    }
+  } catch(e) {
+    document.getElementById('workSkeleton').style.display = 'none'
+    document.getElementById('workEmpty').style.display = ''
+  }
+}
+
+function renderWorkCard(w) {
+  const statusMap = {
+    pending:  { label: '审核中',   cls: 'badge-pending' },
+    approved: { label: '已通过',   cls: 'badge-approved' },
+    rejected: { label: '未通过',   cls: 'badge-rejected' },
+    onshelf:  { label: '已上架',   cls: 'badge-onshelf'  },
+    offshelf: { label: '已下架',   cls: 'badge-pending'  },
+  }
+  const s = statusMap[w.status] || { label: w.status, cls: 'badge-pending' }
+
+  const frames = Array.isArray(w.animationFrames) ? w.animationFrames : []
+  const previewHtml = w.coverUrl
+    ? `<img src="${escHtml(w.coverUrl)}" alt="封面">`
+    : '🎨'
+
+  let rejectHtml = ''
+  if (w.status === 'rejected' && w.rejectReason) {
+    rejectHtml = `<div class="work-reject-reason"><strong>拒绝原因：</strong>${escHtml(w.rejectReason)}</div>`
+  }
+
+  // 帧素材包上传区（仅 approved/onshelf 显示）
+  let packHtml = ''
+  if (w.status === 'approved' || w.status === 'onshelf') {
+    const skus     = Array.isArray(w.supportedSkus) ? w.supportedSkus : []
+    const packs    = w.framePacks || []
+    const packMap  = Object.fromEntries(packs.map(p => [p.size, p]))
+    const sizes    = Array.isArray(w.sizes) ? w.sizes : []
+
+    // 显示每个支持的SKU尺寸的上传状态
+    const sizeItems = skus.length > 0
+      ? [...new Set(skus.map(s => typeof s === 'string' ? s : (s.size || '')))]
+          .filter(Boolean)
+          .map(size => {
+            const pack = packMap[size]
+            const hasPack = !!pack
+            return `<div class="pack-size-item">
+              <span class="pack-size-name">${escHtml(size)}</span>
+              <span class="pack-size-status${hasPack ? ' done' : ''}">${hasPack ? '✓ 已上传' : '待上传'}</span>
+              <button class="pack-upload-btn${hasPack ? ' done' : ''}" onclick="uploadFramePack('${w.id}','${escHtml(size)}')">${hasPack ? '重新上传' : '上传'}</button>
+            </div>`
+          }).join('')
+      : '<p style="font-weight:700;font-size:12px;color:var(--gray3);">无适配款式尺寸信息</p>'
+
+    packHtml = `
+    <div class="pack-section" style="margin-top:12px;">
+      <p class="pack-title">帧素材包 <span class="pack-title-badge">审核已通过</span></p>
+      <p style="font-weight:700;font-size:11px;color:var(--gray3);margin-bottom:10px;">请为每个适配尺寸上传对应的帧素材包（.zip格式，包含帧图序列）</p>
+      <div class="pack-grid">${sizeItems}</div>
+    </div>`
+  }
+
+  return `
+  <div class="work-card">
+    <div class="work-head">
+      <div class="work-preview">${previewHtml}</div>
+      <div class="work-info">
+        <p class="work-title">${escHtml(w.title)}</p>
+        <div class="work-meta">
+          <span class="badge ${s.cls}">${s.label}</span>
+          ${w.isNewbieWork ? '<span class="badge badge-approved">✦ 新手期</span>' : ''}
+          <span style="font-weight:700;font-size:11px;color:var(--gray3);">${fmtDate(w.createdAt)}</span>
+          ${frames.length ? `<span style="font-weight:700;font-size:11px;color:var(--gray3);">🎞 ${frames.length}帧</span>` : ''}
+        </div>
+        ${w.description ? `<p class="work-desc">${escHtml(w.description.slice(0,80))}${w.description.length>80?'…':''}</p>` : ''}
+      </div>
+    </div>
+    <div class="work-body">
+      ${rejectHtml}
+      ${packHtml}
+    </div>
+  </div>`
+}
+
+/* ─────────────────────────────────────────
+   帧素材包上传
+───────────────────────────────────────── */
+function uploadFramePack(workId, size) {
+  packUploadTarget = { workId, size }
+  const inp = document.getElementById('packFileInput')
+  inp.value = ''
+  inp.click()
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('packFileInput').addEventListener('change', async (e) => {
+    const file = e.target.files[0]
+    if (!file || !packUploadTarget) return
+    const { workId, size } = packUploadTarget
+
+    if (!file.name.endsWith('.zip')) {
+      showToast('请上传 .zip 格式的帧素材包', 3000)
+      return
+    }
+    if (file.size > 200 * 1024 * 1024) {
+      showToast('文件不能超过 200MB', 3000)
+      return
+    }
+
+    showToast('获取上传地址…')
+    try {
+      // 1. 获取预签名上传 URL
+      const urlRes  = await fetch(`${CAPI}/api/creator/collab/works/${workId}/frame-packs/${encodeURIComponent(size)}/upload-url`, {
+        headers: { Authorization: `Bearer ${getToken()}` }
+      })
+      const urlData = await urlRes.json()
+      if (!urlData.success) throw new Error(urlData.message)
+
+      showToast('上传中，请稍候…', 30000)
+
+      // 2. PUT 上传到 OSS
+      await fetch(urlData.data.uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/zip' },
+        body: file
+      })
+
+      // 3. 确认上传
+      const confirmRes = await fetch(`${CAPI}/api/creator/collab/works/${workId}/frame-packs/${encodeURIComponent(size)}/confirm-upload`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ ossKey: urlData.data.ossKey })
+      })
+      const confirmData = await confirmRes.json()
+      if (!confirmData.success) throw new Error(confirmData.message)
+
+      showToast(`✅ ${size} 帧素材包上传成功`)
+      loadMyWorks()  // 刷新列表
+    } catch(e) {
+      showToast('上传失败：' + e.message, 4000)
+    }
+    packUploadTarget = null
+  })
+})
+
+/* ─────────────────────────────────────────
+   加载款式 SKU
+───────────────────────────────────────── */
+async function loadSkus() {
+  try {
+    const res  = await fetch(`${CAPI}/api/machine-models`)
+    const json = await res.json()
+    if (!json.success) throw new Error(json.message)
+
+    // 展平所有模型的 SKU
+    allSkus = []
+    ;(json.data || []).forEach(model => {
+      ;(model.skus || []).forEach(sku => {
+        if (sku.isActive !== false) {
+          allSkus.push({
+            id: sku.id,
+            label: `${model.name} · ${sku.size} · ${sku.material} · ${sku.frameCount}帧`,
+            short: `${sku.size}`,
+            modelName: model.name,
+          })
+        }
+      })
+    })
+
+    renderSkuGrid()
+  } catch(e) {
+    document.getElementById('skuGrid').innerHTML =
+      '<p style="font-weight:700;font-size:12px;color:var(--gray3);">款式加载失败，请刷新重试</p>'
+  }
+}
+
+function renderSkuGrid() {
+  if (allSkus.length === 0) {
+    document.getElementById('skuGrid').innerHTML =
+      '<p style="font-weight:700;font-size:12px;color:var(--gray3);">暂无可选款式</p>'
+    return
+  }
+  document.getElementById('skuGrid').innerHTML = allSkus.map(sku =>
+    `<button class="sku-chip${selectedSkus.has(sku.id) ? ' selected' : ''}"
+       onclick="toggleSku('${sku.id}')"
+       title="${escHtml(sku.label)}">${escHtml(sku.short)}</button>`
+  ).join('')
+}
+
+function toggleSku(id) {
+  if (selectedSkus.has(id)) selectedSkus.delete(id)
+  else selectedSkus.add(id)
+  renderSkuGrid()
+  updateSubmitBtn()
+}
+
+/* ─────────────────────────────────────────
+   动画来源逻辑
+───────────────────────────────────────── */
+function goPickAnimation() {
+  // 跳转到动画库，让用户点「提交联名」按钮回来（URL 参数会带回 animationId）
+  location.href = BASE + 'creator-animations.html'
+}
+
+function useOrderMode() {
+  document.getElementById('sourceChoose').style.display = 'none'
+  document.getElementById('sourceFromOrder').style.display = ''
+  document.getElementById('sourceFromAnim').style.display = 'none'
+  currentAnimId = null
+  updateSubmitBtn()
+}
+
+function clearAnimSource() {
+  currentAnimId = null
+  document.getElementById('sourceFromAnim').style.display = 'none'
+  document.getElementById('sourceFromOrder').style.display = 'none'
+  document.getElementById('sourceChoose').style.display = ''
+  updateSubmitBtn()
+}
+
+async function loadAnimSource(animId) {
+  currentAnimId = animId
+  document.getElementById('sourceChoose').style.display = 'none'
+  document.getElementById('sourceFromOrder').style.display = 'none'
+  document.getElementById('sourceFromAnim').style.display = ''
+  document.getElementById('sourceAnimName').textContent = '加载中…'
+  document.getElementById('sourceAnimMeta').textContent = '—'
+
+  try {
+    const res = await fetch(`${CAPI}/api/custom-products/${animId}`, {
+      headers: { Authorization: `Bearer ${getToken()}` }
+    })
+    const json = await res.json()
+    if (!json.success) throw new Error(json.message)
+    const cp = json.data
+    const frames = safeParseJson(cp.animationFrames) || []
+    const name   = (safeParseJson(cp.configJson)?.animName) || `动画 ${fmtDate(cp.createdAt)}`
+    document.getElementById('sourceAnimName').textContent = name
+    document.getElementById('sourceAnimMeta').textContent = `${frames.length} 帧 · ${fmtDate(cp.createdAt)} 创建`
+    if (cp.previewUrl) {
+      document.getElementById('sourceAnimPreview').innerHTML = `<img src="${escHtml(cp.previewUrl)}" alt="预览">`
+    }
+    updateSubmitBtn()
+  } catch(e) {
+    document.getElementById('sourceAnimName').textContent = '加载失败'
+  }
+}
+
+/* ─────────────────────────────────────────
+   提交按钮状态
+───────────────────────────────────────── */
+function updateSubmitBtn() {
+  const hasSource = currentAnimId || document.getElementById('inputOrderNo')?.value?.trim()
+  const hasTitle  = document.getElementById('inputTitle')?.value?.trim()
+  const hasSku    = selectedSkus.size > 0
+  const hasAgree  = document.getElementById('checkAgreement')?.checked
+  document.getElementById('btnSubmit').disabled = !(hasSource && hasTitle && hasSku && hasAgree)
+}
+
+// 监听输入变化
+document.addEventListener('DOMContentLoaded', () => {
+  ;['inputTitle','inputOrderNo'].forEach(id => {
+    const el = document.getElementById(id)
+    if(el) el.addEventListener('input', updateSubmitBtn)
+  })
+})
+
+/* ─────────────────────────────────────────
+   提交申请
+───────────────────────────────────────── */
+async function submitApply() {
+  const title    = document.getElementById('inputTitle').value.trim()
+  const desc     = document.getElementById('inputDesc').value.trim()
+  const orderNo  = document.getElementById('inputOrderNo')?.value?.trim() || null
+  const agreed   = document.getElementById('checkAgreement').checked
+
+  if (!title) { showToast('请填写作品标题'); return }
+  if (selectedSkus.size === 0) { showToast('请至少选择一个适配款式'); return }
+  if (!agreed) { showToast('请先同意授权协议'); return }
+  if (!currentAnimId && !orderNo) { showToast('请选择动画来源'); return }
+
+  const btn = document.getElementById('btnSubmit')
+  btn.disabled = true; btn.textContent = '提交中…'
+
+  try {
+    const body = {
+      title,
+      description:   desc || undefined,
+      supportedSkus: [...selectedSkus],
+      agreementSigned: true,
+    }
+    if (currentAnimId) body.animationId = currentAnimId
+    else body.orderNo = orderNo
+
+    const res  = await fetch(`${CAPI}/api/collab/apply`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+      body: JSON.stringify(body)
+    })
+    const json = await res.json()
+    if (!json.success) throw new Error(json.message)
+
+    showToast('✅ 联名申请已提交，等待审核')
+    resetForm()
+    switchTab('works')
+    setTimeout(loadMyWorks, 500)
+  } catch(e) {
+    showToast('提交失败：' + e.message, 4000)
+    btn.disabled = false; btn.textContent = '提交联名申请'
+  }
+}
+
+function resetForm() {
+  currentAnimId = null
+  selectedSkus.clear()
+  document.getElementById('inputTitle').value = ''
+  document.getElementById('inputDesc').value  = ''
+  if (document.getElementById('inputOrderNo')) document.getElementById('inputOrderNo').value = ''
+  document.getElementById('checkAgreement').checked = false
+  document.getElementById('sourceChoose').style.display = ''
+  document.getElementById('sourceFromAnim').style.display = 'none'
+  document.getElementById('sourceFromOrder').style.display = 'none'
+  document.getElementById('btnSubmit').disabled = true
+  document.getElementById('btnSubmit').textContent = '提交联名申请'
+  renderSkuGrid()
+}
+
+/* ─────────────────────────────────────────
+   工具
+───────────────────────────────────────── */
+function safeParseJson(str) { try { return JSON.parse(str) } catch { return null } }
+function escHtml(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+}
+function fmtDate(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  return `${d.getMonth()+1}月${d.getDate()}日`
+}
+
+/* ─────────────────────────────────────────
+   Reveal
+───────────────────────────────────────── */
+function initReveal() {
+  const els = document.querySelectorAll('.reveal')
+  const io  = new IntersectionObserver(entries => {
+    entries.forEach(e => { if(e.isIntersecting){ e.target.classList.add('on'); io.unobserve(e.target) } })
+  }, { threshold: 0.05 })
+  els.forEach(el => io.observe(el))
+}
+
+/* ─────────────────────────────────────────
+   初始化
+───────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!requireCreator()) return
+  initReveal()
+
+  // 并行加载
+  loadMyWorks()
+  loadSkus()
+
+  // URL 参数处理
+  const params  = new URLSearchParams(location.search)
+  const animId  = params.get('animationId')
+  const openTab = params.get('tab')
+
+  if (animId) {
+    // 来自动画库的"提交联名"按钮
+    switchTab('apply')
+    await loadAnimSource(animId)
+    // 清掉 URL 参数
+    history.replaceState({}, '', location.pathname)
+  } else if (openTab === 'apply') {
+    switchTab('apply')
+    history.replaceState({}, '', location.pathname)
+  }
+})
+</script>
+</body>
+</html>

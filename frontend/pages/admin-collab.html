@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>联名审核 — 哞屋后台</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --white:#FFFFFF;--cream:#F5F3EF;--black:#111110;
+  --gray1:#EBEBEA;--gray2:#C4C3BF;--gray3:#787874;
+  --accent-y:#F5E642;--accent-o:#FF6B35;--accent-g:#8FD694;--accent-b:#7EC8E3;
+  --font:'Nunito','Noto Sans SC',sans-serif;
+  --sidebar-w:220px;--sidebar-collapsed:60px;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:var(--font);background:var(--cream);color:var(--black);min-height:100vh;display:flex;-webkit-font-smoothing:antialiased;}
+
+/* 侧边栏 */
+.sidebar{width:var(--sidebar-w);min-height:100vh;background:var(--black);display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;z-index:100;transition:width .3s cubic-bezier(0.22,1,0.36,1);overflow:hidden;}
+.sidebar.collapsed{width:var(--sidebar-collapsed);}
+.sidebar-logo{padding:24px 20px 20px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px;white-space:nowrap;overflow:hidden;}
+.sidebar-logo-icon{width:32px;height:32px;background:var(--accent-y);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.sidebar-logo-text{font-weight:900;font-size:15px;color:var(--white);}
+.sidebar-logo-sub{font-weight:700;font-size:10px;color:var(--gray3);letter-spacing:.1em;text-transform:uppercase;display:block;margin-top:1px;}
+.sidebar-toggle{position:absolute;top:26px;right:12px;width:28px;height:28px;background:rgba(255,255,255,.08);border:none;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--gray3);font-size:12px;transition:background .2s;}
+.sidebar-toggle:hover{background:rgba(255,255,255,.15);color:var(--white);}
+.sidebar-nav{flex:1;padding:16px 0;overflow-y:auto;overflow-x:hidden;}
+.nav-section-label{font-weight:800;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--gray3);padding:12px 20px 6px;white-space:nowrap;transition:opacity .2s;}
+.sidebar.collapsed .nav-section-label{opacity:0;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;transition:background .15s;white-space:nowrap;overflow:hidden;color:var(--gray3);font-weight:800;font-size:13px;text-decoration:none;position:relative;}
+.nav-item:hover{background:rgba(255,255,255,.06);color:var(--white);}
+.nav-item.active{background:rgba(245,230,66,.12);color:var(--accent-y);}
+.nav-item.active::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent-y);border-radius:0 2px 2px 0;}
+.nav-icon{font-size:16px;flex-shrink:0;width:20px;text-align:center;}
+.nav-label{transition:opacity .2s;}
+.sidebar.collapsed .nav-label{opacity:0;}
+.sidebar-footer{padding:16px 20px;border-top:1px solid rgba(255,255,255,.08);white-space:nowrap;overflow:hidden;}
+.sidebar-user{display:flex;align-items:center;gap:10px;}
+.sidebar-user-avatar{width:32px;height:32px;border-radius:50%;background:var(--accent-y);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:var(--black);flex-shrink:0;}
+.sidebar-user-name{font-weight:800;font-size:12px;color:var(--white);}
+.sidebar-user-role{font-weight:700;font-size:10px;color:var(--gray3);}
+.sidebar.collapsed .sidebar-user-info{display:none;}
+
+/* 主内容 */
+.main{margin-left:var(--sidebar-w);flex:1;min-height:100vh;transition:margin-left .3s cubic-bezier(0.22,1,0.36,1);display:flex;flex-direction:column;}
+.main.expanded{margin-left:var(--sidebar-collapsed);}
+.topbar{position:sticky;top:0;z-index:50;background:rgba(245,243,239,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--gray1);padding:0 32px;height:60px;display:flex;align-items:center;justify-content:space-between;}
+.topbar-title{font-weight:900;font-size:18px;}
+.topbar-right{display:flex;align-items:center;gap:12px;}
+.topbar-time{font-weight:700;font-size:12px;color:var(--gray3);}
+.content{padding:28px 32px;flex:1;}
+
+/* 按钮 */
+.btn{height:38px;padding:0 16px;border-radius:10px;font-family:var(--font);font-weight:800;font-size:13px;border:none;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+.btn:active{transform:scale(.96);}
+.btn-black{background:var(--black);color:var(--white);}
+.btn-black:hover{opacity:.85;}
+.btn-yellow{background:var(--accent-y);color:var(--black);}
+.btn-yellow:hover{opacity:.85;}
+.btn-ghost{background:var(--white);color:var(--black);border:1.5px solid var(--gray1);}
+.btn-ghost:hover{border-color:var(--black);}
+.btn-red{background:#FFE8E3;color:#C0320A;border:1.5px solid #FFCFC5;}
+.btn-red:hover{background:#FFD5CE;}
+.btn-green{background:#E8F5E9;color:#2E7D32;border:1.5px solid #C8E6C9;}
+.btn-green:hover{background:#C8E6C9;}
+.btn-sm{height:32px;padding:0 12px;font-size:12px;border-radius:8px;}
+.btn:disabled{opacity:.4;pointer-events:none;}
+
+/* 统计卡片 */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px;margin-bottom:24px;}
+.stat-card{background:var(--white);border-radius:16px;padding:18px 20px;border:1.5px solid var(--gray1);cursor:pointer;transition:all .2s;position:relative;overflow:hidden;}
+.stat-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.08);}
+.stat-card.active-filter{border-color:var(--black);background:var(--black);}
+.stat-card.active-filter .stat-label{color:rgba(255,255,255,.6);}
+.stat-card.active-filter .stat-num{color:var(--white);}
+.stat-label{font-weight:800;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--gray3);margin-bottom:8px;}
+.stat-num{font-weight:900;font-size:28px;letter-spacing:-.02em;color:var(--black);line-height:1;}
+.stat-dot{position:absolute;right:16px;top:16px;width:8px;height:8px;border-radius:50%;}
+
+/* 筛选tab */
+.filter-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
+.filter-tab{height:34px;padding:0 14px;border-radius:999px;font-family:var(--font);font-weight:800;font-size:12px;border:1.5px solid var(--gray1);background:var(--white);color:var(--gray3);cursor:pointer;transition:all .15s;}
+.filter-tab:hover{border-color:var(--black);color:var(--black);}
+.filter-tab.active{background:var(--black);color:var(--white);border-color:var(--black);}
+
+/* 联名作品表格 */
+.table-wrap{background:var(--white);border-radius:16px;border:1.5px solid var(--gray1);overflow:hidden;}
+.table-header{display:grid;grid-template-columns:200px 1fr 120px 90px 110px 140px;padding:12px 16px;background:var(--cream);border-bottom:1.5px solid var(--gray1);font-weight:800;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gray3);}
+.work-row{display:grid;grid-template-columns:200px 1fr 120px 90px 110px 140px;padding:14px 16px;border-bottom:1px solid var(--gray1);align-items:center;transition:background .15s;cursor:pointer;}
+.work-row:last-child{border-bottom:none;}
+.work-row:hover{background:var(--cream);}
+
+/* 作品封面+标题 */
+.work-cover-wrap{display:flex;align-items:center;gap:10px;}
+.work-cover{width:44px;height:44px;border-radius:10px;background:var(--cream);border:1.5px solid var(--gray1);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;}
+.work-cover img{width:100%;height:100%;object-fit:cover;}
+.work-title{font-weight:800;font-size:13px;color:var(--black);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.work-order{font-weight:700;font-size:11px;color:var(--gray3);margin-top:2px;}
+
+/* 创作者信息 */
+.creator-info{display:flex;align-items:center;gap:8px;}
+.creator-avatar{width:28px;height:28px;border-radius:50%;background:var(--gray1);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:11px;color:var(--gray3);flex-shrink:0;}
+.creator-name{font-weight:700;font-size:12px;color:var(--black);}
+
+/* 状态标签 */
+.status-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;font-weight:800;font-size:11px;white-space:nowrap;}
+.status-pending{background:#FFF8E1;color:#B8860B;}
+.status-approved{background:#E8F5E9;color:#2E7D32;}
+.status-rejected{background:#FFE8E3;color:#C0320A;}
+
+/* 分红率标签 */
+.rate-badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:6px;font-weight:900;font-size:12px;background:#FDF9C6;color:#7A7000;}
+
+/* 新手/独家徽章 */
+.badge-newbie{background:#E3F2FD;color:#1565C0;font-weight:800;font-size:10px;padding:2px 6px;border-radius:4px;margin-left:4px;}
+.badge-exclusive{background:#FCE4EC;color:#C62828;font-weight:800;font-size:10px;padding:2px 6px;border-radius:4px;margin-left:4px;}
+
+/* 分页 */
+.pagination{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-top:1.5px solid var(--gray1);background:var(--cream);}
+.pagination-info{font-weight:700;font-size:12px;color:var(--gray3);}
+.pagination-btns{display:flex;gap:6px;}
+.page-btn{width:32px;height:32px;border-radius:8px;border:1.5px solid var(--gray1);background:var(--white);cursor:pointer;font-family:var(--font);font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.page-btn:hover{border-color:var(--black);}
+.page-btn.active{background:var(--black);color:var(--white);border-color:var(--black);}
+.page-btn:disabled{opacity:.3;pointer-events:none;}
+
+/* 抽屉（作品详情） */
+.drawer-overlay{display:none;position:fixed;inset:0;z-index:200;background:rgba(17,17,16,.4);}
+.drawer-overlay.show{display:block;}
+.drawer{position:fixed;top:0;right:-560px;bottom:0;width:560px;max-width:100vw;background:var(--white);z-index:201;display:flex;flex-direction:column;transition:right .35s cubic-bezier(0.22,1,0.36,1);box-shadow:-8px 0 40px rgba(0,0,0,.12);}
+.drawer.open{right:0;}
+.drawer-header{padding:20px 24px;border-bottom:1.5px solid var(--gray1);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.drawer-title{font-weight:900;font-size:16px;}
+.drawer-close{width:36px;height:36px;border-radius:10px;background:var(--gray1);border:none;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:background .15s;font-family:var(--font);}
+.drawer-close:hover{background:var(--gray2);}
+.drawer-body{flex:1;overflow-y:auto;padding:24px;}
+.drawer-footer{padding:16px 24px;border-top:1.5px solid var(--gray1);display:flex;flex-direction:column;gap:10px;flex-shrink:0;}
+
+/* 详情区块 */
+.detail-section{margin-bottom:24px;}
+.detail-section-title{font-weight:900;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--gray3);margin-bottom:12px;}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.detail-item-label{font-weight:700;font-size:11px;color:var(--gray3);margin-bottom:3px;}
+.detail-item-val{font-weight:800;font-size:13px;color:var(--black);}
+
+/* 帧图预览 */
+.frames-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px;}
+.frame-thumb{aspect-ratio:1;background:var(--gray1);border-radius:6px;overflow:hidden;position:relative;}
+.frame-thumb img{width:100%;height:100%;object-fit:cover;}
+.frame-thumb-num{position:absolute;bottom:3px;right:3px;background:rgba(0,0,0,.6);color:#fff;font-weight:800;font-size:9px;padding:1px 4px;border-radius:3px;}
+
+/* 分红率明细 */
+.rate-breakdown{background:var(--cream);border-radius:12px;padding:14px 16px;}
+.rate-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--gray1);font-weight:700;font-size:13px;}
+.rate-row:last-child{border-bottom:none;font-weight:900;color:var(--black);}
+.rate-row-label{color:var(--gray3);}
+
+/* 审核操作区 */
+.review-actions{display:flex;gap:10px;}
+.review-actions .btn{flex:1;height:46px;}
+.reject-reason-wrap{display:none;}
+.reject-reason-wrap.show{display:block;}
+.reject-textarea{width:100%;min-height:80px;border:1.5px solid var(--gray1);border-radius:10px;padding:12px 14px;font-family:var(--font);font-weight:700;font-size:13px;color:var(--black);outline:none;resize:vertical;transition:border-color .2s;margin-top:10px;}
+.reject-textarea:focus{border-color:var(--black);}
+
+/* 空状态 */
+.empty-state{padding:60px 20px;text-align:center;}
+.empty-icon{font-size:48px;margin-bottom:12px;}
+.empty-text{font-weight:800;font-size:15px;color:var(--gray3);}
+.loading-row{padding:40px;text-align:center;font-weight:700;font-size:14px;color:var(--gray3);}
+
+/* Modal */
+.modal-overlay{display:none;position:fixed;inset:0;z-index:300;background:rgba(17,17,16,.5);align-items:center;justify-content:center;padding:20px;}
+.modal-overlay.show{display:flex;}
+.modal{background:var(--white);border-radius:20px;padding:28px;width:100%;max-width:400px;}
+.modal-title{font-weight:900;font-size:18px;margin-bottom:6px;}
+.modal-sub{font-weight:700;font-size:13px;color:var(--gray3);margin-bottom:20px;line-height:1.6;}
+.modal-actions{display:flex;gap:10px;margin-top:20px;}
+.modal-actions .btn{flex:1;height:46px;}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--black);color:var(--white);font-weight:800;font-size:13px;padding:10px 22px;border-radius:999px;opacity:0;pointer-events:none;transition:all .3s;z-index:9999;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%);}
+  .main{margin-left:0 !important;}
+  .content{padding:16px;}
+  .topbar{padding:0 16px;}
+  .table-header{display:none;}
+  .work-row{grid-template-columns:1fr auto;gap:8px;}
+  .col-creator,.col-rate,.col-date{display:none;}
+  .stats-grid{grid-template-columns:repeat(3,1fr);}
+}
+</style>
+</head>
+<body>
+
+<aside class="sidebar" id="sidebar"></aside>
+
+<div class="main" id="main">
+  <header class="topbar">
+    <span class="topbar-title">联名审核</span>
+    <div class="topbar-right">
+      <span class="topbar-time" id="topbarTime"></span>
+      <button class="btn btn-ghost btn-sm" onclick="loadWorks()">↻ 刷新</button>
+    </div>
+  </header>
+
+  <div class="content">
+
+    <!-- 统计卡片 -->
+    <div class="stats-grid">
+      <div class="stat-card" onclick="setFilter('pending')">
+        <div class="stat-dot" style="background:#F5E642;"></div>
+        <div class="stat-label">待审核</div>
+        <div class="stat-num" id="statPending">—</div>
+      </div>
+      <div class="stat-card" onclick="setFilter('approved')">
+        <div class="stat-dot" style="background:#8FD694;"></div>
+        <div class="stat-label">已通过</div>
+        <div class="stat-num" id="statApproved">—</div>
+      </div>
+      <div class="stat-card" onclick="setFilter('rejected')">
+        <div class="stat-dot" style="background:#FF6B35;"></div>
+        <div class="stat-label">已拒绝</div>
+        <div class="stat-num" id="statRejected">—</div>
+      </div>
+      <div class="stat-card" onclick="setFilter('')">
+        <div class="stat-label">全部</div>
+        <div class="stat-num" id="statTotal">—</div>
+      </div>
+    </div>
+
+    <!-- 状态筛选 -->
+    <div class="filter-tabs" id="filterTabs">
+      <button class="filter-tab active" onclick="setFilter('pending')">⏳ 待审核</button>
+      <button class="filter-tab" onclick="setFilter('approved')">✅ 已通过</button>
+      <button class="filter-tab" onclick="setFilter('rejected')">❌ 已拒绝</button>
+      <button class="filter-tab" onclick="setFilter('')">全部</button>
+    </div>
+
+    <!-- 作品表格 -->
+    <div class="table-wrap">
+      <div class="table-header">
+        <div>作品</div>
+        <div class="col-creator">创作者</div>
+        <div class="col-rate">预估分红率</div>
+        <div>状态</div>
+        <div class="col-date">申请时间</div>
+        <div>操作</div>
+      </div>
+      <div id="tableBody">
+        <div class="loading-row">正在加载…</div>
+      </div>
+      <div class="pagination" id="pagination" style="display:none;"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- 抽屉：作品详情 + 审核 -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <div class="drawer-title" id="drawerTitle">作品详情</div>
+    <button class="drawer-close" onclick="closeDrawer()">✕</button>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+  <div class="drawer-footer" id="drawerFooter"></div>
+</div>
+
+<!-- 确认通过 Modal -->
+<div class="modal-overlay" id="approveModal">
+  <div class="modal">
+    <p class="modal-title">确认审核通过</p>
+    <p class="modal-sub" id="approveModalSub">系统将自动计算分红率并快照，通过后创作者可在联名库中展示。</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeApproveModal()">取消</button>
+      <button class="btn btn-green" onclick="submitApprove()">确认通过</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = (location.hostname==='127.0.0.1'?'http://127.0.0.1:3001':'http://localhost:3001')
+const ROLE_LABEL = { 0:'用户', 1:'生产端', 2:'管理员', 3:'超级管理员' }
+
+let _token   = localStorage.getItem('mowo_token') || ''
+window.addEventListener('mowoTokenRefreshed', () => { _token = localStorage.getItem('mowo_token') || ''; });
+let _works   = []
+let _curPage = 1
+let _filter  = 'pending'
+let _curWork = null
+
+// ══ 初始化 ══
+window.addEventListener('DOMContentLoaded', async () => {
+  setInterval(() => {
+    document.getElementById('topbarTime').textContent =
+      new Date().toLocaleTimeString('zh-CN', { hour:'2-digit', minute:'2-digit', second:'2-digit' })
+  }, 1000)
+
+  if (!_token) { location.href = 'index.html'; return }
+  try {
+    const p = JSON.parse(atob(_token.split('.')[1]))
+    if ((p.role ?? 0) < 2) { alert('权限不足'); location.href = 'index.html'; return }
+    document.getElementById('sidebarName').textContent   = p.phone || '管理员'
+    document.getElementById('sidebarRole').textContent   = ROLE_LABEL[p.role] || '管理员'
+    document.getElementById('sidebarAvatar').textContent = (p.phone || '管')[0]
+  } catch { location.href = 'index.html'; return }
+
+  await Promise.all([loadStats(), loadWorks()])
+})
+
+// ══ 加载统计数 ══
+async function loadStats() {
+  try {
+    const statuses = ['pending', 'approved', 'rejected', '']
+    const counts   = await Promise.all(statuses.map(async s => {
+      const params = new URLSearchParams({ limit: 1 })
+      if (s) params.set('status', s)
+      const r = await fetch(`${API}/api/admin/collab/works?${params}`, {
+        headers: { Authorization: `Bearer ${_token}` }
+      })
+      const j = await r.json()
+      return j.success ? j.data.total : 0
+    }))
+    document.getElementById('statPending').textContent  = counts[0]
+    document.getElementById('statApproved').textContent = counts[1]
+    document.getElementById('statRejected').textContent = counts[2]
+    document.getElementById('statTotal').textContent    = counts[3]
+  } catch {}
+}
+
+// ══ 加载作品列表 ══
+async function loadWorks(page = 1) {
+  _curPage = page
+  document.getElementById('tableBody').innerHTML = '<div class="loading-row">正在加载…</div>'
+
+  const params = new URLSearchParams({ page, limit: 15 })
+  if (_filter) params.set('status', _filter)
+
+  try {
+    const res  = await fetch(`${API}/api/admin/collab/works?${params}`, {
+      headers: { Authorization: `Bearer ${_token}` }
+    })
+    const json = await res.json()
+    if (!json.success) throw new Error()
+
+    _works = json.data.works
+    renderTable(_works)
+    renderPagination(json.data)
+  } catch {
+    document.getElementById('tableBody').innerHTML =
+      '<div class="empty-state"><div class="empty-icon">❌</div><div class="empty-text">加载失败，请刷新重试</div></div>'
+  }
+}
+
+// ══ 渲染表格 ══
+function renderTable(works) {
+  if (!works.length) {
+    document.getElementById('tableBody').innerHTML =
+      '<div class="empty-state"><div class="empty-icon">🤝</div><div class="empty-text">暂无联名申请</div></div>'
+    return
+  }
+
+  document.getElementById('tableBody').innerHTML = works.map(w => {
+    const createdAt = new Date(w.createdAt).toLocaleDateString('zh-CN', { month:'2-digit', day:'2-digit', year:'2-digit' })
+    const rateText  = w.revenueRatePreview != null
+      ? `${(w.revenueRatePreview * 100).toFixed(1)}%`
+      : '—'
+    const statusHtml = statusBadge(w.status)
+    const newbieHtml = w.isNewbieWork ? '<span class="badge-newbie">新手</span>' : ''
+    const exclHtml   = w.creatorLevel?.isExclusive ? '<span class="badge-exclusive">独家</span>' : ''
+
+    const creatorName = w.creator?.nickname || '创作者'
+    const creatorInit = creatorName[0].toUpperCase()
+
+    return `
+    <div class="work-row" onclick="openDrawer('${w.id}')">
+      <div class="work-cover-wrap">
+        <div class="work-cover" id="cover-${w.id}">📦</div>
+        <div>
+          <div class="work-title">${esc(w.title)}${newbieHtml}${exclHtml}</div>
+          <div class="work-order">${esc(w.orderNo || '')}</div>
+        </div>
+      </div>
+      <div class="col-creator">
+        <div class="creator-info">
+          <div class="creator-avatar">${creatorInit}</div>
+          <div class="creator-name">${esc(creatorName)}</div>
+        </div>
+      </div>
+      <div class="col-rate">
+        <span class="rate-badge">${rateText}</span>
+      </div>
+      <div>${statusHtml}</div>
+      <div class="col-date" style="font-weight:700;font-size:11px;color:var(--gray3);">${createdAt}</div>
+      <div style="display:flex;gap:6px;">
+        ${w.status === 'pending' ? `
+          <button class="btn btn-green btn-sm" onclick="event.stopPropagation();quickApprove('${w.id}')">通过</button>
+          <button class="btn btn-red btn-sm"   onclick="event.stopPropagation();openDrawer('${w.id}','reject')">拒绝</button>
+        ` : `
+          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openDrawer('${w.id}')">查看</button>
+        `}
+      </div>
+    </div>`
+  }).join('')
+
+  // 异步加载封面图
+  loadCovers(works)
+}
+
+async function loadCovers(works) {
+  for (const w of works) {
+    if (!w.coverUrl) continue
+    try {
+      const r = await fetch(`${API}/api/collab/works/${w.id}`)
+      const j = await r.json()
+      if (j.success && j.data.coverUrl) {
+        const el = document.getElementById(`cover-${w.id}`)
+        if (el) el.innerHTML = `<img src="${j.data.coverUrl}" alt="">`
+      }
+    } catch {}
+  }
+}
+
+// ══ 渲染分页 ══
+function renderPagination(data) {
+  const el    = document.getElementById('pagination')
+  const pages = Math.ceil(data.total / data.limit)
+  if (pages <= 1) { el.style.display = 'none'; return }
+  el.style.display = 'flex'
+  let btns = ''
+  for (let i = 1; i <= Math.min(pages, 10); i++) {
+    btns += `<button class="page-btn ${i === _curPage ? 'active' : ''}" onclick="loadWorks(${i})">${i}</button>`
+  }
+  el.innerHTML = `
+    <span class="pagination-info">共 ${data.total} 条 / 第 ${data.page} 页</span>
+    <div class="pagination-btns">${btns}</div>`
+}
+
+// ══ 筛选 ══
+function setFilter(status) {
+  _filter = status
+  document.querySelectorAll('.filter-tab').forEach((t, i) => {
+    const vals = ['pending', 'approved', 'rejected', '']
+    t.classList.toggle('active', vals[i] === status)
+  })
+  loadWorks(1)
+}
+
+// ══ 打开抽屉 ══
+async function openDrawer(workId, action = '') {
+  _curWork = null
+  document.getElementById('drawerTitle').textContent  = '作品详情'
+  document.getElementById('drawerBody').innerHTML     = '<div class="loading-row">加载中…</div>'
+  document.getElementById('drawerFooter').innerHTML   = ''
+  document.getElementById('drawer').classList.add('open')
+  document.getElementById('drawerOverlay').classList.add('show')
+  document.body.style.overflow = 'hidden'
+
+  try {
+    const res  = await fetch(`${API}/api/admin/collab/works/${workId}`, {
+      headers: { Authorization: `Bearer ${_token}` }
+    })
+    const json = await res.json()
+    if (!json.success) throw new Error(json.message)
+    _curWork = json.data
+    renderDrawer(json.data)
+    if (action === 'reject') showRejectSection()
+  } catch(e) {
+    document.getElementById('drawerBody').innerHTML = '<div class="loading-row">加载失败</div>'
+  }
+}
+
+function renderDrawer(w) {
+  document.getElementById('drawerTitle').textContent = w.title
+
+  const createdAt    = new Date(w.createdAt).toLocaleString('zh-CN')
+  const approvedAt   = w.approvedAt ? new Date(w.approvedAt).toLocaleString('zh-CN') : '—'
+  const newbieExpire = w.newbieExpiredAt ? new Date(w.newbieExpiredAt).toLocaleDateString('zh-CN') : '—'
+  const rateText     = w.revenueRatePreview != null
+    ? `${(w.revenueRatePreview * 100).toFixed(1)}%`
+    : (w.revenueRate ? `${(w.revenueRate * 100).toFixed(1)}%` : '—')
+
+  // 帧图预览
+  const frameArr  = Array.isArray(w.animationFrames) ? w.animationFrames : []
+  const framesHtml = frameArr.length
+    ? `<div class="frames-grid">${frameArr.slice(0, 10).map((url, i) =>
+        `<div class="frame-thumb">
+          <img src="${url}" alt="帧${i+1}" loading="lazy" onerror="this.style.display='none'">
+          <span class="frame-thumb-num">${i+1}</span>
+        </div>`).join('')}
+        ${frameArr.length > 10 ? `<div class="frame-thumb" style="display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:var(--gray3);">+${frameArr.length - 10}</div>` : ''}
+      </div>`
+    : '<div style="color:var(--gray3);font-size:13px;font-weight:700;">暂无帧图预览</div>'
+
+  // 分红率说明
+  const cl       = w.creatorLevel || {}
+  const bullMap  = { 1:'1牛能', 2:'2牛能', 3:'3牛能', 4:'4牛能', 5:'5牛能' }
+  const rateBreakdownHtml = `
+    <div class="rate-breakdown">
+      <div class="rate-row">
+        <span class="rate-row-label">牛能等级</span>
+        <span>${bullMap[cl.bullEnergy] || '1牛能'}</span>
+      </div>
+      <div class="rate-row">
+        <span class="rate-row-label">独家协议</span>
+        <span>${cl.isExclusive ? '✅ 已签（+8%）' : '未签'}</span>
+      </div>
+      <div class="rate-row">
+        <span class="rate-row-label">新手作品</span>
+        <span>${w.isNewbieWork ? `✅ 是（新手期至 ${newbieExpire}）` : '否'}</span>
+      </div>
+      <div class="rate-row">
+        <span class="rate-row-label">参与活动</span>
+        <span>${w.activityId ? '✅ 是' : '未参与'}</span>
+      </div>
+      <div class="rate-row">
+        <span class="rate-row-label">预估分红率</span>
+        <span style="color:var(--accent-o);font-size:16px;">${rateText}</span>
+      </div>
+    </div>`
+
+  document.getElementById('drawerBody').innerHTML = `
+    <div class="detail-section">
+      <div class="detail-section-title">作品信息</div>
+      <div class="detail-grid">
+        <div>
+          <div class="detail-item-label">作品名称</div>
+          <div class="detail-item-val">${esc(w.title)}</div>
+        </div>
+        <div>
+          <div class="detail-item-label">状态</div>
+          <div class="detail-item-val">${statusBadge(w.status)}</div>
+        </div>
+        <div>
+          <div class="detail-item-label">关联订单</div>
+          <div class="detail-item-val" style="font-size:11px;">${esc(w.orderNo || '—')}</div>
+        </div>
+        <div>
+          <div class="detail-item-label">申请时间</div>
+          <div class="detail-item-val" style="font-size:11px;">${createdAt}</div>
+        </div>
+        ${w.status !== 'pending' ? `
+        <div>
+          <div class="detail-item-label">审核时间</div>
+          <div class="detail-item-val" style="font-size:11px;">${approvedAt}</div>
+        </div>` : ''}
+        ${w.rejectReason ? `
+        <div style="grid-column:span 2;">
+          <div class="detail-item-label">拒绝原因</div>
+          <div class="detail-item-val" style="color:#C0320A;">${esc(w.rejectReason)}</div>
+        </div>` : ''}
+      </div>
+      ${w.description ? `<div style="margin-top:10px;font-weight:700;font-size:13px;color:var(--gray3);line-height:1.6;">${esc(w.description)}</div>` : ''}
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">创作者信息</div>
+      <div class="detail-grid">
+        <div>
+          <div class="detail-item-label">创作者</div>
+          <div class="detail-item-val">${esc(w.creator?.nickname || '—')}</div>
+        </div>
+        <div>
+          <div class="detail-item-label">独家协议</div>
+          <div class="detail-item-val">${cl.isExclusive ? '✅ 已签' : '未签'}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">分红率计算</div>
+      ${rateBreakdownHtml}
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">帧图预览（共 ${frameArr.length} 帧）</div>
+      ${framesHtml}
+    </div>
+
+    <div id="rejectSection" class="reject-reason-wrap">
+      <div class="detail-section-title" style="color:#C0320A;margin-bottom:8px;">填写拒绝原因</div>
+      <textarea class="reject-textarea" id="rejectReason" placeholder="请填写拒绝原因，创作者将会看到此内容…"></textarea>
+    </div>`
+
+  // 底部操作
+  renderDrawerFooter(w)
+}
+
+function renderDrawerFooter(w) {
+  const footer = document.getElementById('drawerFooter')
+  if (w.status === 'pending') {
+    footer.innerHTML = `
+      <div class="review-actions">
+        <button class="btn btn-red" onclick="showRejectSection()">✕ 拒绝</button>
+        <button class="btn btn-green" onclick="openApproveModal()">✓ 审核通过</button>
+      </div>
+      <div id="rejectConfirmRow" style="display:none;">
+        <button class="btn btn-red" style="width:100%;" onclick="submitReject()">确认拒绝并提交</button>
+      </div>`
+  } else {
+    footer.innerHTML = `
+      <div style="font-weight:700;font-size:13px;color:var(--gray3);text-align:center;">
+        此作品已${w.status === 'approved' ? '通过审核' : '被拒绝'}，无法再次操作
+      </div>`
+  }
+}
+
+function showRejectSection() {
+  document.getElementById('rejectSection').classList.add('show')
+  document.getElementById('rejectConfirmRow').style.display = 'block'
+  document.getElementById('rejectReason').focus()
+}
+
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('open')
+  document.getElementById('drawerOverlay').classList.remove('show')
+  document.body.style.overflow = ''
+  _curWork = null
+}
+
+// ══ 快速通过（表格行上的按钮）══
+function quickApprove(workId) {
+  _curWork = { id: workId }
+  openApproveModal()
+}
+
+// ══ 审核通过 ══
+function openApproveModal() {
+  if (!_curWork) return
+  document.getElementById('approveModal').classList.add('show')
+}
+function closeApproveModal() {
+  document.getElementById('approveModal').classList.remove('show')
+}
+
+async function submitApprove() {
+  if (!_curWork) return
+  try {
+    const res  = await fetch(`${API}/api/admin/collab/${_curWork.id}/approve`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${_token}` },
+      body: JSON.stringify({ action: 'approve' })
+    })
+    const json = await res.json()
+    if (json.success) {
+      showToast(`✓ 已通过，分红率 ${(json.data.revenueRate * 100).toFixed(1)}%`)
+      closeApproveModal()
+      closeDrawer()
+      await Promise.all([loadStats(), loadWorks(_curPage)])
+    } else {
+      showToast('操作失败：' + json.message)
+    }
+  } catch { showToast('网络错误') }
+}
+
+// ══ 拒绝 ══
+async function submitReject() {
+  if (!_curWork) return
+  const reason = document.getElementById('rejectReason')?.value.trim()
+  if (!reason) { showToast('请填写拒绝原因'); return }
+
+  try {
+    const res  = await fetch(`${API}/api/admin/collab/${_curWork.id}/approve`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${_token}` },
+      body: JSON.stringify({ action: 'reject', rejectReason: reason })
+    })
+    const json = await res.json()
+    if (json.success) {
+      showToast('✓ 已拒绝')
+      closeDrawer()
+      await Promise.all([loadStats(), loadWorks(_curPage)])
+    } else {
+      showToast('操作失败：' + json.message)
+    }
+  } catch { showToast('网络错误') }
+}
+
+
+
+// ══ Toast ══
+let _toastTimer
+function showToast(msg) {
+  const t = document.getElementById('toast')
+  t.textContent = msg
+  t.classList.add('show')
+  clearTimeout(_toastTimer)
+  _toastTimer = setTimeout(() => t.classList.remove('show'), 2800)
+}
+
+// ══ 工具 ══
+function statusBadge(status) {
+  const map = {
+    pending:  '<span class="status-badge status-pending">⏳ 待审核</span>',
+    approved: '<span class="status-badge status-approved">✅ 已通过</span>',
+    rejected: '<span class="status-badge status-rejected">❌ 已拒绝</span>',
+  }
+  return map[status] || status
+}
+
+function esc(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+}
+</script>
+<script src="../js/auth.js"></script>
+<script src="../js/admin-sidebar.js"></script>
+</body>
+</html>

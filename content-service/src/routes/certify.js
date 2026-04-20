@@ -136,4 +136,120 @@ export default async function certifyRoutes(fastify) {
       }
     })
   })
+
+  // ─────────────────────────────────────────
+  // PUT /api/certify/review/:applicationId 管理员审核认证申请
+  // ─────────────────────────────────────────
+  // 需要管理员权限（role >= 2）
+  // status: 'approved' | 'rejected'
+  // rejectReason: 拒绝原因（拒绝时必填）
+  fastify.put('/review/:applicationId', {
+    preHandler: fastify.requireRole(2),
+    schema: {
+      body: {
+        type: 'object',
+        required: ['status'],
+        properties: {
+          status: { type: 'string', enum: ['approved', 'rejected'] },
+          rejectReason: { type: 'string' }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    const { applicationId } = request.params
+    const { status, rejectReason } = request.body
+
+    if (status === 'rejected' && !rejectReason) {
+      return reply.code(400).send({ success: false, message: '拒绝时必须填写拒绝原因' })
+    }
+
+    const application = await fastify.prisma.certifyApplication.findUnique({
+      where: { id: applicationId }
+    })
+    if (!application) {
+      return reply.code(404).send({ success: false, message: '申请记录不存在' })
+    }
+    if (application.status !== 'pending') {
+      return reply.code(400).send({ success: false, message: '该申请已审核，不能重复操作' })
+    }
+
+    const userId = application.userId
+
+    await fastify.prisma.$transaction(async (tx) => {
+      // 更新申请记录状态
+      await tx.certifyApplication.update({
+        where: { id: applicationId },
+        data: {
+          status,
+          rejectReason: rejectReason || null,
+          reviewedAt: new Date()
+        }
+      })
+
+      if (status === 'approved') {
+        // 审核通过：更新用户认证状态
+        await tx.user.update({
+          where: { id: userId },
+          data: { certifyStatus: 2 }
+        })
+
+        // 创建 creator_profile（如果还没有）
+        const existingProfile = await tx.creatorProfile.findUnique({
+          where: { userId }
+        })
+        if (!existingProfile) {
+          await tx.creatorProfile.create({
+            data: {
+              userId,
+              bullLevel:       1,
+              bullScore:       0,
+              bullCoefficient: 1.0,
+              isExclusive:     false
+            }
+          })
+        }
+
+        // 创建 creator_reserve（储备金账户，如果还没有）
+        const existingReserve = await tx.creatorReserve.findUnique({
+          where: { creatorId: userId }
+        })
+        if (!existingReserve) {
+          await tx.creatorReserve.create({
+            data: {
+              creatorId:        userId,
+              totalReserved:    0,
+              frozenAmount:     0,
+              releasableAmount: 0,
+              releasedAmount:   0,
+              nextReleaseAmount: 0
+            }
+          })
+        }
+
+        // 写牛量等级初始化记录
+        await tx.bullScoreLog.create({
+          data: {
+            creatorId:   userId,
+            changeType:  'init',
+            levelBefore: 1,
+            levelAfter:  1,
+            scoreBefore: 0,
+            scoreAfter:  0,
+            reason:      '创作者认证通过，初始化牛量等级'
+          }
+        })
+      } else {
+        // 审核拒绝：更新用户认证状态为已拒绝
+        await tx.user.update({
+          where: { id: userId },
+          data: { certifyStatus: 3 }
+        })
+      }
+    })
+
+    return reply.send({
+      success: true,
+      message: status === 'approved' ? '审核已通过，创作者账户初始化完成' : '审核已拒绝'
+    })
+  })
 }

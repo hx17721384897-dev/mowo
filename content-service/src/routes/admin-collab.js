@@ -43,15 +43,14 @@ export default async function adminCollabRoutes(fastify) {
     // 附创作者等级信息（用于审核时参考分红率）
     const creatorProfiles = await prisma.creatorProfile.findMany({
       where: { userId: { in: creatorIds } },
-      select: { userId: true, bullEnergy: true, isExclusive: true },
+      select: { userId: true, bullLevel: true, isExclusive: true },
     })
     const creatorMap = Object.fromEntries(creatorProfiles.map(c => [c.userId, c]))
 
     const result = works.map(w => {
       const cp = creatorMap[w.creatorId] ?? {}
-      // 预估当前分红率（供管理员参考）
       const preview = calcRevenueRate({
-        bullEnergy: cp.bullEnergy ?? 1,
+        bullEnergy: cp.bullLevel ?? 1,
         isExclusive: cp.isExclusive ?? false,
         isNewbieWork: w.isNewbieWork,
         newbieExpiredAt: w.newbieExpiredAt,
@@ -62,7 +61,7 @@ export default async function adminCollabRoutes(fastify) {
         animationFrames: safeJson(w.animationFrames),
         supportedSkus: safeJson(w.supportedSkus),
         creator: profileMap[w.creatorId] ?? null,
-        creatorLevel: { bullEnergy: cp.bullEnergy ?? 1, isExclusive: cp.isExclusive ?? false },
+        creatorLevel: { bullEnergy: cp.bullLevel ?? 1, isExclusive: cp.isExclusive ?? false },
         revenueRatePreview: preview.rate,
       }
     })
@@ -141,7 +140,7 @@ export default async function adminCollabRoutes(fastify) {
       : null
 
     const { rate, breakdown } = calcRevenueRate({
-      bullEnergy: creatorProfile?.bullEnergy ?? 1,
+      bullEnergy: creatorProfile?.bullLevel ?? 1,
       isExclusive: creatorProfile?.isExclusive ?? false,
       isNewbieWork: work.isNewbieWork,
       newbieExpiredAt,

@@ -23,14 +23,13 @@
   --ease:     cubic-bezier(0.22, 1, 0.36, 1);
   --pad-mobile: 24px;
   --pad-desk:   72px;
-  --nav-h: 61px;
-  --prog-h: 43px;
+  --nav-h: 55px;
+  --prog-h: 44px;
   --top-offset: calc(var(--nav-h) + var(--prog-h) + 3px);
 }
-@media (min-width:1024px) { :root { --nav-h: 73px; } }
 
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-html { scroll-behavior:smooth; }
+html { scroll-behavior:smooth; scrollbar-gutter:stable; }
 body { font-family:var(--font); background:var(--white); color:var(--black); overflow-x:hidden; -webkit-font-smoothing:antialiased; }
 a { text-decoration:none; color:inherit; }
 button { font-family:var(--font); }
@@ -41,11 +40,10 @@ button { font-family:var(--font); }
 .nav {
   position:fixed; top:0; left:0; right:0; z-index:900;
   display:flex; align-items:center; justify-content:space-between;
-  padding:14px var(--pad-mobile);
-  background:rgba(255,255,255,.92); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
-  border-bottom:1px solid rgba(0,0,0,.06); height:var(--nav-h);
-}
-@media (min-width:1024px) { .nav { padding:20px var(--pad-desk); } }
+  padding:8px var(--pad-mobile);
+  background:rgba(255,255,255,0.9); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid rgba(0,0,0,.06); }
+@media (min-width:1024px) { .nav { padding:8px var(--pad-desk); } }
 .nav-logo { line-height:1; }
 .nav-logo-cn { font-weight:900; font-size:22px; letter-spacing:-.01em; color:var(--black); }
 .nav-logo-en { font-weight:700; font-size:10px; letter-spacing:.22em; text-transform:uppercase; color:var(--gray3); display:block; margin-top:1px; }
@@ -55,8 +53,6 @@ button { font-family:var(--font); }
 .nav-links a::after { content:''; position:absolute; bottom:0; left:0; right:0; height:2px; background:var(--accent-y); border-radius:2px; transform:scaleX(0); transition:transform .25s var(--ease); }
 .nav-links a:hover { color:var(--black); }
 .nav-links a:hover::after { transform:scaleX(1); }
-.nav-login { font-weight:800; font-size:13px; padding:10px 22px; background:var(--black); color:var(--white); border-radius:999px; min-height:44px; display:flex; align-items:center; transition:opacity .2s; }
-.nav-login:hover { opacity:.8; }
 .burger { display:flex; flex-direction:column; gap:5px; cursor:pointer; padding:8px; min-width:44px; min-height:44px; justify-content:center; align-items:center; }
 @media (min-width:1024px) { .burger { display:none; } }
 .burger span { display:block; width:22px; height:2px; background:var(--black); border-radius:2px; transition:transform .3s, opacity .3s; }
@@ -67,28 +63,54 @@ button { font-family:var(--font); }
 .mobile-menu.open { opacity:1; pointer-events:all; }
 .mobile-menu a { font-weight:900; font-size:clamp(28px,8vw,48px); color:var(--white); letter-spacing:-.01em; transition:color .2s; }
 .mobile-menu a:hover { color:var(--accent-y); }
+/* Mobile menu 底部登录区 */
+.mobile-menu-footer {
+  position:absolute; bottom:48px; left:0; right:0;
+  display:flex; flex-direction:column; align-items:center; gap:12px;
+}
+.mobile-login-btn {
+  font-family:var(--font); font-weight:900; font-size:16px; letter-spacing:.05em;
+  padding:14px 48px; background:var(--accent-y); color:var(--black);
+  border-radius:999px; border:none; cursor:pointer;
+  transition:opacity .2s; min-height:52px;
+}
+.mobile-login-btn:hover { opacity:.85; }
+.mobile-menu-avatar {
+  display:flex; flex-direction:column; align-items:center; gap:8px;
+}
+.mobile-menu-avatar-btn {
+  width:56px; height:56px; border-radius:50%;
+  background:var(--accent-y); color:var(--black);
+  font-weight:900; font-size:22px;
+  display:flex; align-items:center; justify-content:center;
+  border:none; cursor:pointer; transition:opacity .2s;
+}
+.mobile-menu-avatar-btn:hover { opacity:.8; }
+.mobile-menu-avatar-name {
+  font-weight:700; font-size:13px; color:rgba(255,255,255,.5); letter-spacing:.05em;
+}
 
 /* ══════════════════════════════
    进度条 & 步骤
 ══════════════════════════════ */
-.progress-bar { position:fixed; top:var(--nav-h); left:0; right:0; z-index:800; background:var(--gray1); height:3px; }
+.progress-bar { position:fixed; top:55px; left:0; right:0; z-index:800; background:var(--gray1); height:3px; }
 .progress-fill { height:100%; width:75%; background:var(--accent-y); border-radius:0 2px 2px 0; }
 .progress-steps {
-  position:fixed; top:calc(var(--nav-h) + 3px); left:0; right:0; z-index:799;
-  background:rgba(255,255,255,.95); backdrop-filter:blur(12px);
-  border-bottom:1px solid var(--gray1);
-  padding:10px var(--pad-mobile); display:flex; align-items:center; gap:8px;
+  position:fixed; top:58px; left:0; right:0; z-index:799;
+  background:rgba(255,255,255,0.9); backdrop-filter:blur(12px);
+  border-bottom:1.5px solid var(--gray1);
+  padding:10px var(--pad-mobile); display:flex; align-items:center; justify-content:center; gap:0;
   height:var(--prog-h);
 }
 @media (min-width:1024px) { .progress-steps { padding:10px var(--pad-desk); } }
-.step-item { display:flex; align-items:center; gap:6px; font-weight:800; font-size:11px; letter-spacing:.08em; color:var(--gray2); white-space:nowrap; }
+.step-item { display:flex; align-items:center; gap:8px; font-weight:800; font-size:12px; letter-spacing:.04em; color:var(--gray2); white-space:nowrap; }
 .step-item.active { color:var(--black); }
-.step-item.done { color:var(--accent-g); }
-.step-num { width:20px; height:20px; border-radius:50%; border:2px solid currentColor; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:900; flex-shrink:0; }
+.step-item.done { color:var(--black); }
+.step-num { width:24px; height:24px; border-radius:50%; border:2px solid currentColor; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:900; flex-shrink:0; transition:background .3s,border-color .3s; }
 .step-item.active .step-num { background:var(--black); color:var(--white); border-color:var(--black); }
-.step-item.done .step-num { background:var(--accent-g); color:var(--black); border-color:var(--accent-g); }
-.step-divider { width:20px; height:1px; background:var(--gray1); flex-shrink:0; }
-@media (max-width:480px) { .step-label { display:none; } }
+.step-item.done .step-num { background:var(--black); color:var(--white); border-color:var(--black); }
+.step-divider { width:clamp(20px,4vw,60px); height:2px; background:var(--gray1); flex-shrink:0; margin:0 4px; }
+@media (max-width:480px) { .step-label { display:none; } .step-item { gap:0; } .step-num { width:26px; height:26px; font-size:12px; } .step-divider { width:16px; } }
 
 /* ══════════════════════════════
    页面主体布局
@@ -99,40 +121,68 @@ button { font-family:var(--font); }
 }
 
 .confirm-layout {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto;
+  gap: 16px;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 32px var(--pad-mobile) 120px;
+  padding: 24px var(--pad-mobile) 120px;
+}
+@media (min-width:768px) {
+  .confirm-layout {
+    grid-template-columns: 200px 1fr 300px;
+    grid-template-rows: auto;
+    gap: 24px;
+    align-items: start;
+    padding: 32px var(--pad-mobile) 80px;
+  }
 }
 @media (min-width:1024px) {
   .confirm-layout {
-    flex-direction: row;
-    align-items: flex-start;
-    gap: 48px;
-    padding: 48px var(--pad-desk) 80px;
+    grid-template-columns: 240px 1fr 320px;
+    gap: 32px;
+    padding: 40px var(--pad-desk) 80px;
   }
 }
 
 /* ══════════════════════════════
-   左栏：预览 + 选配
+   左栏：紧凑预览卡
 ══════════════════════════════ */
 .left-col {
-  flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 0;
+}
+/* 移动端左栏和中栏并排 */
+@media (max-width:767px) {
+  .confirm-layout {
+    grid-template-columns: 100px 1fr;
+    grid-template-areas:
+      "preview config"
+      "card    card";
+  }
+  .left-col  { grid-area: preview; }
+  .mid-col   { grid-area: config; }
+  .right-col { grid-area: card; }
+}
+@media (min-width:768px) {
+  .confirm-layout {
+    grid-template-areas: "preview config card";
+  }
+  .left-col  { grid-area: preview; position: sticky; top: calc(var(--top-offset) + 16px); }
+  .mid-col   { grid-area: config; }
+  .right-col { grid-area: card; position: sticky; top: calc(var(--top-offset) + 16px); }
 }
 
-/* 产品预览图 */
+/* 产品预览图 — 紧凑版 */
 .product-preview {
   width: 100%;
-  aspect-ratio: 4/3;
-  border-radius: 28px;
+  aspect-ratio: 3/4;
+  border-radius: 20px;
   background: var(--cream);
-  border: 2px solid var(--gray1);
+  border: 1.5px solid var(--gray1);
   display: flex; align-items:center; justify-content:center;
   position: relative; overflow: hidden;
   transition: background .4s var(--ease);
@@ -249,95 +299,202 @@ button { font-family:var(--font); }
 }
 
 /* ══════════════════════════════
+   中栏：选配区
+══════════════════════════════ */
+.mid-col {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ══════════════════════════════
    右栏：价格卡（桌面固定，移动端底部）
 ══════════════════════════════ */
 .right-col {
   width:100%;
-  order: 2; /* 移动端在选配下面 */
+  order: 2;
 }
-@media (min-width:1024px) {
+@media (min-width:768px) {
   .right-col {
-    width: 320px;
-    flex-shrink: 0;
-    position: sticky;
-    top: calc(var(--top-offset) + 24px);
+    width: auto;
     order: 0;
   }
 }
 
+/* 价格卡整体 */
 .price-card {
   background:var(--white);
-  border:2px solid var(--gray1);
-  border-radius:28px;
+  border:1.5px solid var(--gray1);
+  border-radius:24px;
   overflow:hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
-/* 价格卡头部 */
-.price-card-head {
-  padding:24px 24px 20px;
-  border-bottom:1px solid var(--gray1);
+/* ── 区块一：当前正在配置 ── */
+.price-card-current {
+  padding: 18px 20px 16px;
+  border-bottom: 1.5px solid var(--gray1);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.price-card-current-label {
+  font-weight: 900;
+  font-size: 10px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--gray3);
 }
 .price-card-machine {
-  font-weight:800; font-size:11px; letter-spacing:.15em;
-  text-transform:uppercase; color:var(--gray3); margin-bottom:6px;
+  font-weight: 800; font-size: 11px; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--gray3);
 }
 .price-card-title {
-  font-weight:900; font-size:22px; letter-spacing:-.02em; color:var(--black);
-  margin-bottom:4px; min-height:28px;
+  font-weight:900; font-size:16px; letter-spacing:-.01em; color:var(--black);
+  min-height:22px; line-height:1.3;
 }
 .price-card-sub {
-  font-weight:700; font-size:12px; color:var(--gray3); line-height:1.6;
-  min-height:18px;
+  font-weight:700; font-size:11px; color:var(--gray3); line-height:1.5;
+  min-height:16px;
 }
 
-/* 实时大价格 */
+/* 当前价格大字 */
 .price-display {
-  padding:20px 24px;
-  border-bottom:1px solid var(--gray1);
-  display:flex; align-items:flex-end; gap:6px;
+  display:flex; align-items:flex-end; gap:4px;
 }
 .price-big {
-  font-weight:900; font-size:40px; letter-spacing:-.03em; color:var(--black);
+  font-weight:900; font-size:36px; letter-spacing:-.03em; color:var(--black);
   line-height:1; transition:all .3s var(--ease);
 }
-.price-unit { font-weight:800; font-size:16px; color:var(--gray3); margin-bottom:4px; }
+.price-unit { font-weight:800; font-size:14px; color:var(--gray3); margin-bottom:3px; }
 
-/* 费用拆分 */
+/* 费用拆分（折叠在当前配置内） */
 .price-breakdown {
-  padding:16px 24px;
-  border-bottom:1px solid var(--gray1);
-  display:flex; flex-direction:column; gap:10px;
+  display:flex; flex-direction:column; gap:6px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--gray1);
 }
 .breakdown-row {
   display:flex; align-items:center; justify-content:space-between; gap:8px;
 }
-.breakdown-label { font-weight:700; font-size:13px; color:var(--gray3); }
-.breakdown-val { font-weight:800; font-size:13px; color:var(--black); white-space:nowrap; }
+.breakdown-label { font-weight:700; font-size:11px; color:var(--gray3); }
+.breakdown-val { font-weight:900; font-size:13px; color:var(--black); white-space:nowrap; }
 .breakdown-val.plus { color:var(--accent-o); }
 .breakdown-val.free { color:var(--accent-g); }
 .breakdown-divider { height:1px; background:var(--gray1); }
-.breakdown-total { font-weight:900; }
-.breakdown-total .breakdown-label { color:var(--black); font-weight:900; font-size:14px; }
-.breakdown-total .breakdown-val { font-size:16px; }
+.breakdown-total .breakdown-label { color:var(--black); font-weight:900; font-size:12px; }
+.breakdown-total .breakdown-val { font-size:14px; }
+
+/* 当前配置按钮（加入） */
+.current-add-btn {
+  width: 100%;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--black);
+  color: var(--white);
+  font-family: var(--font);
+  font-weight: 900;
+  font-size: 14px;
+  border: none;
+  cursor: pointer;
+  transition: opacity .2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.current-add-btn:hover { opacity: .82; }
+.current-add-btn:disabled { opacity: .35; cursor: not-allowed; }
+
+/* ── 区块二：已选款式合计 ── */
+.price-card-cart {
+  background: var(--cream);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.price-card-cart-head {
+  padding: 14px 20px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.price-card-cart-label {
+  font-weight: 900;
+  font-size: 10px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--gray3);
+}
+.cart-count-badge {
+  font-weight: 900;
+  font-size: 11px;
+  background: var(--black);
+  color: var(--white);
+  border-radius: 999px;
+  padding: 2px 8px;
+  display: none;
+}
+.cart-count-badge.show { display: inline-block; }
 
 /* 物流 & 生产信息 */
 .price-info {
-  padding:16px 24px;
-  border-bottom:1px solid var(--gray1);
-  display:flex; flex-direction:column; gap:10px;
+  padding:12px 20px;
+  display:flex; flex-direction:column; gap:8px;
+  border-top: 1px solid var(--gray1);
 }
 .info-row {
-  display:flex; align-items:flex-start; gap:10px;
+  display:flex; align-items:flex-start; gap:8px;
 }
-.info-icon { font-size:14px; flex-shrink:0; margin-top:1px; }
-.info-text { font-weight:700; font-size:12px; color:var(--gray3); line-height:1.6; }
+.info-icon { font-size:13px; flex-shrink:0; margin-top:1px; }
+.info-text { font-weight:700; font-size:11px; color:var(--gray3); line-height:1.5; }
 .info-text strong { color:var(--black); font-weight:800; }
 
-/* 按钮区 */
-.price-card-btns {
-  padding:20px 24px;
-  display:flex; flex-direction:column; gap:10px;
+/* 未完成选配提示 */
+.config-incomplete {
+  font-weight:700; font-size:11px; color:var(--gray3);
+  text-align:center; padding:4px 0;
 }
+
+/* 总结算按钮区 */
+.price-card-btns {
+  padding:16px 20px;
+  display:flex; flex-direction:column; gap:8px;
+  border-top: 1.5px solid var(--gray1);
+  background: var(--white);
+}
+
+/* 已选合计大字 */
+.cart-total-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0 20px 14px;
+}
+.cart-total-label {
+  font-weight: 900;
+  font-size: 13px;
+  color: var(--black);
+}
+.cart-total-val {
+  font-weight: 900;
+  font-size: 28px;
+  letter-spacing: -.02em;
+  color: var(--black);
+}
+.cart-total-empty {
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--gray3);
+  text-align: center;
+  padding: 12px 20px 16px;
+}
+
+
+/* 通用按钮 */
 .btn {
   display:inline-flex; align-items:center; justify-content:center; gap:8px;
   font-family:var(--font); font-weight:800; font-size:15px; letter-spacing:.02em;
@@ -358,12 +515,6 @@ button { font-family:var(--font); }
   font-weight:800; font-size:11px; color:var(--gray3); letter-spacing:.06em;
 }
 .creator-dot { width:6px; height:6px; border-radius:50%; background:var(--accent-g); }
-
-/* 未完成选配提示 */
-.config-incomplete {
-  font-weight:700; font-size:12px; color:var(--gray3);
-  text-align:center; padding:4px 0;
-}
 
 /* ══════════════════════════════
    移动端底部浮动价格栏
@@ -419,11 +570,13 @@ button { font-family:var(--font); }
 
 /* 已选列表总计行 */
 .added-subtotal {
-  padding:12px 0 0;
+  padding:14px 16px;
+  margin-top:8px;
   display:flex; align-items:center; justify-content:space-between;
+  background:var(--accent-y); border-radius:12px;
 }
-.added-subtotal-label { font-weight:700; font-size:12px; color:var(--gray3); }
-.added-subtotal-val   { font-weight:900; font-size:16px; color:var(--black); }
+.added-subtotal-label { font-weight:800; font-size:13px; color:var(--black); }
+.added-subtotal-val   { font-weight:900; font-size:22px; color:var(--black); letter-spacing:-.02em; }
 
 /* ══════════════════════════════
    reveal 动画
@@ -431,6 +584,28 @@ button { font-family:var(--font); }
 .reveal { opacity:0; transform:translateY(24px); transition:opacity .6s var(--ease), transform .6s var(--ease); }
 .reveal.on { opacity:1; transform:none; }
 .d1{transition-delay:.08s} .d2{transition-delay:.16s} .d3{transition-delay:.24s}
+
+.nav-right {
+  display:flex; align-items:center; gap:8px;
+}
+.nav-login {
+  font-weight:800; font-size:13px; letter-spacing:.03em;
+  padding:10px 22px; background:var(--black); color:var(--white);
+  border-radius:999px; min-height:44px; display:flex; align-items:center;
+  transition:opacity .2s; border:none; cursor:pointer; font-family:var(--font);
+}
+.nav-login:hover { opacity:.8; }
+.nav-avatar {
+  width:36px; height:36px; border-radius:50%;
+  background:var(--accent-y); color:var(--black);
+  font-weight:900; font-size:14px;
+  display:flex; align-items:center; justify-content:center;
+  border:none; cursor:pointer; transition:opacity .2s;
+  flex-shrink:0;
+}
+.nav-avatar:hover { opacity:.8; }
+@media (max-width:1023px) { .nav-login-text { display:none; } }
+@media (min-width:1024px) { .nav-login-text { display:flex; } }
 </style>
 </head>
 <body>
@@ -439,9 +614,16 @@ button { font-family:var(--font); }
 <div class="mobile-menu" id="mobileMenu">
   <a href="about.html"           onclick="closeMenu()">关于我们</a>
   <a href="products.html"        onclick="closeMenu()">产品介绍</a>
-  <a href="community.html"       onclick="closeMenu()">社区分享</a>
+  <a href="showcase.html"       onclick="closeMenu()">画师联名</a>
   <a href="customize-start.html" onclick="closeMenu()">创作中心</a>
   <a href="contact.html"         onclick="closeMenu()">联络我们</a>
+  <div class="mobile-menu-footer">
+    <button class="mobile-login-btn" id="mobileLoginBtn">登录 / 注册</button>
+    <div class="mobile-menu-avatar" id="mobileMenuAvatar" style="display:none">
+      <button class="mobile-menu-avatar-btn" id="mobileMenuAvatarBtn"></button>
+      <span class="mobile-menu-avatar-name" id="mobileMenuAvatarName"></span>
+    </div>
+  </div>
 </div>
 
 <!-- 导航 -->
@@ -453,12 +635,12 @@ button { font-family:var(--font); }
   <ul class="nav-links">
     <li><a href="about.html">关于我们</a></li>
     <li><a href="products.html">产品介绍</a></li>
-    <li><a href="community.html">社区分享</a></li>
+    <li><a href="showcase.html">画师联名</a></li>
     <li><a href="customize-start.html">创作中心</a></li>
     <li><a href="contact.html">联络我们</a></li>
   </ul>
-  <div class="nav-right">
-    <button class="nav-login nav-login-btn" id="navLoginBtn">登录</button>
+    <div class="nav-right">
+    <button class="nav-login nav-login-btn nav-login-text" id="navLoginBtn">登录</button>
     <div class="burger" id="burger" onclick="toggleMenu()">
       <span></span><span></span><span></span>
     </div>
@@ -470,9 +652,9 @@ button { font-family:var(--font); }
 
 <!-- 步骤指示 -->
 <div class="progress-steps">
-  <div class="step-item done"><div class="step-num">✓</div><span class="step-label">选型号</span></div>
+  <div class="step-item done"><div class="step-num">1</div><span class="step-label">选型号</span></div>
   <div class="step-divider"></div>
-  <div class="step-item done"><div class="step-num">✓</div><span class="step-label">上传 &amp; 筛帧</span></div>
+  <div class="step-item done"><div class="step-num">2</div><span class="step-label">上传 &amp; 筛帧</span></div>
   <div class="step-divider"></div>
   <div class="step-item active"><div class="step-num">3</div><span class="step-label">选款式</span></div>
   <div class="step-divider"></div>
@@ -483,10 +665,8 @@ button { font-family:var(--font); }
 <div class="page-wrap">
   <div class="confirm-layout">
 
-    <!-- 左栏 -->
+    <!-- 左栏：紧凑预览 -->
     <div class="left-col">
-
-      <!-- 产品预览 -->
       <div class="product-preview reveal" id="productPreview">
         <div class="product-preview-mock">
           <div class="product-mock-shape" id="mockShape">
@@ -494,10 +674,12 @@ button { font-family:var(--font); }
           </div>
           <div class="preview-badge-row" id="previewBadges"></div>
         </div>
-        <p class="preview-img-placeholder">产品图片占位 · 上线前替换为实物照片</p>
+        <p class="preview-img-placeholder">实物图占位</p>
       </div>
+    </div>
 
-      <!-- 选配区 -->
+    <!-- 中栏：选配区 -->
+    <div class="mid-col">
       <div class="config-block">
 
         <!-- 第一组：帧数规格 -->
@@ -507,36 +689,42 @@ button { font-family:var(--font); }
             选择帧数规格
           </div>
           <p class="config-desc" id="frameDesc">根据你上传的动画，以下规格可用。帧数越多动画越流畅。</p>
-          <div class="option-row" id="frameOptions">
-            <!-- 由 JS 渲染 -->
-          </div>
+          <div class="option-row" id="frameOptions"></div>
         </div>
 
-        <!-- 第二组：材质 -->
-        <div class="config-section reveal d2">
+        <!-- 第二组：尺寸 -->
+        <div class="config-section reveal d2" id="sizeSection" style="display:none;">
           <div class="config-label">
             <span class="config-label-num">2</span>
+            选择尺寸
+          </div>
+          <p class="config-desc">尺寸影响最终产品大小。</p>
+          <div class="option-row" id="sizeOptions"></div>
+        </div>
+
+        <!-- 第三组：材质 -->
+        <div class="config-section reveal d2" id="materialSection" style="display:none;">
+          <div class="config-label">
+            <span class="config-label-num">3</span>
             选择材质
           </div>
           <p class="config-desc">不同材质影响重量、手感和价格。</p>
-          <div class="option-row" id="materialOptions">
-            <!-- 由 JS 渲染 -->
-          </div>
+          <div class="option-row" id="materialOptions"></div>
         </div>
 
-        <!-- 第三组：颜色 -->
-        <div class="config-section reveal d3">
+        <!-- 第四组：颜色 -->
+        <div class="config-section reveal d3" id="colorSection" style="display:none;">
           <div class="config-label">
-            <span class="config-label-num">3</span>
+            <span class="config-label-num">4</span>
             选择颜色
           </div>
           <p class="config-desc">颜色选项根据所选材质自动更新。</p>
           <div id="colorArea">
-            <div class="color-locked" id="colorLocked">
+            <div class="color-locked" id="colorLocked" style="display:none;">
               <span>🎨</span>
               <span>请先选择材质，颜色选项将在此显示</span>
             </div>
-            <div class="option-row" id="colorOptions" style="display:none;"></div>
+            <div class="option-row" id="colorOptions"></div>
           </div>
         </div>
 
@@ -547,41 +735,74 @@ button { font-family:var(--font); }
     <div class="right-col">
       <div class="price-card reveal">
 
-        <!-- 头部 -->
-        <div class="price-card-head">
-          <p class="price-card-machine" id="cardMachineName">— 机器型号 —</p>
-          <p class="price-card-title" id="cardConfigSummary">请完成选配</p>
-          <p class="price-card-sub" id="cardFrameInfo">—</p>
+        <!-- ── 区块一：当前正在配置 ── -->
+        <div class="price-card-current">
+          <p class="price-card-current-label">当前配置</p>
+          <div>
+            <p class="price-card-machine" id="cardMachineName">— 机器型号 —</p>
+            <p class="price-card-title" id="cardConfigSummary">请完成选配</p>
+            <p class="price-card-sub" id="cardFrameInfo">—</p>
+          </div>
+
+          <!-- 当前价格 -->
+          <div class="price-display">
+            <span class="price-unit">¥</span>
+            <span class="price-big" id="priceTotal">—</span>
+          </div>
+
+          <!-- 费用拆分 -->
+          <div class="price-breakdown">
+            <div class="breakdown-row">
+              <span class="breakdown-label">基础价格</span>
+              <span class="breakdown-val" id="breakBase">—</span>
+            </div>
+            <div class="breakdown-row">
+              <span class="breakdown-label">材质升级</span>
+              <span class="breakdown-val" id="breakMaterial">—</span>
+            </div>
+            <div class="breakdown-row">
+              <span class="breakdown-label">颜色定制</span>
+              <span class="breakdown-val" id="breakColor">—</span>
+            </div>
+            <div class="breakdown-divider"></div>
+            <div class="breakdown-row breakdown-total">
+              <span class="breakdown-label">小计</span>
+              <span class="breakdown-val" id="breakTotal">—</span>
+            </div>
+          </div>
+
+          <!-- 未完成提示 -->
+          <p class="config-incomplete" id="incompleteHint">请完成全部选配后继续</p>
+
+          <!-- 加入按钮 -->
+          <button class="current-add-btn" id="btnAddMore" disabled onclick="addVariant()">
+            + 加入已选
+          </button>
         </div>
 
-        <!-- 大价格 -->
-        <div class="price-display">
-          <span class="price-unit">¥</span>
-          <span class="price-big" id="priceTotal">—</span>
-        </div>
+        <!-- ── 区块二：已选款式合计 ── -->
+        <div class="price-card-cart" id="priceCardCart">
+          <div class="price-card-cart-head">
+            <span class="price-card-cart-label">已选款式</span>
+            <span class="cart-count-badge" id="cartCountBadge">0 款</span>
+          </div>
 
-        <!-- 费用拆分 -->
-        <div class="price-breakdown">
-          <div class="breakdown-row">
-            <span class="breakdown-label">基础价格</span>
-            <span class="breakdown-val" id="breakBase">—</span>
+          <!-- 款式列表 -->
+          <div class="added-list" id="addedList">
+            <div id="addedItems"></div>
           </div>
-          <div class="breakdown-row">
-            <span class="breakdown-label">材质升级</span>
-            <span class="breakdown-val" id="breakMaterial">—</span>
-          </div>
-          <div class="breakdown-row">
-            <span class="breakdown-label">颜色定制</span>
-            <span class="breakdown-val" id="breakColor">—</span>
-          </div>
-          <div class="breakdown-divider"></div>
-          <div class="breakdown-row breakdown-total">
-            <span class="breakdown-label">合计</span>
-            <span class="breakdown-val" id="breakTotal">—</span>
+
+          <!-- 空状态 -->
+          <p class="cart-total-empty" id="cartEmptyHint">尚未加入任何款式</p>
+
+          <!-- 合计大字 -->
+          <div class="cart-total-row" id="cartTotalRow" style="display:none;">
+            <span class="cart-total-label">已选合计</span>
+            <span class="cart-total-val">¥<span id="addedSubtotal">0</span></span>
           </div>
         </div>
 
-        <!-- 物流 & 生产 -->
+        <!-- 物流信息 -->
         <div class="price-info">
           <div class="info-row">
             <span class="info-icon">📦</span>
@@ -597,25 +818,17 @@ button { font-family:var(--font); }
           </div>
         </div>
 
-        <!-- 已选款式列表 -->
-        <div class="added-list" id="addedList">
-          <p class="added-list-label">已选款式</p>
-          <div id="addedItems"><!-- 由JS渲染 --></div>
-          <div class="added-subtotal">
-            <span class="added-subtotal-label">已选合计</span>
-            <span class="added-subtotal-val">¥<span id="addedSubtotal">0</span></span>
-          </div>
-        </div>
-
-        <!-- 按钮区 -->
+        <!-- 结算按钮 -->
         <div class="price-card-btns">
-          <p class="config-incomplete" id="incompleteHint">请完成全部选配后继续</p>
-          <button class="btn btn-secondary" id="btnAddMore" disabled onclick="addVariant()">
-            + 继续添加款式
-          </button>
-          <button class="btn btn-primary" id="btnBuy" disabled onclick="goBuy()">
+          <button class="btn btn-yellow" id="btnBuy" disabled onclick="goBuy()">
             立即购买 →
           </button>
+          <button class="btn btn-secondary" id="btnAddCart" disabled onclick="goAddCart()" style="font-size:13px;">
+            🛒 加入购物车
+          </button>
+          <div class="btn-creator-tag" id="creatorBtns" style="display:none;">
+            <span class="creator-dot"></span>创作者认证账号可发布至社区
+          </div>
         </div>
 
       </div>
@@ -632,166 +845,97 @@ button { font-family:var(--font); }
   </div>
   <div class="mob-price-btns">
     <button class="btn btn-secondary" id="mobBtnAddMore" disabled onclick="addVariant()">+ 添加</button>
+    <button class="btn btn-secondary" id="mobBtnAddCart" disabled onclick="goAddCart()" style="font-size:12px;padding:0 12px;">🛒 加入</button>
     <button class="btn btn-primary" id="mobBtnBuy" disabled onclick="goBuy()">购买 →</button>
   </div>
 </div>
 
 <script>
-/* ══════════════════════════════
-   数据：机型 + 选配数据
-   后端接入后替换为 API 请求
-══════════════════════════════ */
-const MACHINE_DATA = {
-  cylinder: {
-    name:  '经典圆筒款',
-    shape: 'mock-cylinder',
-    basePrice: { 12:199, 16:239, 24:289 },
-  },
-  lantern: {
-    name:  '手提灯笼款',
-    shape: 'mock-lantern',
-    basePrice: { 12:259, 16:319 },
-  },
-  hexagon: {
-    name:  '六棱柱款',
-    shape: 'mock-hexagon',
-    basePrice: { 6:189, 12:229 },
-  },
-  'flat-round': {
-    name:  '扁圆盒款',
-    shape: 'mock-flat',
-    basePrice: { 12:279, 24:339 },
-  },
-  'mini-pendant': {
-    name:  '迷你挂件款',
-    shape: 'mock-mini',
-    basePrice: { 12:149 },
-  },
-};
-
-/* 材质数据 */
-const MATERIAL_DATA = [
-  {
-    id: 'basswood',
-    name: '椴木板',
-    desc: '基础款 · 轻盈自然',
-    priceAdd: 0,
-    colors: [
-      { id:'natural', name:'原木色',  hex:'#D4B896' },
-      { id:'walnut',  name:'胡桃棕',  hex:'#7B5B3A' },
-    ],
-  },
-  {
-    id: 'acrylic',
-    name: '亚克力',
-    desc: '透明通透 · 光影效果',
-    priceAdd: 15,
-    colors: [
-      { id:'clear',   name:'透明',    hex:'#E8F4F8', border:true },
-      { id:'black',   name:'哑光黑',  hex:'#1A1A1A' },
-      { id:'blush',   name:'藕粉',    hex:'#F2C4CE' },
-      { id:'mint',    name:'薄荷绿',  hex:'#A8D8C8' },
-    ],
-  },
-  {
-    id: 'aluminum',
-    name: '铝合金',
-    desc: '金属质感 · 沉稳耐用',
-    priceAdd: 35,
-    colors: [
-      { id:'silver',  name:'银色',    hex:'#C0C0C0' },
-      { id:'black',   name:'哑光黑',  hex:'#2A2A2A' },
-      { id:'gold',    name:'香槟金',  hex:'#C8A96E' },
-      { id:'rose',    name:'玫瑰金',  hex:'#C5956A' },
-    ],
-  },
-  {
-    id: 'brass',
-    name: '黄铜铸造',
-    desc: '复古厚重 · 限量质感',
-    priceAdd: 60,
-    colors: [
-      { id:'brass',   name:'黄铜原色', hex:'#B8963E' },
-      { id:'antique', name:'做旧铜',   hex:'#7A6040' },
-    ],
-  },
-];
-
-/* 颜色加价（特殊颜色） */
-const COLOR_PRICE_ADD = {
-  rose: 5, antique: 10,
-};
+const MOWO_API = (location.hostname==='127.0.0.1'?'http://127.0.0.1:3001':'http://localhost:3001');
 
 /* ══════════════════════════════
    运行时状态
 ══════════════════════════════ */
 let SEL = {
-  machineType:   null,
-  machineName:   null,
+  modelId:       null,
+  modelName:     null,
   frameCount:    null,
   validTargets:  [],
   selectedFrame: null,
+  selectedSize:  null,
   selectedMat:   null,
+  selectedSku:   null,
   selectedColor: null,
 };
 
+let _skus      = []; // API返回的所有SKU
+let _currentSkuMaterials = []; // 当前帧数下可用的材质列表（去重）
+
 /* 已选款式列表 */
-let CART = []; /* [{ frame, mat, matName, color, colorName, colorHex, price, summary }] */
+let CART = [];
 
 /* ══════════════════════════════
-   初始化
+   初始化（从API加载SKU数据）
 ══════════════════════════════ */
-(function init() {
-  /* 从 URL 和 localStorage 读取上一步的数据 */
-  const params = new URLSearchParams(location.search);
-  SEL.machineType  = params.get('type')    || 'cylinder';
-  SEL.frameCount   = parseInt(params.get('frames')) || 0;
-  const targetsStr = params.get('targets') || '';
-  SEL.validTargets = targetsStr ? targetsStr.split(',').map(Number).filter(Boolean) : [12];
+(async function init() {
+  // 从 localStorage 读取上一步的数据
+  let meta = {};
+  try { meta = JSON.parse(localStorage.getItem('mowo_customize_meta') || '{}'); } catch(e) {}
 
-  try {
-    const meta = JSON.parse(localStorage.getItem('mowo_customize_meta') || '{}');
-    SEL.machineName = meta.name || MACHINE_DATA[SEL.machineType]?.name || '动画机';
-    if (meta.validTargets?.length) SEL.validTargets = meta.validTargets;
-  } catch(e) {}
+  SEL.modelId      = meta.modelId      || null;
+  SEL.modelName    = meta.name         || '动画机';
+  SEL.frameCount   = meta.frameCount   || 0;
+  SEL.validTargets = meta.validTargets || [];
 
-  const machine = MACHINE_DATA[SEL.machineType];
-  if (!machine) return;
-
-  /* 更新机型外观 */
-  const shape = document.getElementById('mockShape');
-  shape.className = 'product-mock-shape ' + machine.shape;
-  shape.innerHTML = '<div class="mock-ring"></div>';
-
-  /* 更新预览区顶部机型名 */
-  document.getElementById('cardMachineName').textContent = machine.name;
+  // 更新页面标题
+  document.getElementById('cardMachineName').textContent = SEL.modelName;
   document.getElementById('previewBadges').innerHTML =
-    `<span class="preview-badge">${machine.name}</span>`;
+    `<span class="preview-badge">${SEL.modelName}</span>`;
 
-  /* 渲染帧数选项 */
-  renderFrameOptions(machine);
+  if (!SEL.modelId) {
+    document.getElementById('frameDesc').textContent = '未找到款式信息，请返回上一步重新选择。';
+    return;
+  }
 
-  /* 渲染材质选项 */
-  renderMaterialOptions();
-
-  /* 判断创作者身份（从 token 读，这里用 localStorage 模拟） */
+  // 从API加载SKU
   try {
-    const isCreator = JSON.parse(localStorage.getItem('mowo_token') || '{}').is_creator;
-    if (isCreator) {
-      document.getElementById('creatorBtns').style.display = 'block';
-      document.getElementById('mobBtnPublish').style.display = 'flex';
+    const res  = await fetch(`${MOWO_API}/api/machine-models/${SEL.modelId}/skus`);
+    const json = await res.json();
+    if (!json.success || !json.data.length) {
+      document.getElementById('frameDesc').textContent = '暂无可用规格，请联系客服。';
+      return;
+    }
+    _skus = json.data;
+  } catch(e) {
+    document.getElementById('frameDesc').textContent = '加载规格失败，请刷新重试。';
+    return;
+  }
+
+  // 渲染帧数选项
+  renderFrameOptions();
+
+  // 判断创作者身份
+  try {
+    const token = localStorage.getItem('mowo_token');
+    if (token) {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      if (payload.certifyStatus === 2) {
+        document.getElementById('creatorBtns').style.display = 'block';
+        document.getElementById('mobBtnPublish').style.display = 'flex';
+      }
     }
   } catch(e) {}
 })();
 
 /* ══════════════════════════════
    渲染帧数选项
+   validTargets 是上一步筛帧后可匹配的帧数
+   只显示SKU里包含该帧数的选项
 ══════════════════════════════ */
-function renderFrameOptions(machine) {
+function renderFrameOptions() {
   const container = document.getElementById('frameOptions');
   const desc      = document.getElementById('frameDesc');
 
-  /* validTargets 是可以被 frameCount 整除的目标帧数 */
   if (!SEL.validTargets.length) {
     desc.textContent = '未检测到可用帧数规格，请返回上一步重新筛帧。';
     return;
@@ -799,84 +943,140 @@ function renderFrameOptions(machine) {
 
   desc.textContent = `你上传了 ${SEL.frameCount} 帧，系统将循环补齐至所选规格。帧数越多动画越流畅。`;
 
-  container.innerHTML = SEL.validTargets.map(f => {
-    const base     = machine.basePrice[f] || 0;
-    const loopInfo = f > SEL.frameCount
-      ? `循环 ×${f / SEL.frameCount}`
-      : '原始帧数';
+  // 找出所有SKU支持的帧数（每个SKU有一个frameCount），与validTargets取交集
+  const allSkuFrames = new Set(_skus.map(s => s.frameCount));
+  const availFrames  = SEL.validTargets.filter(f => allSkuFrames.has(f));
+
+  if (!availFrames.length) {
+    // validTargets 里没有匹配的，直接列出所有SKU里的帧数选项
+    const allFrames = [...allSkuFrames].sort((a,b) => a-b);
+    if (!allFrames.length) {
+      desc.textContent = '当前款式暂不支持你的帧数，请返回上一步调整。';
+      return;
+    }
+    // 用所有可用帧数
+    SEL.validTargets = allFrames;
+    availFrames.push(...allFrames);
+  }
+
+  // 渲染帧数按钮（价格暂显示「—」，后续接CRMEB定价）
+  container.innerHTML = availFrames.map(f => {
+    const loopInfo = f > SEL.frameCount ? `循环 ×${f / SEL.frameCount}` : '原始帧数';
     return `
-      <div class="opt-btn" data-type="frame" data-val="${f}" data-base="${base}" onclick="selectOption(this,'frame')">
+      <div class="opt-btn" data-type="frame" data-val="${f}" data-base="0" onclick="selectOption(this,'frame')">
         <span class="opt-check">✓</span>
         <span class="opt-name">${f} 帧</span>
-        <span class="opt-price">${loopInfo} · ¥${base}</span>
+        <span class="opt-price">${loopInfo}</span>
       </div>`;
   }).join('');
 }
 
 /* ══════════════════════════════
-   渲染材质选项
+   四步选配逻辑：帧数→尺寸→材质→颜色
+   每步根据已选条件筛选可用选项
 ══════════════════════════════ */
-function renderMaterialOptions() {
-  const container = document.getElementById('materialOptions');
-  container.innerHTML = MATERIAL_DATA.map(m => {
-    const priceLabel = m.priceAdd === 0 ? '基础款' : `+¥${m.priceAdd}`;
-    const priceClass = m.priceAdd > 0 ? 'plus' : '';
-    return `
-      <div class="opt-btn" data-type="material" data-val="${m.id}" data-price-add="${m.priceAdd}" onclick="selectOption(this,'material')">
-        <span class="opt-check">✓</span>
-        <span class="opt-name">${m.name}</span>
-        <span class="opt-price ${priceClass}">${priceLabel} · ${m.desc}</span>
-      </div>`;
-  }).join('');
+
+// 第一步选帧数后 → 渲染尺寸
+function renderSizeOptions(frameCount) {
+  const matched = _skus.filter(s => s.frameCount === frameCount);
+  const sizes   = [...new Set(matched.map(s => s.size))].sort();
+
+  document.getElementById('sizeSection').style.display = sizes.length ? '' : 'none';
+  document.getElementById('materialSection').style.display = 'none';
+  document.getElementById('colorSection').style.display    = 'none';
+  SEL.selectedSize  = null;
+  SEL.selectedMat   = null;
+  SEL.selectedSku   = null;
+  SEL.selectedColor = null;
+
+  document.getElementById('sizeOptions').innerHTML = sizes.map(size => `
+    <div class="opt-btn" data-type="size" data-val="${size}" onclick="selectSize(this,'${size}')">
+      <span class="opt-check">✓</span>
+      <span class="opt-name">${size}</span>
+    </div>`).join('');
 }
 
-/* ══════════════════════════════
-   渲染颜色选项
-══════════════════════════════ */
-function renderColorOptions(materialId) {
-  const mat      = MATERIAL_DATA.find(m => m.id === materialId);
-  const locked   = document.getElementById('colorLocked');
-  const optArea  = document.getElementById('colorOptions');
-  if (!mat) { locked.style.display = 'flex'; optArea.style.display = 'none'; return; }
+// 第二步选尺寸后 → 渲染材质
+function selectSize(el, size) {
+  document.querySelectorAll('.opt-btn[data-type="size"]').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  SEL.selectedSize  = size;
+  SEL.selectedMat   = null;
+  SEL.selectedSku   = null;
+  SEL.selectedColor = null;
 
-  locked.style.display  = 'none';
-  optArea.style.display = 'flex';
+  const matched   = _skus.filter(s => s.frameCount === SEL.selectedFrame && s.size === size);
+  const materials = [...new Set(matched.map(s => s.material))].sort();
 
-  optArea.innerHTML = mat.colors.map(c => {
-    const add   = COLOR_PRICE_ADD[c.id] || 0;
-    const label = add > 0 ? `+¥${add}` : c.name;
-    const borderStyle = c.border ? 'border:2px solid var(--gray2);' : '';
+  document.getElementById('materialSection').style.display = materials.length ? '' : 'none';
+  document.getElementById('colorSection').style.display    = 'none';
+
+  document.getElementById('materialOptions').innerHTML = materials.map(mat => `
+    <div class="opt-btn" data-type="material" data-val="${mat}" onclick="selectMaterial(this,'${mat}')">
+      <span class="opt-check">✓</span>
+      <span class="opt-name">${mat}</span>
+    </div>`).join('');
+
+  updatePriceCard();
+}
+
+// 第三步选材质后 → 渲染颜色
+function selectMaterial(el, mat) {
+  document.querySelectorAll('.opt-btn[data-type="material"]').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  SEL.selectedMat   = mat;
+  SEL.selectedSku   = null;
+  SEL.selectedColor = null;
+
+  const matched = _skus.filter(s =>
+    s.frameCount === SEL.selectedFrame &&
+    s.size       === SEL.selectedSize  &&
+    s.material   === mat
+  );
+
+  document.getElementById('colorSection').style.display = matched.length ? '' : 'none';
+
+  document.getElementById('colorOptions').innerHTML = matched.map(sku => {
+    const borderStyle = sku.colorHex === '#FFFFFF' || sku.colorHex === '#F5F3EF' ? 'border:2px solid var(--gray2);' : '';
     return `
       <div class="color-item">
-        <div class="color-opt" data-type="color" data-val="${c.id}" data-price-add="${add}"
-             style="background:${c.hex};${borderStyle}" onclick="selectOption(this,'color')" title="${c.name}">
+        <div class="color-opt" data-type="color" data-sku="${sku.id}"
+             style="background:${sku.colorHex};${borderStyle}"
+             onclick="selectColor(this,'${sku.id}')" title="${sku.colorName}">
           <span class="opt-check" style="top:-6px;right:-6px;">✓</span>
         </div>
-        <span class="color-label">${label}</span>
+        <span class="color-label">${sku.colorName}</span>
       </div>`;
   }).join('');
+
+  updatePriceCard();
+}
+
+// 第四步选颜色 → 确定SKU
+function selectColor(el, skuId) {
+  document.querySelectorAll('.color-opt[data-type="color"]').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+
+  SEL.selectedSku   = _skus.find(s => s.id === skuId);
+  SEL.selectedColor = skuId;
+  updatePreviewColor();
+  updatePriceCard();
 }
 
 /* ══════════════════════════════
-   统一选项选中处理
+   统一选项选中处理（仅处理帧数）
 ══════════════════════════════ */
 function selectOption(el, type) {
-  /* 同组取消旧选中 */
-  document.querySelectorAll(`.opt-btn[data-type="${type}"], .color-opt[data-type="${type}"]`)
-    .forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll(`.opt-btn[data-type="${type}"]`).forEach(b => b.classList.remove('selected'));
   el.classList.add('selected');
 
   if (type === 'frame') {
     SEL.selectedFrame = parseInt(el.dataset.val);
-  } else if (type === 'material') {
-    SEL.selectedMat   = el.dataset.val;
-    SEL.selectedColor = null; /* 重置颜色 */
-    renderColorOptions(SEL.selectedMat);
-    /* 更新预览背景色 */
-    updatePreviewColor();
-  } else if (type === 'color') {
-    SEL.selectedColor = el.dataset.val;
-    updatePreviewColor();
+    SEL.selectedSize  = null;
+    SEL.selectedMat   = null;
+    SEL.selectedSku   = null;
+    SEL.selectedColor = null;
+    renderSizeOptions(SEL.selectedFrame);
   }
 
   updatePriceCard();
@@ -892,28 +1092,16 @@ function updatePreviewColor() {
 
   if (colorEl) {
     const hex = colorEl.style.background;
-    /* 预览区背景根据颜色变化 */
     const rgb = hexToRgb(hex) || {r:235,g:234,b:231};
     preview.style.background = `rgb(${Math.min(rgb.r+40,255)},${Math.min(rgb.g+40,255)},${Math.min(rgb.b+40,255)})`;
     shape.style.background   = hex;
-  } else if (SEL.selectedMat) {
-    /* 只选了材质，用材质对应的默认背景 */
-    const matBg = {
-      basswood:'#E8DDD0', acrylic:'#D8EEF5', aluminum:'#D8D8D8', brass:'#E0CFA0'
-    };
-    preview.style.background = matBg[SEL.selectedMat] || '#F5F3EF';
-    shape.style.background   = '';
   }
 
-  /* 更新徽章 */
+  // 更新徽章
   const badges = [];
   if (SEL.selectedFrame) badges.push(`${SEL.selectedFrame} 帧`);
-  if (SEL.selectedMat)   badges.push(MATERIAL_DATA.find(m=>m.id===SEL.selectedMat)?.name || '');
-  if (SEL.selectedColor) {
-    const mat = MATERIAL_DATA.find(m=>m.id===SEL.selectedMat);
-    const col = mat?.colors.find(c=>c.id===SEL.selectedColor);
-    if (col) badges.push(col.name);
-  }
+  if (SEL.selectedSku)   badges.push(`${SEL.selectedSku.size} · ${SEL.selectedSku.material}`);
+  if (SEL.selectedSku) badges.push(SEL.selectedSku.colorName);
   document.getElementById('previewBadges').innerHTML =
     badges.map(b=>`<span class="preview-badge">${b}</span>`).join('');
 }
@@ -931,41 +1119,21 @@ function hexToRgb(hex) {
    实时价格更新
 ══════════════════════════════ */
 function updatePriceCard() {
-  const machine   = MACHINE_DATA[SEL.machineType];
-  const basePrice = SEL.selectedFrame ? (machine?.basePrice[SEL.selectedFrame] || 0) : 0;
-  const matAdd    = SEL.selectedMat
-    ? (MATERIAL_DATA.find(m=>m.id===SEL.selectedMat)?.priceAdd || 0) : 0;
-  const colorAdd  = SEL.selectedColor ? (COLOR_PRICE_ADD[SEL.selectedColor] || 0) : 0;
-  const total     = basePrice + matAdd + colorAdd;
+  const isComplete = !!(SEL.selectedFrame && SEL.selectedSku && SEL.selectedColor && SEL.selectedSize && SEL.selectedMat);
+  const price      = isComplete && SEL.selectedSku?.price ? Number(SEL.selectedSku.price) : null;
+  const priceStr   = price !== null ? `¥${price.toFixed(0)}` : '—';
 
-  const isComplete = !!(SEL.selectedFrame && SEL.selectedMat && SEL.selectedColor);
+  document.getElementById('priceTotal').textContent  = isComplete ? priceStr : '—';
+  document.getElementById('mobPriceVal').textContent = isComplete ? priceStr : '—';
+  document.getElementById('breakBase').textContent     = isComplete ? priceStr : '—';
+  document.getElementById('breakMaterial').textContent = SEL.selectedMat   || '—';
+  document.getElementById('breakColor').textContent    = SEL.selectedSku?.colorName || '—';
+  document.getElementById('breakTotal').textContent    = isComplete ? priceStr : '—';
 
-  /* 大价格：显示当前选配价，有已选列表时显示合计 */
-  const cartTotal = CART.reduce((s, v) => s + v.price, 0);
-  const displayTotal = CART.length > 0 ? cartTotal + (isComplete ? total : 0) : (isComplete ? total : null);
-  document.getElementById('priceTotal').textContent  = displayTotal !== null ? displayTotal : '—';
-  document.getElementById('mobPriceVal').textContent = isComplete ? total : (cartTotal > 0 ? cartTotal : '—');
-
-  /* 拆分（显示当前正在配置的这一款） */
-  document.getElementById('breakBase').textContent     = basePrice ? `¥${basePrice}` : '—';
-  document.getElementById('breakMaterial').textContent = SEL.selectedMat
-    ? (matAdd > 0 ? `+¥${matAdd}` : '免费') : '—';
-  document.getElementById('breakColor').textContent    = SEL.selectedColor
-    ? (colorAdd > 0 ? `+¥${colorAdd}` : '免费') : '—';
-  document.getElementById('breakTotal').textContent    = isComplete ? `¥${total}` : '—';
-
-  /* 颜色样式 */
-  document.getElementById('breakMaterial').className =
-    'breakdown-val' + (matAdd > 0 ? ' plus' : matAdd === 0 && SEL.selectedMat ? ' free' : '');
-  document.getElementById('breakColor').className =
-    'breakdown-val' + (colorAdd > 0 ? ' plus' : colorAdd === 0 && SEL.selectedColor ? ' free' : '');
-
-  /* 配置摘要 */
+  // 配置摘要
   if (isComplete) {
-    const mat = MATERIAL_DATA.find(m=>m.id===SEL.selectedMat);
-    const col = mat?.colors.find(c=>c.id===SEL.selectedColor);
     document.getElementById('cardConfigSummary').textContent =
-      `${mat.name} · ${col?.name || ''} · ${SEL.selectedFrame}帧`;
+      `${SEL.selectedSku.colorName} · ${SEL.selectedSku.size} · ${SEL.selectedFrame}帧`;
     document.getElementById('cardFrameInfo').textContent =
       SEL.frameCount < SEL.selectedFrame
         ? `你的 ${SEL.frameCount} 帧将循环补齐至 ${SEL.selectedFrame} 帧`
@@ -976,18 +1144,20 @@ function updatePriceCard() {
     document.getElementById('cardFrameInfo').textContent = '—';
   }
 
-  /* 按钮状态 */
+  // 按钮状态
   const canAdd = isComplete;
   const canBuy = isComplete || CART.length > 0;
-  document.getElementById('btnAddMore').disabled   = !canAdd;
-  document.getElementById('btnBuy').disabled       = !canBuy;
+  document.getElementById('btnAddMore').disabled    = !canAdd;
+  document.getElementById('btnBuy').disabled        = !canBuy;
+  document.getElementById('btnAddCart').disabled    = !canBuy;
   document.getElementById('mobBtnAddMore').disabled = !canAdd;
-  document.getElementById('mobBtnBuy').disabled    = !canBuy;
+  document.getElementById('mobBtnBuy').disabled     = !canBuy;
+  document.getElementById('mobBtnAddCart').disabled = !canBuy;
 
-  /* 移动端件数 */
+  // 移动端件数
   document.getElementById('mobAddedCount').textContent = CART.length;
 
-  /* 提示文字 */
+  // 提示文字
   const hint = document.getElementById('incompleteHint');
   if (isComplete || CART.length > 0) {
     hint.style.display = 'none';
@@ -995,12 +1165,12 @@ function updatePriceCard() {
     hint.style.display = 'block';
     const missing = [];
     if (!SEL.selectedFrame) missing.push('帧数规格');
+    if (!SEL.selectedSize)  missing.push('尺寸');
     if (!SEL.selectedMat)   missing.push('材质');
     if (!SEL.selectedColor) missing.push('颜色');
     hint.textContent = `还需选择：${missing.join('、')}`;
   }
 
-  /* 已选列表 */
   renderAddedList();
 }
 
@@ -1008,34 +1178,31 @@ function updatePriceCard() {
    已选款式列表管理
 ══════════════════════════════ */
 function addVariant() {
-  if (!SEL.selectedFrame || !SEL.selectedMat || !SEL.selectedColor) return;
-  const machine  = MACHINE_DATA[SEL.machineType];
-  const mat      = MATERIAL_DATA.find(m => m.id === SEL.selectedMat);
-  const col      = mat?.colors.find(c => c.id === SEL.selectedColor);
-  const base     = machine?.basePrice[SEL.selectedFrame] || 0;
-  const matAdd   = mat?.priceAdd || 0;
-  const colorAdd = COLOR_PRICE_ADD[SEL.selectedColor] || 0;
+  if (!SEL.selectedFrame || !SEL.selectedSku || !SEL.selectedColor) return;
 
   CART.push({
     id:        Date.now(),
     frame:     SEL.selectedFrame,
-    mat:       SEL.selectedMat,
-    matName:   mat?.name,
-    color:     SEL.selectedColor,
-    colorName: col?.name,
-    colorHex:  col ? getColorHex(SEL.selectedMat, SEL.selectedColor) : '#eee',
-    price:     base + matAdd + colorAdd,
-    summary:   `${SEL.selectedFrame}帧 · ${mat?.name} · ${col?.name}`,
+    skuId:     SEL.selectedSku.id,
+    size:      SEL.selectedSku.size,
+    material:  SEL.selectedSku.material,
+    color:     SEL.selectedSku.colorHex,
+    colorName: SEL.selectedSku.colorName,
+    colorHex:  SEL.selectedSku.colorHex,
+    price:     Number(SEL.selectedSku.price || 0),
+    summary:   `${SEL.selectedFrame}帧 · ${SEL.selectedSku.size} · ${SEL.selectedSku.material} · ${SEL.selectedSku.colorName}`,
   });
 
-  /* 重置当前选配（但保留帧数，方便继续选其他款） */
+  // 重置当前选配（保留帧数，允许继续添加）
+  SEL.selectedSize  = null;
   SEL.selectedMat   = null;
+  SEL.selectedSku   = null;
   SEL.selectedColor = null;
-  document.querySelectorAll('.opt-btn[data-type="material"], .opt-btn[data-type="frame"]')
-    .forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('.opt-btn').forEach(b => b.classList.remove('selected'));
   document.querySelectorAll('.color-opt').forEach(b => b.classList.remove('selected'));
-  document.getElementById('colorLocked').style.display = 'flex';
-  document.getElementById('colorOptions').style.display = 'none';
+  document.getElementById('sizeSection').style.display     = 'none';
+  document.getElementById('materialSection').style.display = 'none';
+  document.getElementById('colorSection').style.display    = 'none';
 
   updatePriceCard();
 }
@@ -1045,84 +1212,239 @@ function removeVariant(id) {
   updatePriceCard();
 }
 
-function getColorHex(matId, colorId) {
-  const mat = MATERIAL_DATA.find(m => m.id === matId);
-  return mat?.colors.find(c => c.id === colorId)?.hex || '#eee';
-}
-
 function renderAddedList() {
   const list  = document.getElementById('addedList');
   const items = document.getElementById('addedItems');
-  const sub   = document.getElementById('addedSubtotal');
+  const emptyHint   = document.getElementById('cartEmptyHint');
+  const totalRow    = document.getElementById('cartTotalRow');
+  const countBadge  = document.getElementById('cartCountBadge');
 
   if (!CART.length) {
-    list.classList.remove('has-items');
+    list.style.display = 'none';
+    if (emptyHint)  emptyHint.style.display = '';
+    if (totalRow)   totalRow.style.display  = 'none';
+    if (countBadge) { countBadge.textContent = '0 款'; countBadge.classList.remove('show'); }
     return;
   }
-  list.classList.add('has-items');
+
+  list.style.display = 'block';
+  if (emptyHint)  emptyHint.style.display = 'none';
+  if (totalRow)   totalRow.style.display  = '';
+  if (countBadge) { countBadge.textContent = CART.length + ' 款'; countBadge.classList.add('show'); }
 
   items.innerHTML = CART.map(v => `
     <div class="added-item">
       <div class="added-item-swatch" style="background:${v.colorHex}"></div>
       <div class="added-item-info">
         <p class="added-item-name">${v.summary}</p>
-        <p class="added-item-price">¥${v.price}</p>
+        <p class="added-item-price">${v.price > 0 ? '¥' + v.price.toFixed(0) : '待定价'}</p>
       </div>
       <button class="added-item-remove" onclick="removeVariant(${v.id})" title="移除">✕</button>
     </div>
   `).join('');
 
-  const total = CART.reduce((s, v) => s + v.price, 0);
-  document.getElementById('addedSubtotal').textContent = total;
+  // 计算合计
+  const total = CART.reduce((s, v) => s + (v.price || 0), 0);
+  const totalEl = document.getElementById('addedSubtotal');
+  if (totalEl) totalEl.textContent = total > 0 ? total.toFixed(0) : '0';
 }
 
 /* ══════════════════════════════
    跳转
 ══════════════════════════════ */
-function goBuy() {
-  /* 如果当前还有未加入列表的完整选配，先自动加入 */
-  if (SEL.selectedFrame && SEL.selectedMat && SEL.selectedColor && CART.length === 0) {
-    addVariantSilent();
-  } else if (SEL.selectedFrame && SEL.selectedMat && SEL.selectedColor) {
-    addVariantSilent();
+/* ── 内部工具：按帧数去重创建 CustomProduct，返回 frameCount→id 映射 ── */
+async function _createCustomProducts(token, frameDataUrls) {
+  const uniqueFrames = [...new Set(CART.map(v => v.frame))];
+  const map = {};
+  for (const frameCount of uniqueFrames) {
+    const cpRes = await fetch(`${MOWO_API}/api/custom-products`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({
+        animationFrames: JSON.stringify(frameDataUrls),
+        // 工程元数据：短期仅保存选帧结果 + 上下文供「重新编辑」恢复编辑器状态
+        // 完整原始帧存储见 docs/ANIMATION_DRAFT_PLAN.md（OSS 迁移方案）
+        draftData: JSON.stringify({
+          version: 1,
+          source: 'customize-confirm',
+          savedAt: new Date().toISOString(),
+          frameCount,
+          totalSourceFrames: null,  // 短期未知（用户在编辑器筛完才到此页）
+          modelId: SEL.modelId || null,
+          modelName: SEL.modelName || null,
+          // frames 不重复存储，已在 animationFrames 字段
+        }),
+        configJson: JSON.stringify({ frameCount, modelId: SEL.modelId, modelName: SEL.modelName }),
+        frameCount
+      })
+    });
+    const cpJson = await cpRes.json();
+    if (!cpJson.success) throw new Error(cpJson.message || '草稿保存失败');
+    map[frameCount] = cpJson.data.id;
   }
-  if (!CART.length) return;
-  saveToStorage();
-  location.href = `checkout.html?type=${SEL.machineType}&frames=${SEL.validTargets.join(',')}`;
+  return map;
 }
 
-/* 静默加入（不重置选配界面，仅用于结算前最后一次） */
+async function goBuy() {
+  const token = localStorage.getItem('mowo_token');
+  if (!token) { if (typeof openAuthModal === 'function') openAuthModal(); return; }
+
+  if (SEL.selectedFrame && SEL.selectedSku && SEL.selectedColor) addVariantSilent();
+  if (!CART.length) return;
+
+  const btnBuy    = document.getElementById('btnBuy');
+  const mobBtnBuy = document.getElementById('mobBtnBuy');
+  if (btnBuy)    btnBuy.disabled = true;
+  if (mobBtnBuy) mobBtnBuy.disabled = true;
+
+  let frameDataUrls = [];
+  try { frameDataUrls = JSON.parse(localStorage.getItem('mowo_customize_frames') || '[]'); } catch(e) {}
+
+  // 同一批次共享 sessionGroupId
+  const sessionGroupId = (crypto.randomUUID ? crypto.randomUUID()
+    : Date.now().toString(36) + Math.random().toString(36).slice(2));
+
+  const cartItemIds = [];
+  try {
+    // 1. 按帧数去重创建 CustomProduct
+    const customProductMap = await _createCustomProducts(token, frameDataUrls);
+
+    // 2. 每款配置各自加入购物车
+    for (const item of CART) {
+      const customProductId = customProductMap[item.frame];
+      const cartRes = await fetch(`${MOWO_API}/api/cart/add`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          itemType: 'CUSTOM',
+          contentId: customProductId,
+          hardwareSkuId: item.skuId,
+          quantity: 1,
+          sessionGroupId
+        })
+      });
+      const cartJson = await cartRes.json();
+      if (!cartJson.success) throw new Error(cartJson.message || '加入购物车失败');
+      cartItemIds.push(cartJson.data.id);
+    }
+
+    // 3. 跳转结算页
+    sessionStorage.setItem('mowo_checkout_items', JSON.stringify(cartItemIds));
+    window.location.href = './checkout.html';
+
+  } catch(err) {
+    alert('操作失败：' + err.message + '\n请重试或联系客服');
+    console.error(err);
+    if (btnBuy)    btnBuy.disabled = false;
+    if (mobBtnBuy) mobBtnBuy.disabled = false;
+  }
+}
+
+/* ══════════════════════════════
+   加入购物车（保存草稿 → 加购）
+══════════════════════════════ */
+async function goAddCart() {
+  const token = localStorage.getItem('mowo_token');
+  if (!token) { if (typeof openAuthModal === 'function') openAuthModal(); return; }
+
+  if (SEL.selectedFrame && SEL.selectedSku && SEL.selectedColor) addVariantSilent();
+  if (!CART.length) return;
+
+  const btn    = document.getElementById('btnAddCart');
+  const mobBtn = document.getElementById('mobBtnAddCart');
+  if (btn) btn.disabled = true;
+  if (mobBtn) mobBtn.disabled = true;
+
+  let frameDataUrls = [];
+  try { frameDataUrls = JSON.parse(localStorage.getItem('mowo_customize_frames') || '[]'); } catch(e) {}
+
+  // 同一批次共享 sessionGroupId（购物车分组用）
+  const sessionGroupId = (crypto.randomUUID ? crypto.randomUUID()
+    : Date.now().toString(36) + Math.random().toString(36).slice(2));
+
+  try {
+    // 1. 按帧数去重创建 CustomProduct（同帧数共用一个，节省存储）
+    const customProductMap = await _createCustomProducts(token, frameDataUrls);
+
+    // 2. 每款配置各自加入购物车，共享 sessionGroupId
+    for (const item of CART) {
+      const customProductId = customProductMap[item.frame];
+      const cartRes = await fetch(`${MOWO_API}/api/cart/add`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          itemType: 'CUSTOM',
+          contentId: customProductId,
+          hardwareSkuId: item.skuId,
+          quantity: 1,
+          sessionGroupId
+        })
+      });
+      const cartJson = await cartRes.json();
+      if (!cartJson.success) throw new Error(cartJson.message || '加入购物车失败');
+    }
+
+    // 3. 成功提示（留在当前页）
+    const notice = document.createElement('div');
+    notice.style.cssText = 'position:fixed;top:80px;left:50%;transform:translateX(-50%);background:#111;color:#fff;font-weight:900;font-size:13px;padding:10px 20px;border-radius:999px;z-index:9999;white-space:nowrap;';
+    notice.textContent = `🛒 已加入购物车（共 ${CART.length} 款）`;
+    document.body.appendChild(notice);
+    setTimeout(() => notice.remove(), 2600);
+
+  } catch(err) {
+    alert('加入购物车失败：' + err.message);
+  } finally {
+    if (btn) btn.disabled = false;
+    if (mobBtn) mobBtn.disabled = false;
+  }
+}
+
+function copyOrderNo() {
+  const orderNo = document.getElementById('resultOrderNo').textContent;
+  navigator.clipboard.writeText(orderNo)
+    .then(() => alert('订单号已复制！'))
+    .catch(() => {
+      const input = document.createElement('input');
+      input.value = orderNo;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+      alert('订单号已复制！');
+    });
+}
+
+// 静默加入（不重置界面，仅用于结算前）
 function addVariantSilent() {
-  const machine  = MACHINE_DATA[SEL.machineType];
-  const mat      = MATERIAL_DATA.find(m => m.id === SEL.selectedMat);
-  const col      = mat?.colors.find(c => c.id === SEL.selectedColor);
-  const base     = machine?.basePrice[SEL.selectedFrame] || 0;
-  const matAdd   = mat?.priceAdd || 0;
-  const colorAdd = COLOR_PRICE_ADD[SEL.selectedColor] || 0;
-  /* 避免重复加入 */
+  const colorOpt = SEL.selectedSku?.colorOptions?.find(c => c.id === SEL.selectedColor);
+  // 避免重复加入
   const dup = CART.find(v =>
-    v.frame === SEL.selectedFrame &&
-    v.mat   === SEL.selectedMat   &&
-    v.color === SEL.selectedColor
+    v.frame    === SEL.selectedFrame &&
+    v.skuId    === SEL.selectedSku?.id &&
+    v.color    === SEL.selectedColor
   );
   if (dup) return;
   CART.push({
-    id: Date.now(), frame: SEL.selectedFrame,
-    mat: SEL.selectedMat, matName: mat?.name,
-    color: SEL.selectedColor, colorName: col?.name,
-    colorHex: getColorHex(SEL.selectedMat, SEL.selectedColor),
-    price: base + matAdd + colorAdd,
-    summary: `${SEL.selectedFrame}帧 · ${mat?.name} · ${col?.name}`,
+    id:        Date.now(),
+    frame:     SEL.selectedFrame,
+    skuId:     SEL.selectedSku?.id,
+    size:      SEL.selectedSku?.size,
+    material:  SEL.selectedSku?.material,
+    color:     SEL.selectedColor,
+    colorName: colorOpt?.name || SEL.selectedColor,
+    colorHex:  colorOpt?.hex  || '#D4B896',
+    price:     0,
+    summary:   `${SEL.selectedFrame}帧 · ${SEL.selectedSku?.size} · ${SEL.selectedSku?.material} · ${colorOpt?.name || ''}`,
   });
 }
 
 function saveToStorage() {
   try {
     const meta = JSON.parse(localStorage.getItem('mowo_customize_meta') || '{}');
-    meta.cart        = CART;
-    meta.cartTotal   = CART.reduce((s, v) => s + v.price, 0);
-    meta.machineType = SEL.machineType;
-    meta.frameCount  = SEL.frameCount;
+    meta.cart       = CART;
+    meta.modelId    = SEL.modelId;
+    meta.modelName  = SEL.modelName;
+    meta.frameCount = SEL.frameCount;
     localStorage.setItem('mowo_customize_meta', JSON.stringify(meta));
   } catch(e) {}
 }
@@ -1171,6 +1493,111 @@ if (window.matchMedia('(pointer:fine)').matches) {
   });
 }
 </script>
+<!-- 上传进度弹窗 -->
+<div id="uploadOverlay" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(17,17,16,.7);display:none;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fff;border-radius:24px;padding:36px 32px;max-width:380px;width:100%;text-align:center;">
+    <div style="font-size:36px;margin-bottom:16px;">⏳</div>
+    <p style="font-weight:900;font-size:18px;color:#111;margin-bottom:8px;">正在提交定制</p>
+    <p style="font-weight:700;font-size:13px;color:#787874;margin-bottom:20px;" id="uploadStatusText">正在上传帧图片…</p>
+    <div style="background:#EBEBEA;border-radius:999px;height:6px;overflow:hidden;">
+      <div id="uploadProgressBar" style="height:100%;background:#111110;border-radius:999px;width:0%;transition:width .3s;"></div>
+    </div>
+    <p style="font-weight:700;font-size:12px;color:#787874;margin-top:8px;" id="uploadProgressText">0%</p>
+  </div>
+</div>
+
+<!-- 订单成功弹窗 -->
+<div id="orderSuccessOverlay" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(17,17,16,.7);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fff;border-radius:24px;padding:36px 32px;max-width:420px;width:100%;text-align:center;">
+    <div style="font-size:48px;margin-bottom:16px;">🎉</div>
+    <p style="font-weight:900;font-size:22px;color:#111;margin-bottom:8px;">定制已提交！</p>
+    <p style="font-weight:700;font-size:13px;color:#787874;margin-bottom:24px;line-height:1.7;">
+      你的帧图片已保存，订单已创建。<br>请添加客服微信完成支付，支付后我们将开始生产。
+    </p>
+
+    <!-- 订单号 -->
+    <div style="background:#F5F3EF;border-radius:16px;padding:16px;margin-bottom:20px;">
+      <p style="font-weight:700;font-size:12px;color:#787874;margin-bottom:6px;letter-spacing:.08em;">订单号</p>
+      <p style="font-weight:900;font-size:20px;color:#111;letter-spacing:.04em;" id="resultOrderNo">—</p>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <button onclick="copyOrderNo()" style="width:100%;height:50px;border-radius:12px;background:#F5E642;color:#111110;font-family:inherit;font-weight:900;font-size:15px;border:none;cursor:pointer;">
+        📋 复制订单号
+      </button>
+      <a href="https://work.weixin.qq.com" target="_blank"
+         style="display:flex;align-items:center;justify-content:center;width:100%;height:50px;border-radius:12px;background:#111110;color:#fff;font-weight:900;font-size:15px;text-decoration:none;">
+        💬 联系客服完成支付
+      </a>
+      <button onclick="location.href='index.html'" style="width:100%;height:44px;border-radius:12px;background:none;color:#787874;font-family:inherit;font-weight:800;font-size:14px;border:1.5px solid #EBEBEA;cursor:pointer;">
+        返回首页
+      </button>
+    </div>
+
+    <!-- 提示 -->
+    <p style="font-weight:700;font-size:11px;color:#C4C3BF;margin-top:16px;line-height:1.6;">
+      请截图保存订单号，客服核实后将发送支付链接。<br>支付完成后生产周期约 7—14 个工作日。
+    </p>
+  </div>
+</div>
+
 <script src="../js/auth.js"></script>
+<script>
+(function syncMobileAuth() {
+  function applyState() {
+    var navLoginBtn     = document.getElementById('navLoginBtn');
+    var mowoNavUser     = document.getElementById('mowoNavUser');
+    var mobileLoginBtn  = document.getElementById('mobileLoginBtn');
+    var mobileAvatar    = document.getElementById('mobileMenuAvatar');
+    var mobileAvatarBtn = document.getElementById('mobileMenuAvatarBtn');
+    var mobileAvatarName= document.getElementById('mobileMenuAvatarName');
+    if (!mobileLoginBtn) return;
+
+    var loggedIn = (navLoginBtn && navLoginBtn.style.display === 'none')
+                || (mowoNavUser && mowoNavUser.classList.contains('show'));
+
+    if (loggedIn) {
+      mobileLoginBtn.style.display = 'none';
+      if (mobileAvatar) mobileAvatar.style.display = 'flex';
+      var uname   = document.getElementById('mowoNavUname');
+      var initial = document.getElementById('mowoNavAvatarInitial');
+      if (mobileAvatarBtn) mobileAvatarBtn.textContent = (initial && initial.textContent) || '?';
+      if (mobileAvatarName) mobileAvatarName.textContent = (uname && uname.textContent) || '我的账户';
+      if (mobileAvatarBtn) mobileAvatarBtn.onclick = function() {
+        document.getElementById('mowoNavAvatarBtn')?.click();
+        closeMenu();
+      };
+    } else {
+      mobileLoginBtn.style.display = '';
+      if (mobileAvatar) mobileAvatar.style.display = 'none';
+      mobileLoginBtn.onclick = function() { closeMenu(); window.openAuthModal && window.openAuthModal(); };
+    }
+  }
+
+  function startObserving() {
+    var navLoginBtn = document.getElementById('navLoginBtn');
+    var mowoNavUser = document.getElementById('mowoNavUser');
+    if (navLoginBtn) {
+      new MutationObserver(applyState).observe(navLoginBtn, {
+        attributes: true, attributeFilter: ['style']
+      });
+    }
+    if (mowoNavUser) {
+      new MutationObserver(applyState).observe(mowoNavUser, {
+        attributes: true, attributeFilter: ['class']
+      });
+    }
+    applyState();
+  }
+
+  if (document.readyState === 'complete') {
+    startObserving();
+  } else {
+    window.addEventListener('load', startObserving);
+  }
+  setTimeout(applyState, 800);
+})();
+</script>
 </body>
 </html>

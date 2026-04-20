@@ -1,327 +1,234 @@
 // src/routes/settlement.js
-// 分红结算相关接口
+// 分红结算系统：管理端结算操作 + 创作者收益查询
 //
-// 路由分三组：
-//   /api/internal/settlement/*  — 定时任务专用（内部调用，IP白名单保护）
-//   /api/admin/settlement/*     — 管理员操作
-//   /api/creator/settlement/*   — 创作者查看
-
-// ─────────────────────────────────────────────────────────────
-// 工具函数
-// ─────────────────────────────────────────────────────────────
-
-// 获取当前结算周标识，如 "2026-W14"
-function getCurrentWeek() {
-  const now = new Date()
-  const startOfYear = new Date(now.getFullYear(), 0, 1)
-  const dayOfYear = Math.floor((now - startOfYear) / 86400000)
-  const week = Math.ceil((dayOfYear + startOfYear.getDay() + 1) / 7)
-  return `${now.getFullYear()}-W${String(week).padStart(2, '0')}`
-}
-
-// 计算冷却期截止时间（确认收货时间 + 15天）
-function calcCoolingEnd(confirmedAt) {
-  const d = new Date(confirmedAt)
-  d.setDate(d.getDate() + 15)
-  return d
-}
-
-// 计算储备金释放时间（确认收货时间 + 90天）
-function calcReserveReleaseAt(confirmedAt) {
-  const d = new Date(confirmedAt)
-  d.setDate(d.getDate() + 90)
-  return d
-}
+// 路由清单：
+//   管理端（role >= 2）：
+//     GET  /api/admin/settlement/pending       待结算汇总（按创作者分组）
+//     GET  /api/admin/settlement/history       历史结算记录
+//     POST /api/admin/settlement/settle        确认打款
+//
+//   创作者端（certifyStatus = 2）：
+//     GET  /api/creator/settlement/summary     收益总览
+//     GET  /api/creator/settlement/orders      联名分红明细列表
+//     GET  /api/creator/settlement/reserve     储备金状态 + 流水
 
 export default async function settlementRoutes(fastify) {
 
-  // ═══════════════════════════════════════════════════════════
-  // 内部定时任务接口
-  // ═══════════════════════════════════════════════════════════
+  const requireAdmin = fastify.requireRole(2)
 
-  // ─────────────────────────────────────────
-  // POST /api/internal/settlement/cooling-to-available
-  // 定时任务：冷却期满 → 分红转为可提现
-  // 建议每天凌晨跑一次（cron: 0 2 * * *）
-  // ─────────────────────────────────────────
-  fastify.post('/internal/cooling-to-available', async (request, reply) => {
-    const clientIp = request.ip
-    if (clientIp !== '127.0.0.1' && clientIp !== '::1' && clientIp !== '::ffff:127.0.0.1') {
-      return reply.code(403).send({ success: false, message: '仅限内部调用' })
-    }
-
-    const now = new Date()
-
-    // 找出所有冷却期已到期、状态还是 cooling 的联名订单
-    const readyOrders = await fastify.prisma.collabOrder.findMany({
-      where: {
-        revenueStatus: 'cooling',
-        coolingEndAt: { lte: now }
-      }
-    })
-
-    if (readyOrders.length === 0) {
-      return reply.send({ success: true, message: '没有到期订单', count: 0 })
-    }
-
-    // 按创作者分组
-    const creatorMap = {}
-    for (const order of readyOrders) {
-      if (!creatorMap[order.creatorId]) creatorMap[order.creatorId] = 0
-      creatorMap[order.creatorId] += order.payoutAmount
-    }
-
-    await fastify.prisma.$transaction(async (tx) => {
-      // 批量将订单状态改为 available
-      await tx.collabOrder.updateMany({
-        where: { id: { in: readyOrders.map(o => o.id) } },
-        data: { revenueStatus: 'available' }
+  async function requireCreator(request, reply) {
+    await fastify.authenticate(request, reply)
+    if (request.user.certifyStatus !== 2) {
+      return reply.code(403).send({
+        success: false,
+        message: '需要创作者认证才能使用此功能'
       })
-
-      // 按创作者更新 Balance：pendingAmount → availableAmount
-      for (const [creatorId, amount] of Object.entries(creatorMap)) {
-        await tx.balance.upsert({
-          where: { creatorId },
-          create: {
-            creatorId,
-            pendingAmount: 0,
-            availableAmount: amount,
-            withdrawnAmount: 0
-          },
-          update: {
-            pendingAmount:   { decrement: amount },
-            availableAmount: { increment: amount }
-          }
-        })
-      }
-    })
-
-    await fastify.prisma.operationLog.create({
-      data: {
-        userId:   'system',
-        userRole: -1,
-        method:   'POST',
-        path:     '/api/internal/settlement/cooling-to-available',
-        action:   'COOLING_TO_AVAILABLE',
-        after:    JSON.stringify({ count: readyOrders.length, creatorCount: Object.keys(creatorMap).length }),
-        ip:       clientIp
-      }
-    })
-
-    return reply.send({
-      success: true,
-      message: `已处理 ${readyOrders.length} 笔订单，涉及 ${Object.keys(creatorMap).length} 位创作者`,
-      count: readyOrders.length
-    })
-  })
-
-  // ─────────────────────────────────────────
-  // POST /api/internal/settlement/release-reserve
-  // 定时任务：储备金 90 天到期 → 释放回可提现余额
-  // 建议每天凌晨跑一次（cron: 0 3 * * *）
-  // ─────────────────────────────────────────
-  fastify.post('/internal/release-reserve', async (request, reply) => {
-    const clientIp = request.ip
-    if (clientIp !== '127.0.0.1' && clientIp !== '::1' && clientIp !== '::ffff:127.0.0.1') {
-      return reply.code(403).send({ success: false, message: '仅限内部调用' })
     }
+  }
 
-    const now = new Date()
+  // 计算 ISO 周号，格式 2026-W14
+  function getISOWeek(date = new Date()) {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+    const dayNum = d.getUTCDay() || 7
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum)
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+    const week = Math.ceil((((d - yearStart) / 86400000) + 1) / 7)
+    return `${d.getUTCFullYear()}-W${String(week).padStart(2, '0')}`
+  }
 
-    // 找出所有到期待释放的储备金流水
-    // note 不含 [released] 表示尚未处理
-    const dueReserveLogs = await fastify.prisma.reserveLog.findMany({
-      where: {
-        actionType: 'deduct',
-        releaseAt:  { lte: now },
-        note:       { not: { contains: '[released]' } }
-      }
-    })
-
-    if (dueReserveLogs.length === 0) {
-      return reply.send({ success: true, message: '没有到期储备金', count: 0 })
-    }
-
-    // 按创作者分组
-    const creatorReleaseMap = {}
-    for (const log of dueReserveLogs) {
-      if (!creatorReleaseMap[log.creatorId]) creatorReleaseMap[log.creatorId] = []
-      creatorReleaseMap[log.creatorId].push(log)
-    }
-
-    await fastify.prisma.$transaction(async (tx) => {
-      for (const [creatorId, logs] of Object.entries(creatorReleaseMap)) {
-        const totalRelease = logs.reduce((sum, l) => sum + l.amount, 0)
-
-        const reserve = await tx.creatorReserve.findUnique({ where: { creatorId } })
-        const newReleasable = Math.max(0, (reserve?.releasableAmount ?? 0) - totalRelease)
-        const newReleased   = (reserve?.releasedAmount ?? 0) + totalRelease
-
-        await tx.creatorReserve.update({
-          where: { creatorId },
-          data: {
-            releasableAmount: newReleasable,
-            releasedAmount:   newReleased
-          }
-        })
-
-        await tx.reserveLog.create({
-          data: {
-            creatorId,
-            actionType:  'release',
-            amount:      totalRelease,
-            balanceAfter: newReleasable,
-            note:        `释放 ${logs.length} 笔储备金`
-          }
-        })
-
-        // 标记原始 deduct 记录已处理
-        await tx.reserveLog.updateMany({
-          where: { id: { in: logs.map(l => l.id) } },
-          data:  { note: '[released]' }
-        })
-
-        // 将释放金额打入可提现余额
-        await tx.balance.upsert({
-          where: { creatorId },
-          create: {
-            creatorId,
-            pendingAmount:   0,
-            availableAmount: totalRelease,
-            withdrawnAmount: 0
-          },
-          update: {
-            availableAmount: { increment: totalRelease }
-          }
-        })
-      }
-    })
-
-    const totalAmount = dueReserveLogs.reduce((sum, l) => sum + l.amount, 0)
-
-    return reply.send({
-      success: true,
-      message: `已释放 ${dueReserveLogs.length} 笔储备金，涉及 ${Object.keys(creatorReleaseMap).length} 位创作者，合计 ¥${totalAmount.toFixed(2)}`,
-      count: dueReserveLogs.length
-    })
-  })
-
-  // ═══════════════════════════════════════════════════════════
-  // 管理员接口（role >= 2）
-  // ═══════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════
+  // 管理端接口
+  // ══════════════════════════════════════════
 
   // ─────────────────────────────────────────
   // GET /api/admin/settlement/pending
-  // 查询所有待结算汇总，按创作者分组
+  // 待结算汇总：revenueStatus=available 且 settlementStatus=pending
+  // 按创作者分组，展示每人应收金额
   // ─────────────────────────────────────────
-  fastify.get('/admin/pending', {
-    preHandler: fastify.requireRole(2)
+  fastify.get('/admin/settlement/pending', {
+    preHandler: requireAdmin
   }, async (request, reply) => {
-    const { week } = request.query
-    const targetWeek = week || getCurrentWeek()
 
-    // 所有状态为 available、尚未结算的订单
     const orders = await fastify.prisma.collabOrder.findMany({
       where: {
-        revenueStatus:    'available',
+        revenueStatus: 'available',
         settlementStatus: 'pending'
       },
       include: {
         collabWork: { select: { title: true } }
-      }
+      },
+      orderBy: { createdAt: 'asc' }
     })
 
-    // 按创作者分组汇总
-    const creatorMap = {}
-    for (const order of orders) {
-      const cid = order.creatorId
-      if (!creatorMap[cid]) {
-        creatorMap[cid] = {
-          creatorId:      cid,
-          orderCount:     0,
-          totalRevenue:   0,
-          reserveDeducted: 0,
-          payoutAmount:   0,
-          orders:         []
-        }
-      }
-      creatorMap[cid].orderCount++
-      creatorMap[cid].totalRevenue    += order.revenueAmount
-      creatorMap[cid].reserveDeducted += order.reserveAmount
-      creatorMap[cid].payoutAmount    += order.payoutAmount
-      creatorMap[cid].orders.push({
-        id:            order.id,
-        orderId:       order.orderId,
-        workTitle:     order.collabWork?.title || '未知作品',
-        salePrice:     order.salePrice,
-        revenueRate:   order.revenueRate,
-        revenueAmount: order.revenueAmount,
-        reserveAmount: order.reserveAmount,
-        payoutAmount:  order.payoutAmount,
-        createdAt:     order.createdAt
+    if (orders.length === 0) {
+      return reply.send({
+        success: true,
+        data: { creators: [], totalPayout: 0, orderCount: 0, currentWeek: getISOWeek() }
       })
     }
 
-    // 带出创作者昵称和头像
-    const creatorIds = Object.keys(creatorMap)
-    if (creatorIds.length > 0) {
-      const profiles = await fastify.prisma.userProfile.findMany({
-        where:  { userId: { in: creatorIds } },
-        select: { userId: true, nickname: true, avatarUrl: true }
-      })
-      for (const p of profiles) {
-        if (creatorMap[p.userId]) {
-          creatorMap[p.userId].nickname  = p.nickname
-          creatorMap[p.userId].avatarUrl = p.avatarUrl
+    // 按 creatorId 分组
+    const grouped = {}
+    for (const o of orders) {
+      if (!grouped[o.creatorId]) {
+        grouped[o.creatorId] = {
+          creatorId:    o.creatorId,
+          orderCount:   0,
+          totalRevenue: 0,
+          totalReserve: 0,
+          totalPayout:  0,
+          orders:       []
         }
       }
+      const g = grouped[o.creatorId]
+      g.orderCount++
+      g.totalRevenue += o.revenueAmount
+      g.totalReserve += o.reserveAmount
+      g.totalPayout  += o.payoutAmount
+      g.orders.push({
+        id:            o.id,
+        orderId:       o.orderId,
+        workTitle:     o.collabWork?.title ?? '-',
+        salePrice:     o.salePrice,
+        revenueRate:   o.revenueRate,
+        revenueAmount: o.revenueAmount,
+        reserveAmount: o.reserveAmount,
+        payoutAmount:  o.payoutAmount,
+        coolingEndAt:  o.coolingEndAt,
+        createdAt:     o.createdAt
+      })
     }
 
-    const list = Object.values(creatorMap).sort((a, b) => b.payoutAmount - a.payoutAmount)
+    // 批量拉创作者昵称
+    const creatorIds = Object.keys(grouped)
+    const profiles = await fastify.prisma.userProfile.findMany({
+      where: { userId: { in: creatorIds } },
+      select: { userId: true, nickname: true, avatarUrl: true }
+    })
+    const profileMap = Object.fromEntries(profiles.map(p => [p.userId, p]))
+
+    const creators = creatorIds.map(id => {
+      const g = grouped[id]
+      const p = profileMap[id] || {}
+      return {
+        ...g,
+        nickname:     p.nickname  || '未设置昵称',
+        avatarUrl:    p.avatarUrl || null,
+        totalRevenue: +g.totalRevenue.toFixed(2),
+        totalReserve: +g.totalReserve.toFixed(2),
+        totalPayout:  +g.totalPayout.toFixed(2)
+      }
+    })
 
     return reply.send({
       success: true,
       data: {
-        week:         targetWeek,
-        creatorCount: list.length,
-        totalPayout:  list.reduce((s, c) => s + c.payoutAmount, 0),
-        list
+        creators,
+        totalPayout:  +creators.reduce((s, c) => s + c.totalPayout, 0).toFixed(2),
+        orderCount:   creators.reduce((s, c) => s + c.orderCount, 0),
+        currentWeek:  getISOWeek()
+      }
+    })
+  })
+
+  // ─────────────────────────────────────────
+  // GET /api/admin/settlement/history
+  // 历史结算记录，支持按创作者/周/状态筛选
+  // ─────────────────────────────────────────
+  fastify.get('/admin/settlement/history', {
+    preHandler: requireAdmin,
+    schema: {
+      querystring: {
+        type: 'object',
+        properties: {
+          page:           { type: 'integer', minimum: 1, default: 1 },
+          limit:          { type: 'integer', minimum: 1, maximum: 500, default: 20 },
+          creatorId:      { type: 'string' },
+          settlementWeek: { type: 'string' },
+          status:         { type: 'string', enum: ['pending', 'paid', 'failed'] }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    const { page, limit, creatorId, settlementWeek, status } = request.query
+    const skip = (page - 1) * limit
+
+    const where = {
+      ...(creatorId      ? { creatorId }      : {}),
+      ...(settlementWeek ? { settlementWeek } : {}),
+      ...(status         ? { status }         : {})
+    }
+
+    const [records, total] = await Promise.all([
+      fastify.prisma.settlementRecord.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          creator: {
+            select: { profile: { select: { nickname: true, avatarUrl: true } } }
+          },
+          settledByUser: {
+            select: { profile: { select: { nickname: true } } }
+          }
+        }
+      }),
+      fastify.prisma.settlementRecord.count({ where })
+    ])
+
+    const formatted = records.map(r => ({
+      id:              r.id,
+      settlementWeek:  r.settlementWeek,
+      creatorId:       r.creatorId,
+      nickname:        r.creator?.profile?.nickname  || '未设置昵称',
+      avatarUrl:       r.creator?.profile?.avatarUrl || null,
+      orderCount:      r.orderCount,
+      totalRevenue:    +r.totalRevenue.toFixed(2),
+      reserveDeducted: +r.reserveDeducted.toFixed(2),
+      payoutAmount:    +r.payoutAmount.toFixed(2),
+      status:          r.status,
+      settledBy:       r.settledByUser?.profile?.nickname || null,
+      settledAt:       r.settledAt,
+      note:            r.note,
+      createdAt:       r.createdAt
+    }))
+
+    return reply.send({
+      success: true,
+      data: {
+        records: formatted,
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
       }
     })
   })
 
   // ─────────────────────────────────────────
   // POST /api/admin/settlement/settle
-  // 确认打款：对指定创作者结算
-  // body: { creatorId, week?, note? }
+  // 确认打款：对某创作者的所有 available 订单一次性结算
+  //
+  // 事务步骤：
+  //   1. 写/更新 settlement_records 凭证（paid）
+  //   2. 将该批 collab_orders 标记 settlementStatus=settled
+  //   3. payoutAmount 累加进 balances.availableAmount
   // ─────────────────────────────────────────
-  fastify.post('/admin/settle', {
-    preHandler: fastify.requireRole(2),
+  fastify.post('/admin/settlement/settle', {
+    preHandler: requireAdmin,
     schema: {
       body: {
         type: 'object',
         required: ['creatorId'],
         properties: {
           creatorId: { type: 'string' },
-          week:      { type: 'string' },
           note:      { type: 'string', maxLength: 500 }
         }
       }
     }
   }, async (request, reply) => {
+    const { userId: adminId } = request.user
     const { creatorId, note } = request.body
-    const week    = request.body.week || getCurrentWeek()
-    const adminId = request.user.userId
+    const settlementWeek = getISOWeek()
 
-    // 防止重复结算
-    const existing = await fastify.prisma.settlementRecord.findUnique({
-      where: { settlementWeek_creatorId: { settlementWeek: week, creatorId } }
-    })
-    if (existing?.status === 'paid') {
-      return reply.code(400).send({ success: false, message: `${week} 该创作者已结算完毕` })
-    }
-
-    // 找出所有可结算订单
     const orders = await fastify.prisma.collabOrder.findMany({
       where: {
         creatorId,
@@ -331,422 +238,278 @@ export default async function settlementRoutes(fastify) {
     })
 
     if (orders.length === 0) {
-      return reply.code(400).send({ success: false, message: '该创作者暂无可结算订单' })
+      return reply.code(400).send({
+        success: false,
+        message: '该创作者暂无可结算订单'
+      })
+    }
+
+    // 防同周重复打款
+    const existing = await fastify.prisma.settlementRecord.findUnique({
+      where: { settlementWeek_creatorId: { settlementWeek, creatorId } }
+    })
+    if (existing?.status === 'paid') {
+      return reply.code(400).send({
+        success: false,
+        message: `本周（${settlementWeek}）已完成结算，请勿重复操作`
+      })
     }
 
     const totalRevenue    = orders.reduce((s, o) => s + o.revenueAmount, 0)
     const reserveDeducted = orders.reduce((s, o) => s + o.reserveAmount, 0)
     const payoutAmount    = orders.reduce((s, o) => s + o.payoutAmount,  0)
+    const orderIds        = orders.map(o => o.id)
+    const now             = new Date()
 
     await fastify.prisma.$transaction(async (tx) => {
-      // 1. 订单状态 → settled
-      await tx.collabOrder.updateMany({
-        where: { id: { in: orders.map(o => o.id) } },
-        data: {
-          revenueStatus:    'withdrawn',
-          settlementStatus: 'settled',
-          settlementWeek:   week,
-          settledAt:        new Date()
-        }
-      })
-
-      // 2. 写或更新结算凭证
+      // 1. 写结算凭证
       await tx.settlementRecord.upsert({
-        where: { settlementWeek_creatorId: { settlementWeek: week, creatorId } },
+        where:  { settlementWeek_creatorId: { settlementWeek, creatorId } },
         create: {
-          settlementWeek:  week,
+          settlementWeek,
           creatorId,
           orderCount:      orders.length,
-          totalRevenue,
-          reserveDeducted,
-          payoutAmount,
-          status:    'paid',
-          settledBy: adminId,
-          settledAt: new Date(),
-          note:      note || null
+          totalRevenue:    +totalRevenue.toFixed(4),
+          reserveDeducted: +reserveDeducted.toFixed(4),
+          payoutAmount:    +payoutAmount.toFixed(4),
+          status:          'paid',
+          settledBy:       adminId,
+          settledAt:       now,
+          note:            note || null
         },
         update: {
           orderCount:      orders.length,
-          totalRevenue,
-          reserveDeducted,
-          payoutAmount,
-          status:    'paid',
-          settledBy: adminId,
-          settledAt: new Date(),
-          note:      note || null
+          totalRevenue:    +totalRevenue.toFixed(4),
+          reserveDeducted: +reserveDeducted.toFixed(4),
+          payoutAmount:    +payoutAmount.toFixed(4),
+          status:          'paid',
+          settledBy:       adminId,
+          settledAt:       now,
+          note:            note || null
         }
       })
 
-      // 3. Balance：扣减 availableAmount，累加 withdrawnAmount
-      await tx.balance.update({
-        where: { creatorId },
+      // 2. 批量标记订单已结算
+      await tx.collabOrder.updateMany({
+        where: { id: { in: orderIds } },
         data: {
-          availableAmount: { decrement: payoutAmount },
-          withdrawnAmount: { increment: payoutAmount }
+          settlementStatus: 'settled',
+          settlementWeek,
+          settledAt: now
+        }
+      })
+
+      // 3. 写入创作者余额（upsert，新创作者自动建账）
+      await tx.balance.upsert({
+        where:  { creatorId },
+        create: {
+          creatorId,
+          pendingAmount:   0,
+          availableAmount: +payoutAmount.toFixed(4),
+          withdrawnAmount: 0
+        },
+        update: {
+          availableAmount: { increment: +payoutAmount.toFixed(4) }
         }
       })
     })
 
-    await fastify.prisma.operationLog.create({
-      data: {
-        userId:   adminId,
-        userRole: request.user.role,
-        method:   'POST',
-        path:     '/api/admin/settlement/settle',
-        action:   'SETTLEMENT_PAID',
-        targetId: creatorId,
-        after:    JSON.stringify({ week, payoutAmount, orderCount: orders.length }),
-        ip:       request.ip
-      }
-    })
-
     return reply.send({
       success: true,
-      message: `结算成功，共 ${orders.length} 笔，实际打款 ¥${payoutAmount.toFixed(2)}`,
-      data: { week, creatorId, orderCount: orders.length, totalRevenue, reserveDeducted, payoutAmount }
-    })
-  })
-
-  // ─────────────────────────────────────────
-  // GET /api/admin/settlement/history
-  // 历史结算记录，支持按创作者/结算周筛选
-  // ─────────────────────────────────────────
-  fastify.get('/admin/history', {
-    preHandler: fastify.requireRole(2)
-  }, async (request, reply) => {
-    const { creatorId, week, page = 1, pageSize = 20 } = request.query
-    const skip = (Number(page) - 1) * Number(pageSize)
-
-    const where = { status: 'paid' }
-    if (creatorId) where.creatorId = creatorId
-    if (week)      where.settlementWeek = week
-
-    const [total, records] = await Promise.all([
-      fastify.prisma.settlementRecord.count({ where }),
-      fastify.prisma.settlementRecord.findMany({
-        where,
-        orderBy: { settledAt: 'desc' },
-        skip,
-        take: Number(pageSize),
-        include: {
-          creator: {
-            select: { profile: { select: { nickname: true, avatarUrl: true } } }
-          },
-          settledByUser: {
-            select: { profile: { select: { nickname: true } } }
-          }
-        }
-      })
-    ])
-
-    return reply.send({
-      success: true,
+      message: `结算成功，已向创作者打款 ¥${payoutAmount.toFixed(2)}`,
       data: {
-        total,
-        page:     Number(page),
-        pageSize: Number(pageSize),
-        list: records.map(r => ({
-          id:              r.id,
-          settlementWeek:  r.settlementWeek,
-          creatorId:       r.creatorId,
-          nickname:        r.creator?.profile?.nickname   || '未知',
-          avatarUrl:       r.creator?.profile?.avatarUrl  || null,
-          orderCount:      r.orderCount,
-          totalRevenue:    r.totalRevenue,
-          reserveDeducted: r.reserveDeducted,
-          payoutAmount:    r.payoutAmount,
-          status:          r.status,
-          settledBy:       r.settledByUser?.profile?.nickname || '未知管理员',
-          settledAt:       r.settledAt,
-          note:            r.note
-        }))
+        settlementWeek,
+        creatorId,
+        orderCount:   orders.length,
+        payoutAmount: +payoutAmount.toFixed(2)
       }
     })
   })
 
-  // ═══════════════════════════════════════════════════════════
-  // 创作者接口（certifyStatus = 2）
-  // ═══════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════
+  // 创作者端接口
+  // ══════════════════════════════════════════
 
   // ─────────────────────────────────────────
   // GET /api/creator/settlement/summary
-  // 收益总览：各状态金额 + 储备金 + 钱包余额
+  // 收益总览：各状态金额 + 余额 + 储备金快照
+  // 前端用：creator-dashboard.html 顶部数字卡片
   // ─────────────────────────────────────────
-  fastify.get('/creator/summary', {
-    preHandler: fastify.authenticate
+  fastify.get('/creator/settlement/summary', {
+    preHandler: requireCreator
   }, async (request, reply) => {
     const { userId } = request.user
 
-    if (request.user.certifyStatus < 2) {
-      return reply.code(403).send({ success: false, message: '需要完成创作者认证' })
-    }
-
-    const [estimated, cooling, available, withdrawn, reserve, balance, nextCooling] = await Promise.all([
-      fastify.prisma.collabOrder.aggregate({
-        where: { creatorId: userId, revenueStatus: 'estimated' },
-        _sum:  { revenueAmount: true }
+    const [orderStats, balance, reserve] = await Promise.all([
+      fastify.prisma.collabOrder.groupBy({
+        by: ['revenueStatus'],
+        where: { creatorId: userId },
+        _sum:   { payoutAmount: true },
+        _count: { id: true }
       }),
-      fastify.prisma.collabOrder.aggregate({
-        where: { creatorId: userId, revenueStatus: 'cooling' },
-        _sum:  { revenueAmount: true }
-      }),
-      fastify.prisma.collabOrder.aggregate({
-        where: { creatorId: userId, revenueStatus: 'available' },
-        _sum:  { payoutAmount: true }
-      }),
-      fastify.prisma.collabOrder.aggregate({
-        where: { creatorId: userId, revenueStatus: 'withdrawn' },
-        _sum:  { payoutAmount: true }
-      }),
-      fastify.prisma.creatorReserve.findUnique({ where: { creatorId: userId } }),
       fastify.prisma.balance.findUnique({ where: { creatorId: userId } }),
-      fastify.prisma.collabOrder.findFirst({
-        where:   { creatorId: userId, revenueStatus: 'cooling' },
-        orderBy: { coolingEndAt: 'asc' },
-        select:  { coolingEndAt: true }
-      })
+      fastify.prisma.creatorReserve.findUnique({ where: { creatorId: userId } })
     ])
+
+    const statsMap = {}
+    for (const s of orderStats) {
+      statsMap[s.revenueStatus] = {
+        amount: +(s._sum.payoutAmount || 0).toFixed(2),
+        count:  s._count.id
+      }
+    }
 
     return reply.send({
       success: true,
       data: {
-        estimatedAmount:  estimated._sum.revenueAmount || 0,   // 预估中（订单未收货）
-        coolingAmount:    cooling._sum.revenueAmount   || 0,   // 冷却中（等15天）
-        availableAmount:  available._sum.payoutAmount  || 0,   // 可结算
-        withdrawnAmount:  withdrawn._sum.payoutAmount  || 0,   // 已提现累计
-        nextCoolingEndAt: nextCooling?.coolingEndAt    || null, // 最近一笔解冻时间
-
-        reserve: {
-          releasableAmount:  reserve?.releasableAmount  || 0,
-          frozenAmount:      reserve?.frozenAmount      || 0,
-          nextReleaseAt:     reserve?.nextReleaseAt     || null,
-          nextReleaseAmount: reserve?.nextReleaseAmount || 0
+        estimated: statsMap['estimated'] || { amount: 0, count: 0 },
+        cooling:   statsMap['cooling']   || { amount: 0, count: 0 },
+        available: statsMap['available'] || { amount: 0, count: 0 },
+        withdrawn: statsMap['withdrawn'] || { amount: 0, count: 0 },
+        balance: {
+          availableAmount: balance ? +balance.availableAmount.toFixed(2) : 0,
+          withdrawnAmount: balance ? +balance.withdrawnAmount.toFixed(2) : 0
         },
-
-        walletBalance: balance?.availableAmount || 0
+        reserve: reserve ? {
+          totalReserved:     +reserve.totalReserved.toFixed(2),
+          releasableAmount:  +reserve.releasableAmount.toFixed(2),
+          frozenAmount:      +reserve.frozenAmount.toFixed(2),
+          releasedAmount:    +reserve.releasedAmount.toFixed(2),
+          nextReleaseAt:     reserve.nextReleaseAt,
+          nextReleaseAmount: +reserve.nextReleaseAmount.toFixed(2)
+        } : {
+          totalReserved: 0, releasableAmount: 0, frozenAmount: 0,
+          releasedAmount: 0, nextReleaseAt: null, nextReleaseAmount: 0
+        }
       }
     })
   })
 
   // ─────────────────────────────────────────
-  // GET /api/creator/settlement/detail
-  // 分红明细列表，支持按状态筛选和分页
+  // GET /api/creator/settlement/orders
+  // 联名分红明细列表（分页 + 状态筛选）
+  // 前端用：creator-earnings.html 明细表格
   // ─────────────────────────────────────────
-  fastify.get('/creator/detail', {
-    preHandler: fastify.authenticate
+  fastify.get('/creator/settlement/orders', {
+    preHandler: requireCreator,
+    schema: {
+      querystring: {
+        type: 'object',
+        properties: {
+          page:          { type: 'integer', minimum: 1, default: 1 },
+          limit:         { type: 'integer', minimum: 1, maximum: 50, default: 20 },
+          revenueStatus: {
+            type: 'string',
+            enum: ['estimated', 'cooling', 'available', 'withdrawn']
+          }
+        }
+      }
+    }
   }, async (request, reply) => {
     const { userId } = request.user
+    const { page, limit, revenueStatus } = request.query
+    const skip = (page - 1) * limit
 
-    if (request.user.certifyStatus < 2) {
-      return reply.code(403).send({ success: false, message: '需要完成创作者认证' })
+    const where = {
+      creatorId: userId,
+      ...(revenueStatus ? { revenueStatus } : {})
     }
 
-    const { status, page = 1, pageSize = 20 } = request.query
-    const skip  = (Number(page) - 1) * Number(pageSize)
-    const where = { creatorId: userId }
-    if (status) where.revenueStatus = status
-
-    const [total, orders] = await Promise.all([
-      fastify.prisma.collabOrder.count({ where }),
+    const [orders, total] = await Promise.all([
       fastify.prisma.collabOrder.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
         skip,
-        take: Number(pageSize),
+        take: limit,
+        orderBy: { createdAt: 'desc' },
         include: {
           collabWork: { select: { title: true, coverUrl: true } }
         }
-      })
+      }),
+      fastify.prisma.collabOrder.count({ where })
     ])
+
+    const formatted = orders.map(o => ({
+      id:            o.id,
+      orderId:       o.orderId,
+      workTitle:     o.collabWork?.title    || '-',
+      workCover:     o.collabWork?.coverUrl || null,
+      // 公式拆解，方便前端展示「¥XX × 20% - 储备金15% = ¥XX」
+      salePrice:     +o.salePrice.toFixed(2),
+      revenueRate:   o.revenueRate,
+      revenueAmount: +o.revenueAmount.toFixed(2),
+      reserveRate:   o.reserveRate,
+      reserveAmount: +o.reserveAmount.toFixed(2),
+      payoutAmount:  +o.payoutAmount.toFixed(2),
+      revenueStatus:  o.revenueStatus,
+      coolingEndAt:   o.coolingEndAt,
+      settlementWeek: o.settlementWeek,
+      settledAt:      o.settledAt,
+      createdAt:      o.createdAt
+    }))
 
     return reply.send({
       success: true,
       data: {
-        total,
-        page:     Number(page),
-        pageSize: Number(pageSize),
-        list: orders.map(o => ({
-          id:             o.id,
-          orderId:        o.orderId,
-          workTitle:      o.collabWork?.title    || '未知作品',
-          workCover:      o.collabWork?.coverUrl || null,
-          salePrice:      o.salePrice,
-          revenueRate:    o.revenueRate,
-          revenueAmount:  o.revenueAmount,   // 分红总额
-          reserveRate:    o.reserveRate,
-          reserveAmount:  o.reserveAmount,   // 储备金扣除
-          payoutAmount:   o.payoutAmount,    // 实际到账
-          revenueStatus:  o.revenueStatus,
-          coolingEndAt:   o.coolingEndAt,
-          settlementWeek: o.settlementWeek,
-          settledAt:      o.settledAt,
-          createdAt:      o.createdAt
-        }))
+        orders: formatted,
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
       }
     })
   })
 
   // ─────────────────────────────────────────
   // GET /api/creator/settlement/reserve
-  // 储备金详情：余额 + 变动流水
+  // 储备金状态 + 近期变动流水
+  // 前端用：creator-earnings.html 储备金区块
   // ─────────────────────────────────────────
-  fastify.get('/creator/reserve', {
-    preHandler: fastify.authenticate
+  fastify.get('/creator/settlement/reserve', {
+    preHandler: requireCreator,
+    schema: {
+      querystring: {
+        type: 'object',
+        properties: {
+          page:  { type: 'integer', minimum: 1, default: 1 },
+          limit: { type: 'integer', minimum: 1, maximum: 20, default: 10 }
+        }
+      }
+    }
   }, async (request, reply) => {
     const { userId } = request.user
+    const { page, limit } = request.query
+    const skip = (page - 1) * limit
 
-    if (request.user.certifyStatus < 2) {
-      return reply.code(403).send({ success: false, message: '需要完成创作者认证' })
-    }
-
-    const { page = 1, pageSize = 20 } = request.query
-    const skip = (Number(page) - 1) * Number(pageSize)
-
-    const [reserve, total, logs] = await Promise.all([
+    const [reserve, logs, total] = await Promise.all([
       fastify.prisma.creatorReserve.findUnique({ where: { creatorId: userId } }),
-      fastify.prisma.reserveLog.count({ where: { creatorId: userId } }),
       fastify.prisma.reserveLog.findMany({
-        where:   { creatorId: userId },
-        orderBy: { createdAt: 'desc' },
+        where: { creatorId: userId },
         skip,
-        take: Number(pageSize)
-      })
+        take: limit,
+        orderBy: { createdAt: 'desc' }
+      }),
+      fastify.prisma.reserveLog.count({ where: { creatorId: userId } })
     ])
 
     return reply.send({
       success: true,
       data: {
-        reserve: {
-          totalReserved:     reserve?.totalReserved     || 0,
-          releasableAmount:  reserve?.releasableAmount  || 0,
-          frozenAmount:      reserve?.frozenAmount      || 0,
-          releasedAmount:    reserve?.releasedAmount    || 0,
-          nextReleaseAt:     reserve?.nextReleaseAt     || null,
-          nextReleaseAmount: reserve?.nextReleaseAmount || 0
-        },
-        logs: {
-          total,
-          page:     Number(page),
-          pageSize: Number(pageSize),
-          list: logs.map(l => ({
-            id:           l.id,
-            actionType:   l.actionType,
-            amount:       l.amount,
-            balanceAfter: l.balanceAfter,
-            releaseAt:    l.releaseAt,
-            note:         l.note,
-            createdAt:    l.createdAt
-          }))
-        }
-      }
-    })
-  })
-
-  // ─────────────────────────────────────────
-  // POST /api/creator/settlement/withdraw
-  // 创作者发起提现申请
-  // 阶段1：写记录 + 冻结余额，灵活用工 API 占位
-  // ─────────────────────────────────────────
-  fastify.post('/creator/withdraw', {
-    preHandler: fastify.authenticate,
-    schema: {
-      body: {
-        type: 'object',
-        required: ['amount', 'method', 'accountName', 'accountNumber'],
-        properties: {
-          amount:        { type: 'number', minimum: 1 },
-          method:        { type: 'string', enum: ['alipay', 'bankcard'] },
-          accountName:   { type: 'string', maxLength: 50 },
-          accountNumber: { type: 'string', maxLength: 100 },
-          bankName:      { type: 'string', maxLength: 100 }
-        }
-      }
-    }
-  }, async (request, reply) => {
-    const { userId } = request.user
-
-    if (request.user.certifyStatus < 2) {
-      return reply.code(403).send({ success: false, message: '需要完成创作者认证' })
-    }
-
-    const { amount, method, accountName, accountNumber, bankName } = request.body
-
-    if (method === 'bankcard' && !bankName) {
-      return reply.code(400).send({ success: false, message: '银行卡提现需填写开户行' })
-    }
-
-    // 验证余额
-    const balance = await fastify.prisma.balance.findUnique({ where: { creatorId: userId } })
-    const available = Number(balance?.availableAmount || 0)
-    if (available < amount) {
-      return reply.code(400).send({
-        success: false,
-        message: `可提现余额不足，当前余额 ¥${available.toFixed(2)}`
-      })
-    }
-
-    // 防止重复提交
-    const pending = await fastify.prisma.withdrawalRequest.findFirst({
-      where: { creatorId: userId, status: 'pending' }
-    })
-    if (pending) {
-      return reply.code(400).send({ success: false, message: '您有一笔提现正在处理中，请勿重复提交' })
-    }
-
-    const withdrawal = await fastify.prisma.$transaction(async (tx) => {
-      const record = await tx.withdrawalRequest.create({
-        data: {
-          creatorId: userId,
-          amount,
-          method,
-          accountName,
-          accountNumber,
-          bankName: bankName || null,
-          status:   'pending'
-        }
-      })
-
-      // 冻结余额（从 availableAmount 移出）
-      await tx.balance.update({
-        where: { creatorId: userId },
-        data:  { availableAmount: { decrement: amount } }
-      })
-
-      return record
-    })
-
-    // ── 灵活用工平台 API 占位 ──────────────────────────────────
-    // TODO: 选定平台后在此处实现
-    //
-    // 需要做的事：
-    //   1. 查询创作者实名信息（来自 CertifyApplication）
-    //   2. 生成"任务完成单"：任务描述 = "联名动画机内容创作"，金额 = amount
-    //   3. 调用平台 API 下发，拿到任务单号写回 withdrawal.note
-    //   4. 平台异步回调时：status → 'approved'，balance.withdrawnAmount += amount
-    //
-    // const taskResult = await callFlexPlatformAPI({ withdrawalId: withdrawal.id, ... })
-    // ──────────────────────────────────────────────────────────
-
-    await fastify.prisma.operationLog.create({
-      data: {
-        userId,
-        userRole: request.user.role,
-        method:   'POST',
-        path:     '/api/creator/settlement/withdraw',
-        action:   'WITHDRAW_REQUEST',
-        targetId: withdrawal.id,
-        after:    JSON.stringify({ amount, method }),
-        ip:       request.ip
-      }
-    })
-
-    return reply.send({
-      success: true,
-      message: '提现申请已提交，预计 1-3 个工作日到账',
-      data: {
-        withdrawalId: withdrawal.id,
-        amount,
-        status: 'pending'
+        reserve: reserve ? {
+          totalReserved:     +reserve.totalReserved.toFixed(2),
+          releasableAmount:  +reserve.releasableAmount.toFixed(2),
+          frozenAmount:      +reserve.frozenAmount.toFixed(2),
+          releasedAmount:    +reserve.releasedAmount.toFixed(2),
+          nextReleaseAt:     reserve.nextReleaseAt,
+          nextReleaseAmount: +reserve.nextReleaseAmount.toFixed(2)
+        } : null,
+        logs: logs.map(l => ({
+          id:           l.id,
+          actionType:   l.actionType,
+          // deduct / release / freeze / unfreeze / confiscate
+          amount:       +l.amount.toFixed(2),
+          balanceAfter: +l.balanceAfter.toFixed(2),
+          releaseAt:    l.releaseAt,
+          note:         l.note,
+          createdAt:    l.createdAt
+        })),
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
       }
     })
   })
