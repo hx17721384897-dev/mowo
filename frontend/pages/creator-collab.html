@@ -148,26 +148,42 @@ input,select,textarea{font-family:var(--font);}
 .source-change{font-weight:800;font-size:12px;color:var(--gray3);text-decoration:underline;cursor:pointer;flex-shrink:0;}
 .source-change:hover{color:var(--black);}
 
-/* ── SKU 多选 ── */
-.sku-grid{display:flex;flex-wrap:wrap;gap:8px;}
+/* ── SKU 区域头部 ── */
+.sku-section-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;}
+.btn-select-all{padding:6px 14px;border-radius:999px;border:1.5px solid var(--gray2);font-weight:800;font-size:12px;color:var(--gray3);background:var(--white);cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .15s;}
+.btn-select-all:hover{border-color:var(--black);color:var(--black);}
+.btn-select-all.all-selected{background:var(--black);color:var(--white);border-color:var(--black);}
+
+/* ── 模型选择列表（fallback） ── */
 .sku-chip{padding:7px 14px;border-radius:10px;font-weight:800;font-size:12px;border:1.5px solid var(--gray1);color:var(--black);background:var(--white);cursor:pointer;transition:all .15s;user-select:none;}
 .sku-chip:hover{border-color:var(--gray2);}
-.sku-chip.selected{border-color:var(--black);background:var(--black);color:var(--white);}
-.sku-chip.selected:hover{background:rgba(17,17,16,.85);}
 .sku-loading{font-weight:700;font-size:13px;color:var(--gray3);padding:12px 0;}
 
-/* ── SKU 分组卡片（草稿锁定款式后） ── */
-.sku-size-group{margin-bottom:14px;}
-.sku-size-label{font-weight:900;font-size:12px;color:var(--black);margin-bottom:7px;letter-spacing:.3px;}
-.sku-chips-row{display:flex;flex-wrap:wrap;gap:7px;}
-.sku-chip-card{display:flex;align-items:center;gap:5px;padding:7px 12px;border-radius:10px;border:1.5px solid var(--gray1);background:var(--white);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;user-select:none;}
-.sku-chip-card:hover{border-color:var(--gray2);}
-.sku-chip-card.selected{border-color:var(--black);background:var(--black);color:var(--white);}
-.sku-chip-card.selected .sku-chip-mat{color:rgba(255,255,255,.7);}
-.sku-chip-frame{font-weight:900;}
-.sku-chip-mat{color:var(--gray3);font-size:10px;}
-.sku-chip-clr{font-size:10px;}
-.sku-color-dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex-shrink:0;border:1px solid rgba(0,0,0,.1);}
+/* ── SKU 分组（按尺寸） ── */
+.sku-size-group{margin-bottom:18px;}
+.sku-size-label{font-weight:900;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gray3);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--gray1);}
+
+/* ── SKU 卡片 ── */
+.sku-cards-row{display:flex;flex-wrap:wrap;gap:8px;}
+.sku-card{
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+  padding:10px 14px;min-width:80px;border-radius:12px;
+  border:1.5px solid var(--gray1);background:var(--white);
+  font-size:12px;font-weight:700;cursor:pointer;
+  transition:border-color .15s,background .15s,box-shadow .15s;
+  user-select:none;position:relative;
+}
+.sku-card:hover{border-color:var(--gray2);box-shadow:0 2px 8px rgba(0,0,0,.06);}
+.sku-card.selected{border-color:var(--black);background:var(--black);color:var(--white);box-shadow:0 2px 10px rgba(0,0,0,.18);}
+.sku-card-check{position:absolute;top:5px;right:7px;font-size:10px;font-weight:900;color:var(--accent-y);opacity:0;transition:opacity .15s;}
+.sku-card.selected .sku-card-check{opacity:1;}
+.sku-card-color{width:26px;height:26px;border-radius:50%;border:2px solid rgba(0,0,0,.08);flex-shrink:0;transition:border-color .15s;}
+.sku-card.selected .sku-card-color{border-color:rgba(255,255,255,.25);}
+.sku-card-frame{font-weight:900;font-size:12px;line-height:1;}
+.sku-card-mat{font-size:10px;font-weight:700;color:var(--gray3);line-height:1;}
+.sku-card.selected .sku-card-mat{color:rgba(255,255,255,.6);}
+.sku-card-clr{font-size:10px;font-weight:700;line-height:1;max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--gray3);}
+.sku-card.selected .sku-card-clr{color:rgba(255,255,255,.65);}
 
 /* ── 协议勾选 ── */
 .agreement-box{background:var(--cream);border-radius:14px;padding:14px 16px;border:1.5px solid var(--gray1);}
@@ -327,9 +343,14 @@ input,select,textarea{font-family:var(--font);}
 
         <!-- 3. 支持款式 -->
         <div class="form-section">
-          <p class="form-section-title"><span class="num">3</span>申请适配款式 <span style="font-weight:700;font-size:12px;color:var(--gray3);letter-spacing:0;text-transform:none;">（至少选1款）</span></p>
-          <p style="font-weight:700;font-size:12px;color:var(--gray3);margin-bottom:12px;">选择你希望这个联名作品适配的哞屋机型规格</p>
-          <div class="sku-grid" id="skuGrid">
+          <div class="sku-section-header">
+            <div>
+              <p class="form-section-title" style="margin-bottom:2px;"><span class="num">3</span>申请适配规格 <span style="font-weight:700;font-size:12px;color:var(--gray3);letter-spacing:0;text-transform:none;">（至少选1款）</span></p>
+              <p style="font-weight:700;font-size:12px;color:var(--gray3);">选择你希望这个联名作品上架时提供的规格，买家下单时可选</p>
+            </div>
+            <button class="btn-select-all" id="btnSelectAll" onclick="toggleSelectAll()">全选</button>
+          </div>
+          <div id="skuGrid">
             <p class="sku-loading">加载款式信息…</p>
           </div>
         </div>
@@ -609,7 +630,9 @@ async function loadAllModels() {
         '<p style="font-weight:700;font-size:12px;color:var(--gray3);">暂无可用款式</p>'
       return
     }
-    // 渲染模型选择列表
+    // 渲染模型选择列表（fallback：无 animationId）
+    const btnSelectAll = document.getElementById('btnSelectAll')
+    if (btnSelectAll) btnSelectAll.style.display = 'none'
     document.getElementById('skuGrid').innerHTML =
       `<p style="font-weight:700;font-size:12px;color:var(--gray3);margin-bottom:10px;">请先选择适配的款式：</p>` +
       `<div style="display:flex;flex-wrap:wrap;gap:8px;">` +
@@ -626,6 +649,9 @@ async function loadAllModels() {
 
 // 加载指定模型的 SKU（草稿锁定 or 手动选模型）
 async function loadSkusForModel(modelId, modelName) {
+  // 显示全选按钮
+  const btnSelectAll = document.getElementById('btnSelectAll')
+  if (btnSelectAll) btnSelectAll.style.display = ''
   document.getElementById('skuGrid').innerHTML =
     '<p style="font-weight:700;font-size:12px;color:var(--gray3);">加载中…</p>'
   try {
@@ -646,44 +672,71 @@ function renderSkuGrouped(modelName) {
   const container = document.getElementById('skuGrid')
   if (!allSkus.length) {
     container.innerHTML = '<p style="font-weight:700;font-size:12px;color:var(--gray3);">该款式暂无可用规格</p>'
+    syncSelectAllBtn()
     return
   }
-  // 按 size 分组
+  // 按 size 分组（保留 SKU 原有排序）
   const bySize = {}
+  const sizeOrder = []
   allSkus.forEach(s => {
-    if (!bySize[s.size]) bySize[s.size] = []
+    if (!bySize[s.size]) { bySize[s.size] = []; sizeOrder.push(s.size) }
     bySize[s.size].push(s)
   })
-  const header = modelName
-    ? `<p style="font-weight:900;font-size:12px;color:var(--gray3);margin-bottom:12px;">适配款式：${escHtml(modelName)}</p>`
+  const modelTag = modelName
+    ? `<p style="font-weight:800;font-size:11px;color:var(--gray3);margin-bottom:14px;display:flex;align-items:center;gap:5px;"><span style="background:var(--gray1);padding:2px 9px;border-radius:999px;">款式：${escHtml(modelName)}</span></p>`
     : ''
-  container.innerHTML = header + Object.entries(bySize).map(([size, list]) =>
-    `<div class="sku-size-group">
+  container.innerHTML = modelTag + sizeOrder.map(size => {
+    const list = bySize[size]
+    return `<div class="sku-size-group">
       <div class="sku-size-label">${escHtml(size)}</div>
-      <div class="sku-chips-row">
+      <div class="sku-cards-row">
         ${list.map(s => {
           const sel = selectedSkus.has(s.id)
-          const colorDot = s.colorName
-            ? `<span class="sku-color-dot" style="background:${escHtml(s.colorHex||'#ccc')}"></span>`
-            : ''
-          return `<div class="sku-chip-card${sel ? ' selected' : ''}" onclick="toggleSku('${escHtml(s.id)}')" title="${escHtml(s.material)} · ${s.frameCount}帧${s.colorName?' · '+s.colorName:''}">
-            <span class="sku-chip-frame">${s.frameCount}帧</span>
-            <span class="sku-chip-mat">${escHtml(s.material)}</span>
-            ${s.colorName ? `${colorDot}<span class="sku-chip-clr">${escHtml(s.colorName)}</span>` : ''}
+          const hex  = s.colorHex || '#D0CEC9'
+          // 无颜色时用灰色圆圈（表示原色/默认）
+          const colorCircle = `<div class="sku-card-color" style="background:${escHtml(hex)}" title="${escHtml(s.colorName||'默认')}"></div>`
+          return `<div class="sku-card${sel ? ' selected' : ''}" onclick="toggleSku('${escHtml(s.id)}')" title="${escHtml(s.size)} · ${escHtml(s.material)} · ${s.frameCount}帧${s.colorName?' · '+s.colorName:''}">
+            <span class="sku-card-check">✓</span>
+            ${colorCircle}
+            <span class="sku-card-frame">${s.frameCount}帧</span>
+            <span class="sku-card-mat">${escHtml(s.material)}</span>
+            ${s.colorName ? `<span class="sku-card-clr">${escHtml(s.colorName)}</span>` : ''}
           </div>`
         }).join('')}
       </div>
     </div>`
-  ).join('')
+  }).join('')
+  syncSelectAllBtn()
 }
 
 function toggleSku(id) {
   if (selectedSkus.has(id)) selectedSkus.delete(id)
   else selectedSkus.add(id)
-  // 重新渲染（保留当前模型名，从现有 allSkus 第一项取）
   const modelName = allSkus[0]?.modelName || ''
-  if (allSkus.length > 0) renderSkuGrouped(modelName)
+  renderSkuGrouped(modelName)
   updateSubmitBtn()
+}
+
+function toggleSelectAll() {
+  const allIds = allSkus.map(s => s.id)
+  const allSelected = allIds.every(id => selectedSkus.has(id))
+  if (allSelected) {
+    allIds.forEach(id => selectedSkus.delete(id))
+  } else {
+    allIds.forEach(id => selectedSkus.add(id))
+  }
+  const modelName = allSkus[0]?.modelName || ''
+  renderSkuGrouped(modelName)
+  updateSubmitBtn()
+}
+
+function syncSelectAllBtn() {
+  const btn = document.getElementById('btnSelectAll')
+  if (!btn || !allSkus.length) return
+  const allIds = allSkus.map(s => s.id)
+  const allSelected = allIds.length > 0 && allIds.every(id => selectedSkus.has(id))
+  btn.textContent = allSelected ? '取消全选' : '全选'
+  btn.classList.toggle('all-selected', allSelected)
 }
 
 /* ─────────────────────────────────────────
