@@ -869,6 +869,7 @@ async function submitApply() {
 function resetForm() {
   currentAnimId = null
   selectedSkus.clear()
+  allSkus = []
   document.getElementById('inputTitle').value = ''
   document.getElementById('inputDesc').value  = ''
   if (document.getElementById('inputOrderNo')) document.getElementById('inputOrderNo').value = ''
@@ -878,7 +879,10 @@ function resetForm() {
   document.getElementById('sourceFromOrder').style.display = 'none'
   document.getElementById('btnSubmit').disabled = true
   document.getElementById('btnSubmit').textContent = '提交联名申请'
-  renderSkuGrid()
+  // 重置 SKU 区域
+  const btnSelectAll = document.getElementById('btnSelectAll')
+  if (btnSelectAll) { btnSelectAll.style.display = 'none'; btnSelectAll.textContent = '全选'; btnSelectAll.classList.remove('all-selected') }
+  document.getElementById('skuGrid').innerHTML = '<p class="sku-loading">加载款式信息…</p>'
 }
 
 /* ─────────────────────────────────────────
