@@ -622,12 +622,14 @@ model CollabWork {
   revenueRate       Float     @default(0) @map("revenue_rate") // 审核时快照
   isOnShelf         Boolean   @default(false) @map("is_on_shelf")
   shelfAt           DateTime? @map("shelf_at")
+  submissionBatchId String?   @map("submission_batch_id") // 同批次提交的作品共享同一 batchId
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
   framePacks   CollabFramePack[]
   collabOrders CollabOrder[]
 
+  @@index([submissionBatchId])
   @@map("collab_works")
 }
 

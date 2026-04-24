@@ -112,9 +112,17 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
 /* 分红率标签 */
 .rate-badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:6px;font-weight:900;font-size:12px;background:#FDF9C6;color:#7A7000;}
 
-/* 新手/独家徽章 */
+/* 新手/独家/批次徽章 */
 .badge-newbie{background:#E3F2FD;color:#1565C0;font-weight:800;font-size:10px;padding:2px 6px;border-radius:4px;margin-left:4px;}
 .badge-exclusive{background:#FCE4EC;color:#C62828;font-weight:800;font-size:10px;padding:2px 6px;border-radius:4px;margin-left:4px;}
+/* 批次分组行 */
+.batch-header{display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--cream);border:1px solid var(--gray1);border-radius:10px;margin-bottom:4px;margin-top:12px;}
+.batch-header:first-child{margin-top:0;}
+.batch-tag{background:var(--black);color:var(--white);font-weight:900;font-size:10px;padding:2px 8px;border-radius:4px;letter-spacing:.04em;}
+.batch-info{font-weight:700;font-size:12px;color:var(--gray3);}
+.batch-approve-all{margin-left:auto;padding:4px 12px;border-radius:6px;background:var(--accent-g);color:var(--black);font-weight:800;font-size:11px;border:none;cursor:pointer;}
+.batch-approve-all:hover{opacity:.85;}
+.work-row.in-batch{border-left:3px solid var(--gray2);margin-left:8px;}
 
 /* 分页 */
 .pagination{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-top:1.5px solid var(--gray1);background:var(--cream);}
@@ -359,7 +367,45 @@ async function loadWorks(page = 1) {
   }
 }
 
-// ══ 渲染表格 ══
+// ══ 渲染单行 ══
+function renderWorkRow(w, inBatch = false) {
+  const createdAt  = new Date(w.createdAt).toLocaleDateString('zh-CN', { month:'2-digit', day:'2-digit', year:'2-digit' })
+  const rateText   = w.revenueRatePreview != null ? `${(w.revenueRatePreview * 100).toFixed(1)}%` : '—'
+  const statusHtml = statusBadge(w.status)
+  const newbieHtml = w.isNewbieWork ? '<span class="badge-newbie">新手</span>' : ''
+  const exclHtml   = w.creatorLevel?.isExclusive ? '<span class="badge-exclusive">独家</span>' : ''
+  const creatorName = w.creator?.nickname || '创作者'
+  const creatorInit = creatorName[0].toUpperCase()
+  return `
+  <div class="work-row${inBatch ? ' in-batch' : ''}" onclick="openDrawer('${w.id}')">
+    <div class="work-cover-wrap">
+      <div class="work-cover" id="cover-${w.id}">📦</div>
+      <div>
+        <div class="work-title">${esc(w.title)}${newbieHtml}${exclHtml}</div>
+        <div class="work-order">${esc(w.orderNo || '')}</div>
+      </div>
+    </div>
+    <div class="col-creator">
+      <div class="creator-info">
+        <div class="creator-avatar">${creatorInit}</div>
+        <div class="creator-name">${esc(creatorName)}</div>
+      </div>
+    </div>
+    <div class="col-rate"><span class="rate-badge">${rateText}</span></div>
+    <div>${statusHtml}</div>
+    <div class="col-date" style="font-weight:700;font-size:11px;color:var(--gray3);">${createdAt}</div>
+    <div style="display:flex;gap:6px;">
+      ${w.status === 'pending' ? `
+        <button class="btn btn-green btn-sm" onclick="event.stopPropagation();quickApprove('${w.id}')">通过</button>
+        <button class="btn btn-red btn-sm"   onclick="event.stopPropagation();openDrawer('${w.id}','reject')">拒绝</button>
+      ` : `
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openDrawer('${w.id}')">查看</button>
+      `}
+    </div>
+  </div>`
+}
+
+// ══ 渲染表格（支持批次分组）══
 function renderTable(works) {
   if (!works.length) {
     document.getElementById('tableBody').innerHTML =
@@ -367,50 +413,38 @@ function renderTable(works) {
     return
   }
 
-  document.getElementById('tableBody').innerHTML = works.map(w => {
-    const createdAt = new Date(w.createdAt).toLocaleDateString('zh-CN', { month:'2-digit', day:'2-digit', year:'2-digit' })
-    const rateText  = w.revenueRatePreview != null
-      ? `${(w.revenueRatePreview * 100).toFixed(1)}%`
-      : '—'
-    const statusHtml = statusBadge(w.status)
-    const newbieHtml = w.isNewbieWork ? '<span class="badge-newbie">新手</span>' : ''
-    const exclHtml   = w.creatorLevel?.isExclusive ? '<span class="badge-exclusive">独家</span>' : ''
+  // 按 submissionBatchId 分组（null 各自独立）
+  const groups = []
+  const batchMap = {}
+  works.forEach(w => {
+    const bid = w.submissionBatchId
+    if (!bid) {
+      groups.push({ batchId: null, works: [w] })
+    } else {
+      if (!batchMap[bid]) { batchMap[bid] = { batchId: bid, works: [] }; groups.push(batchMap[bid]) }
+      batchMap[bid].works.push(w)
+    }
+  })
 
-    const creatorName = w.creator?.nickname || '创作者'
-    const creatorInit = creatorName[0].toUpperCase()
+  let html = ''
+  for (const g of groups) {
+    if (g.batchId && g.works.length > 1) {
+      // 批次标题行
+      const pendingInBatch = g.works.filter(w => w.status === 'pending')
+      const batchIds = g.works.map(w => `'${w.id}'`).join(',')
+      const creatorName = g.works[0]?.creator?.nickname || '创作者'
+      html += `<div class="batch-header">
+        <span class="batch-tag">批次提交</span>
+        <span class="batch-info">${esc(creatorName)} · 共 ${g.works.length} 款</span>
+        ${pendingInBatch.length > 0 ? `<button class="batch-approve-all" onclick="batchApproveAll([${batchIds}])">全部通过（${pendingInBatch.length}款）</button>` : ''}
+      </div>`
+      g.works.forEach(w => { html += renderWorkRow(w, true) })
+    } else {
+      html += renderWorkRow(g.works[0], false)
+    }
+  }
 
-    return `
-    <div class="work-row" onclick="openDrawer('${w.id}')">
-      <div class="work-cover-wrap">
-        <div class="work-cover" id="cover-${w.id}">📦</div>
-        <div>
-          <div class="work-title">${esc(w.title)}${newbieHtml}${exclHtml}</div>
-          <div class="work-order">${esc(w.orderNo || '')}</div>
-        </div>
-      </div>
-      <div class="col-creator">
-        <div class="creator-info">
-          <div class="creator-avatar">${creatorInit}</div>
-          <div class="creator-name">${esc(creatorName)}</div>
-        </div>
-      </div>
-      <div class="col-rate">
-        <span class="rate-badge">${rateText}</span>
-      </div>
-      <div>${statusHtml}</div>
-      <div class="col-date" style="font-weight:700;font-size:11px;color:var(--gray3);">${createdAt}</div>
-      <div style="display:flex;gap:6px;">
-        ${w.status === 'pending' ? `
-          <button class="btn btn-green btn-sm" onclick="event.stopPropagation();quickApprove('${w.id}')">通过</button>
-          <button class="btn btn-red btn-sm"   onclick="event.stopPropagation();openDrawer('${w.id}','reject')">拒绝</button>
-        ` : `
-          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openDrawer('${w.id}')">查看</button>
-        `}
-      </div>
-    </div>`
-  }).join('')
-
-  // 异步加载封面图
+  document.getElementById('tableBody').innerHTML = html
   loadCovers(works)
 }
 
@@ -629,6 +663,25 @@ function closeDrawer() {
 function quickApprove(workId) {
   _curWork = { id: workId }
   openApproveModal()
+}
+
+// ══ 批次全部通过 ══
+async function batchApproveAll(workIds) {
+  if (!confirm(`确认批量通过这 ${workIds.length} 款联名申请？`)) return
+  let ok = 0, fail = 0
+  for (const id of workIds) {
+    try {
+      const res  = await fetch(`${API}/api/admin/collab/works/${id}/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${_token}` },
+        body: JSON.stringify({ isExclusiveWork: false })
+      })
+      const json = await res.json()
+      if (json.success) ok++; else fail++
+    } catch { fail++ }
+  }
+  showToast(fail === 0 ? `✅ 已全部通过（${ok}款）` : `完成：${ok}款通过，${fail}款失败`, 3000)
+  loadWorks(_curPage)
 }
 
 // ══ 审核通过 ══

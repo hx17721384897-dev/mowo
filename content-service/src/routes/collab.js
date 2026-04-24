@@ -191,75 +191,35 @@ export default async function collabRoutes(fastify) {
    *   agreementSigned: true,   // 必须为true，表示已同意授权协议
    * }
    */
+  /**
+   * POST /api/collab/apply
+   * 批量提交联名申请（支持多款式一次提交）
+   *
+   * Body:
+   * {
+   *   variants: [
+   *     { animationId?, orderNo?, title, description?, supportedSkus: string[] }
+   *   ],
+   *   agreementSigned: true,
+   *   activityId?: string
+   * }
+   */
   fastify.post('/collab/apply', { preHandler: requireCertified }, async (req, reply) => {
-    const { orderNo, animationId, title, description, supportedSkus, activityId, agreementSigned } = req.body
+    const { variants, agreementSigned, activityId } = req.body
     const userId = req.user.userId
 
     // 基础校验
-    if (!title || !supportedSkus?.length) {
-      return reply.code(400).send({ success: false, message: '缺少必填字段：title / supportedSkus' })
-    }
-    if (!orderNo && !animationId) {
-      return reply.code(400).send({ success: false, message: '必须提供 animationId（动画作品）或 orderNo（定制订单）' })
-    }
     if (!agreementSigned) {
       return reply.code(400).send({ success: false, message: '必须同意联名授权协议' })
     }
-
-    let animationFramesJson, coverKey, orderNoForRecord = null
-
-    if (animationId) {
-      // 来源：创作者动画作品库（CustomProduct）
-      const cp = await prisma.customProduct.findFirst({
-        where: { id: animationId, userId, status: { not: 'removed' } },
-      })
-      if (!cp) {
-        return reply.code(404).send({ success: false, message: '动画作品不存在或不属于你' })
-      }
-      animationFramesJson = cp.animationFrames
-      const frameArr = safeJson(cp.animationFrames)
-      coverKey = frameArr[0] ?? null
-
-      // 检查该动画是否已申请过联名
-      const existing = await prisma.collabWork.findFirst({
-        where: { animationFrames: cp.animationFrames, creatorId: userId, status: { not: 'rejected' } },
-      })
-      if (existing) {
-        return reply.code(400).send({ success: false, message: '该动画作品已申请过联名' })
-      }
-    } else {
-      // 来源：已购定制订单（原有流程）
-      const order = await prisma.customizeOrder.findFirst({
-        where: { orderNo, userId },
-      })
-      if (!order) {
-        return reply.code(404).send({ success: false, message: '订单不存在或不属于你' })
-      }
-      if (order.status === 'pending') {
-        return reply.code(400).send({ success: false, message: '订单尚未完成支付，无法申请联名' })
-      }
-      // 检查该订单是否已申请过联名
-      const existing = await prisma.collabWork.findFirst({
-        where: { orderNo, creatorId: userId },
-      })
-      if (existing) {
-        return reply.code(400).send({ success: false, message: '该订单已申请过联名' })
-      }
-      animationFramesJson = order.frameUrls
-      const frameKeys = safeJson(order.frameUrls)
-      coverKey = frameKeys[0] ?? null
-      orderNoForRecord = orderNo
+    if (!Array.isArray(variants) || variants.length === 0) {
+      return reply.code(400).send({ success: false, message: '请至少添加一款申请款式' })
+    }
+    if (variants.length > 20) {
+      return reply.code(400).send({ success: false, message: '单次最多提交 20 款' })
     }
 
-    // 验证 SKU
-    const skus = await prisma.machineModelSku.findMany({
-      where: { id: { in: supportedSkus }, isActive: true },
-    })
-    if (skus.length !== supportedSkus.length) {
-      return reply.code(400).send({ success: false, message: '部分SKU不存在或已下架' })
-    }
-
-    // 验证活动（如果传了activityId）
+    // 验证活动（如果传了 activityId）
     if (activityId) {
       const activity = await prisma.collabActivity.findUnique({ where: { id: activityId } })
       if (!activity || !activity.isActive || new Date() > activity.endAt) {
@@ -267,36 +227,102 @@ export default async function collabRoutes(fastify) {
       }
     }
 
-    // 判断是否是创作者前3款（新手期）
-    const approvedCount = await prisma.collabWork.count({
-      where: { creatorId: userId, status: 'approved' },
-    })
-    const pendingCount = await prisma.collabWork.count({
-      where: { creatorId: userId, status: 'pending' },
-    })
-    const isNewbieWork = (approvedCount + pendingCount) < 3
+    // 判断是否是创作者前3款（新手期）—— 在整批提交前计算
+    const approvedCount = await prisma.collabWork.count({ where: { creatorId: userId, status: 'approved' } })
+    const pendingCount  = await prisma.collabWork.count({ where: { creatorId: userId, status: 'pending' } })
+    let workIndexOffset = approvedCount + pendingCount
 
-    // 创建申请
-    const work = await prisma.collabWork.create({
-      data: {
-        creatorId:        userId,
-        orderNo:          orderNoForRecord,
-        title,
-        description:      description ?? null,
-        coverUrl:         coverKey,
-        animationFrames:  animationFramesJson,
-        supportedSkus:    JSON.stringify(supportedSkus),
-        isNewbieWork,
-        newbieExpiredAt:  null,
-        activityId:       activityId ?? null,
-        isExclusiveWork:  false,
-        status:           'pending',
-        agreementSignedAt: new Date(),
-        revenueRate:      0,
-      },
-    })
+    // 生成本批次 ID
+    const submissionBatchId = variants.length > 1
+      ? `batch_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,7)}`
+      : null
 
-    return reply.code(201).send({ success: true, data: { id: work.id, status: 'pending' } })
+    const now = new Date()
+    const createdWorks = []
+    const errors = []
+
+    for (let i = 0; i < variants.length; i++) {
+      const v = variants[i]
+      const { animationId, orderNo, title, description, supportedSkus } = v
+
+      // 单项校验
+      if (!title?.trim()) { errors.push(`第 ${i+1} 款：缺少作品标题`); continue }
+      if (!supportedSkus?.length) { errors.push(`第 ${i+1} 款：请选择至少一个规格`); continue }
+      if (!animationId && !orderNo) { errors.push(`第 ${i+1} 款：缺少动画来源`); continue }
+
+      let animationFramesJson, coverKey, orderNoForRecord = null
+
+      if (animationId) {
+        const cp = await prisma.customProduct.findFirst({
+          where: { id: animationId, userId, status: { not: 'removed' } },
+        })
+        if (!cp) { errors.push(`第 ${i+1} 款：动画作品不存在或不属于你`); continue }
+        animationFramesJson = cp.animationFrames
+        coverKey = safeJson(cp.animationFrames)?.[0] ?? null
+
+        // 重复检测：同一动画 + 完全相同的 SKU 集合 = 重复
+        const skuKey = JSON.stringify([...supportedSkus].sort())
+        const existing = await prisma.collabWork.findFirst({
+          where: { animationFrames: cp.animationFrames, creatorId: userId, status: { not: 'rejected' } },
+        })
+        if (existing) {
+          const existingSkuKey = JSON.stringify(safeJson(existing.supportedSkus)?.slice().sort() ?? [])
+          if (existingSkuKey === skuKey) {
+            errors.push(`第 ${i+1} 款「${title}」：该动画 + 相同规格已申请过联名`); continue
+          }
+          // 相同动画不同 SKU 组合：允许
+        }
+      } else {
+        const order = await prisma.customizeOrder.findFirst({ where: { orderNo, userId } })
+        if (!order) { errors.push(`第 ${i+1} 款：订单不存在或不属于你`); continue }
+        if (order.status === 'pending') { errors.push(`第 ${i+1} 款：订单尚未完成支付`); continue }
+        const existing = await prisma.collabWork.findFirst({ where: { orderNo, creatorId: userId, status: { not: 'rejected' } } })
+        if (existing) { errors.push(`第 ${i+1} 款：该订单已申请过联名`); continue }
+        animationFramesJson = order.frameUrls
+        coverKey = safeJson(order.frameUrls)?.[0] ?? null
+        orderNoForRecord = orderNo
+      }
+
+      // 验证 SKU
+      const skuRecords = await prisma.machineModelSku.findMany({ where: { id: { in: supportedSkus }, isActive: true } })
+      if (skuRecords.length !== supportedSkus.length) { errors.push(`第 ${i+1} 款：部分规格不存在或已下架`); continue }
+
+      const isNewbieWork = (workIndexOffset + i) < 3
+
+      try {
+        const work = await prisma.collabWork.create({
+          data: {
+            creatorId:         userId,
+            orderNo:           orderNoForRecord,
+            title:             title.trim(),
+            description:       description?.trim() ?? null,
+            coverUrl:          coverKey,
+            animationFrames:   animationFramesJson,
+            supportedSkus:     JSON.stringify(supportedSkus),
+            isNewbieWork,
+            newbieExpiredAt:   null,
+            activityId:        activityId ?? null,
+            isExclusiveWork:   false,
+            status:            'pending',
+            agreementSignedAt: now,
+            revenueRate:       0,
+            submissionBatchId,
+          },
+        })
+        createdWorks.push({ id: work.id, title: work.title, status: 'pending' })
+      } catch(e) {
+        errors.push(`第 ${i+1} 款「${title}」：创建失败（${e.message}）`)
+      }
+    }
+
+    if (createdWorks.length === 0) {
+      return reply.code(400).send({ success: false, message: errors.join('；') || '提交失败' })
+    }
+
+    return reply.code(201).send({
+      success: true,
+      data: { submissionBatchId, works: createdWorks, errors }
+    })
   })
 
   // ─────────────────────────────────────────────
