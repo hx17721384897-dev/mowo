@@ -948,8 +948,12 @@ async function loadAnimSource(animId) {
     const modelName = cfgJson.modelName || null
     document.getElementById('sourceAnimName').textContent = name
     document.getElementById('sourceAnimMeta').textContent = `${frames.length} 帧 · ${fmtDate(cp.createdAt)} 创建`
-    if (cp.previewUrl) {
-      document.getElementById('sourceAnimPreview').innerHTML = `<img src="${escHtml(cp.previewUrl)}" alt="预览">`
+    // 预览图：优先 previewUrl，兜底取第一帧
+    const firstFrame = frames.length > 0 && typeof frames[0] === 'string' ? frames[0] : ''
+    const thumbSrc   = cp.previewUrl || cp.staticPreviewUrl || firstFrame
+    if (thumbSrc) {
+      const src = thumbSrc.startsWith('data:') ? thumbSrc : escHtml(thumbSrc)
+      document.getElementById('sourceAnimPreview').innerHTML = `<img src="${src}" alt="预览" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">`
     }
     updatePanelAddBtn()
 
