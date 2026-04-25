@@ -516,21 +516,6 @@ button { font-family:var(--font); }
 }
 .creator-dot { width:6px; height:6px; border-radius:50%; background:var(--accent-g); }
 
-/* ══════════════════════════════
-   移动端底部浮动价格栏
-══════════════════════════════ */
-.mobile-price-bar {
-  position:fixed; bottom:0; left:0; right:0; z-index:700;
-  background:var(--white); border-top:1px solid var(--gray1);
-  padding:14px var(--pad-mobile) calc(14px + env(safe-area-inset-bottom));
-  display:flex; align-items:center; justify-content:space-between; gap:16px;
-}
-@media (min-width:1024px) { .mobile-price-bar { display:none; } }
-.mob-price-info { min-width:0; }
-.mob-price-label { font-weight:700; font-size:10px; letter-spacing:.15em; text-transform:uppercase; color:var(--gray3); margin-bottom:3px; }
-.mob-price-val { font-weight:900; font-size:24px; letter-spacing:-.02em; color:var(--black); }
-.mob-price-btns { display:flex; gap:8px; flex-shrink:0; }
-.mob-price-btns .btn { min-height:44px; padding:10px 20px; font-size:14px; width:auto; }
 
 /* ══════════════════════════════
    已选款式列表
@@ -837,18 +822,6 @@ button { font-family:var(--font); }
   </div>
 </div>
 
-<!-- 移动端底部价格栏 -->
-<div class="mobile-price-bar" id="mobilePriceBar">
-  <div class="mob-price-info">
-    <p class="mob-price-label">当前选配 / 已选 <span id="mobAddedCount">0</span> 款</p>
-    <p class="mob-price-val">¥<span id="mobPriceVal">—</span></p>
-  </div>
-  <div class="mob-price-btns">
-    <button class="btn btn-secondary" id="mobBtnAddMore" disabled onclick="addVariant()">+ 添加</button>
-    <button class="btn btn-secondary" id="mobBtnAddCart" disabled onclick="goAddCart()" style="font-size:12px;padding:0 12px;">🛒 加入</button>
-    <button class="btn btn-primary" id="mobBtnBuy" disabled onclick="goBuy()">购买 →</button>
-  </div>
-</div>
 
 <script>
 const MOWO_API = (location.hostname==='127.0.0.1'?'http://127.0.0.1:3001':'http://localhost:3001');
@@ -1131,7 +1104,6 @@ function updatePriceCard() {
   const priceStr   = price !== null ? `¥${price.toFixed(0)}` : '—';
 
   document.getElementById('priceTotal').textContent  = isComplete ? priceStr : '—';
-  document.getElementById('mobPriceVal').textContent = isComplete ? priceStr : '—';
   document.getElementById('breakBase').textContent     = isComplete ? priceStr : '—';
   document.getElementById('breakMaterial').textContent = SEL.selectedMat   || '—';
   document.getElementById('breakColor').textContent    = SEL.selectedSku?.colorName || '—';
@@ -1157,12 +1129,6 @@ function updatePriceCard() {
   document.getElementById('btnAddMore').disabled    = !canAdd;
   document.getElementById('btnBuy').disabled        = !canBuy;
   document.getElementById('btnAddCart').disabled    = !canBuy;
-  document.getElementById('mobBtnAddMore').disabled = !canAdd;
-  document.getElementById('mobBtnBuy').disabled     = !canBuy;
-  document.getElementById('mobBtnAddCart').disabled = !canBuy;
-
-  // 移动端件数
-  document.getElementById('mobAddedCount').textContent = CART.length;
 
   // 提示文字
   const hint = document.getElementById('incompleteHint');
@@ -1409,10 +1375,8 @@ async function goBuy() {
   if (SEL.selectedFrame && SEL.selectedSku && SEL.selectedColor) addVariantSilent();
   if (!CART.length) return;
 
-  const btnBuy    = document.getElementById('btnBuy');
-  const mobBtnBuy = document.getElementById('mobBtnBuy');
-  if (btnBuy)    btnBuy.disabled = true;
-  if (mobBtnBuy) mobBtnBuy.disabled = true;
+  const btnBuy = document.getElementById('btnBuy');
+  if (btnBuy) btnBuy.disabled = true;
 
   let frameDataUrls = [];
   try { frameDataUrls = JSON.parse(localStorage.getItem('mowo_customize_frames') || '[]'); } catch(e) {}
@@ -1452,8 +1416,7 @@ async function goBuy() {
   } catch(err) {
     alert('操作失败：' + err.message + '\n请重试或联系客服');
     console.error(err);
-    if (btnBuy)    btnBuy.disabled = false;
-    if (mobBtnBuy) mobBtnBuy.disabled = false;
+    if (btnBuy) btnBuy.disabled = false;
   }
 }
 
@@ -1467,10 +1430,8 @@ async function goAddCart() {
   if (SEL.selectedFrame && SEL.selectedSku && SEL.selectedColor) addVariantSilent();
   if (!CART.length) return;
 
-  const btn    = document.getElementById('btnAddCart');
-  const mobBtn = document.getElementById('mobBtnAddCart');
+  const btn = document.getElementById('btnAddCart');
   if (btn) btn.disabled = true;
-  if (mobBtn) mobBtn.disabled = true;
 
   let frameDataUrls = [];
   try { frameDataUrls = JSON.parse(localStorage.getItem('mowo_customize_frames') || '[]'); } catch(e) {}
@@ -1512,7 +1473,6 @@ async function goAddCart() {
     alert('加入购物车失败：' + err.message);
   } finally {
     if (btn) btn.disabled = false;
-    if (mobBtn) mobBtn.disabled = false;
   }
 }
 
