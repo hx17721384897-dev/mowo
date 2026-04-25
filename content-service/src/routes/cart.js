@@ -140,11 +140,11 @@ export default async function cartRoutes(fastify) {
       if (cp.status === 'ordered' || cp.status === 'removed') {
         return reply.code(400).send({ success: false, message: '该草稿已提交，不可再加入购物车' })
       }
-      // 帧数兼容性校验
-      if (cp.frameCount && sku.frameCount && cp.frameCount !== sku.frameCount) {
+      // 帧数兼容性校验（支持循环补帧：sku.frameCount 必须是 cp.frameCount 的整数倍）
+      if (cp.frameCount && sku.frameCount && sku.frameCount % cp.frameCount !== 0) {
         return reply.code(400).send({
           success: false,
-          message: `当前动画仅适配 ${cp.frameCount} 帧机型，无法选择此底座（所选底座为 ${sku.frameCount} 帧）`
+          message: `当前动画为 ${cp.frameCount} 帧，无法匹配 ${sku.frameCount} 帧底座（需整数倍才可循环补帧）`
         })
       }
 

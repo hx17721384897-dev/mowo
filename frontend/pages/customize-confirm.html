@@ -1280,88 +1280,97 @@ function dismissReorderBanner() {
   document.getElementById('reorderBanner')?.remove()
 }
 
-/* ── 内部工具：按帧数去重创建 CustomProduct，返回 frameCount→id 映射 ── */
+/* ── 内部工具：为本次定制会话创建 1 个 CustomProduct，返回 SKU帧数→id 映射 ── */
+// 设计：无论用户购物车中选了多少种 SKU 帧数（12/24 等），统一共用一个 customProduct，
+// frameCount 存储用户实际上传的帧数（SEL.frameCount），后端按 sku.frameCount % cp.frameCount
+// 判断是否兼容（循环补帧），不再按 SKU 帧数创建多条记录。
 async function _createCustomProducts(token, frameDataUrls) {
-  const uniqueFrames = [...new Set(CART.map(v => v.frame))];
   // 同一流程内已保存过的 product map（重试/返回重选时复用，避免重复创建）
   let existingMap = {};
   try { existingMap = JSON.parse(localStorage.getItem('mowo_customize_product_map') || '{}'); } catch(e) {}
   // 第二步保存的单条草稿 ID（仅首次使用，之后通过 existingMap 复用）
   const draftId = localStorage.getItem('mowo_customize_draft_id');
-  let usedDraft = false;
-  const map = {};
 
   // ── 若用户选择"复用上次的动画"，拉取旧订单的 animationFrames ──
-  let reuseAnimationFrames = null
+  let reuseAnimationFrames = null;
   if (_reuseOldFrames && _prevOrderedProduct) {
     try {
       const r = await fetch(`${MOWO_API}/api/custom-products/${_prevOrderedProduct.id}`, {
         headers: { Authorization: `Bearer ${token}` }
-      })
-      const j = await r.json()
+      });
+      const j = await r.json();
       if (j.success && j.data?.animationFrames) {
-        reuseAnimationFrames = j.data.animationFrames  // 已是 JSON 字符串
+        reuseAnimationFrames = j.data.animationFrames;  // 已是 JSON 字符串
       }
     } catch(e) {}
   }
 
-  for (const frameCount of uniqueFrames) {
-    const animFramesPayload = reuseAnimationFrames ?? JSON.stringify(frameDataUrls)
-    const body = JSON.stringify({
-      animationFrames: animFramesPayload,
-      draftData: JSON.stringify({
-        version: 1,
-        source: 'customize-confirm',
-        savedAt: new Date().toISOString(),
-        frameCount,
-        totalSourceFrames: null,
-        modelId: SEL.modelId || null,
-        modelName: SEL.modelName || null,
-      }),
-      configJson: JSON.stringify({ frameCount, modelId: SEL.modelId, modelName: SEL.modelName }),
-      frameCount
+  // 用户实际上传的帧数（而非 SKU 目标帧数），作为 customProduct.frameCount
+  const userFrameCount = SEL.frameCount;
+  const animFramesPayload = reuseAnimationFrames ?? JSON.stringify(frameDataUrls);
+  const body = JSON.stringify({
+    animationFrames: animFramesPayload,
+    draftData: JSON.stringify({
+      version: 1,
+      source: 'customize-confirm',
+      savedAt: new Date().toISOString(),
+      frameCount: userFrameCount,
+      totalSourceFrames: null,
+      modelId: SEL.modelId || null,
+      modelName: SEL.modelName || null,
+    }),
+    configJson: JSON.stringify({ frameCount: userFrameCount, modelId: SEL.modelId, modelName: SEL.modelName }),
+    frameCount: userFrameCount
+  });
+
+  // 查找已有的会话级 product ID（兼容旧格式：'_session' 键或任意数值键）
+  let cpRes;
+  const existingId = existingMap['_session'] || Object.values(existingMap)[0] || null;
+  if (existingId) {
+    // 已有记录：直接更新，不新建
+    cpRes = await fetch(`${MOWO_API}/api/custom-products/${encodeURIComponent(existingId)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body,
     });
-    let cpRes;
-    const existingId = existingMap[frameCount];
-    if (existingId) {
-      // 已有记录：直接更新，不新建
-      cpRes = await fetch(`${MOWO_API}/api/custom-products/${encodeURIComponent(existingId)}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body,
-      });
-    } else if (draftId && !usedDraft) {
-      // 第二步草稿：更新它作为第一条记录
-      cpRes = await fetch(`${MOWO_API}/api/custom-products/${encodeURIComponent(draftId)}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body,
-      });
-      usedDraft = true;
-    } else {
-      cpRes = await fetch(`${MOWO_API}/api/custom-products`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body,
-      });
-    }
-    let cpJson = await cpRes.json();
-
-    // ── 兜底：若 PUT 目标已是 ordered/removed，清除旧 map 并 POST 新草稿 ──
-    // 正常情况下阶段一（start.html + checkout.html 的清理）已避免此路径，这里只是保险
-    if (!cpJson.success && (cpJson.message?.includes('已提交') || cpJson.message?.includes('不可再编辑'))) {
-      delete existingMap[frameCount]
-      cpRes = await fetch(`${MOWO_API}/api/custom-products`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body,
-      })
-      cpJson = await cpRes.json()
-    }
-
-    if (!cpJson.success) throw new Error(cpJson.message || '草稿保存失败');
-    map[frameCount] = cpJson.data.id;
+  } else if (draftId) {
+    // 第二步草稿：更新它作为本次会话的唯一记录
+    cpRes = await fetch(`${MOWO_API}/api/custom-products/${encodeURIComponent(draftId)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body,
+    });
+  } else {
+    cpRes = await fetch(`${MOWO_API}/api/custom-products`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body,
+    });
   }
+  let cpJson = await cpRes.json();
+
+  // ── 兜底：若 PUT 目标已是 ordered/removed，清除旧 map 并 POST 新草稿 ──
+  // 正常情况下阶段一（start.html + checkout.html 的清理）已避免此路径，这里只是保险
+  if (!cpJson.success && (cpJson.message?.includes('已提交') || cpJson.message?.includes('不可再编辑'))) {
+    existingMap = {};
+    cpRes = await fetch(`${MOWO_API}/api/custom-products`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body,
+    });
+    cpJson = await cpRes.json();
+  }
+
+  if (!cpJson.success) throw new Error(cpJson.message || '草稿保存失败');
+
+  const singleId = cpJson.data.id;
+  // 构建返回 map：'_session' + 所有购物车 SKU 帧数 → 同一 customProduct ID
+  const map = { '_session': singleId };
+  const uniqueSkuFrames = [...new Set(CART.map(v => v.frame))];
+  for (const f of uniqueSkuFrames) {
+    map[f] = singleId;
+  }
+
   // 持久化本次 map，同一流程下再次点击时复用同一批记录
   localStorage.setItem('mowo_customize_product_map', JSON.stringify(map));
   localStorage.removeItem('mowo_customize_draft_id');
