@@ -249,11 +249,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     return
   }
 
-  // 并行加载购物车和地址数据
+  // 并行加载购物车和地址数据，两者都完成后再统一渲染
   await Promise.all([
     loadCartItems(token),
     loadSavedAddresses(token)
   ])
+  renderCheckoutPage()
 })
 
 async function loadCartItems(token) {
@@ -264,7 +265,7 @@ async function loadCartItems(token) {
     const data = await res.json()
     if (!data.success) throw new Error('加载失败')
     cartItems = (data.data.items || []).filter(i => cartItemIds.includes(i.id))
-    renderCheckoutPage()
+    // 不在此处渲染，由 DOMContentLoaded 的 Promise.all 之后统一调用 renderCheckoutPage()
   } catch(e) {
     document.getElementById('pageContent').innerHTML = `<div style="text-align:center;padding:60px;color:var(--red);font-weight:700;">加载失败，请返回购物车重试</div>`
   }
