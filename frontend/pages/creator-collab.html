@@ -876,16 +876,22 @@ async function loadAnimList() {
       return
     }
     grid.innerHTML = items.map(cp => {
-      const cfg  = safeParseJson(cp.configJson) || {}
-      const name = cfg.animName || fmtDate(cp.createdAt)
-      const prev = cp.previewUrl || cp.staticPreviewUrl || ''
+      const cfg    = safeParseJson(cp.configJson) || {}
+      const name   = cfg.animName || fmtDate(cp.createdAt)
+      // 预览图：优先 previewUrl / staticPreviewUrl，兜底取第一帧（与 creator-animations.html 逻辑一致）
+      const frames = safeParseJson(cp.animationFrames) || []
+      const firstFrame = frames.length > 0 && typeof frames[0] === 'string' ? frames[0] : ''
+      const prev   = cp.previewUrl || cp.staticPreviewUrl || firstFrame
+      const imgSrc = prev
+        ? (prev.startsWith('data:') ? prev : escHtml(prev))
+        : ''
       return `<div class="anim-picker-card" data-id="${escHtml(cp.id)}" onclick="selectAnimFromPicker('${escHtml(cp.id)}')">
         <div class="anim-picker-thumb">
-          ${prev ? `<img src="${escHtml(prev)}" alt="">` : '🎬'}
+          ${imgSrc ? `<img src="${imgSrc}" alt="" loading="lazy">` : '🎬'}
         </div>
         <div class="anim-picker-info">
           <p class="anim-picker-name" title="${escHtml(name)}">${escHtml(name)}</p>
-          <p class="anim-picker-meta">${cp.frameCount || '?'}帧</p>
+          <p class="anim-picker-meta">${cp.frameCount || frames.length || '?'}帧</p>
         </div>
       </div>`
     }).join('')
