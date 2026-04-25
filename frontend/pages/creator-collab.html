@@ -361,8 +361,8 @@ input,select,textarea{font-family:var(--font);}
       <div id="manageList" style="display:none;"></div>
       <div class="empty" id="manageEmpty" style="display:none;">
         <div class="empty-icon">🎨</div>
-        <p class="empty-text">还没有已通过的作品</p>
-        <p class="empty-sub">联名申请审核通过后，作品将在这里显示，你可以提交修改申请</p>
+        <p class="empty-text">还没有联名申请记录</p>
+        <p class="empty-sub">前往"提交申请"提交你的第一款联名作品</p>
         <button class="btn btn-ghost" onclick="switchTab('works')">查看我的申请</button>
       </div>
     </div>
@@ -631,7 +631,7 @@ function switchTab(tab) {
     document.getElementById(tabMap[k]).classList.toggle('active', k === tab)
     document.getElementById(btnMap[k]).classList.toggle('active', k === tab)
   })
-  if (tab === 'manage') loadManageWorks()
+  if (tab === 'manage') { _manageLoaded = false; loadManageWorks() }
   if (tab === 'notif')  loadCollabNotifs()
 }
 
@@ -716,7 +716,7 @@ async function loadManageWorks() {
   empty.style.display    = 'none'
 
   try {
-    const res  = await fetch(`${CAPI}/api/creator/collab/works?status=approved&limit=50`, {
+    const res  = await fetch(`${CAPI}/api/creator/collab/works?limit=50`, {
       headers: { Authorization: `Bearer ${getToken()}` }
     })
     const json = await res.json()
@@ -761,6 +761,24 @@ async function loadManageThumb(workId) {
 function renderManageCard(w) {
   const skus = Array.isArray(w.supportedSkus) ? w.supportedSkus : []
   const skuText = skus.length ? `${skus.length} 个规格` : '无规格'
+
+  // 状态徽章 + 操作按钮（根据状态不同）
+  let statusBadge, actionBtn
+  if (w.status === 'approved') {
+    statusBadge = `<span class="badge badge-approved">已通过</span>${w.isOnShelf ? '<span class="badge badge-onshelf">已上架</span>' : ''}`
+    actionBtn   = `<button class="btn btn-ghost btn-sm" style="flex-shrink:0;margin-left:8px;" onclick="openEditPanel('${w.id}')">✏️ 编辑</button>`
+  } else if (w.status === 'pending') {
+    statusBadge = `<span class="badge" style="background:#FFF8E1;color:#B8860B;">审核中</span>`
+    actionBtn   = `<span style="flex-shrink:0;margin-left:8px;font-size:11px;font-weight:700;color:var(--gray3);">等待审核</span>`
+  } else if (w.status === 'rejected') {
+    statusBadge = `<span class="badge" style="background:#FEE2E2;color:#C0320A;">已拒绝</span>`
+    const reason = w.rejectReason ? `title="${escHtml(w.rejectReason)}"` : ''
+    actionBtn   = `<span class="btn btn-ghost btn-sm" style="flex-shrink:0;margin-left:8px;cursor:default;color:#C0320A;" ${reason}>已拒绝${w.rejectReason ? ' ℹ️' : ''}</span>`
+  } else {
+    statusBadge = `<span class="badge" style="background:var(--gray1);color:var(--gray3);">${escHtml(w.status)}</span>`
+    actionBtn   = ''
+  }
+
   return `
   <div class="work-card">
     <div class="work-head">
@@ -768,14 +786,14 @@ function renderManageCard(w) {
       <div class="work-info">
         <p class="work-title">${escHtml(w.title)}</p>
         <div class="work-meta">
-          <span class="badge badge-approved">已通过</span>
-          ${w.isOnShelf ? '<span class="badge badge-onshelf">已上架</span>' : ''}
+          ${statusBadge}
           <span style="font-weight:700;font-size:11px;color:var(--gray3);">${skuText}</span>
           <span style="font-weight:700;font-size:11px;color:var(--gray3);">${fmtDate(w.createdAt)}</span>
         </div>
         ${w.description ? `<p class="work-desc">${escHtml(w.description.slice(0,80))}${w.description.length>80?'…':''}</p>` : ''}
+        ${w.status === 'rejected' && w.rejectReason ? `<p class="work-desc" style="color:#C0320A;">拒绝原因：${escHtml(w.rejectReason)}</p>` : ''}
       </div>
-      <button class="btn btn-ghost btn-sm" style="flex-shrink:0;margin-left:8px;" onclick="openEditPanel('${w.id}')">✏️ 编辑</button>
+      ${actionBtn}
     </div>
   </div>`
 }
