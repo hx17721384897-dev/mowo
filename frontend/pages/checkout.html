@@ -618,6 +618,11 @@ function renderPaymentPending(preOrder) {
 function renderPaymentSuccess() {
   clearInterval(pollTimer)
   sessionStorage.removeItem('mowo_checkout_items')
+  // 支付完成后清除定制流程临时数据，防止下次进入 confirm 页时复用已 ordered 的 product_map
+  localStorage.removeItem('mowo_customize_product_map')
+  localStorage.removeItem('mowo_customize_draft_id')
+  localStorage.removeItem('mowo_customize_frames')
+  localStorage.removeItem('mowo_customize_meta')
   document.getElementById('pageContent').innerHTML = `
   <div class="card">
     <div class="pay-status-box">

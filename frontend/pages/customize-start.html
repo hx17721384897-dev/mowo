@@ -439,7 +439,7 @@ footer{background:var(--black);color:rgba(255,255,255,.45);padding:80px var(--pa
   </div>
   <div class="bottom-bar-btns">
     <button class="btn btn-secondary btn-sm" onclick="clearSelection()">重新选择</button>
-    <a class="btn btn-primary btn-sm" id="nextBtn" href="#">下一步 →</a>
+    <a class="btn btn-primary btn-sm" id="nextBtn" href="#" onclick="return goNext(event)">下一步 →</a>
   </div>
 </div>
 
@@ -755,6 +755,32 @@ function selectModel(modelId) {
   doSelect(m)
 }
 
+const CAPI = location.hostname === '127.0.0.1' ? 'http://127.0.0.1:3001' : 'http://localhost:3001'
+
+async function goNext(e) {
+  e.preventDefault()
+  const href = document.getElementById('nextBtn').href
+  if (!href || href.endsWith('#')) return false
+
+  const token = localStorage.getItem('mowo_token')
+  if (!token) { location.href = href; return false }
+
+  try {
+    const res  = await fetch(`${CAPI}/api/custom-products/quota`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    const json = await res.json()
+    if (json.success && !json.data.canCreate) {
+      const { count, limit } = json.data
+      alert(`草稿箱已达上限（${count}/${limit} 个）\n\n请先前往「我的动画」删除不需要的草稿，再开始新的定制。`)
+      return false
+    }
+  } catch(e) { /* 网络异常不阻断，让后续步骤兜底 */ }
+
+  location.href = href
+  return false
+}
+
 function doSelect(m) {
   _selectedId = m.id
   _models.forEach(x => {
@@ -765,6 +791,11 @@ function doSelect(m) {
   document.getElementById('bottomBarName').textContent = m.name
   document.getElementById('nextBtn').href = `customize-editor.html?modelId=${m.id}`
   document.getElementById('bottomBar').classList.add('visible')
+
+  // 每次选定新机型时清除上一次下单会话的残留数据，防止旧 product_map 在下次下单时复用已完成订单的 ID
+  localStorage.removeItem('mowo_customize_product_map')
+  localStorage.removeItem('mowo_customize_draft_id')
+  localStorage.removeItem('mowo_customize_frames')
 
   const skus   = m.skus || []
   const frames = [...new Set(skus.map(s => s.frameCount))].sort((a,b) => a-b)
@@ -780,6 +811,8 @@ function clearSelection() {
   document.getElementById('bottomBar').classList.remove('visible')
   localStorage.removeItem('mowo_customize_meta')
   localStorage.removeItem('mowo_customize_frames')
+  localStorage.removeItem('mowo_customize_draft_id')
+  localStorage.removeItem('mowo_customize_product_map')
 }
 
 // ══ 详情弹窗 ══
