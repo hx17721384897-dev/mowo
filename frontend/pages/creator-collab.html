@@ -1449,53 +1449,26 @@ async function loadCollabNotifs() {
   list.style.display     = 'none'
   empty.style.display    = 'none'
   try {
-    // 并行拉取：申请记录（pending/rejected）+ 系统通知
-    const [worksRes, notifRes] = await Promise.all([
-      fetch(`${CAPI}/api/creator/collab/works?limit=50`, { headers: { Authorization: `Bearer ${getToken()}` } }),
-      fetch(`${CAPI}/api/creator/notifications?limit=50`, { headers: { Authorization: `Bearer ${getToken()}` } })
-    ])
-    const [worksJson, notifJson] = await Promise.all([worksRes.json(), notifRes.json()])
+    const res  = await fetch(`${CAPI}/api/creator/collab/works?limit=50`, {
+      headers: { Authorization: `Bearer ${getToken()}` }
+    })
+    const json = await res.json()
     skeleton.style.display = 'none'
 
-    // 申请记录：排除已通过（联名管理已展示）
-    const allWorks = (worksJson.success ? worksJson.data?.works || [] : [])
-    const applyWorks = allWorks.filter(w => w.status === 'pending' || w.status === 'rejected')
+    const applyWorks = (json.success ? json.data?.works || [] : [])
+      .filter(w => w.status === 'pending' || w.status === 'rejected')
 
-    // 系统通知
-    const notifs = notifJson.success ? (notifJson.data?.notifications || notifJson.data?.list || []) : []
-
-    if (!applyWorks.length && !notifs.length) { empty.style.display = ''; return }
-
-    let html = ''
-
-    // ── 申请记录区块 ──
-    if (applyWorks.length) {
-      html += `<p style="font-weight:900;font-size:12px;color:var(--gray3);letter-spacing:.05em;margin:0 0 10px;">📋 申请记录</p>`
-      html += applyWorks.map(renderApplyCard).join('')
+    if (!applyWorks.length) { empty.style.display = ''; }
+    else {
+      list.style.display = ''
+      list.innerHTML = applyWorks.map(renderApplyCard).join('')
     }
 
-    // ── 系统通知区块 ──
-    if (notifs.length) {
-      if (applyWorks.length) html += `<p style="font-weight:900;font-size:12px;color:var(--gray3);letter-spacing:.05em;margin:18px 0 10px;">🔔 系统通知</p>`
-      html += notifs.map(renderNotifCard).join('')
-    }
+    // 进入申请通知 tab 即全部标已读，清除所有红点角标
+    fetch(`${CAPI}/api/creator/notifications/read-all`, {
+      method: 'POST', headers: { Authorization: `Bearer ${getToken()}` }
+    }).then(() => loadNotifBadge()).catch(() => {})
 
-    list.style.display = ''
-    list.innerHTML = html
-
-    // 标记已读：系统通知点击后置为已读
-    list.querySelectorAll('.notif-card.unread').forEach(card => {
-      card.addEventListener('click', () => {
-        const id = card.dataset.id
-        if (!id) return
-        fetch(`${CAPI}/api/creator/notifications/${id}/read`, {
-          method: 'POST', headers: { Authorization: `Bearer ${getToken()}` }
-        }).catch(() => {})
-        card.classList.remove('unread')
-        card.querySelector('.notif-dot')?.remove()
-        loadNotifBadge()
-      })
-    })
   } catch(e) {
     skeleton.style.display = 'none'
     empty.style.display    = ''
@@ -1523,28 +1496,6 @@ function renderApplyCard(w) {
   </div>`
 }
 
-function renderNotifCard(n) {
-  const typeMap = {
-    approved:           { icon: '✅', title: '审核通过' },
-    rejected:           { icon: '❌', title: '审核未通过' },
-    offshelf:           { icon: '📦', title: '作品已下架' },
-    onshelf:            { icon: '🛍️', title: '作品已上架' },
-    revision_approved:  { icon: '✅', title: '修改版审核通过' },
-    revision_rejected:  { icon: '❌', title: '修改版未通过' },
-  }
-  const t = typeMap[n.type] || { icon: '🔔', title: n.type }
-  const isUnread = !n.isRead
-  const dot = isUnread ? '<div class="notif-dot"></div>' : ''
-  return `<div class="notif-card${isUnread ? ' unread' : ''}" data-id="${n.id}">
-    <div class="notif-icon">${t.icon}</div>
-    <div class="notif-body">
-      <p class="notif-title">${t.title}</p>
-      <p class="notif-msg">${escHtml(n.message || n.workTitle || '')}</p>
-      <p class="notif-date">${fmtDate(n.createdAt)}</p>
-    </div>
-    ${dot}
-  </div>`
-}
 
 /* ─────────────────────────────────────────
    通知角标

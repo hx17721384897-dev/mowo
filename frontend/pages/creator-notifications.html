@@ -264,7 +264,7 @@ function renderCard(n) {
   const t   = typeMap[n.type] || { icon: '🔔', iconCls: '', title: n.type }
   const unread = !n.isRead
   return `
-  <div class="notif-card${unread?' unread':''}" id="notifCard_${n.id}" onclick="markRead('${n.id}', this)">
+  <div class="notif-card${unread?' unread':''}" id="notifCard_${n.id}" onclick="goToApplyNotif()" style="cursor:pointer;">
     <div class="notif-icon ${t.iconCls}">${t.icon}</div>
     <div class="notif-body">
       <p class="notif-title">${t.title}</p>
@@ -273,6 +273,10 @@ function renderCard(n) {
     </div>
     ${unread ? '<div class="notif-dot"></div>' : ''}
   </div>`
+}
+
+function goToApplyNotif() {
+  location.href = 'creator-collab.html?tab=notif'
 }
 
 async function loadNotifications(reset = false) {
