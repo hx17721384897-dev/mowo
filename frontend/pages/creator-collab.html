@@ -662,7 +662,7 @@ function renderWorkCard(w) {
 
   const frames = Array.isArray(w.animationFrames) ? w.animationFrames : []
   const previewHtml = w.coverUrl
-    ? `<img src="${escHtml(w.coverUrl)}" alt="封面">`
+    ? `<img src="${escHtml(w.coverUrl)}" alt="" onerror="this.parentElement.innerHTML='🎨'">`
     : '🎨'
 
   let rejectHtml = ''
@@ -739,7 +739,7 @@ async function loadManageThumb(workId) {
     if (!url) return
     const el = document.getElementById(`manageThumb_${workId}`)
     if (el) {
-      el.innerHTML = `<img src="${escHtml(url)}" alt="封面" style="width:100%;height:100%;object-fit:contain;">`
+      el.innerHTML = `<img src="${escHtml(url)}" alt="" onerror="this.parentElement.innerHTML='🎨'">`
     }
     // 缓存 url 到 manageWorks 以便编辑面板使用
     const w = manageWorks.find(x => x.id === workId)
@@ -764,11 +764,7 @@ function renderManageCard(w) {
         </div>
         ${w.description ? `<p class="work-desc">${escHtml(w.description.slice(0,80))}${w.description.length>80?'…':''}</p>` : ''}
       </div>
-    </div>
-    <div class="work-body" style="padding-top:0;">
-      <div style="display:flex;justify-content:flex-end;padding:10px 20px 16px;">
-        <button class="btn btn-ghost btn-sm" onclick="openEditPanel('${w.id}')">✏️ 编辑</button>
-      </div>
+      <button class="btn btn-ghost btn-sm" style="flex-shrink:0;align-self:flex-start;margin-top:2px;" onclick="openEditPanel('${w.id}')">✏️ 编辑</button>
     </div>
   </div>`
 }
