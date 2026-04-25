@@ -115,6 +115,14 @@ export default async function adminCollabRoutes(fastify) {
         data: { status: 'rejected', rejectReason, approvedAt: null, approvedBy: null },
       })
 
+      const notifType = work.isRevision ? 'revision_rejected' : 'rejected'
+      const notifMsg  = work.isRevision
+        ? `你对《${work.title}》的修改申请未通过，原因：${rejectReason}`
+        : `你的作品《${work.title}》审核未通过，原因：${rejectReason}`
+      await prisma.creatorNotification.create({
+        data: { userId: work.creatorId, type: notifType, workId: work.id, workTitle: work.title, message: notifMsg }
+      }).catch(() => {})
+
       return reply.send({ success: true, data: updated })
     }
 
@@ -160,6 +168,27 @@ export default async function adminCollabRoutes(fastify) {
       },
     })
 
+    // 修改版通过时：将变更字段覆写回原作品
+    if (work.isRevision && work.originalWorkId) {
+      const cl = safeJson(work.changeLog)
+      const patch = {}
+      if (cl.title)                      patch.title        = cl.title.new
+      if (cl.description !== undefined)  patch.description  = cl.description?.new ?? null
+      if (cl.supportedSkus)              patch.supportedSkus = JSON.stringify(cl.supportedSkus.new)
+      if (Object.keys(patch).length) {
+        await prisma.collabWork.update({ where: { id: work.originalWorkId }, data: patch })
+      }
+    }
+
+    // 写通知
+    const notifType = work.isRevision ? 'revision_approved' : 'approved'
+    const notifMsg  = work.isRevision
+      ? `你对《${work.title}》的修改版已审核通过，修改内容已同步至展示库`
+      : `你的作品《${work.title}》已审核通过，分红率 ${(rate * 100).toFixed(1)}%`
+    await prisma.creatorNotification.create({
+      data: { userId: work.creatorId, type: notifType, workId: work.id, workTitle: work.title, message: notifMsg }
+    }).catch(() => {})
+
     return reply.send({
       success: true,
       data: { ...updated, revenueRateBreakdown: breakdown },
@@ -193,6 +222,18 @@ export default async function adminCollabRoutes(fastify) {
         shelfAt:   action === 'on' ? new Date() : null,
       },
     })
+
+    if (action === 'off') {
+      await prisma.creatorNotification.create({
+        data: {
+          userId:    work.creatorId,
+          type:      'offshelf',
+          workId:    work.id,
+          workTitle: work.title,
+          message:   `你的作品《${work.title}》已被下架，如有疑问请联系平台`,
+        }
+      }).catch(() => {})
+    }
 
     return reply.send({ success: true, message: action === 'on' ? '已上架' : '已下架', data: updated })
   })

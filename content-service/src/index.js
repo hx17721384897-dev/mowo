@@ -21,7 +21,8 @@ import customizeOrderRoutes from './routes/customize-orders.js'
 import adminRoutes from './routes/admin.js'
 import collabRoutes from './routes/collab.js'
 import adminCollabRoutes from './routes/admin-collab.js'
-import creatorRoutes from './routes/creator.js'
+import creatorRoutes       from './routes/creator.js'
+import notificationsRoutes from './routes/notifications.js'
 import inventoryRoutes from './routes/inventory.js'
 import importRoutes     from './routes/import.js'
 import platformSkuRoutes from './routes/platform-sku.js'
@@ -118,6 +119,7 @@ async function start() {
     await fastify.register(collabRoutes,         { prefix: '/api' })
     await fastify.register(adminCollabRoutes,    { prefix: '/api' })
     await fastify.register(creatorRoutes,        { prefix: '/api/creator' })
+    await fastify.register(notificationsRoutes,  { prefix: '/api/creator' })
     await fastify.register(inventoryRoutes,      { prefix: '/api/inventory' })
     await fastify.register(importRoutes,         { prefix: '/api/admin/import' })
     await fastify.register(platformSkuRoutes,    { prefix: '/api/admin/sku-mapping' })

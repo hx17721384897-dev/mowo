@@ -184,6 +184,73 @@ export default async function creatorRoutes(fastify) {
   })
 
   // ─────────────────────────────────────────────
+  // 联名作品修改版（shadow record）
+  // ─────────────────────────────────────────────
+
+  /**
+   * POST /api/creator/collab/works/:id/revise
+   * 创作者对已通过作品提交修改申请
+   * 创建独立的 shadow record（isRevision=true），原作品不下线
+   */
+  fastify.post('/collab/works/:id/revise', { preHandler: requireCreator }, async (req, reply) => {
+    const userId = req.user.userId
+    const { title, description, supportedSkus } = req.body
+
+    if (!title?.trim()) {
+      return reply.code(400).send({ success: false, message: '标题不能为空' })
+    }
+    if (!Array.isArray(supportedSkus) || supportedSkus.length === 0) {
+      return reply.code(400).send({ success: false, message: '至少选择一个适配规格' })
+    }
+
+    const work = await prisma.collabWork.findUnique({ where: { id: req.params.id } })
+    if (!work) return reply.code(404).send({ success: false, message: '作品不存在' })
+    if (work.creatorId !== userId) return reply.code(403).send({ success: false, message: '无权操作此作品' })
+    if (work.status !== 'approved') {
+      return reply.code(400).send({ success: false, message: '只有已审核通过的作品才能提交修改' })
+    }
+
+    // 检查是否已有待审的修改版
+    const existingRevision = await prisma.collabWork.findFirst({
+      where: { originalWorkId: work.id, isRevision: true, status: 'pending' }
+    })
+    if (existingRevision) {
+      return reply.code(400).send({ success: false, message: '已有一个修改版正在审核中，请等待审核完成后再提交' })
+    }
+
+    // 构建 changeLog（记录 old/new 对比）
+    const oldSkus = safeJson(work.supportedSkus)
+    const changeLog = JSON.stringify({
+      title:        { old: work.title,       new: title.trim() },
+      description:  { old: work.description, new: description || null },
+      supportedSkus: { old: oldSkus,         new: supportedSkus }
+    })
+
+    const revision = await prisma.collabWork.create({
+      data: {
+        creatorId:        work.creatorId,
+        title:            title.trim(),
+        description:      description || null,
+        animationFrames:  work.animationFrames,
+        coverUrl:         work.coverUrl,
+        supportedSkus:    JSON.stringify(supportedSkus),
+        sizes:            work.sizes,
+        activityId:       work.activityId,
+        isRevision:       true,
+        originalWorkId:   work.id,
+        changeLog,
+        status:           'pending',
+        isNewbieWork:     false,
+        isExclusiveWork:  false,
+        revenueRate:      work.revenueRate,
+        agreementSignedAt: new Date(),
+      }
+    })
+
+    return reply.send({ success: true, data: { revisionId: revision.id } })
+  })
+
+  // ─────────────────────────────────────────────
   // 销量统计
   // ─────────────────────────────────────────────
 

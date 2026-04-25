@@ -295,6 +295,11 @@ input,select,textarea{font-family:var(--font);}
     <a href="creator-animations.html" class="nav-item"><span class="nav-icon">🎬</span>我的动画</a>
     <a href="creator-collab.html"     class="nav-item active"><span class="nav-icon">🎨</span>我的联名</a>
     <a href="creator-links.html"      class="nav-item"><span class="nav-icon">🔗</span>引流链接</a>
+    <p class="nav-sec" style="margin-top:12px;">系统</p>
+    <a href="creator-notifications.html" class="nav-item" id="navNotif">
+      <span class="nav-icon">🔔</span>通知
+      <span id="notifBadge" style="display:none;margin-left:auto;background:var(--accent-o);color:#fff;font-weight:900;font-size:10px;padding:1px 7px;border-radius:999px;"></span>
+    </a>
   </nav>
   <div class="sidebar-bottom">
     <div class="cert-v">
@@ -326,13 +331,14 @@ input,select,textarea{font-family:var(--font);}
 
     <div style="margin-bottom:24px;" class="reveal">
       <h1 style="font-weight:900;font-size:26px;letter-spacing:-.02em;margin-bottom:6px;">我的联名</h1>
-      <p style="font-weight:700;font-size:13px;color:var(--gray3);">管理联名申请、上传帧素材包，让更多用户爱上你的设计</p>
+      <p style="font-weight:700;font-size:13px;color:var(--gray3);">管理联名申请与已通过作品，让更多用户爱上你的设计</p>
     </div>
 
     <!-- Tab 栏 -->
     <div class="tab-bar reveal d1" id="tabBar">
-      <button class="tab-btn active" onclick="switchTab('works')" id="tabWorks">📋 我的申请</button>
-      <button class="tab-btn" onclick="switchTab('apply')" id="tabApply">🚀 提交申请</button>
+      <button class="tab-btn active" onclick="switchTab('works')"  id="tabWorks">📋 联名申请</button>
+      <button class="tab-btn"        onclick="switchTab('manage')" id="tabManage">🎨 联名管理</button>
+      <button class="tab-btn"        onclick="switchTab('apply')"  id="tabApply">🚀 提交申请</button>
     </div>
 
     <!-- ── Tab 1: 我的申请 ── -->
@@ -353,7 +359,22 @@ input,select,textarea{font-family:var(--font);}
       </div>
     </div>
 
-    <!-- ── Tab 2: 提交申请 ── -->
+    <!-- ── Tab 2: 联名管理 ── -->
+    <div class="tab-pane reveal d2" id="paneManage">
+      <div id="manageSkeleton">
+        <div class="sk-card"><div class="sk-line skeleton" style="width:55%"></div><div class="sk-line skeleton" style="width:35%"></div></div>
+        <div class="sk-card"><div class="sk-line skeleton" style="width:70%"></div><div class="sk-line skeleton" style="width:40%"></div></div>
+      </div>
+      <div id="manageList" style="display:none;"></div>
+      <div class="empty" id="manageEmpty" style="display:none;">
+        <div class="empty-icon">🎨</div>
+        <p class="empty-text">还没有已通过的作品</p>
+        <p class="empty-sub">联名申请审核通过后，作品将在这里显示，你可以提交修改申请</p>
+        <button class="btn btn-ghost" onclick="switchTab('works')">查看我的申请</button>
+      </div>
+    </div>
+
+    <!-- ── Tab 3: 提交申请 ── -->
     <div class="tab-pane reveal d2" id="paneApply">
 
       <!-- 申请列表顶栏 -->
@@ -391,9 +412,6 @@ input,select,textarea{font-family:var(--font);}
 
   </div>
 </main>
-
-<!-- 帧素材包上传的隐藏文件输入 -->
-<input type="file" class="pack-file-input" id="packFileInput" accept=".zip">
 
 <!-- ── 添加款式面板（从右滑入）── -->
 <div class="panel-overlay" id="panelOverlay" onclick="closePanel()"></div>
@@ -491,6 +509,51 @@ input,select,textarea{font-family:var(--font);}
   </div>
 </div>
 
+<!-- ── 编辑作品面板（联名管理 Tab 用）── -->
+<div class="panel-overlay" id="editPanelOverlay" onclick="closeEditPanel()"></div>
+<div class="panel" id="editPanel">
+  <div class="panel-header">
+    <p class="panel-title">修改作品信息</p>
+    <button class="panel-close" onclick="closeEditPanel()">✕</button>
+  </div>
+  <div class="panel-body">
+    <div style="background:#FFF8E1;border:1px solid #FFE082;border-radius:12px;padding:12px 14px;margin-bottom:20px;font-weight:700;font-size:12px;color:#7a5a00;line-height:1.6;">
+      📋 修改申请将创建一个新的审核版本，原作品在审核期间继续正常展示。审核通过后修改内容自动生效。
+    </div>
+    <!-- 帧图预览（只读） -->
+    <div class="form-section">
+      <p class="form-section-title"><span class="num">·</span>帧图预览（不可修改）</p>
+      <div id="editFramePreview" style="width:72px;height:72px;border-radius:12px;background:var(--gray1);display:flex;align-items:center;justify-content:center;font-size:28px;overflow:hidden;">🎨</div>
+    </div>
+    <!-- 作品信息 -->
+    <div class="form-section">
+      <p class="form-section-title"><span class="num">1</span>作品信息</p>
+      <div class="form-row">
+        <label class="form-label">作品标题 <span class="req">*</span></label>
+        <input class="form-field" id="editTitle" type="text" placeholder="给作品起个名字" maxlength="50">
+      </div>
+      <div class="form-row">
+        <label class="form-label">作品描述</label>
+        <textarea class="form-textarea" id="editDesc" placeholder="介绍一下设计灵感（选填）" rows="3" maxlength="500"></textarea>
+      </div>
+    </div>
+    <!-- 适配规格 -->
+    <div class="form-section">
+      <div class="sku-section-header">
+        <div>
+          <p class="form-section-title" style="margin-bottom:2px;"><span class="num">2</span>适配规格 <span style="font-weight:700;font-size:12px;color:var(--gray3);letter-spacing:0;text-transform:none;">（至少选1款）</span></p>
+        </div>
+        <button class="btn-select-all" id="editBtnSelectAll" onclick="toggleEditSelectAll()">全选</button>
+      </div>
+      <div id="editSkuGrid"><p class="sku-loading">加载中…</p></div>
+    </div>
+  </div>
+  <div class="panel-footer">
+    <button class="btn btn-ghost" onclick="closeEditPanel()">取消</button>
+    <button class="btn btn-yellow" id="btnSubmitEdit" onclick="submitEdit()">提交修改申请</button>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -501,10 +564,14 @@ input,select,textarea{font-family:var(--font);}
 const CAPI = (location.hostname==='127.0.0.1'?'http://127.0.0.1:3001':'http://localhost:3001')
 const BASE = location.pathname.includes('/pages/') ? '../pages/' : './'
 
-let currentAnimId    = null      // 面板中当前选中的动画 ID
-let selectedSkus     = new Set() // 面板中当前选中的 SKU
-let allSkus          = []        // 面板中加载的 SKU 列表
-let packUploadTarget = null      // { workId, size }
+let currentAnimId  = null      // 面板中当前选中的动画 ID
+let selectedSkus   = new Set() // 面板中当前选中的 SKU
+let allSkus        = []        // 面板中加载的 SKU 列表
+
+let manageWorks    = []        // 联名管理 Tab 已加载的作品列表
+let editWorkId     = null      // 当前编辑的作品 ID
+let editAllSkus    = []        // 编辑面板的 SKU 列表
+let editSelectedSkus = new Set() // 编辑面板已选 SKU
 
 // 草稿列表（本地，未提交到 API）
 let draftItems = []        // [{ id, animationId, orderNo, title, desc, supportedSkus, skuSummary, animName, previewUrl }]
@@ -548,13 +615,13 @@ function showToast(msg, dur = 2400) {
    Tab 切换
 ───────────────────────────────────────── */
 function switchTab(tab) {
-  const tabMap = { works: 'paneWorks', apply: 'paneApply' }
-  const btnMap = { works: 'tabWorks', apply: 'tabApply' }
+  const tabMap = { works: 'paneWorks', manage: 'paneManage', apply: 'paneApply' }
+  const btnMap = { works: 'tabWorks',  manage: 'tabManage',  apply: 'tabApply'  }
   Object.keys(tabMap).forEach(k => {
     document.getElementById(tabMap[k]).classList.toggle('active', k === tab)
     document.getElementById(btnMap[k]).classList.toggle('active', k === tab)
   })
-  // SKU 在打开面板时按需加载，无需在 tab 切换时预加载
+  if (tab === 'manage') loadManageWorks()
 }
 
 /* ─────────────────────────────────────────
@@ -603,43 +670,12 @@ function renderWorkCard(w) {
     rejectHtml = `<div class="work-reject-reason"><strong>拒绝原因：</strong>${escHtml(w.rejectReason)}</div>`
   }
 
-  // 帧素材包上传区（仅 approved/onshelf 显示）
-  let packHtml = ''
-  if (w.status === 'approved' || w.status === 'onshelf') {
-    const skus     = Array.isArray(w.supportedSkus) ? w.supportedSkus : []
-    const packs    = w.framePacks || []
-    const packMap  = Object.fromEntries(packs.map(p => [p.size, p]))
-    const sizes    = Array.isArray(w.sizes) ? w.sizes : []
-
-    // 显示每个支持的SKU尺寸的上传状态
-    const sizeItems = skus.length > 0
-      ? [...new Set(skus.map(s => typeof s === 'string' ? s : (s.size || '')))]
-          .filter(Boolean)
-          .map(size => {
-            const pack = packMap[size]
-            const hasPack = !!pack
-            return `<div class="pack-size-item">
-              <span class="pack-size-name">${escHtml(size)}</span>
-              <span class="pack-size-status${hasPack ? ' done' : ''}">${hasPack ? '✓ 已上传' : '待上传'}</span>
-              <button class="pack-upload-btn${hasPack ? ' done' : ''}" onclick="uploadFramePack('${w.id}','${escHtml(size)}')">${hasPack ? '重新上传' : '上传'}</button>
-            </div>`
-          }).join('')
-      : '<p style="font-weight:700;font-size:12px;color:var(--gray3);">无适配款式尺寸信息</p>'
-
-    packHtml = `
-    <div class="pack-section" style="margin-top:12px;">
-      <p class="pack-title">帧素材包 <span class="pack-title-badge">审核已通过</span></p>
-      <p style="font-weight:700;font-size:11px;color:var(--gray3);margin-bottom:10px;">请为每个适配尺寸上传对应的帧素材包（.zip格式，包含帧图序列）</p>
-      <div class="pack-grid">${sizeItems}</div>
-    </div>`
-  }
-
   return `
   <div class="work-card">
     <div class="work-head">
       <div class="work-preview">${previewHtml}</div>
       <div class="work-info">
-        <p class="work-title">${escHtml(w.title)}</p>
+        <p class="work-title">${escHtml(w.title)}${w.isRevision ? '<span style="background:#FFF8E1;color:#B8860B;font-weight:900;font-size:10px;padding:2px 7px;border-radius:4px;margin-left:6px;">修改版</span>' : ''}</p>
         <div class="work-meta">
           <span class="badge ${s.cls}">${s.label}</span>
           ${w.isNewbieWork ? '<span class="badge badge-approved">✦ 新手期</span>' : ''}
@@ -649,73 +685,260 @@ function renderWorkCard(w) {
         ${w.description ? `<p class="work-desc">${escHtml(w.description.slice(0,80))}${w.description.length>80?'…':''}</p>` : ''}
       </div>
     </div>
-    <div class="work-body">
-      ${rejectHtml}
-      ${packHtml}
+    ${rejectHtml ? `<div class="work-body">${rejectHtml}</div>` : ''}
+  </div>`
+}
+
+/* ─────────────────────────────────────────
+   联名管理 Tab
+───────────────────────────────────────── */
+let _manageLoaded = false
+
+async function loadManageWorks() {
+  if (_manageLoaded) return   // 已加载过则跳过，除非强制刷新
+  _manageLoaded = true
+  const skeleton = document.getElementById('manageSkeleton')
+  const list     = document.getElementById('manageList')
+  const empty    = document.getElementById('manageEmpty')
+  skeleton.style.display = ''
+  list.style.display     = 'none'
+  empty.style.display    = 'none'
+
+  try {
+    const res  = await fetch(`${CAPI}/api/creator/collab/works?status=approved&limit=50`, {
+      headers: { Authorization: `Bearer ${getToken()}` }
+    })
+    const json = await res.json()
+    skeleton.style.display = 'none'
+    if (!json.success) throw new Error(json.message)
+    manageWorks = json.data.works || []
+
+    if (!manageWorks.length) {
+      empty.style.display = ''
+      return
+    }
+    list.style.display = ''
+    list.innerHTML = manageWorks.map(renderManageCard).join('')
+
+    // 异步懒加载封面预签名 URL
+    manageWorks.forEach(w => loadManageThumb(w.id))
+  } catch(e) {
+    skeleton.style.display = 'none'
+    empty.style.display    = ''
+  }
+}
+
+async function loadManageThumb(workId) {
+  try {
+    const res  = await fetch(`${CAPI}/api/creator/collab/works/${workId}`, {
+      headers: { Authorization: `Bearer ${getToken()}` }
+    })
+    const json = await res.json()
+    if (!json.success) return
+    const url = json.data.coverUrl || (json.data.animationFrames || [])[0] || null
+    if (!url) return
+    const el = document.getElementById(`manageThumb_${workId}`)
+    if (el) {
+      el.innerHTML = `<img src="${escHtml(url)}" alt="封面" style="width:100%;height:100%;object-fit:contain;">`
+    }
+    // 缓存 url 到 manageWorks 以便编辑面板使用
+    const w = manageWorks.find(x => x.id === workId)
+    if (w) w._thumbUrl = url
+  } catch(e) {}
+}
+
+function renderManageCard(w) {
+  const skus = Array.isArray(w.supportedSkus) ? w.supportedSkus : []
+  const skuText = skus.length ? `${skus.length} 个规格` : '无规格'
+  return `
+  <div class="work-card">
+    <div class="work-head">
+      <div class="work-preview" id="manageThumb_${w.id}">🎨</div>
+      <div class="work-info">
+        <p class="work-title">${escHtml(w.title)}</p>
+        <div class="work-meta">
+          <span class="badge badge-approved">已通过</span>
+          ${w.isOnShelf ? '<span class="badge badge-onshelf">已上架</span>' : ''}
+          <span style="font-weight:700;font-size:11px;color:var(--gray3);">${skuText}</span>
+          <span style="font-weight:700;font-size:11px;color:var(--gray3);">${fmtDate(w.createdAt)}</span>
+        </div>
+        ${w.description ? `<p class="work-desc">${escHtml(w.description.slice(0,80))}${w.description.length>80?'…':''}</p>` : ''}
+      </div>
+    </div>
+    <div class="work-body" style="padding-top:0;">
+      <div style="display:flex;justify-content:flex-end;padding:10px 20px 16px;">
+        <button class="btn btn-ghost btn-sm" onclick="openEditPanel('${w.id}')">✏️ 编辑</button>
+      </div>
     </div>
   </div>`
 }
 
 /* ─────────────────────────────────────────
-   帧素材包上传
+   编辑面板
 ───────────────────────────────────────── */
-function uploadFramePack(workId, size) {
-  packUploadTarget = { workId, size }
-  const inp = document.getElementById('packFileInput')
-  inp.value = ''
-  inp.click()
+async function openEditPanel(workId) {
+  editWorkId = workId
+  editSelectedSkus.clear()
+  editAllSkus = []
+
+  const w = manageWorks.find(x => x.id === workId)
+  if (!w) return
+
+  // 填充基本信息
+  document.getElementById('editTitle').value = w.title || ''
+  document.getElementById('editDesc').value  = w.description || ''
+
+  // 封面预览
+  const thumbEl = document.getElementById('editFramePreview')
+  thumbEl.innerHTML = w._thumbUrl
+    ? `<img src="${escHtml(w._thumbUrl)}" alt="封面" style="width:100%;height:100%;object-fit:contain;border-radius:12px;">`
+    : '🎨'
+
+  // 打开面板
+  document.getElementById('editPanel').classList.add('open')
+  document.getElementById('editPanelOverlay').classList.add('show')
+  document.body.style.overflow = 'hidden'
+
+  // 加载 SKU（找到原来 SKU 对应的 modelId）
+  document.getElementById('editSkuGrid').innerHTML = '<p class="sku-loading">加载中…</p>'
+  document.getElementById('btnSubmitEdit').disabled = false
+
+  try {
+    // 查详情获取 animationFrames 来源的 modelId（configJson 中）
+    // 直接调全部模型，再根据 supportedSkus 确定是哪个模型
+    const modRes  = await fetch(`${CAPI}/api/machine-models`)
+    const modJson = await modRes.json()
+    if (!modJson.success) throw new Error()
+    const models = (modJson.data || []).filter(m => m.isActive !== false)
+
+    // 找到第一个有 SKU 与 supportedSkus 交集的模型
+    const existingSkuIds = new Set(Array.isArray(w.supportedSkus) ? w.supportedSkus : [])
+    let matchModel = null
+    for (const m of models) {
+      const skuRes  = await fetch(`${CAPI}/api/machine-models/${m.id}/skus`)
+      const skuJson = await skuRes.json()
+      if (!skuJson.success) continue
+      const skus = (skuJson.data || []).filter(s => s.isActive !== false)
+      if (skus.some(s => existingSkuIds.has(s.id))) {
+        matchModel = { ...m, skus }
+        break
+      }
+    }
+
+    if (!matchModel) {
+      document.getElementById('editSkuGrid').innerHTML =
+        '<p style="font-weight:700;font-size:12px;color:var(--gray3);">无法找到对应款式，请联系平台</p>'
+      return
+    }
+
+    editAllSkus = matchModel.skus.map(s => ({ ...s, modelId: matchModel.id, modelName: matchModel.name }))
+    // 预选原有 SKU
+    editAllSkus.forEach(s => { if (existingSkuIds.has(s.id)) editSelectedSkus.add(s.id) })
+    renderEditSkuGrouped(matchModel.name)
+  } catch(e) {
+    document.getElementById('editSkuGrid').innerHTML =
+      '<p style="font-weight:700;font-size:12px;color:var(--gray3);">规格加载失败，请刷新重试</p>'
+  }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('packFileInput').addEventListener('change', async (e) => {
-    const file = e.target.files[0]
-    if (!file || !packUploadTarget) return
-    const { workId, size } = packUploadTarget
+function closeEditPanel() {
+  document.getElementById('editPanel').classList.remove('open')
+  document.getElementById('editPanelOverlay').classList.remove('show')
+  document.body.style.overflow = ''
+}
 
-    if (!file.name.endsWith('.zip')) {
-      showToast('请上传 .zip 格式的帧素材包', 3000)
-      return
-    }
-    if (file.size > 200 * 1024 * 1024) {
-      showToast('文件不能超过 200MB', 3000)
-      return
-    }
-
-    showToast('获取上传地址…')
-    try {
-      // 1. 获取预签名上传 URL
-      const urlRes  = await fetch(`${CAPI}/api/creator/collab/works/${workId}/frame-packs/${encodeURIComponent(size)}/upload-url`, {
-        headers: { Authorization: `Bearer ${getToken()}` }
-      })
-      const urlData = await urlRes.json()
-      if (!urlData.success) throw new Error(urlData.message)
-
-      showToast('上传中，请稍候…', 30000)
-
-      // 2. PUT 上传到 OSS
-      await fetch(urlData.data.uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/zip' },
-        body: file
-      })
-
-      // 3. 确认上传
-      const confirmRes = await fetch(`${CAPI}/api/creator/collab/works/${workId}/frame-packs/${encodeURIComponent(size)}/confirm-upload`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-        body: JSON.stringify({ ossKey: urlData.data.ossKey })
-      })
-      const confirmData = await confirmRes.json()
-      if (!confirmData.success) throw new Error(confirmData.message)
-
-      showToast(`✅ ${size} 帧素材包上传成功`)
-      loadMyWorks()  // 刷新列表
-    } catch(e) {
-      showToast('上传失败：' + e.message, 4000)
-    }
-    packUploadTarget = null
+function renderEditSkuGrouped(modelName) {
+  const container = document.getElementById('editSkuGrid')
+  if (!editAllSkus.length) {
+    container.innerHTML = '<p style="font-weight:700;font-size:12px;color:var(--gray3);">该款式暂无可用规格</p>'
+    syncEditSelectAllBtn()
+    return
+  }
+  const bySize = {}
+  const sizeOrder = []
+  editAllSkus.forEach(s => {
+    if (!bySize[s.size]) { bySize[s.size] = []; sizeOrder.push(s.size) }
+    bySize[s.size].push(s)
   })
-})
+  const modelTag = modelName
+    ? `<p style="font-weight:800;font-size:11px;color:var(--gray3);margin-bottom:14px;"><span style="background:var(--gray1);padding:2px 9px;border-radius:999px;">款式：${escHtml(modelName)}</span></p>`
+    : ''
+  container.innerHTML = modelTag + sizeOrder.map(size => {
+    const list = bySize[size]
+    return `<div class="sku-size-group">
+      <div class="sku-size-label">${escHtml(size)}</div>
+      <div class="sku-cards-row">
+        ${list.map(s => {
+          const sel = editSelectedSkus.has(s.id)
+          const hex = s.colorHex || '#D0CEC9'
+          return `<div class="sku-card${sel?' selected':''}" onclick="toggleEditSku('${escHtml(s.id)}')" title="${escHtml(s.size)} · ${escHtml(s.material)} · ${s.frameCount}帧">
+            <span class="sku-card-check">✓</span>
+            <div class="sku-card-color" style="background:${escHtml(hex)}"></div>
+            <span class="sku-card-frame">${s.frameCount}帧</span>
+            <span class="sku-card-mat">${escHtml(s.material)}</span>
+            ${s.colorName?`<span class="sku-card-clr">${escHtml(s.colorName)}</span>`:''}
+          </div>`
+        }).join('')}
+      </div>
+    </div>`
+  }).join('')
+  syncEditSelectAllBtn()
+}
+
+function toggleEditSku(id) {
+  if (editSelectedSkus.has(id)) editSelectedSkus.delete(id)
+  else editSelectedSkus.add(id)
+  const mn = editAllSkus[0]?.modelName || ''
+  renderEditSkuGrouped(mn)
+}
+
+function toggleEditSelectAll() {
+  const allIds = editAllSkus.map(s => s.id)
+  const allSel = allIds.every(id => editSelectedSkus.has(id))
+  if (allSel) allIds.forEach(id => editSelectedSkus.delete(id))
+  else        allIds.forEach(id => editSelectedSkus.add(id))
+  renderEditSkuGrouped(editAllSkus[0]?.modelName || '')
+}
+
+function syncEditSelectAllBtn() {
+  const btn = document.getElementById('editBtnSelectAll')
+  if (!btn || !editAllSkus.length) return
+  const allIds = editAllSkus.map(s => s.id)
+  const allSel = allIds.length > 0 && allIds.every(id => editSelectedSkus.has(id))
+  btn.textContent = allSel ? '取消全选' : '全选'
+  btn.classList.toggle('all-selected', allSel)
+}
+
+async function submitEdit() {
+  const title = document.getElementById('editTitle').value.trim()
+  const desc  = document.getElementById('editDesc').value.trim()
+  if (!title)                    { showToast('标题不能为空'); return }
+  if (editSelectedSkus.size === 0) { showToast('至少选择一个规格'); return }
+
+  const btn = document.getElementById('btnSubmitEdit')
+  btn.disabled = true; btn.textContent = '提交中…'
+
+  try {
+    const res  = await fetch(`${CAPI}/api/creator/collab/works/${editWorkId}/revise`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+      body: JSON.stringify({ title, description: desc || null, supportedSkus: [...editSelectedSkus] })
+    })
+    const json = await res.json()
+    if (!json.success) throw new Error(json.message)
+
+    showToast('✅ 修改申请已提交，请等待审核')
+    closeEditPanel()
+    _manageLoaded = false   // 重置，下次切回管理 Tab 时刷新
+    switchTab('works')
+    setTimeout(loadMyWorks, 400)
+  } catch(e) {
+    showToast('提交失败：' + e.message, 4000)
+  } finally {
+    const b = document.getElementById('btnSubmitEdit')
+    if (b) { b.disabled = false; b.textContent = '提交修改申请' }
+  }
+}
 
 /* ─────────────────────────────────────────
    加载款式 SKU
@@ -1205,11 +1428,30 @@ function initReveal() {
 }
 
 /* ─────────────────────────────────────────
+   通知角标
+───────────────────────────────────────── */
+async function loadNotifBadge() {
+  try {
+    const res  = await fetch(`${CAPI}/api/creator/notifications/unread-count`, {
+      headers: { Authorization: `Bearer ${getToken()}` }
+    })
+    const json = await res.json()
+    if (!json.success) return
+    const count = json.data?.count || 0
+    const badge = document.getElementById('notifBadge')
+    if (!badge) return
+    if (count > 0) { badge.textContent = count; badge.style.display = '' }
+    else             badge.style.display = 'none'
+  } catch(e) {}
+}
+
+/* ─────────────────────────────────────────
    初始化
 ───────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', async () => {
   if (!requireCreator()) return
   initReveal()
+  loadNotifBadge()
 
   // 并行加载作品列表
   loadMyWorks()
@@ -1220,13 +1462,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   const openTab = params.get('tab')
 
   if (animId) {
-    // 来自动画库"提交联名"按钮：切到申请 tab，打开面板并预填动画
     switchTab('apply')
     openPanel()
     await loadAnimSource(animId)
     history.replaceState({}, '', location.pathname)
   } else if (openTab === 'apply') {
     switchTab('apply')
+    history.replaceState({}, '', location.pathname)
+  } else if (openTab === 'manage') {
+    switchTab('manage')
     history.replaceState({}, '', location.pathname)
   }
 })
