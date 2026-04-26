@@ -533,6 +533,8 @@ model MachineModelSku {
   isActive     Boolean      @default(true) @map("is_active")
   sortOrder    Int          @default(0) @map("sort_order")
 
+  exampleMedia      String?   @map("example_media")                    // JSON: ["oss/path1", "oss/path2"]
+
   // v2 新增：结构化编码与授权字段
   skuCode           String?   @map("sku_code") @db.VarChar(50)          // 如 STD-55-12F-WD-NA
   skuType           String    @default("KIT") @map("sku_type") @db.VarChar(20) // KIT / CBR_TEMPLATE / MTO_TEMPLATE
@@ -660,6 +662,8 @@ model CollabWork {
   isRevision        Boolean   @default(false) @map("is_revision")        // 是否为修改版
   originalWorkId    String?   @map("original_work_id")                   // 指向被修改的原作品 ID
   changeLog         String?   @db.Text @map("change_log")                // JSON diff: {title:{old,new},...}
+  hoverGifUrl       String?   @map("hover_gif_url")       // 卡片 hover 用小 GIF OSS 路径
+  creatorMarkups    String?   @map("creator_markups")     // JSON: {"skuId": decimalAmount}
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 

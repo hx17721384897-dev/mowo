@@ -27,6 +27,10 @@ export default async function creatorRoutes(fastify) {
     try { return JSON.parse(str) } catch { return [] }
   }
 
+  function safeJsonObj(str) {
+    try { const v = JSON.parse(str); return (v && typeof v === 'object' && !Array.isArray(v)) ? v : {} } catch { return {} }
+  }
+
   // ─────────────────────────────────────────────
   // 我的联名作品
   // ─────────────────────────────────────────────
@@ -248,6 +252,102 @@ export default async function creatorRoutes(fastify) {
     })
 
     return reply.send({ success: true, data: { revisionId: revision.id } })
+  })
+
+  // ─────────────────────────────────────────────
+  // 创作者加价（per-SKU markup）
+  // ─────────────────────────────────────────────
+
+  /**
+   * GET /api/creator/collab/:id/markup
+   * 获取当前加价设置
+   */
+  fastify.get('/collab/:id/markup', { preHandler: requireCreator }, async (req, reply) => {
+    const work = await prisma.collabWork.findUnique({ where: { id: req.params.id } })
+    if (!work) return reply.code(404).send({ success: false, message: '作品不存在' })
+    if (work.creatorId !== req.user.userId) return reply.code(403).send({ success: false, message: '无权访问' })
+
+    const skuIds = safeJson(work.supportedSkus)
+    const skus = skuIds.length
+      ? await prisma.machineModelSku.findMany({
+          where: { id: { in: skuIds } },
+          select: { id: true, size: true, material: true, frameCount: true, colorName: true, price: true },
+        })
+      : []
+
+    const markups = safeJsonObj(work.creatorMarkups)
+
+    return reply.send({
+      success: true,
+      data: {
+        workId: work.id,
+        markups,
+        skus: skus.map(s => ({
+          ...s,
+          basePrice: Number(s.price),
+          markup: Number(markups[s.id] ?? 0),
+          maxMarkup: Math.floor(Number(s.price) * 0.2 * 100) / 100,
+          finalPrice: Number(s.price) + Number(markups[s.id] ?? 0),
+        })),
+      },
+    })
+  })
+
+  /**
+   * PUT /api/creator/collab/:id/markup
+   * 设置加价（每个SKU可独立设置）
+   * Body: { markups: { skuId: amount, ... } }
+   * 规则：加价上限 = 基础价 × 20%，立即生效，只影响新订单
+   */
+  fastify.put('/collab/:id/markup', { preHandler: requireCreator }, async (req, reply) => {
+    const work = await prisma.collabWork.findUnique({ where: { id: req.params.id } })
+    if (!work) return reply.code(404).send({ success: false, message: '作品不存在' })
+    if (work.creatorId !== req.user.userId) return reply.code(403).send({ success: false, message: '无权访问' })
+    if (work.status !== 'approved') return reply.code(400).send({ success: false, message: '只有审核通过的作品才能设置加价' })
+
+    const { markups } = req.body
+    if (!markups || typeof markups !== 'object') {
+      return reply.code(400).send({ success: false, message: 'markups 必须是对象' })
+    }
+
+    // 验证每个SKU的加价不超过20%上限
+    const skuIds = Object.keys(markups)
+    if (skuIds.length === 0) {
+      // 允许全部清零
+      await prisma.collabWork.update({ where: { id: work.id }, data: { creatorMarkups: JSON.stringify({}) } })
+      return reply.send({ success: true, data: { markups: {} } })
+    }
+
+    const skus = await prisma.machineModelSku.findMany({
+      where: { id: { in: skuIds } },
+      select: { id: true, price: true },
+    })
+    const skuMap = Object.fromEntries(skus.map(s => [s.id, Number(s.price)]))
+
+    const validatedMarkups = {}
+    for (const [skuId, amount] of Object.entries(markups)) {
+      const basePrice = skuMap[skuId]
+      if (basePrice === undefined) continue // 忽略无效SKU ID
+
+      const markup = Math.round(Number(amount) * 100) / 100 // 保留两位小数
+      if (markup < 0) return reply.code(400).send({ success: false, message: `加价不能为负数 (SKU: ${skuId})` })
+
+      const maxMarkup = Math.floor(basePrice * 0.2 * 100) / 100
+      if (markup > maxMarkup) {
+        return reply.code(400).send({
+          success: false,
+          message: `SKU 加价超过上限（上限 ${maxMarkup} 元，即基础价 ${basePrice} 元的 20%）`,
+        })
+      }
+      validatedMarkups[skuId] = markup
+    }
+
+    await prisma.collabWork.update({
+      where: { id: work.id },
+      data: { creatorMarkups: JSON.stringify(validatedMarkups) },
+    })
+
+    return reply.send({ success: true, data: { markups: validatedMarkups } })
   })
 
   // ─────────────────────────────────────────────

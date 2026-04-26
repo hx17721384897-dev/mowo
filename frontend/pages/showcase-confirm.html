@@ -167,6 +167,20 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
 .foot-links a:hover{color:var(--white);}
 .foot-copy{font-weight:700;font-size:12px;margin-top:24px;}
 
+/* ── Frame Player ── */
+.fp-wrap{position:relative;width:100%;height:100%;overflow:hidden;background:var(--black);display:flex;align-items:center;justify-content:center;}
+.fp-img{width:100%;height:100%;object-fit:contain;display:block;}
+.fp-watermark{position:absolute;bottom:0;left:0;right:0;padding:8px 14px;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:space-between;gap:8px;pointer-events:none;}
+.fp-watermark-text{font-weight:700;font-size:10px;letter-spacing:.04em;color:rgba(255,255,255,.8);}
+.fp-controls{position:absolute;top:10px;right:10px;display:flex;gap:6px;pointer-events:all;}
+.fp-btn{font-family:var(--font);font-weight:800;font-size:10px;padding:4px 10px;border-radius:999px;border:none;cursor:pointer;transition:all .15s;min-height:30px;}
+.fp-play{background:rgba(255,255,255,.9);color:var(--black);}
+.fp-play:hover{background:var(--white);}
+.fp-speed{background:rgba(255,255,255,.2);color:var(--white);}
+.fp-speed:hover{background:rgba(255,255,255,.35);}
+.fp-speed.active{background:var(--accent-y);color:var(--black);}
+.fp-progress{position:absolute;bottom:0;left:0;height:2px;background:var(--accent-y);transition:none;}
+
 /* Reveal */
 .reveal{opacity:0;transform:translateY(20px);transition:opacity .6s var(--ease),transform .6s var(--ease);}
 .reveal.on{opacity:1;transform:none;}
@@ -229,13 +243,74 @@ const urlParams = new URLSearchParams(location.search)
 const workId = urlParams.get('workId')
 
 let workData = null
-let skuList = []           // [{id, size, material, colorOptions:[]}]
+let skuList = []           // [{id, size, material, finalPrice, exampleMedia:[]}]
 let selectedSkuId = null
 let currentSlide = 0
-let slides = []            // [{type:'img', src}]
+let slides = []            // [{type:'player'|'img', src?}]
 let isLiked = false
 let likeCount = 0
 let isFollowing = false
+
+/* ── Frame Player state ── */
+const FP = {
+  frames: [],       // array of src URLs
+  loaded: [],       // preloaded Image objects
+  idx: 0,
+  playing: false,
+  fps: 10,          // default speed: 中
+  timer: null,
+  ready: false,
+}
+
+function fpStart() {
+  if (FP.timer) clearInterval(FP.timer)
+  if (!FP.frames.length) return
+  FP.playing = true
+  const delay = Math.round(1000 / FP.fps)
+  FP.timer = setInterval(fpTick, delay)
+  const btn = document.getElementById('fpPlayBtn')
+  if (btn) btn.textContent = '⏸ 暂停'
+}
+
+function fpStop() {
+  clearInterval(FP.timer)
+  FP.timer = null
+  FP.playing = false
+  const btn = document.getElementById('fpPlayBtn')
+  if (btn) btn.textContent = '▶ 播放'
+}
+
+function fpToggle() { FP.playing ? fpStop() : fpStart() }
+
+function fpSetSpeed(fps) {
+  FP.fps = fps
+  document.querySelectorAll('.fp-speed').forEach(b => b.classList.toggle('active', Number(b.dataset.fps) === fps))
+  if (FP.playing) fpStart()
+}
+
+function fpTick() {
+  if (!FP.frames.length) return
+  FP.idx = (FP.idx + 1) % FP.frames.length
+  const img = document.getElementById('fpImg')
+  const bar = document.getElementById('fpProgress')
+  if (img) img.src = FP.frames[FP.idx]
+  if (bar) bar.style.width = ((FP.idx + 1) / FP.frames.length * 100) + '%'
+}
+
+function fpPreload(urls) {
+  FP.frames = urls
+  FP.loaded = []
+  FP.idx = 0
+  urls.forEach(url => {
+    const img = new Image()
+    img.src = url
+    FP.loaded.push(img)
+  })
+  // Show first frame
+  const fpImg = document.getElementById('fpImg')
+  if (fpImg && urls.length) fpImg.src = urls[0]
+  FP.ready = true
+}
 
 /* ── Init ── */
 document.addEventListener('DOMContentLoaded', async () => {
@@ -278,28 +353,40 @@ function renderPage() {
   const creatorName = creator.nickname || '认证创作者'
   const creatorInitial = creatorName.charAt(0)
 
-  // 构建轮播幻灯片：封面 + 帧图（最多8张）
+  // 构建轮播幻灯片：
+  //   Slot 0 = 帧播放器（始终第一格）
+  //   Slot 1+ = SKU 示例物料图片
   slides = []
-  if (w.coverUrl) slides.push({ src: w.coverUrl })
   const frames = Array.isArray(w.animationFrames) ? w.animationFrames : []
-  frames.slice(0, 8).forEach(src => { if (src !== w.coverUrl) slides.push({ src }) })
-  if (!slides.length) slides.push(null)  // 占位
+  slides.push({ type: 'player' })  // 第一格：帧播放器
+
+  // 收集所有 SKU 的示例物料（去重）
+  const exampleSeen = new Set()
+  ;(w.supportedSkus || []).forEach(s => {
+    (s.exampleMedia || []).forEach(url => {
+      if (!exampleSeen.has(url)) { exampleSeen.add(url); slides.push({ type: 'img', src: url }) }
+    })
+  })
+
+  // 预加载帧图
+  if (frames.length) {
+    fpPreload(frames)
+  }
 
   // 封面头像
   const avatarHtml = creator.avatarUrl
     ? `<img src="${esc(creator.avatarUrl)}" alt="avatar">`
     : esc(creatorInitial)
 
-  // 徽章
-  let badges = ''
+  // 起始价格（最低 finalPrice）
+  const minPrice = skuList.length
+    ? Math.min(...skuList.map(s => s.finalPrice ?? s.price ?? 0))
+    : null
+  const priceLabel = minPrice != null ? `¥${Number(minPrice).toFixed(0)}` : '询价'
 
-  // 基础价格
-  const basePrice = w.basePrice ? `¥${Number(w.basePrice).toFixed(0)}` : '询价'
-
-  // SKU 区块（只有 supportedSkus 时才显示）
+  // SKU 区块
   let skuHtml = ''
   if (skuList.length) {
-    // 按 size 分组
     const sizes = [...new Set(skuList.map(s => s.size).filter(Boolean))]
     const materials = [...new Set(skuList.map(s => s.material).filter(Boolean))]
 
@@ -320,18 +407,36 @@ function renderPage() {
       </div>`
   }
 
+  // 帧播放器 HTML
+  const fpHtml = frames.length > 0
+    ? `<div class="fp-wrap">
+        <img id="fpImg" class="fp-img" src="${esc(frames[0])}" alt="动画帧">
+        <div class="fp-controls">
+          <button class="fp-btn fp-play" id="fpPlayBtn" onclick="fpToggle()">▶ 播放</button>
+          <button class="fp-btn fp-speed" data-fps="5" onclick="fpSetSpeed(5)">慢</button>
+          <button class="fp-btn fp-speed active" data-fps="10" onclick="fpSetSpeed(10)">中</button>
+          <button class="fp-btn fp-speed" data-fps="15" onclick="fpSetSpeed(15)">快</button>
+        </div>
+        <div class="fp-watermark">
+          <span class="fp-watermark-text">© MOWOBOX · @${esc(creatorName)}</span>
+          <span class="fp-watermark-text">${frames.length} 帧</span>
+        </div>
+        <div id="fpProgress" class="fp-progress" style="width:0%"></div>
+      </div>`
+    : `<div class="gallery-placeholder">🎨</div>`
+
   document.getElementById('pageRoot').innerHTML = `
   <div class="detail-wrap">
 
     <!-- LEFT: Gallery -->
     <div class="detail-media reveal">
       <div class="gallery-main" id="galleryMain">
-        ${buildSlides()}
+        ${buildSlides(fpHtml)}
         <button class="gallery-arrow gallery-arrow-prev${slides.length <= 1 ? ' hidden' : ''}" onclick="moveSlide(-1)">‹</button>
         <button class="gallery-arrow gallery-arrow-next${slides.length <= 1 ? ' hidden' : ''}" onclick="moveSlide(1)">›</button>
         ${slides.length > 1 ? `<div class="gallery-counter" id="galleryCounter">1 / ${slides.length}</div>` : ''}
       </div>
-      <div class="gallery-thumbs" id="galleryThumbs">${buildThumbs()}</div>
+      <div class="gallery-thumbs" id="galleryThumbs">${buildThumbs(frames[0])}</div>
     </div>
 
     <!-- RIGHT: Info -->
@@ -350,16 +455,15 @@ function renderPage() {
         </button>
       </div>
 
-      <!-- Badges + Title -->
-      ${badges ? `<div class="badge-row reveal d1">${badges}</div>` : ''}
+      <!-- Title -->
       <h1 class="work-title reveal d2">${esc(w.title || '联名作品')}</h1>
 
       <!-- Stats row -->
       <div class="stats-row reveal d2">
         <div class="stat-item">
-          <span class="stat-icon">🎨</span>
-          <span class="stat-val">${slides.length}</span>
-          <span class="stat-lab">帧预览</span>
+          <span class="stat-icon">🎞️</span>
+          <span class="stat-val">${frames.length}</span>
+          <span class="stat-lab">帧动画</span>
         </div>
         <button class="like-big ${isLiked ? 'liked' : ''}" id="likeBigBtn" onclick="toggleLike()">
           <span class="like-big-icon">${isLiked ? '♥' : '♡'}</span>
@@ -376,7 +480,7 @@ function renderPage() {
       <!-- CTA block -->
       <div class="cta-block reveal d3">
         <div class="cta-price-row">
-          <span class="cta-price" id="ctaPrice">${basePrice}</span>
+          <span class="cta-price" id="ctaPrice">${priceLabel}</span>
           <span class="cta-price-unit">起 · 含硬件</span>
         </div>
         <div class="cta-btns">
@@ -412,19 +516,22 @@ function renderPage() {
 }
 
 /* ── Gallery ── */
-function buildSlides() {
+function buildSlides(fpHtml) {
   return slides.map((s, i) => {
     const active = i === 0 ? ' active' : ''
-    if (!s) return `<div class="gallery-slide${active}"><div class="gallery-placeholder">🎨</div></div>`
-    return `<div class="gallery-slide${active}"><img src="${esc(s.src)}" alt="frame ${i + 1}" loading="${i === 0 ? 'eager' : 'lazy'}"></div>`
+    if (s.type === 'player') return `<div class="gallery-slide${active}">${fpHtml}</div>`
+    return `<div class="gallery-slide${active}"><img src="${esc(s.src)}" alt="示例物料 ${i}" loading="lazy" style="width:100%;height:100%;object-fit:contain;background:var(--black);"></div>`
   }).join('')
 }
 
-function buildThumbs() {
+function buildThumbs(firstFrameSrc) {
   return slides.map((s, i) => {
     const active = i === 0 ? ' active' : ''
-    if (!s) return `<div class="gallery-thumb${active}" onclick="goSlide(${i})">🎨</div>`
-    return `<div class="gallery-thumb${active}" onclick="goSlide(${i})"><img src="${esc(s.src)}" alt="thumb ${i + 1}" loading="lazy"></div>`
+    if (s.type === 'player') {
+      const thumbSrc = firstFrameSrc ? `<img src="${esc(firstFrameSrc)}" alt="动画">` : '🎞️'
+      return `<div class="gallery-thumb${active}" onclick="goSlide(${i})" title="动画播放">${thumbSrc}</div>`
+    }
+    return `<div class="gallery-thumb${active}" onclick="goSlide(${i})"><img src="${esc(s.src)}" alt="示例 ${i}" loading="lazy"></div>`
   }).join('')
 }
 
@@ -467,9 +574,11 @@ function matchSku() {
   })
   selectedSkuId = matched?.id || null
 
-  if (matched?.price) {
+  // 显示最终价格（含创作者加价）
+  if (matched) {
+    const finalPrice = matched.finalPrice ?? matched.price ?? 0
     const el = document.getElementById('ctaPrice')
-    if (el) el.textContent = `¥${Number(matched.price).toFixed(0)}`
+    if (el) el.textContent = `¥${Number(finalPrice).toFixed(0)}`
   }
 
   const hasChoice = skuList.length > 0

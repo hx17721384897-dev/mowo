@@ -34,6 +34,7 @@ export default async function collabRoutes(fastify) {
           title: true,
           description: true,
           coverUrl: true,
+          hoverGifUrl: true,
           supportedSkus: true,
           isNewbieWork: true,
           isExclusiveWork: true,
@@ -81,6 +82,8 @@ export default async function collabRoutes(fastify) {
     const result = works.map(w => ({
       ...w,
       supportedSkus: safeJson(w.supportedSkus),
+      coverUrl: w.coverUrl ? fastify.ossPresignGet(w.coverUrl, 3600) : null,
+      hoverGifUrl: w.hoverGifUrl ? fastify.ossPresignGet(w.hoverGifUrl, 3600) : null,
       creator: profileMap[w.creatorId] ?? { userId: w.creatorId, nickname: '创作者', avatarUrl: null },
       likeCount: likeCountMap[w.id] ?? 0,
       isLiked: myLikedSet.has(w.id),
@@ -107,18 +110,38 @@ export default async function collabRoutes(fastify) {
       select: { userId: true, nickname: true, avatarUrl: true },
     })
 
-    // 获取支持的SKU详情
+    // 获取支持的SKU详情（含 exampleMedia + 加价后价格）
     const skuIds = safeJson(work.supportedSkus)
-    const skus = skuIds.length
+    const creatorMarkups = safeJson(work.creatorMarkups, {})
+    const rawSkus = skuIds.length
       ? await prisma.machineModelSku.findMany({
           where: { id: { in: skuIds } },
-          select: { id: true, size: true, material: true, frameCount: true, colorName: true, colorHex: true, price: true },
+          select: { id: true, size: true, material: true, frameCount: true, colorName: true, colorHex: true, price: true, exampleMedia: true },
         })
       : []
+
+    // 为每个 SKU 附加 exampleMedia 预签名 URL 和最终价格（含创作者加价）
+    const skus = rawSkus.map(s => {
+      const basePrice = Number(s.price)
+      const markup = Number(creatorMarkups[s.id] ?? 0)
+      const finalPrice = basePrice + markup
+      const exampleKeys = safeJson(s.exampleMedia, [])
+      const exampleUrls = exampleKeys.map(k => fastify.ossPresignGet(k, 3600))
+      return {
+        ...s,
+        price: basePrice,
+        markup,
+        finalPrice,
+        exampleMedia: exampleUrls,
+      }
+    })
 
     // 帧图：生成预签名URL
     const frameKeys = safeJson(work.animationFrames)
     const frameUrls = frameKeys.map(key => fastify.ossPresignGet(key, 3600))
+
+    // hover GIF 预签名 URL（如已生成）
+    const hoverGifUrl = work.hoverGifUrl ? fastify.ossPresignGet(work.hoverGifUrl, 3600) : null
 
     // 封面图预签名
     const coverUrl = work.coverUrl ? fastify.ossPresignGet(work.coverUrl, 3600) : null
@@ -145,8 +168,10 @@ export default async function collabRoutes(fastify) {
       data: {
         ...work,
         animationFrames: frameUrls,
+        hoverGifUrl,
         coverUrl,
         supportedSkus: skus,
+        creatorMarkups,
         creator: profile ?? { userId: work.creatorId, nickname: '创作者', avatarUrl: null },
         likeCount,
         isLiked,

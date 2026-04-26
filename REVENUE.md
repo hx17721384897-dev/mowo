@@ -280,7 +280,28 @@ model CollabActivity {
 
 ---
 
-## 八、网页端案例展示（showcase.html）
+## 八、创作者加价体系
+
+### 8.1 加价规则
+
+- **存储字段：** `collab_works.creatorMarkups` JSON（`{"skuId": decimalAmount, ...}`）
+- **上限：** 该 SKU 基础价 × **20%**，前端校验 + 后端校验（双重保障）
+- **生效：** 立即生效，前端保存前弹确认弹窗
+- **影响范围：** 只影响新订单，历史订单价格不回溯
+- **审核：** 不需要（在上限内自动通过）
+- **展示：** 展示最终价格（基础价 + 加价），不拆分显示
+- **分红计算：** `revenueRate × base_price` 只基于基础价计算；加价 100% 归创作者，不纳入平台分红体系
+
+### 8.2 接口
+
+```
+GET  /api/creator/collab/:id/markup   查询当前加价（含每个SKU基础价/加价/上限/最终价）
+PUT  /api/creator/collab/:id/markup   保存加价 Body: { markups: { skuId: amount } }
+```
+
+---
+
+## 九、网页端案例展示（showcase.html）
 
 ### 8.1 展示内容
 - 联名创作者作品卡片（封面图 + 作品名 + 创作者名）

@@ -2,6 +2,7 @@
 // 全部需要 role >= 2
 
 import { calcRevenueRate, buildRevenueConfig } from '../lib/revenue.js'
+import { generateAndUploadHoverGif } from '../lib/gif-generator.js'
 
 export default async function adminCollabRoutes(fastify) {
   const { prisma } = fastify
@@ -194,6 +195,28 @@ export default async function adminCollabRoutes(fastify) {
     await prisma.creatorNotification.create({
       data: { userId: work.creatorId, type: notifType, workId: work.id, workTitle: work.title, message: notifMsg }
     }).catch(() => {})
+
+    // 异步生成 hover GIF（不阻塞审核响应）
+    const frameKeys = safeJson(work.animationFrames)
+    if (frameKeys.length > 0) {
+      setImmediate(async () => {
+        try {
+          const frameUrls = frameKeys.map(k => fastify.ossPresignGet(k, 7200))
+          const gifKey = await generateAndUploadHoverGif({
+            collabWorkId: work.id,
+            frameUrls,
+            oss: fastify.oss,
+          })
+          await prisma.collabWork.update({
+            where: { id: work.id },
+            data: { hoverGifUrl: gifKey },
+          })
+          fastify.log.info(`[hover-gif] 生成完成: ${gifKey}`)
+        } catch (e) {
+          fastify.log.warn('[hover-gif] 生成失败: ' + e.message)
+        }
+      })
+    }
 
     return reply.send({
       success: true,

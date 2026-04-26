@@ -393,6 +393,7 @@ function renderWorks(reset = false) {
 
 function buildCard(w) {
   const cover = w.coverUrl || ''
+  const gifUrl = w.hoverGifUrl || ''
   const name = esc(w.creator?.nickname || '创作者')
   const initial = name.charAt(0)
   const avatarUrl = w.creator?.avatarUrl || ''
@@ -404,12 +405,28 @@ function buildCard(w) {
   const likeIcon = w.isLiked ? '♥' : '♡'
   const likeCount = fmtCount(w.likeCount || 0)
 
-  let badges = ''
+  // 图片 HTML：有封面图才显示；有 GIF 则 hover 切换
+  let mediaHtml
+  if (cover) {
+    if (gifUrl) {
+      mediaHtml = `<img
+        src="${esc(cover)}"
+        data-cover="${esc(cover)}"
+        data-gif="${esc(gifUrl)}"
+        alt="${esc(w.title || '')}"
+        loading="lazy"
+        onmouseenter="this.src=this.dataset.gif"
+        onmouseleave="this.src=this.dataset.cover">`
+    } else {
+      mediaHtml = `<img src="${esc(cover)}" alt="${esc(w.title || '')}" loading="lazy">`
+    }
+  } else {
+    mediaHtml = `<div class="card-media-placeholder">🎨</div>`
+  }
 
   return `<div class="work-card reveal" data-id="${esc(w.id)}" onclick="goDetail('${esc(w.id)}')">
     <div class="card-media">
-      ${cover ? `<img src="${esc(cover)}" alt="${esc(w.title || '')}" loading="lazy">` : `<div class="card-media-placeholder">🎨</div>`}
-      <div class="card-badges">${badges}</div>
+      ${mediaHtml}
     </div>
     <div class="card-body">
       <p class="card-title">${esc(w.title || '未命名作品')}</p>

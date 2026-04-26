@@ -278,6 +278,9 @@ mowo_sku_colors       — 款式管理自定义颜色选项
 /api/collab/*            — 联名系统 ✅ 已完成
 /api/inventory/*         — 库存管理 ✅ 已完成
 /api/admin/revenue/*     — 分红规则配置（GET role≥2 / PUT role=3）✅ 新增
+/api/creator/collab/:id/markup  — 创作者加价（GET/PUT，20%上限，立即生效）✅ 新增
+/api/machine-models/skus/:id/example-media  — SKU示例图（POST上传/DELETE删除）✅ 新增
+/api/upload/presign-get?key=  — 获取OSS读取预签名URL（GET，需登录）✅ 新增
 /api/shop/*              — 转发至 CRMEB（待配置）
 ```
 
@@ -313,10 +316,10 @@ creator_profiles（含牛能/独家字段）/
 articles / comments / likes / collects / follows / reports / animations /
 products / earnings / balances / withdrawal_requests /
 machine_models（含sortOrder款式排序）/
-machine_model_skus（含price/previewImage/skuBarcode/sortOrder SKU排序）/
+machine_model_skus（含price/previewImage/skuBarcode/sortOrder SKU排序/exampleMedia示例图JSON）/
 customize_orders（含收件信息/快递信息/inventoryStatus/sourceType/collabWorkId）/
 operation_logs /
-collab_works（含isOnShelf/framePackOssPath/sizes）/
+collab_works（含isOnShelf/framePackOssPath/sizes/hoverGifUrl卡片GIF/creatorMarkups创作者加价JSON）/
 collab_orders / collab_activities /
 sku_inventory / inventory_logs / auth_codes /
 shipping_batches（已弃用）

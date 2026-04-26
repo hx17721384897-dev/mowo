@@ -279,6 +279,31 @@ input,select,textarea{font-family:var(--font);}
 .anim-picker-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
 .anim-picker-close{font-weight:700;font-size:12px;color:var(--gray3);padding:4px 10px;border-radius:8px;background:var(--cream);border:none;cursor:pointer;transition:background .15s;}
 .anim-picker-close:hover{background:var(--gray1);}
+
+/* ── 加价模态框 ── */
+.markup-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);z-index:1900;display:none;align-items:center;justify-content:center;padding:20px;}
+.markup-overlay.show{display:flex;}
+.markup-modal{background:var(--white);border-radius:24px;width:100%;max-width:520px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;}
+.markup-modal-head{padding:20px 24px 16px;border-bottom:1px solid var(--gray1);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.markup-modal-title{font-weight:900;font-size:16px;}
+.markup-modal-close{font-size:20px;color:var(--gray3);padding:4px 8px;border-radius:8px;transition:background .15s;cursor:pointer;}
+.markup-modal-close:hover{background:var(--cream);}
+.markup-modal-body{padding:16px 24px;overflow-y:auto;flex:1;}
+.markup-sku-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--gray1);}
+.markup-sku-row:last-child{border-bottom:none;}
+.markup-sku-info{flex:1;min-width:0;}
+.markup-sku-name{font-weight:800;font-size:13px;color:var(--black);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.markup-sku-base{font-weight:700;font-size:11px;color:var(--gray3);margin-top:2px;}
+.markup-sku-input-wrap{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.markup-sku-prefix{font-weight:800;font-size:13px;color:var(--gray3);}
+.markup-sku-input{width:70px;padding:6px 10px;border-radius:8px;border:1.5px solid var(--gray1);font-family:var(--font);font-weight:800;font-size:13px;text-align:center;transition:border-color .2s;background:var(--cream);}
+.markup-sku-input:focus{outline:none;border-color:var(--black);}
+.markup-sku-max{font-weight:700;font-size:10px;color:var(--gray3);white-space:nowrap;}
+.markup-modal-foot{padding:14px 24px 20px;border-top:1px solid var(--gray1);display:flex;gap:10px;flex-shrink:0;}
+.markup-note{font-weight:700;font-size:12px;color:var(--gray3);line-height:1.6;flex:1;}
+.markup-save-btn{padding:10px 24px;border-radius:999px;background:var(--black);color:var(--white);font-weight:900;font-size:13px;min-height:42px;flex-shrink:0;transition:opacity .2s;}
+.markup-save-btn:hover{opacity:.8;}
+.markup-save-btn:disabled{opacity:.35;cursor:not-allowed;}
 </style>
 </head>
 <body>
@@ -775,9 +800,113 @@ function renderManageCard(w) {
         </div>
         ${w.description ? `<p class="work-desc">${escHtml(w.description.slice(0,80))}${w.description.length>80?'…':''}</p>` : ''}
       </div>
-      <button class="btn btn-ghost btn-sm" style="flex-shrink:0;margin-left:8px;" onclick="openEditPanel('${w.id}')">✏️ 编辑</button>
+      <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;margin-left:8px;">
+        <button class="btn btn-ghost btn-sm" onclick="openEditPanel('${w.id}')">✏️ 编辑</button>
+        <button class="btn btn-ghost btn-sm" onclick="openMarkupModal('${w.id}')" style="white-space:nowrap;">💰 加价</button>
+      </div>
     </div>
   </div>`
+}
+
+/* ─────────────────────────────────────────
+   加价设置
+───────────────────────────────────────── */
+let _markupWorkId = null
+
+async function openMarkupModal(workId) {
+  _markupWorkId = workId
+  document.getElementById('markupOverlay').classList.add('show')
+  document.body.style.overflow = 'hidden'
+  document.getElementById('markupModalBody').innerHTML = '<p style="font-weight:700;font-size:13px;color:var(--gray3);">加载中…</p>'
+  document.getElementById('markupSaveBtn').disabled = true
+
+  try {
+    const res  = await fetch(`${CAPI}/api/creator/collab/${workId}/markup`, {
+      headers: { Authorization: `Bearer ${getToken()}` }
+    })
+    const json = await res.json()
+    if (!json.success) throw new Error(json.message)
+
+    const { skus } = json.data
+    if (!skus || !skus.length) {
+      document.getElementById('markupModalBody').innerHTML = '<p style="font-weight:700;font-size:13px;color:var(--gray3);">该作品暂无支持的规格</p>'
+      return
+    }
+
+    document.getElementById('markupModalBody').innerHTML = skus.map(s => `
+      <div class="markup-sku-row">
+        <div class="markup-sku-info">
+          <div class="markup-sku-name">${escHtml(s.size)} · ${escHtml(s.material)} · ${s.frameCount}帧 · ${escHtml(s.colorName || '')}</div>
+          <div class="markup-sku-base">基础价 ¥${Number(s.basePrice).toFixed(2)} · 上限 +¥${Number(s.maxMarkup).toFixed(2)}</div>
+        </div>
+        <div class="markup-sku-input-wrap">
+          <span class="markup-sku-prefix">+¥</span>
+          <input class="markup-sku-input" type="number" id="markup_${escHtml(s.id)}"
+            data-max="${s.maxMarkup}" data-skuid="${escHtml(s.id)}"
+            value="${Number(s.markup).toFixed(2)}" min="0" max="${s.maxMarkup}" step="0.01"
+            oninput="validateMarkupInput(this)">
+        </div>
+      </div>`).join('')
+
+    document.getElementById('markupSaveBtn').disabled = false
+  } catch(e) {
+    document.getElementById('markupModalBody').innerHTML = `<p style="font-weight:700;font-size:13px;color:var(--accent-o);">加载失败：${escHtml(e.message)}</p>`
+  }
+}
+
+function validateMarkupInput(input) {
+  const max = Number(input.dataset.max)
+  let val = Number(input.value)
+  if (isNaN(val) || val < 0) val = 0
+  if (val > max) { val = max; input.value = max.toFixed(2) }
+}
+
+function closeMarkupModal() {
+  document.getElementById('markupOverlay').classList.remove('show')
+  document.body.style.overflow = ''
+  _markupWorkId = null
+}
+
+async function saveMarkup() {
+  if (!_markupWorkId) return
+  const inputs = document.querySelectorAll('.markup-sku-input')
+  const markups = {}
+  let valid = true
+
+  inputs.forEach(inp => {
+    const skuId = inp.dataset.skuid
+    const max   = Number(inp.dataset.max)
+    const val   = Math.round(Number(inp.value) * 100) / 100
+    if (val < 0 || val > max) { valid = false; inp.style.borderColor = 'var(--accent-o)' }
+    else { inp.style.borderColor = ''; markups[skuId] = val }
+  })
+
+  if (!valid) { showToast('加价超出上限，请检查'); return }
+
+  // 确认弹窗
+  const confirmed = confirm('确认保存加价设置？修改将立即生效，影响之后的新订单，历史订单不受影响。')
+  if (!confirmed) return
+
+  const btn = document.getElementById('markupSaveBtn')
+  btn.disabled = true
+  btn.textContent = '保存中…'
+
+  try {
+    const res  = await fetch(`${CAPI}/api/creator/collab/${_markupWorkId}/markup`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+      body: JSON.stringify({ markups })
+    })
+    const json = await res.json()
+    if (!json.success) throw new Error(json.message)
+    showToast('✅ 加价设置已保存')
+    closeMarkupModal()
+  } catch(e) {
+    showToast('保存失败：' + e.message)
+  } finally {
+    btn.disabled = false
+    btn.textContent = '保存'
+  }
 }
 
 /* ─────────────────────────────────────────
@@ -1550,5 +1679,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 })
 </script>
+
+<!-- ── 加价设置模态框 ── -->
+<div class="markup-overlay" id="markupOverlay" onclick="if(event.target===this)closeMarkupModal()">
+  <div class="markup-modal">
+    <div class="markup-modal-head">
+      <span class="markup-modal-title">💰 设置作品加价</span>
+      <button class="markup-modal-close" onclick="closeMarkupModal()">×</button>
+    </div>
+    <div class="markup-modal-body" id="markupModalBody">
+      <p style="font-weight:700;font-size:13px;color:var(--gray3);">加载中…</p>
+    </div>
+    <div class="markup-modal-foot">
+      <p class="markup-note">加价上限为基础价格的 20%。加价收入 100% 归你所有，立即生效。</p>
+      <button class="markup-save-btn" id="markupSaveBtn" onclick="saveMarkup()">保存</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

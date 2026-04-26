@@ -295,6 +295,78 @@ export default async function machineModelRoutes(fastify) {
   })
 
   // ─────────────────────────────────────────────
+  // SKU 示例物料（exampleMedia）
+  // ─────────────────────────────────────────────
+
+  /**
+   * POST /api/machine-models/skus/:skuId/example-media
+   * 上传一张示例图片，追加到 exampleMedia JSON 数组（最多5张）
+   */
+  fastify.post('/skus/:skuId/example-media', { preHandler: requireAdmin }, async (req, reply) => {
+    const { skuId } = req.params
+    const sku = await fastify.prisma.machineModelSku.findUnique({ where: { id: skuId } })
+    if (!sku) return reply.code(404).send({ success: false, message: 'SKU不存在' })
+
+    const existing = safeJson(sku.exampleMedia, [])
+    if (existing.length >= 5) {
+      return reply.code(400).send({ success: false, message: '示例图最多5张，请先删除旧图' })
+    }
+
+    const data = await req.file()
+    if (!data) return reply.code(400).send({ success: false, message: '未收到文件' })
+
+    const ext = (data.filename || 'jpg').split('.').pop().toLowerCase() || 'jpg'
+    const objectKey = `sku-example/${skuId}/${Date.now()}.${ext}`
+
+    const chunks = []
+    for await (const chunk of data.file) chunks.push(chunk)
+    const buffer = Buffer.concat(chunks)
+
+    if (buffer.length > 5 * 1024 * 1024) {
+      return reply.code(400).send({ success: false, message: '图片不能超过 5MB' })
+    }
+
+    await fastify.oss.put(objectKey, buffer, {
+      headers: { 'Content-Type': data.mimetype || 'image/jpeg' }
+    })
+
+    const updated = await fastify.prisma.machineModelSku.update({
+      where: { id: skuId },
+      data: { exampleMedia: JSON.stringify([...existing, objectKey]) }
+    })
+
+    const previewUrl = fastify.ossPresignGet(objectKey, 3600)
+    return reply.send({ success: true, data: { objectKey, previewUrl, exampleMedia: safeJson(updated.exampleMedia, []) } })
+  })
+
+  /**
+   * DELETE /api/machine-models/skus/:skuId/example-media
+   * 从 exampleMedia 数组删除指定的 objectKey
+   * Body: { objectKey: string }
+   */
+  fastify.delete('/skus/:skuId/example-media', { preHandler: requireAdmin }, async (req, reply) => {
+    const { skuId } = req.params
+    const { objectKey } = req.body
+    if (!objectKey) return reply.code(400).send({ success: false, message: 'objectKey必填' })
+
+    const sku = await fastify.prisma.machineModelSku.findUnique({ where: { id: skuId } })
+    if (!sku) return reply.code(404).send({ success: false, message: 'SKU不存在' })
+
+    const existing = safeJson(sku.exampleMedia, [])
+    const filtered = existing.filter(k => k !== objectKey)
+
+    await fastify.prisma.machineModelSku.update({
+      where: { id: skuId },
+      data: { exampleMedia: JSON.stringify(filtered) }
+    })
+
+    // 尝试从 OSS 删除（非关键操作，失败不影响响应）
+    fastify.oss.delete(objectKey).catch(() => {})
+
+    return reply.send({ success: true, data: { exampleMedia: filtered } })
+  })
+
+  // ─────────────────────────────────────────────
   // 排序接口
   // ─────────────────────────────────────────────
 

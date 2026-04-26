@@ -134,4 +134,17 @@ export default async function uploadRoutes(fastify) {
       }
     })
   })
+
+  // ─────────────────────────────────────────
+  // GET /api/upload/presign-get?key=xxx
+  // 获取 OSS 对象的预签名读取 URL（管理员用）
+  // ─────────────────────────────────────────
+  fastify.get('/presign-get', {
+    preHandler: [fastify.authenticate]
+  }, async (request, reply) => {
+    const { key } = request.query
+    if (!key) return reply.code(400).send({ success: false, message: 'key 参数必填' })
+    const url = fastify.ossPresignGet(key, 3600)
+    return reply.send({ success: true, data: { url } })
+  })
 }
