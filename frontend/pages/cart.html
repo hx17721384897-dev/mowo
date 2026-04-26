@@ -350,7 +350,7 @@ async function loadCart() {
           type: gType,
           previewUrl: item.coverUrl,
           label: gType === 'CUSTOM'
-            ? ('我的定制' + (item.machine ? ' · ' + (item.machine.split(' · ')[0] || '') : ''))
+            ? (() => { try { const c = JSON.parse(item.configJson); return '我的定制' + (c.modelName ? ' · ' + c.modelName : '') } catch { return '我的定制' } })()
             : (cp ? cp.nickname : '未知创作者'),
           subLabel: null,
           creatorAvatar: cp ? cp.avatarUrl : null,
@@ -387,9 +387,11 @@ function buildMachineLabel(item) {
     try {
       const cfg = JSON.parse(item.configSnapshotJson);
       const parts = [];
-      if (cfg.frameCount) parts.push(cfg.frameCount + '帧');
-      if (cfg.size) parts.push(cfg.size);
-      if (cfg.material) parts.push(cfg.material);
+      // skuFrameCount = SKU 目标帧数；userFrameCount/frameCount = 用户上传帧数（兼容旧数据）
+      const dispFrame = cfg.skuFrameCount || cfg.frameCount;
+      if (dispFrame) parts.push(dispFrame + '帧');
+      if (cfg.size)      parts.push(cfg.size);
+      if (cfg.material)  parts.push(cfg.material);
       if (cfg.colorName) parts.push(cfg.colorName);
       if (parts.length) return parts.join(' · ');
     } catch(e) {}
@@ -480,19 +482,20 @@ function buildChildDisplayTitle(item) {
     if (item.configJson) {
       try {
         const cfg = JSON.parse(item.configJson);
+        // skuFrameCount = SKU 目标帧数（优先），兼容旧数据 frameCount
+        const displayFrame = cfg.skuFrameCount || cfg.frameCount;
         const spec = [
           cfg.modelName || null,
-          cfg.size     || null,
-          cfg.frameCount ? cfg.frameCount + '帧' : null,
+          cfg.size      || null,
+          displayFrame  ? displayFrame + '帧' : null,
           cfg.material  || null,
           cfg.colorName || null,
         ].filter(Boolean);
         if (spec.length) {
-          // 格式：定制款 · 标准款 8x8cm 12帧椴木板原色
-          // modelName 和 size 之间加空格，size 和 frameCount 之间加空格，其余紧连
+          // 格式：定制款 · 标准款 8x8cm 12帧 椴木板 原色
           const [model, size, frame, material, color] = [
             cfg.modelName, cfg.size,
-            cfg.frameCount ? cfg.frameCount + '帧' : null,
+            displayFrame ? displayFrame + '帧' : null,
             cfg.material, cfg.colorName
           ];
           let specStr = [model, size].filter(Boolean).join(' ');

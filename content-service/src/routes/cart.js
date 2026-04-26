@@ -148,9 +148,29 @@ export default async function cartRoutes(fastify) {
         })
       }
 
-      snapshotTitle = `定制款 · ${sku.model?.name || ''} ${sku.size || ''} ${sku.material || ''}`
-      snapshotPreviewUrl = cp.previewUrl || null
-      configSnapshotJson = cp.configJson || null
+      // 拼完整规格快照：合并 customProduct 级别配置 + 当前 SKU 的规格
+      const cpConfig = (() => { try { return JSON.parse(cp.configJson || '{}') } catch { return {} } })()
+      // 用第一帧图作预览兜底（OSS 私有桶 URL，前端读取时走预签名）
+      const firstFrame = (() => { try { return JSON.parse(cp.animationFrames || '[]')[0] || null } catch { return null } })()
+
+      configSnapshotJson = JSON.stringify({
+        modelId:        cpConfig.modelId   || null,
+        modelName:      sku.model?.name    || cpConfig.modelName || null,
+        userFrameCount: cpConfig.frameCount || null,   // 用户实际上传帧数（循环基准）
+        skuFrameCount:  sku.frameCount      || null,   // SKU 目标帧数（12/24 等）
+        size:           sku.size            || null,
+        material:       sku.material        || null,
+        colorName:      sku.colorName       || null,
+      })
+      snapshotTitle = [
+        '定制款',
+        sku.model?.name || null,
+        sku.size        || null,
+        sku.frameCount  ? sku.frameCount + '帧' : null,
+        sku.material    || null,
+        sku.colorName   || null,
+      ].filter(Boolean).join(' · ')
+      snapshotPreviewUrl = cp.previewUrl || firstFrame || null
       customProductId = cp.id
 
       // 更新草稿状态为 in_cart
