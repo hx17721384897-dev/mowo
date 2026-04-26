@@ -3,6 +3,23 @@
 
 import { unlockInventory, makeIdempotencyKey } from '../lib/inventory.js'
 
+// 安全签名辅助：仅对 OSS key（相对路径）生成预签名 URL
+// data URL（base64）和完整 http(s) URL 直接返回 null（不适合做缩略图）
+function ossSign(fastify, value) {
+  if (!value) return null
+  if (value.startsWith('data:')) return null          // base64 data URL，跳过
+  if (value.startsWith('http://') || value.startsWith('https://')) {
+    // 已经是完整 URL，直接返回（通常不会出现，但做兜底）
+    return value
+  }
+  // 相对 OSS key，生成预签名 URL（有效期 1 小时）
+  try {
+    return fastify.ossPresignGet(value, 3600)
+  } catch {
+    return null
+  }
+}
+
 // 后端状态 → 前端展示映射
 const STATUS_MAP = {
   pending:    { label: '待付款', group: 'pending',   step: 0 },
@@ -82,14 +99,15 @@ async function orderRoutes(fastify, opts) {
         ? collab.title
         : `DIY 定制款 · ${o.size} ${o.frameCount}帧 ${o.colorName}`
 
-      // 缩略图：联名取 coverUrl，自定义取 frameUrls 第一帧，均需预签名（私有桶）
+      // 缩略图：联名取 coverUrl，自定义取 frameUrls 第一帧
+      // 仅当值是 OSS key（相对路径）时才预签名；data URL / 完整 http URL 直接使用
       let previewUrl = null
       try {
         if (o.sourceType === 'collab' && collab?.coverUrl) {
-          previewUrl = fastify.ossPresignGet(collab.coverUrl, 3600)
+          previewUrl = ossSign(fastify, collab.coverUrl)
         } else {
           const frames = JSON.parse(o.frameUrls || '[]')
-          if (frames[0]) previewUrl = fastify.ossPresignGet(frames[0], 3600)
+          if (frames[0]) previewUrl = ossSign(fastify, frames[0])
         }
       } catch {}
 
@@ -248,14 +266,14 @@ async function orderRoutes(fastify, opts) {
       ? collab.title
       : `DIY 定制款 · ${order.size} ${order.frameCount}帧 ${order.colorName}`
 
-    // 缩略图预签名（私有桶）
+    // 缩略图：联名取 coverUrl，自定义取 frameUrls 第一帧，经 ossSign 安全处理
     let previewUrl = null
     try {
       if (order.sourceType === 'collab' && collab?.coverUrl) {
-        previewUrl = fastify.ossPresignGet(collab.coverUrl, 3600)
+        previewUrl = ossSign(fastify, collab.coverUrl)
       } else {
         const frames = JSON.parse(order.frameUrls || '[]')
-        if (frames[0]) previewUrl = fastify.ossPresignGet(frames[0], 3600)
+        if (frames[0]) previewUrl = ossSign(fastify, frames[0])
       }
     } catch {}
 
