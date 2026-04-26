@@ -82,6 +82,17 @@ async function orderRoutes(fastify, opts) {
         ? collab.title
         : `DIY 定制款 · ${o.size} ${o.frameCount}帧 ${o.colorName}`
 
+      // 缩略图：联名取 coverUrl，自定义取 frameUrls 第一帧，均需预签名（私有桶）
+      let previewUrl = null
+      try {
+        if (o.sourceType === 'collab' && collab?.coverUrl) {
+          previewUrl = fastify.ossPresignGet(collab.coverUrl, 3600)
+        } else {
+          const frames = JSON.parse(o.frameUrls || '[]')
+          if (frames[0]) previewUrl = fastify.ossPresignGet(frames[0], 3600)
+        }
+      } catch {}
+
       return {
         id:             o.id,
         orderNo:        o.orderNo,
@@ -103,7 +114,7 @@ async function orderRoutes(fastify, opts) {
         shippedAt:      o.shippedAt      || null,
         receiverName:   o.receiverName   || null,
         receiverCity:   o.receiverCity   || null,
-        coverUrl:       collab?.coverUrl || null,
+        coverUrl:       previewUrl,
         createdAt:      o.createdAt,
         updatedAt:      o.updatedAt,
       }
@@ -237,6 +248,17 @@ async function orderRoutes(fastify, opts) {
       ? collab.title
       : `DIY 定制款 · ${order.size} ${order.frameCount}帧 ${order.colorName}`
 
+    // 缩略图预签名（私有桶）
+    let previewUrl = null
+    try {
+      if (order.sourceType === 'collab' && collab?.coverUrl) {
+        previewUrl = fastify.ossPresignGet(collab.coverUrl, 3600)
+      } else {
+        const frames = JSON.parse(order.frameUrls || '[]')
+        if (frames[0]) previewUrl = fastify.ossPresignGet(frames[0], 3600)
+      }
+    } catch {}
+
     return reply.send({
       success: true,
       data: {
@@ -261,7 +283,7 @@ async function orderRoutes(fastify, opts) {
         receiverPhone:   order.receiverPhone  || null,
         receiverAddress: order.receiverAddress || null,
         receiverCity:    order.receiverCity   || null,
-        coverUrl:        collab?.coverUrl     || null,
+        coverUrl:        previewUrl,
         createdAt:       order.createdAt,
         updatedAt:       order.updatedAt,
       },
