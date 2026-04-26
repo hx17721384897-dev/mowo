@@ -458,15 +458,22 @@ function buildActionBar(o) {
   let btns = ''
 
   if (o.status === 'pending') {
+    // 待付款：可自助取消
     btns = `<button class="btn-action outline" onclick="goContact()">联系客服</button>
             <button class="btn-action danger" onclick="cancelOrder()">取消订单</button>`
-  } else if (['paid','locked','processing','producing'].includes(o.status)) {
+  } else if (o.status === 'paid') {
+    // 已付款但管理员尚未导出地址，仍可自助取消
     btns = `<button class="btn-action outline" onclick="goContact()">联系客服</button>
             <button class="btn-action danger" onclick="cancelOrder()">取消订单</button>`
+  } else if (['locked','processing','producing'].includes(o.status)) {
+    // 已进入生产流程，不可自助取消，只能联系客服
+    btns = `<button class="btn-action outline" onclick="goContact()">联系客服</button>`
   } else if (o.status === 'shipped') {
+    // 运输中：确认收货 + 联系客服
     btns = `<button class="btn-action yellow" onclick="confirmReceipt()">确认收货</button>
             <button class="btn-action outline" onclick="goContact()">联系客服</button>`
   } else if (o.status === 'received') {
+    // 已完成：申请售后 + 联系客服
     btns = `<button class="btn-action outline" onclick="goContact()">联系客服</button>
             <button class="btn-action danger" onclick="openRefund()">申请售后</button>`
   } else if (o.status === 'aftersale') {
