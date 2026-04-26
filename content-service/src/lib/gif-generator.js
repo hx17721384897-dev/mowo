@@ -5,7 +5,6 @@
  */
 import { createCanvas, loadImage } from 'canvas'
 import GifEncoder from 'gif-encoder'
-import fetch from 'node-fetch'
 import { Buffer } from 'buffer'
 
 const GIF_SIZE   = 200   // 输出尺寸 px（正方形）
