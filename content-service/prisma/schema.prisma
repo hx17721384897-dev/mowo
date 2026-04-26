@@ -106,7 +106,8 @@ model User {
   addresses     UserAddress[]
 
   // 创作者通知
-  notifications CreatorNotification[]
+  notifications     CreatorNotification[]
+  aftersaleRequests AftersaleRequest[]
 
   @@map("users")
 }
@@ -575,6 +576,8 @@ model CustomizeOrder {
   trackingNo      String?   @map("tracking_no")
   trackingCompany String?   @map("tracking_company")
   shippedAt       DateTime? @map("shipped_at")
+  receivedAt      DateTime? @map("received_at")
+  aftersaleCount  Int       @default(0) @map("aftersale_count")  // 售后申请次数（防刷上限3次）
   batchId         String?   @map("batch_id")
   seqNo           Int?      @map("seq_no")
 
@@ -592,10 +595,37 @@ model CustomizeOrder {
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
-  user User @relation(fields: [userId], references: [id])
+  user              User                @relation(fields: [userId], references: [id])
+  aftersaleRequests AftersaleRequest[]
 
   @@unique([platform, externalOrderId], name: "platform_external_order_unique")
   @@map("customize_orders")
+}
+
+// ================================================================
+// 第五点五组：售后申请
+// ================================================================
+
+model AftersaleRequest {
+  id          String    @id @default(uuid())
+  orderId     String    @map("order_id")
+  userId      String    @map("user_id")
+  type        String    @db.VarChar(20)    // refund（退款申请）| quality（质量售后）
+  reason      String    @db.VarChar(100)   // 原因文字，从预定义列表选
+  description String?   @db.Text           // 用户补充说明（可选）
+  imageUrls   String    @default("[]") @map("image_urls")  // JSON数组，OSS objectKey
+  status      String    @default("pending") @db.VarChar(20)
+  // pending | approved | rejected | completed | cancelled
+  adminNote   String?   @db.Text @map("admin_note")    // 管理员处理回复
+  adminId     String?   @map("admin_id")
+  processedAt DateTime? @map("processed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  order CustomizeOrder @relation(fields: [orderId], references: [id])
+  user  User           @relation(fields: [userId], references: [id])
+
+  @@map("aftersale_requests")
 }
 
 // ================================================================

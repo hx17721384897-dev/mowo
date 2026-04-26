@@ -197,6 +197,37 @@ a{text-decoration:none;}
 .btn-modal-confirm{flex:1;height:50px;border-radius:14px;background:var(--red);color:var(--white);font-weight:900;font-size:14px;transition:opacity .18s;}
 .btn-modal-confirm:hover{opacity:.85;}
 
+/* ── AFTERSALE TYPE BUTTONS ── */
+.type-btns{display:flex;gap:10px;margin-bottom:18px;}
+.type-btn{flex:1;padding:14px 10px;border-radius:16px;border:2px solid var(--gray1);font-weight:800;font-size:13px;text-align:center;cursor:pointer;transition:all .18s;background:none;font-family:var(--font);}
+.type-btn .tb-icon{font-size:22px;display:block;margin-bottom:6px;}
+.type-btn:hover{border-color:var(--gray2);}
+.type-btn.sel{border-color:var(--black);background:var(--cream);}
+/* ── DESCRIPTION TEXTAREA ── */
+.modal-textarea{width:100%;height:80px;border:2px solid var(--gray1);border-radius:14px;padding:12px;font-family:var(--font);font-weight:700;font-size:13px;resize:none;outline:none;transition:border-color .18s;margin-bottom:14px;background:var(--white);}
+.modal-textarea:focus{border-color:var(--black);}
+.modal-textarea::placeholder{color:var(--gray2);}
+/* ── IMAGE UPLOAD ── */
+.img-upload-area{margin-bottom:16px;}
+.img-upload-label{font-weight:900;font-size:12px;color:var(--gray3);letter-spacing:.05em;text-transform:uppercase;margin-bottom:8px;display:block;}
+.img-upload-row{display:flex;gap:8px;flex-wrap:wrap;}
+.img-thumb{width:68px;height:68px;border-radius:12px;object-fit:cover;border:1.5px solid var(--gray1);}
+.img-add-btn{width:68px;height:68px;border-radius:12px;border:2px dashed var(--gray2);display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;color:var(--gray2);background:none;transition:all .18s;font-family:var(--font);}
+.img-add-btn:hover{border-color:var(--gray3);color:var(--gray3);}
+.img-note{font-size:11px;color:var(--gray2);font-weight:700;margin-top:6px;}
+.upload-spin{display:inline-block;animation:spin .8s linear infinite;margin-left:4px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* ── MODAL LEGAL NOTICE ── */
+.modal-legal{font-size:11px;color:var(--gray2);font-weight:700;line-height:1.7;margin-bottom:16px;padding:10px 12px;background:var(--cream);border-radius:10px;}
+/* ── AFTERSALE STATUS DISPLAY ── */
+.aftersale-tag{display:inline-block;padding:3px 10px;border-radius:999px;font-weight:900;font-size:11px;letter-spacing:.04em;}
+.aftersale-tag.pending{background:#FFF3E0;color:#E65100;}
+.aftersale-tag.approved{background:#E8F5E9;color:#2E7D32;}
+.aftersale-tag.rejected{background:#FFEBEE;color:#C62828;}
+.aftersale-tag.completed{background:#E3F2FD;color:#1565C0;}
+.aftersale-note-box{background:var(--cream);border-radius:12px;padding:14px;margin-top:12px;font-size:13px;font-weight:700;line-height:1.7;color:var(--black);}
+.aftersale-note-label{font-size:11px;font-weight:900;color:var(--gray3);letter-spacing:.05em;text-transform:uppercase;margin-bottom:6px;}
+
 /* REVEAL */
 .reveal{opacity:0;transform:translateY(14px);transition:opacity .5s var(--ease),transform .5s var(--ease);}
 .reveal.on{opacity:1;transform:none;}
@@ -271,16 +302,63 @@ a{text-decoration:none;}
   <div class="action-bar reveal d4" id="actionBar"></div>
 </main>
 
-<!-- REFUND MODAL -->
+<!-- 申请售后弹窗 -->
 <div class="modal-bg" id="refundModal" onclick="handleModalBg(event)">
-  <div class="modal-box" onclick="event.stopPropagation()">
-    <div class="modal-icon">↩️</div>
-    <div class="modal-title">申请退款</div>
-    <div class="modal-desc">请选择退款原因，我们会在 1-3 个工作日内处理并与您联系。</div>
-    <div class="refund-reasons" id="refundReasons"></div>
+  <div class="modal-box" style="max-height:90vh;overflow-y:auto" onclick="event.stopPropagation()">
+    <div class="modal-icon">🔄</div>
+    <div class="modal-title">申请售后</div>
+    <div class="modal-desc">请选择申请类型和原因，客服将在 1–3 个工作日内联系您处理。</div>
+
+    <!-- 类型选择 -->
+    <div class="type-btns" id="typeBtns">
+      <button class="type-btn" id="typeRefund" onclick="pickType('refund')">
+        <span class="tb-icon">💸</span>退款申请<br>
+        <span style="font-weight:700;font-size:11px;color:var(--gray3)">未收到货 / 不想要</span>
+      </button>
+      <button class="type-btn" id="typeQuality" onclick="pickType('quality')">
+        <span class="tb-icon">🔧</span>质量售后<br>
+        <span style="font-weight:700;font-size:11px;color:var(--gray3)">收货后发现问题</span>
+      </button>
+    </div>
+
+    <!-- 原因列表 -->
+    <div class="refund-reasons" id="refundReasons" style="display:none"></div>
+
+    <!-- 补充说明 -->
+    <div id="descArea" style="display:none">
+      <textarea class="modal-textarea" id="refundDesc" placeholder="请详细描述问题，有助于我们快速处理（选填）" maxlength="300"></textarea>
+    </div>
+
+    <!-- 图片上传（质量问题时显示） -->
+    <div class="img-upload-area" id="imgUploadArea" style="display:none">
+      <span class="img-upload-label">上传凭证图片（最多 3 张）</span>
+      <div class="img-upload-row" id="imgRow">
+        <button class="img-add-btn" onclick="triggerImgPick()" id="imgAddBtn">＋</button>
+      </div>
+      <div class="img-note">仅支持 JPG / PNG / WebP，每张限 10MB</div>
+      <input type="file" accept="image/jpeg,image/png,image/webp" multiple id="imgFileInput" style="display:none" onchange="handleImgFiles(this)">
+    </div>
+
+    <!-- 法律提示 -->
+    <div class="modal-legal">
+      ⚠️ 根据《消费者权益保护法》，个性化定制商品不适用无理由退货。如属质量问题，我们将积极协助解决（换货/补发/协商退款）。
+    </div>
+
     <div class="modal-btns">
       <button class="btn-modal-cancel" onclick="closeRefund()">取消</button>
-      <button class="btn-modal-confirm" onclick="submitRefund()">提交申请</button>
+      <button class="btn-modal-confirm" id="submitRefundBtn" onclick="submitRefund()">提交申请</button>
+    </div>
+  </div>
+</div>
+
+<!-- 售后进度弹窗 -->
+<div class="modal-bg" id="aftersaleModal" onclick="if(event.target.id==='aftersaleModal')closeAftersale()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-icon">🔄</div>
+    <div class="modal-title">售后申请进度</div>
+    <div id="aftersaleContent" style="margin-bottom:20px"></div>
+    <div class="modal-btns">
+      <button class="btn-modal-cancel" onclick="closeAftersale()">关闭</button>
     </div>
   </div>
 </div>
@@ -308,10 +386,20 @@ const STATUS_ICON = {
   cancelled:'❌', aftersale:'🔄'
 }
 const FILL_PCT = { 0:'0%', 1:'33%', 2:'66%', 3:'100%' }
-const REFUND_REASONS = ['不想要了','拍错了','价格有变动','质量问题（收货后）','其他原因']
+const REFUND_REASONS = {
+  refund:  ['不想要了','拍错了','价格有变动','物流异常/未收到货','其他原因'],
+  quality: ['机器运转异常','帧图印刷错误/模糊','外壳破损或配件缺失','与描述不符','其他质量问题']
+}
+const AFTERSALE_STATUS_LABEL = {
+  pending:'待处理', approved:'已同意', rejected:'已拒绝', completed:'已完成', cancelled:'已取消'
+}
+const AFTERSALE_TYPE_LABEL = { refund:'退款申请', quality:'质量售后' }
 
 let ORDER = null
 let selectedReason = null
+let selectedType   = null
+let uploadedOssKeys = []
+let isUploading     = false
 let tT
 
 /* ─── LOAD ─── */
@@ -461,23 +549,35 @@ function buildActionBar(o) {
     // 待付款：可自助取消
     btns = `<button class="btn-action outline" onclick="goContact()">联系客服</button>
             <button class="btn-action danger" onclick="cancelOrder()">取消订单</button>`
-  } else if (o.status === 'paid') {
-    // 已付款但管理员尚未导出地址，仍可自助取消
-    btns = `<button class="btn-action outline" onclick="goContact()">联系客服</button>
-            <button class="btn-action danger" onclick="cancelOrder()">取消订单</button>`
-  } else if (['locked','processing','producing'].includes(o.status)) {
-    // 已进入生产流程，不可自助取消，只能联系客服
-    btns = `<button class="btn-action outline" onclick="goContact()">联系客服</button>`
-  } else if (o.status === 'shipped') {
-    // 运输中：确认收货 + 联系客服
-    btns = `<button class="btn-action yellow" onclick="confirmReceipt()">确认收货</button>
-            <button class="btn-action outline" onclick="goContact()">联系客服</button>`
-  } else if (o.status === 'received') {
-    // 已完成：申请售后 + 联系客服
+
+  } else if (['paid','locked','processing','producing'].includes(o.status)) {
+    // 已付款进入生产流程，不可自助取消
     btns = `<button class="btn-action outline" onclick="goContact()">联系客服</button>
             <button class="btn-action danger" onclick="openRefund()">申请售后</button>`
+
+  } else if (o.status === 'shipped') {
+    // 运输中：确认收货（主操作）+ 售后申请
+    btns = `<button class="btn-action yellow" onclick="confirmReceipt()">确认收货</button>
+            <button class="btn-action outline" onclick="goContact()">联系客服</button>
+            <button class="btn-action danger" onclick="openRefund()">申请售后</button>`
+
+  } else if (o.status === 'received') {
+    // 已完成：判断 7 天时效
+    const receivedAt = o.receivedAt ? new Date(o.receivedAt) : null
+    const daysSince  = receivedAt ? (Date.now() - receivedAt.getTime()) / 86400000 : 999
+    if (daysSince <= 7) {
+      btns = `<button class="btn-action outline" onclick="goContact()">联系客服</button>
+              <button class="btn-action danger" onclick="openRefund()">申请售后</button>`
+    } else {
+      btns = `<button class="btn-action outline" onclick="goContact()">联系客服</button>
+              <button class="btn-action outline" style="color:var(--gray2);cursor:default" title="收货超过7天，请联系客服处理">售后已过期</button>`
+    }
+
   } else if (o.status === 'aftersale') {
-    btns = `<button class="btn-action outline" onclick="goContact()">联系客服</button>`
+    // 售后处理中：查看进度
+    btns = `<button class="btn-action primary" onclick="showAftersaleStatus()">查看售后进度</button>
+            <button class="btn-action outline" onclick="goContact()">联系客服</button>`
+
   } else if (o.status === 'cancelled') {
     btns = `<button class="btn-action outline" onclick="goContact()">联系客服</button>`
   }
@@ -540,31 +640,205 @@ function copyTracking(no) {
   })
 }
 
-/* ─── REFUND MODAL ─── */
+/* ─── 申请售后弹窗 ─── */
 function openRefund() {
-  selectedReason = null
-  document.getElementById('refundReasons').innerHTML = REFUND_REASONS.map((r, i) => `
-    <div class="reason-opt" id="reason-${i}" onclick="pickReason(${i})">
-      <div class="reason-radio"></div>
-      <span>${r}</span>
-    </div>`).join('')
+  // 重置状态
+  selectedType    = null
+  selectedReason  = null
+  uploadedOssKeys = []
+  document.getElementById('typeRefund').classList.remove('sel')
+  document.getElementById('typeQuality').classList.remove('sel')
+  document.getElementById('refundReasons').style.display = 'none'
+  document.getElementById('refundReasons').innerHTML = ''
+  document.getElementById('descArea').style.display = 'none'
+  document.getElementById('refundDesc').value = ''
+  document.getElementById('imgUploadArea').style.display = 'none'
+  document.getElementById('imgRow').innerHTML = '<button class="img-add-btn" onclick="triggerImgPick()" id="imgAddBtn">＋</button>'
+
+  // quality 类型限制：只在 received 状态允许
+  const qBtn = document.getElementById('typeQuality')
+  if (ORDER && ORDER.status !== 'received') {
+    qBtn.style.opacity = '.4'
+    qBtn.style.pointerEvents = 'none'
+    qBtn.title = '质量售后需在确认收货后申请'
+  } else {
+    qBtn.style.opacity = ''
+    qBtn.style.pointerEvents = ''
+    qBtn.title = ''
+  }
+
   document.getElementById('refundModal').classList.add('open')
   document.body.style.overflow = 'hidden'
 }
+
+function pickType(type) {
+  selectedType   = type
+  selectedReason = null
+  document.getElementById('typeRefund').classList.toggle('sel', type === 'refund')
+  document.getElementById('typeQuality').classList.toggle('sel', type === 'quality')
+
+  // 渲染原因列表
+  const reasons = REFUND_REASONS[type] || []
+  document.getElementById('refundReasons').innerHTML = reasons.map((r, i) => `
+    <div class="reason-opt" onclick="pickReason(${i})">
+      <div class="reason-radio"></div>
+      <span>${r}</span>
+    </div>`).join('')
+  document.getElementById('refundReasons').style.display = 'flex'
+  document.getElementById('descArea').style.display = 'block'
+
+  // 质量售后显示图片上传区
+  document.getElementById('imgUploadArea').style.display = type === 'quality' ? 'block' : 'none'
+}
+
 function pickReason(i) {
   selectedReason = i
   document.querySelectorAll('.reason-opt').forEach((el, idx) => el.classList.toggle('sel', idx === i))
 }
+
 function closeRefund() {
   document.getElementById('refundModal').classList.remove('open')
   document.body.style.overflow = ''
 }
-function submitRefund() {
-  if (selectedReason === null) { toast('请选择原因'); return }
-  closeRefund()
-  toast('✓ 申请已提交，客服将在 1–3 个工作日内联系您')
-}
+
 function handleModalBg(e) { if (e.target.id === 'refundModal') closeRefund() }
+
+/* ─── 图片上传 ─── */
+function triggerImgPick() {
+  if (uploadedOssKeys.length >= 3) { toast('最多上传 3 张图片'); return }
+  document.getElementById('imgFileInput').click()
+}
+
+async function handleImgFiles(input) {
+  const files = Array.from(input.files).slice(0, 3 - uploadedOssKeys.length)
+  if (!files.length) return
+  input.value = ''
+
+  const token = localStorage.getItem('mowo_token')
+  for (const file of files) {
+    if (file.size > 10 * 1024 * 1024) { toast('图片超过 10MB，跳过'); continue }
+    // 在缩略图区显示加载中
+    const loadId = 'img-loading-' + Date.now()
+    document.getElementById('imgRow').insertAdjacentHTML('beforeend',
+      `<div id="${loadId}" style="width:68px;height:68px;border-radius:12px;background:var(--gray1);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--gray3)">上传中</div>`)
+    try {
+      // 获取预签名 URL
+      const presignRes  = await fetch(`${CAPI}/api/upload/presign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ fileName: file.name, fileType: file.type, folder: 'aftersale' })
+      })
+      const presignJson = await presignRes.json()
+      if (!presignJson.success) throw new Error(presignJson.message)
+      const { uploadUrl, objectKey } = presignJson.data
+
+      // 直传 OSS
+      await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file })
+
+      uploadedOssKeys.push(objectKey)
+      // 替换 loading 占位为缩略图
+      const objUrl = URL.createObjectURL(file)
+      document.getElementById(loadId).outerHTML =
+        `<img class="img-thumb" src="${objUrl}" title="${file.name}">`
+
+      // 超过 3 张隐藏添加按钮
+      if (uploadedOssKeys.length >= 3) {
+        const addBtn = document.getElementById('imgAddBtn')
+        if (addBtn) addBtn.style.display = 'none'
+      }
+    } catch(err) {
+      document.getElementById(loadId)?.remove()
+      toast('❌ 图片上传失败：' + err.message)
+    }
+  }
+}
+
+/* ─── 提交售后申请 ─── */
+async function submitRefund() {
+  if (!selectedType)   { toast('请选择申请类型'); return }
+  if (selectedReason === null) { toast('请选择申请原因'); return }
+  if (!ORDER) return
+
+  const reasons = REFUND_REASONS[selectedType] || []
+  const reason  = reasons[selectedReason]
+  const description = document.getElementById('refundDesc').value.trim()
+
+  const btn = document.getElementById('submitRefundBtn')
+  btn.textContent = '提交中…'; btn.disabled = true
+
+  const token = localStorage.getItem('mowo_token')
+  try {
+    const res  = await fetch(`${CAPI}/api/orders/${ORDER.id}/aftersale`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ type: selectedType, reason, description: description || undefined, imageUrls: uploadedOssKeys })
+    })
+    const json = await res.json()
+    if (json.success) {
+      closeRefund()
+      toast('✓ 申请已提交，客服将在 1–3 个工作日内联系您')
+      setTimeout(() => loadOrder(), 900)
+    } else {
+      toast('❌ ' + (json.message || '提交失败'))
+    }
+  } catch(err) {
+    toast('❌ 网络异常，请稍后重试')
+  } finally {
+    btn.textContent = '提交申请'; btn.disabled = false
+  }
+}
+
+/* ─── 售后进度弹窗 ─── */
+async function showAftersaleStatus() {
+  if (!ORDER) return
+  document.getElementById('aftersaleModal').classList.add('open')
+  document.body.style.overflow = 'hidden'
+  document.getElementById('aftersaleContent').innerHTML = '<div style="text-align:center;padding:16px;color:var(--gray3)">加载中…</div>'
+
+  const token = localStorage.getItem('mowo_token')
+  try {
+    const res  = await fetch(`${CAPI}/api/orders/${ORDER.id}/aftersale`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    const json = await res.json()
+    if (!json.success || !json.data) {
+      document.getElementById('aftersaleContent').innerHTML = '<div style="color:var(--gray3);font-weight:700;font-size:13px">暂无售后申请记录</div>'
+      return
+    }
+    const r = json.data
+    const statusTag = `<span class="aftersale-tag ${r.status}">${AFTERSALE_STATUS_LABEL[r.status] || r.status}</span>`
+    const createdStr = r.createdAt ? new Date(r.createdAt).toLocaleString('zh-CN', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' }) : '—'
+    const processedStr = r.processedAt ? new Date(r.processedAt).toLocaleString('zh-CN', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' }) : null
+
+    let html = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <span style="font-weight:900;font-size:13px">${AFTERSALE_TYPE_LABEL[r.type] || r.type}</span>
+        ${statusTag}
+      </div>
+      <div style="font-size:13px;font-weight:700;margin-bottom:6px">📌 原因：${escHtml(r.reason)}</div>
+      ${r.description ? `<div style="font-size:12px;color:var(--gray3);margin-bottom:10px">${escHtml(r.description)}</div>` : ''}
+      <div style="font-size:11px;color:var(--gray2);font-weight:700">申请时间：${createdStr}</div>`
+
+    if (r.adminNote) {
+      html += `<div class="aftersale-note-box">
+        <div class="aftersale-note-label">客服回复</div>
+        ${escHtml(r.adminNote)}
+        ${processedStr ? `<div style="font-size:11px;color:var(--gray2);margin-top:6px">处理时间：${processedStr}</div>` : ''}
+      </div>`
+    } else if (r.status === 'pending') {
+      html += `<div style="font-size:12px;color:var(--gray3);font-weight:700;margin-top:12px">⏳ 客服正在处理，请耐心等待（1–3 个工作日）</div>`
+    }
+
+    document.getElementById('aftersaleContent').innerHTML = html
+  } catch(err) {
+    document.getElementById('aftersaleContent').innerHTML = '<div style="color:var(--red);font-weight:700;font-size:13px">加载失败，请重试</div>'
+  }
+}
+
+function closeAftersale() {
+  document.getElementById('aftersaleModal').classList.remove('open')
+  document.body.style.overflow = ''
+}
 
 /* ─── SKELETON ─── */
 function showSkeleton() {

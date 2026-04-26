@@ -1877,4 +1877,101 @@ export default async function adminRoutes(fastify) {
     return reply.send({ success: true, data: authCode })
   })
 
+  // ──────────────────────────────────────────────
+  // GET /api/admin/aftersales
+  // 售后申请列表，支持 status / page / limit 过滤
+  // ──────────────────────────────────────────────
+  fastify.get('/aftersales', async (req, reply) => {
+    const { status = 'pending', page = 1, limit = 20 } = req.query
+    const where = status === 'all' ? {} : { status }
+    const skip  = (Number(page) - 1) * Number(limit)
+
+    const [requests, total] = await Promise.all([
+      fastify.prisma.aftersaleRequest.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: Number(limit),
+        include: {
+          order: {
+            select: {
+              orderNo:      true,
+              status:       true,
+              sourceType:   true,
+              modelName:    true,
+              size:         true,
+              totalAmount:  true,
+              receiverName: true,
+              collabWorkId: true,
+              receivedAt:   true,
+            },
+          },
+          user: { select: { id: true, phone: true } },
+        },
+      }),
+      fastify.prisma.aftersaleRequest.count({ where }),
+    ])
+
+    // 图片预签名（OSS key → 临时访问 URL）
+    const processed = requests.map(r => {
+      let imageSignedUrls = []
+      try {
+        const keys = JSON.parse(r.imageUrls || '[]')
+        imageSignedUrls = keys.map(k => {
+          try { return fastify.ossPresignGet(k, 3600) } catch { return null }
+        }).filter(Boolean)
+      } catch {}
+      return { ...r, imageSignedUrls }
+    })
+
+    return reply.send({
+      success: true,
+      data: { requests: processed, total, page: Number(page), limit: Number(limit) },
+    })
+  })
+
+  // ──────────────────────────────────────────────
+  // PUT /api/admin/aftersales/:id
+  // 处理售后申请：approved（同意）/ rejected（拒绝）/ completed（已完成退款/换货）
+  // ──────────────────────────────────────────────
+  fastify.put('/aftersales/:id', async (req, reply) => {
+    const adminId = req.user.userId
+    const { id }  = req.params
+    const { status, adminNote } = req.body
+
+    const VALID = ['approved', 'rejected', 'completed']
+    if (!VALID.includes(status)) {
+      return reply.code(400).send({ success: false, message: '无效处理状态' })
+    }
+
+    const request = await fastify.prisma.aftersaleRequest.findUnique({
+      where: { id },
+      include: { order: true },
+    })
+    if (!request) return reply.code(404).send({ success: false, message: '售后申请不存在' })
+    if (request.status !== 'pending') {
+      return reply.code(400).send({ success: false, message: '该申请已处理，不可重复操作' })
+    }
+
+    await fastify.prisma.$transaction(async tx => {
+      await tx.aftersaleRequest.update({
+        where: { id },
+        data: { status, adminNote: adminNote || null, adminId, processedAt: new Date() },
+      })
+
+      if (status === 'rejected') {
+        // 拒绝：恢复订单到售后前的状态
+        const prevStatus = request.order.receivedAt ? 'received' : 'shipped'
+        await tx.customizeOrder.update({
+          where: { id: request.orderId },
+          data:  { status: prevStatus },
+        })
+        // 注意：联名分红已被申请时取消，拒绝后不自动恢复（需管理员人工在结算系统处理）
+      }
+      // approved / completed：订单保持 aftersale 状态，退款等操作线下处理
+    })
+
+    return reply.send({ success: true })
+  })
+
 }

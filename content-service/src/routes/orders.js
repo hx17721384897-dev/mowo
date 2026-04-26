@@ -174,7 +174,7 @@ async function orderRoutes(fastify, opts) {
     await prisma.$transaction(async tx => {
       await tx.customizeOrder.update({
         where: { id },
-        data: { status: 'received' },
+        data: { status: 'received', receivedAt: new Date() },
       })
 
       // 若为联名款，将 collabOrder 从 estimated/cooling → cooling（写入冷却期结束时间）
@@ -306,6 +306,96 @@ async function orderRoutes(fastify, opts) {
         updatedAt:       order.updatedAt,
       },
     })
+  })
+  // ──────────────────────────────────────────────
+  // POST /api/orders/:id/aftersale
+  // 提交售后申请（退款 or 质量问题）
+  // 允许状态：paid / locked / processing / producing / shipped / received
+  // ──────────────────────────────────────────────
+  fastify.post('/:id/aftersale', async (req, reply) => {
+    const userId = req.user.userId
+    const { id } = req.params
+    const { type, reason, description, imageUrls = [] } = req.body
+
+    // 参数校验
+    const VALID_TYPES = ['refund', 'quality']
+    if (!VALID_TYPES.includes(type)) {
+      return reply.code(400).send({ success: false, message: '申请类型无效' })
+    }
+    if (!reason || !reason.trim()) {
+      return reply.code(400).send({ success: false, message: '请选择申请原因' })
+    }
+
+    const order = await prisma.customizeOrder.findFirst({ where: { id, userId } })
+    if (!order) return reply.code(404).send({ success: false, message: '订单不存在' })
+
+    const AFTERSALE_ALLOW = ['paid', 'locked', 'processing', 'producing', 'shipped', 'received']
+    if (!AFTERSALE_ALLOW.includes(order.status)) {
+      return reply.code(400).send({
+        success: false,
+        message: `「${STATUS_MAP[order.status]?.label || order.status}」状态不可申请售后`,
+      })
+    }
+    if (type === 'quality' && order.status !== 'received') {
+      return reply.code(400).send({ success: false, message: '质量问题售后需在确认收货后申请' })
+    }
+    if (order.aftersaleCount >= 3) {
+      return reply.code(400).send({ success: false, message: '申请次数已达上限（3次），请联系客服处理' })
+    }
+
+    // 检查是否已有 pending 申请
+    const existing = await prisma.aftersaleRequest.findFirst({
+      where: { orderId: id, status: 'pending' },
+    })
+    if (existing) {
+      return reply.code(400).send({ success: false, message: '已有处理中的申请，请等待客服回复' })
+    }
+
+    // 事务：创建申请 + 订单变为 aftersale + 次数+1 + 联名分红取消
+    await prisma.$transaction(async tx => {
+      await tx.aftersaleRequest.create({
+        data: {
+          orderId: id,
+          userId,
+          type,
+          reason: reason.trim(),
+          description: description?.trim() || null,
+          imageUrls: JSON.stringify(Array.isArray(imageUrls) ? imageUrls : []),
+        },
+      })
+      await tx.customizeOrder.update({
+        where: { id },
+        data: { status: 'aftersale', aftersaleCount: { increment: 1 } },
+      })
+      // 联名款：取消冷却期中的分红（还未打款的部分）
+      if (order.sourceType === 'collab') {
+        await tx.collabOrder.updateMany({
+          where: { orderId: id, revenueStatus: { in: ['estimated', 'cooling'] } },
+          data: { revenueStatus: 'cancelled' },
+        })
+      }
+    })
+
+    return reply.send({ success: true, data: { status: 'aftersale' } })
+  })
+
+  // ──────────────────────────────────────────────
+  // GET /api/orders/:id/aftersale
+  // 查看订单最新一条售后申请详情
+  // ──────────────────────────────────────────────
+  fastify.get('/:id/aftersale', async (req, reply) => {
+    const userId = req.user.userId
+    const { id } = req.params
+
+    const order = await prisma.customizeOrder.findFirst({ where: { id, userId } })
+    if (!order) return reply.code(404).send({ success: false, message: '订单不存在' })
+
+    const request = await prisma.aftersaleRequest.findFirst({
+      where: { orderId: id },
+      orderBy: { createdAt: 'desc' },
+    })
+
+    return reply.send({ success: true, data: request || null })
   })
 }
 

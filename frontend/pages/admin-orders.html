@@ -393,6 +393,19 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
       </div>
     </div>
 
+    <!-- ══ 售后处理视图 ══ -->
+    <div id="view-aftersale" style="display:none;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+        <button class="btn btn-sm" id="asTab-pending"  onclick="switchAftersaleTab('pending')"  style="background:var(--black);color:#fff;">待处理</button>
+        <button class="btn btn-sm btn-ghost" id="asTab-approved" onclick="switchAftersaleTab('approved')">已同意</button>
+        <button class="btn btn-sm btn-ghost" id="asTab-rejected" onclick="switchAftersaleTab('rejected')">已拒绝</button>
+        <button class="btn btn-sm btn-ghost" id="asTab-completed" onclick="switchAftersaleTab('completed')">已完成</button>
+        <button class="btn btn-sm btn-ghost" id="asTab-all"      onclick="switchAftersaleTab('all')">全部</button>
+      </div>
+      <div id="aftersaleList"><div class="loading-row">正在加载…</div></div>
+      <div class="pagination" id="paginationAftersale" style="display:none;margin-top:12px;"></div>
+    </div>
+
   </div>
 </div>
 
@@ -680,30 +693,20 @@ function updateTime() {
     now.toLocaleDateString('zh-CN') + ' ' + now.toLocaleTimeString('zh-CN', { hour:'2-digit', minute:'2-digit' });
 }
 
-// ══ 子菜单折叠 ══
-function toggleNavGroup() {
-  const hdr = document.getElementById('navGroupHeader');
-  const sub = document.getElementById('navSub');
-  hdr.classList.toggle('open');
-  sub.classList.toggle('open');
-}
-
 // ══ 视图切换 ══
 const VIEW_TITLES = { all:'全部订单', paid:'待处理', locked:'处理中', processing:'待生产', producing:'生产中', shipped:'已发货', received:'已收货', aftersale:'售后中' };
 
 async function switchView(view) {
   _curView = view;
   // 隐藏所有视图
-  ['paid','locked','processing','all'].forEach(v => {
+  ['paid','locked','processing','all','aftersale'].forEach(v => {
     const el = document.getElementById('view-' + v); if(el) el.style.display = 'none';
   });
   document.getElementById('statsGrid').style.display = 'none';
 
-  // 侧边栏子菜单高亮
-  document.querySelectorAll('.nav-sub-item').forEach(el => el.classList.remove('active'));
-  const activeKey = ['paid','locked','processing','producing','shipped'].includes(view) ? view : 'all';
-  const subnav = document.getElementById('subnav-' + activeKey);
-  if (subnav) subnav.classList.add('active');
+  // 同步 URL 和侧边栏高亮
+  history.replaceState(null, '', '?view=' + view);
+  if (window.__adminSidebarSetActive) __adminSidebarSetActive('admin-orders.html?view=' + view);
 
   document.getElementById('topbarTitle').textContent = VIEW_TITLES[view] || '定制订单';
 
@@ -716,6 +719,9 @@ async function switchView(view) {
   } else if (view === 'processing') {
     document.getElementById('view-processing').style.display = '';
     await loadProcessingOrders();
+  } else if (view === 'aftersale') {
+    document.getElementById('view-aftersale').style.display = '';
+    await loadAftersaleOrders(1, 'pending');
   } else {
     document.getElementById('view-all').style.display = '';
     if (view === 'all') document.getElementById('statsGrid').style.display = '';
@@ -729,6 +735,136 @@ async function switchView(view) {
 
 function goView(view) { location.href = 'admin-orders.html?view=' + (view || 'all'); }
 function refreshCurrent() { switchView(_curView); loadStats(); }
+
+// ══ 售后处理 ══
+let _asTab = 'pending'
+const AS_STATUS_LABEL = { pending:'待处理', approved:'已同意', rejected:'已拒绝', completed:'已完成', cancelled:'已取消' }
+const AS_TYPE_LABEL   = { refund:'退款申请', quality:'质量售后' }
+const AS_STATUS_CLASS = { pending:'status-aftersale', approved:'status-received', rejected:'status-cancelled', completed:'status-received', cancelled:'status-cancelled' }
+
+function switchAftersaleTab(tab) {
+  _asTab = tab
+  // 高亮 tab 按钮
+  ;['pending','approved','rejected','completed','all'].forEach(t => {
+    const btn = document.getElementById('asTab-' + t)
+    if (!btn) return
+    btn.className = t === tab ? 'btn btn-sm' : 'btn btn-sm btn-ghost'
+    btn.style.background = t === tab ? 'var(--black)' : ''
+    btn.style.color = t === tab ? '#fff' : ''
+  })
+  loadAftersaleOrders(1, tab)
+}
+
+async function loadAftersaleOrders(page = 1, status = 'pending') {
+  _asTab = status
+  document.getElementById('aftersaleList').innerHTML = '<div class="loading-row">正在加载…</div>'
+  document.getElementById('paginationAftersale').style.display = 'none'
+
+  const params = new URLSearchParams({ page, limit: 20, status })
+  try {
+    const res  = await fetch(`${API}/api/admin/aftersales?${params}`, { headers: { Authorization: `Bearer ${_token}` } })
+    const json = await res.json()
+    if (!json.success) { document.getElementById('aftersaleList').innerHTML = '<div class="loading-row">加载失败</div>'; return }
+    const { requests, total, limit } = json.data
+
+    if (!requests.length) {
+      document.getElementById('aftersaleList').innerHTML = '<div class="loading-row" style="color:var(--gray3)">暂无售后申请</div>'
+      return
+    }
+
+    document.getElementById('aftersaleList').innerHTML = requests.map(r => renderAftersaleCard(r)).join('')
+
+    // 分页
+    const totalPages = Math.ceil(total / limit)
+    if (totalPages > 1) {
+      renderPagEl('paginationAftersale', { page, limit, total }, p => loadAftersaleOrders(p, status))
+      document.getElementById('paginationAftersale').style.display = ''
+    }
+  } catch(e) {
+    document.getElementById('aftersaleList').innerHTML = '<div class="loading-row">加载失败</div>'
+  }
+}
+
+function renderAftersaleCard(r) {
+  const o = r.order || {}
+  const u = r.user  || {}
+  const phone = u.phone ? u.phone.slice(0,3) + '****' + u.phone.slice(7) : '—'
+  const typeTag = `<span class="order-badge" style="background:#EEF2FF;color:#3730A3">${AS_TYPE_LABEL[r.type] || r.type}</span>`
+  const statusTag = `<span class="order-badge ${AS_STATUS_CLASS[r.status] || ''}">${AS_STATUS_LABEL[r.status] || r.status}</span>`
+  const isCollab = o.sourceType === 'collab'
+  const collabWarning = isCollab ? `<div style="display:inline-flex;align-items:center;gap:6px;background:#FFF3E0;color:#E65100;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:900;margin-left:8px">⚠️ 联名款·需处理分红</div>` : ''
+  const createdStr = r.createdAt ? new Date(r.createdAt).toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' }) : '—'
+
+  // 图片缩略图
+  let imgHtml = ''
+  if (r.imageSignedUrls && r.imageSignedUrls.length) {
+    imgHtml = `<div style="display:flex;gap:6px;margin:8px 0;flex-wrap:wrap">` +
+      r.imageSignedUrls.map(url => `<img src="${url}" style="width:56px;height:56px;border-radius:10px;object-fit:cover;border:1.5px solid var(--gray1);cursor:pointer" onclick="window.open('${url}','_blank')" onerror="this.style.display='none'">`).join('') +
+      `</div>`
+  }
+
+  // 处理面板（pending 时显示）
+  const actionPanel = r.status === 'pending' ? `
+    <div id="asPanel-${r.id}" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--gray1)">
+      <div style="font-size:12px;font-weight:900;color:var(--gray3);letter-spacing:.05em;text-transform:uppercase;margin-bottom:6px">处理回复</div>
+      <textarea id="asNote-${r.id}" placeholder="填写处理结果或说明（将展示给用户）…" maxlength="500"
+        style="width:100%;height:80px;border:2px solid var(--gray1);border-radius:12px;padding:10px;font-family:inherit;font-size:13px;font-weight:700;resize:none;outline:none;transition:border-color .18s;margin-bottom:10px;"
+        onfocus="this.style.borderColor='var(--black)'" onblur="this.style.borderColor='var(--gray1)'"></textarea>
+      ${isCollab ? `<div style="background:#FFF3E0;border-radius:12px;padding:12px;font-size:12px;font-weight:800;color:#E65100;margin-bottom:10px">⚠️ 此为联名款订单，同意申请前请先在结算系统确认分红状态。若分红仍在冷却期内，系统已自动取消；若已结算，需人工处理。</div>` : ''}
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-sm" style="background:#2E7D32;color:#fff" onclick="handleAftersale('${r.id}','approved')">✅ 同意申请</button>
+        <button class="btn btn-sm btn-ghost" style="color:var(--red)" onclick="handleAftersale('${r.id}','rejected')">❌ 拒绝申请</button>
+        <button class="btn btn-sm btn-ghost" onclick="handleAftersale('${r.id}','completed')">✓ 标记已完成</button>
+      </div>
+    </div>` : (r.adminNote ? `<div style="background:var(--cream);border-radius:10px;padding:10px;margin-top:8px;font-size:12px;font-weight:700;color:var(--black)">💬 ${escHtml(r.adminNote)}</div>` : '')
+
+  return `<div style="background:var(--white);border-radius:16px;border:1.5px solid var(--gray1);padding:16px;margin-bottom:10px">
+    <div style="display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+      <span style="font-weight:900;font-size:13px">NO. ${escHtml(o.orderNo || '—')}</span>
+      ${typeTag}${statusTag}${collabWarning}
+    </div>
+    <div style="font-size:12px;color:var(--gray3);font-weight:700;margin-bottom:4px">
+      👤 ${phone} &nbsp;·&nbsp; 📌 ${escHtml(r.reason)} &nbsp;·&nbsp; ${createdStr}
+    </div>
+    ${r.description ? `<div style="font-size:12px;color:var(--black);font-weight:700;margin-bottom:4px">${escHtml(r.description)}</div>` : ''}
+    ${imgHtml}
+    ${r.status === 'pending' ? `<button class="btn btn-sm btn-ghost" style="margin-top:6px" onclick="toggleAsPanel('${r.id}')">展开处理 ▾</button>` : ''}
+    ${actionPanel}
+  </div>`
+}
+
+function toggleAsPanel(id) {
+  const panel = document.getElementById('asPanel-' + id)
+  if (!panel) return
+  const isOpen = panel.style.display !== 'none'
+  panel.style.display = isOpen ? 'none' : ''
+}
+
+async function handleAftersale(id, status) {
+  const note = document.getElementById('asNote-' + id)?.value.trim() || ''
+  const labels = { approved:'同意申请', rejected:'拒绝申请', completed:'标记为已完成' }
+  if (!confirm(`确认${labels[status] || status}？此操作不可撤销。`)) return
+
+  try {
+    const res  = await fetch(`${API}/api/admin/aftersales/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${_token}` },
+      body: JSON.stringify({ status, adminNote: note })
+    })
+    const json = await res.json()
+    if (json.success) {
+      showToast(`✓ 已${labels[status]}`)
+      loadAftersaleOrders(1, _asTab)
+      loadStats()
+    } else {
+      showToast('❌ ' + (json.message || '操作失败'))
+    }
+  } catch(e) {
+    showToast('❌ 网络异常')
+  }
+}
+
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
 
 // ══ 统计 ══
 async function loadStats() {
