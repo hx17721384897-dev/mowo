@@ -277,6 +277,7 @@ mowo_sku_colors       — 款式管理自定义颜色选项
 /api/creator/*           — 创作者端接口 ✅ 新增
 /api/collab/*            — 联名系统 ✅ 已完成
 /api/inventory/*         — 库存管理 ✅ 已完成
+/api/admin/revenue/*     — 分红规则配置（GET role≥2 / PUT role=3）✅ 新增
 /api/shop/*              — 转发至 CRMEB（待配置）
 ```
 
@@ -346,18 +347,34 @@ globalSort = 款式.sortOrder × 1000 + SKU.sortOrder
 
 ```
 customize-start.html   选款式（走马灯横向滑动，点「查看详情」看SKU规格）
+  ↓ 点「下一步」前：若已登录，调 GET /api/custom-products/quota 检查草稿配额
+    配额已满 → alert 提示去「我的动画」删除旧草稿，阻断跳转
   ↓ localStorage: mowo_customize_meta（含 modelId/name/frames/sizes/validTargets）
 customize-editor.html  上传→裁剪→提取帧→去重→筛帧
+  ↓ 导入文件时（新建流程）：再次调 GET /api/custom-products/quota 二次兜底
+    配额已满 → showToast 提示，阻断上传
+  ↓ 点「下一步」：若已登录，POST /api/custom-products 保存草稿（状态 draft）
+    草稿 ID 存入 localStorage: mowo_customize_draft_id
   ↓ localStorage: mowo_customize_frames
 customize-confirm.html 四步选配（帧数→尺寸→材质→颜色，基于单条SKU匹配）
   已选列表支持多款，底部黄色背景显示合计价格
-  ↓ 点「提交定制」
-  1. 帧复制补齐（不足目标帧数则循环）
-  2. 批量上传OSS
-  3. POST /api/customize-orders（状态 pending）
-  4. 显示订单号+客服引导弹窗
-  ↓ 清除localStorage
+  ↓ 点「立即购买」/「加入购物车」：
+    - 若 mowo_customize_draft_id 存在 → PUT 更新该草稿（不新建）
+    - 若 mowo_customize_product_map 存在 → PUT 更新已有记录（重试时防重复）
+    结果 map 存入 localStorage: mowo_customize_product_map
+  ↓ 跳转 checkout.html
+  ↓ 清除 localStorage（mowo_customize_frames/meta/draft_id/product_map）
 ```
+
+### 草稿配额规则
+| 角色 | 配额 | 计算范围 |
+|------|------|---------|
+| 普通用户 | 3 个 | status IN ('draft', 'in_cart') |
+| 认证创作者（certifyStatus≥2） | 10 个 | 同上 |
+
+- 配额检查接口：`GET /api/custom-products/quota`（需登录），返回 `{ count, limit, canCreate }`
+- **检查时机**：① customize-start.html 点「下一步」时 ② customize-editor.html 导入文件时（仅新建，重新编辑不受限）③ POST /api/custom-products 时（服务端兜底）
+- 已提交订单（status='ordered'）、已删除（status='removed'）不计入配额
 
 ---
 
@@ -403,6 +420,7 @@ customize-confirm.html 四步选配（帧数→尺寸→材质→颜色，基于
 | admin-logs.html | 审计日志 | role=3 | ✅ |
 | admin-models.html | 款式增删改/SKU管理/图片/价格/库存/款式排序/SKU排序 | role≥2 | ✅ 已更新 |
 | admin-inventory.html | 库存管理/入库/预警设置 | role≥2 | ✅ |
+| admin-revenue-config.html | 分红规则配置（新手期/牛量系数/独家加成/上限） | role=3 写，role≥2 只读 | ✅ 新增 |
 
 ## 生产端页面清单（独立于管理后台，role≥1）
 
@@ -582,6 +600,8 @@ GET  /api/collab/works/:id/reviews  作品评价列表（公开）
 | 联名帧素材库存 | on_demand按需/stocked有备货 | 材料包是硬门槛，帧素材包软性 |
 | 文档填充方式 | adm-zip操作XML插入图片/文字 | 不依赖模板路径，格式可控 |
 | customize-confirm | 四步独立选配（帧数→尺寸→材质→颜色）| 基于单条SKU匹配，逻辑清晰 |
+| 草稿配额拦截时机 | 在 customize-start「下一步」和 editor 导入文件时前置检查，不等到提交才报错 | 用户编辑完才报上限体验极差，前置拦截节省用户时间 |
+| 草稿配额数量 | 普通用户3个，认证创作者10个 | 防止草稿堆积占用存储，创作者高频使用给更大空间 |
 | 导出地址排序规则 | 单款排前→多款按最高SKU→同SKU按数量少→逐位比较次高SKU | 生产顺序和打单顺序严格一致，打包时多款用户无需手动匹配 |
 | seqNo | 导出地址时写入，帧图压缩包按seqNo排序 | 两次导出顺序永远一致，不依赖重新计算 |
 | 批次ID格式 | YYYYMMDD_HHMMSS（精确到秒）| 防止同分钟内多次导出冲突 |

@@ -31,6 +31,7 @@ import contactRoutes      from './routes/contact.js'
 import adminContactRoutes from './routes/admin-contact.js'
 import settlementRoutes   from './routes/settlement.js'
 import bullRoutes         from './routes/bull.js'
+import revenueConfigRoutes from './routes/revenue-config.js'
 import linksRoutes        from './routes/links.js'
 import contractsRoutes    from './routes/contracts.js'
 import cartRoutes          from './routes/cart.js'
@@ -132,11 +133,12 @@ async function start() {
     await fastify.register(contactRoutes,        { prefix: '/api/contact' })
     await fastify.register(adminContactRoutes,   { prefix: '/api/admin/contact' })
 
-    // ── 结算 + 牛量 + 引流链接 + 商务合同 ──
+    // ── 结算 + 牛量 + 引流链接 + 商务合同 + 分红配置 ──
     await fastify.register(settlementRoutes,     { prefix: '/api' })
     await fastify.register(bullRoutes,           { prefix: '/api' })
     await fastify.register(linksRoutes,          { prefix: '/api' })
     await fastify.register(contractsRoutes,      { prefix: '/api' })
+    await fastify.register(revenueConfigRoutes,  { prefix: '/api' })
 
     // ── 购物车系统 ──
     await fastify.register(cartRoutes,           { prefix: '/api/cart' })

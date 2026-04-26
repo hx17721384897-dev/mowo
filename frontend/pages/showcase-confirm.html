@@ -292,8 +292,6 @@ function renderPage() {
 
   // 徽章
   let badges = ''
-  if (w.isExclusiveWork) badges += `<span class="badge badge-exclusive">限定联名</span>`
-  if (w.isNewbieWork) badges += `<span class="badge badge-newbie">新人创作者</span>`
 
   // 基础价格
   const basePrice = w.basePrice ? `¥${Number(w.basePrice).toFixed(0)}` : '询价'
@@ -396,7 +394,6 @@ function renderPage() {
         <p class="collab-label">关于联名</p>
         <p class="collab-note">
           购买此作品即直接支持创作者。创作者将在冷静期结束后获得销售分成。
-          ${w.isExclusiveWork ? '<br>🌟 限定联名，不定期限量发售。' : ''}
         </p>
       </div>
 

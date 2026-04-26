@@ -1,7 +1,7 @@
 // src/routes/admin-collab.js — 管理员联名审核 + 活动管理
 // 全部需要 role >= 2
 
-import { calcRevenueRate } from '../lib/revenue.js'
+import { calcRevenueRate, buildRevenueConfig } from '../lib/revenue.js'
 
 export default async function adminCollabRoutes(fastify) {
   const { prisma } = fastify
@@ -127,6 +127,11 @@ export default async function adminCollabRoutes(fastify) {
     }
 
     // action === 'approve'
+    // 读取分红参数配置
+    const revenueConfigRows = await prisma.platformConfig.findMany({ where: { groupName: 'revenue' } })
+    const revenueConfig = buildRevenueConfig(revenueConfigRows)
+    const newbieDays = Number(revenueConfig.revenue_newbie_days ?? 14)
+
     // 获取创作者等级信息（计算分红率快照）
     const creatorProfile = await prisma.creatorProfile.findUnique({
       where: { userId: work.creatorId },
@@ -144,15 +149,16 @@ export default async function adminCollabRoutes(fastify) {
     // 计算分红率快照
     const now = new Date()
     const newbieExpiredAt = work.isNewbieWork
-      ? new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000)
+      ? new Date(now.getTime() + newbieDays * 24 * 60 * 60 * 1000)
       : null
 
     const { rate, breakdown } = calcRevenueRate({
-      bullEnergy: creatorProfile?.bullLevel ?? 1,
-      isExclusive: creatorProfile?.isExclusive ?? false,
-      isNewbieWork: work.isNewbieWork,
+      bullEnergy:      creatorProfile?.bullLevel ?? 1,
+      isExclusive:     creatorProfile?.isExclusive ?? false,
+      isNewbieWork:    work.isNewbieWork,
       newbieExpiredAt,
       activityRate,
+      config:          revenueConfig,
     })
 
     const updated = await prisma.collabWork.update({

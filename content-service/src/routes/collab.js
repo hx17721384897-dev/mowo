@@ -112,7 +112,7 @@ export default async function collabRoutes(fastify) {
     const skus = skuIds.length
       ? await prisma.machineModelSku.findMany({
           where: { id: { in: skuIds } },
-          select: { id: true, size: true, material: true, colorOptions: true },
+          select: { id: true, size: true, material: true, frameCount: true, colorName: true, colorHex: true, price: true },
         })
       : []
 
@@ -146,7 +146,7 @@ export default async function collabRoutes(fastify) {
         ...work,
         animationFrames: frameUrls,
         coverUrl,
-        supportedSkus: skus.map(s => ({ ...s, colorOptions: safeJson(s.colorOptions) })),
+        supportedSkus: skus,
         creator: profile ?? { userId: work.creatorId, nickname: '创作者', avatarUrl: null },
         likeCount,
         isLiked,
@@ -227,7 +227,11 @@ export default async function collabRoutes(fastify) {
       }
     }
 
-    // 判断是否是创作者前3款（新手期）—— 在整批提交前计算
+    // 读取新手期作品数量上限（从配置，默认3）
+    const newbieWorksConfig = await prisma.platformConfig.findUnique({ where: { configKey: 'revenue_newbie_works' } })
+    const newbieWorksLimit = Number(newbieWorksConfig?.configValue ?? 3)
+
+    // 判断是否是创作者新手期（前 N 款）—— 在整批提交前计算
     const approvedCount = await prisma.collabWork.count({ where: { creatorId: userId, status: 'approved' } })
     const pendingCount  = await prisma.collabWork.count({ where: { creatorId: userId, status: 'pending' } })
     let workIndexOffset = approvedCount + pendingCount
@@ -287,7 +291,7 @@ export default async function collabRoutes(fastify) {
       const skuRecords = await prisma.machineModelSku.findMany({ where: { id: { in: supportedSkus }, isActive: true } })
       if (skuRecords.length !== supportedSkus.length) { errors.push(`第 ${i+1} 款：部分规格不存在或已下架`); continue }
 
-      const isNewbieWork = (workIndexOffset + i) < 3
+      const isNewbieWork = (workIndexOffset + i) < newbieWorksLimit
 
       try {
         const work = await prisma.collabWork.create({
