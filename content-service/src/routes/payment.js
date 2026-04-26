@@ -58,9 +58,18 @@ export default async function paymentRoutes(fastify) {
       for (const item of items) {
         const orderNo = `ORD${Date.now()}${Math.random().toString(36).slice(2, 6).toUpperCase()}`
 
-        // 从 configSnapshotJson 解析定制参数
-        let configData = {}
-        try { configData = JSON.parse(item.configSnapshotJson || '{}') } catch {}
+        // 查询 SKU + 关联 model，补全 CustomizeOrder 必填字段
+        const sku = await tx.machineModelSku.findUnique({
+          where: { id: item.hardwareSkuId },
+          include: { model: true }
+        })
+
+        // 帧图 URL：优先从 customProduct 取 animationFrames
+        let frameUrls = '[]'
+        if (item.customProductId) {
+          const cp = await tx.customProduct.findUnique({ where: { id: item.customProductId } })
+          if (cp?.animationFrames) frameUrls = cp.animationFrames
+        }
 
         // 创建 CustomizeOrder（进入现有生产流程）
         const newOrder = await tx.customizeOrder.create({
@@ -68,22 +77,27 @@ export default async function paymentRoutes(fastify) {
             orderNo,
             userId:        preOrder.userId,
             skuId:         item.hardwareSkuId,
+            modelId:       sku?.modelId      || '',
+            modelName:     sku?.model?.name  || '',
+            frameCount:    sku?.frameCount   || 0,
+            size:          sku?.size         || '',
+            material:      sku?.material     || '',
+            color:         sku?.colorHex     || '',
+            colorName:     sku?.colorName    || '',
+            ossPath:       '',
             status:        'paid',
             sourceType:    item.itemType === 'MARKET' ? 'collab' : 'custom',
             collabWorkId:  item.itemType === 'MARKET' ? item.contentId : null,
-            frameUrls:     item.configSnapshotJson || '[]',
-            quantity:      item.quantity,
-            // 收件信息（字段名与 customize_orders 统一）
-            receiverName:    preOrder.receiverName  || '',
-            receiverPhone:   preOrder.receiverPhone || '',
+            frameUrls,
+            receiverName:    preOrder.receiverName    || '',
+            receiverPhone:   preOrder.receiverPhone   || '',
             receiverAddress: preOrder.receiverAddress || '',
-            receiverCity:    preOrder.receiverCity || '',
-            // 平台来源
-            platform:         'SELF'
+            receiverCity:    preOrder.receiverCity    || '',
+            platform:        'SELF'
           }
         }).catch(e => {
-          fastify.log.warn(`创建 CustomizeOrder 失败: ${e.message}`)
-          return null
+          fastify.log.error(`创建 CustomizeOrder 失败: ${e.message}`)
+          throw e  // 上抛让事务回滚，避免静默丢单
         })
 
         // MARKET 类型：创建 CollabOrder（创作者分成流程）
@@ -113,10 +127,9 @@ export default async function paymentRoutes(fastify) {
         }
       }
 
-      // 标记 CartItem 已下单（从购物车移除视角）
-      await tx.cartItem.updateMany({
-        where: { id: { in: cartItemIds } },
-        data: { status: 'invalid' }
+      // 支付成功：从购物车直接删除已下单的条目
+      await tx.cartItem.deleteMany({
+        where: { id: { in: cartItemIds } }
       }).catch(() => {})
     })
 
