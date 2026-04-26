@@ -105,6 +105,9 @@ model User {
   // 收货地址
   addresses     UserAddress[]
 
+  // 创作者通知
+  notifications CreatorNotification[]
+
   @@map("users")
 }
 
@@ -571,6 +574,7 @@ model CustomizeOrder {
   receiverCity    String?   @map("receiver_city")
   trackingNo      String?   @map("tracking_no")
   trackingCompany String?   @map("tracking_company")
+  shippedAt       DateTime? @map("shipped_at")
   batchId         String?   @map("batch_id")
   seqNo           Int?      @map("seq_no")
 
@@ -623,6 +627,9 @@ model CollabWork {
   isOnShelf         Boolean   @default(false) @map("is_on_shelf")
   shelfAt           DateTime? @map("shelf_at")
   submissionBatchId String?   @map("submission_batch_id") // 同批次提交的作品共享同一 batchId
+  isRevision        Boolean   @default(false) @map("is_revision")        // 是否为修改版
+  originalWorkId    String?   @map("original_work_id")                   // 指向被修改的原作品 ID
+  changeLog         String?   @db.Text @map("change_log")                // JSON diff: {title:{old,new},...}
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
@@ -630,6 +637,7 @@ model CollabWork {
   collabOrders CollabOrder[]
 
   @@index([submissionBatchId])
+  @@index([originalWorkId])
   @@map("collab_works")
 }
 
@@ -1568,4 +1576,26 @@ model MaterialSkuBinding {
 
   @@unique([materialId, skuId])
   @@map("material_sku_bindings")
+}
+
+// ================================================================
+// 创作者通知
+// ================================================================
+
+model CreatorNotification {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  type      String   @db.VarChar(30)
+  // approved | rejected | offshelf | onshelf | revision_approved | revision_rejected
+  workId    String   @map("work_id")
+  workTitle String   @map("work_title") @db.VarChar(100)
+  message   String?  @db.Text
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@map("creator_notifications")
 }

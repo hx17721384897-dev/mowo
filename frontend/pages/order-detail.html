@@ -222,7 +222,7 @@ a{text-decoration:none;}
   </a>
   <ul class="nav-links">
     <li><a href="about.html">关于我们</a></li><li><a href="products.html">产品介绍</a></li>
-    <li><a href="showcase.html">画师联名</a></li><li><a href="customize-start.html">创作中心</a></li>
+    <li><a href="community.html">社区分享</a></li><li><a href="customize-start.html">创作中心</a></li>
     <li><a href="contact.html">联络我们</a></li>
   </ul>
   <div class="nav-right">
@@ -249,16 +249,11 @@ a{text-decoration:none;}
   </div>
 
   <!-- Address -->
-  <div class="section reveal d3">
+  <div class="section reveal d3" id="addressSection">
     <div class="sec-head">
       <span class="sec-title"><span class="sec-title-icon">📍</span> 收货地址</span>
-      <button class="sec-action" onclick="toast('地址修改（仅制作前可修改）')">修改</button>
     </div>
-    <div class="address-block">
-      <div class="addr-name">小橘酱</div>
-      <div class="addr-phone">138 **** 8888</div>
-      <div class="addr-full">广东省广州市天河区天河路385号太古汇T1栋 2203室</div>
-    </div>
+    <div class="address-block" id="addressBlock">—</div>
   </div>
 
   <!-- Payment -->
@@ -293,256 +288,379 @@ a{text-decoration:none;}
 <div class="toast" id="toast"></div>
 
 <script>
-/* ─── MOCK ORDER ─── */
-// In production, read ?id= from URL and fetch from API
-const ORDER = {
-  id: 'ORD-20240318-001',
-  date: '2024年3月18日 14:32',
-  status: 'shipped', // pending | making | shipped | done
-  reviewed: false,
-  items: [
-    { workId:'w1', title:'奔跑的橘猫 · 12帧循环', machine:'经典圆筒款', bg:'#FFF3EC', em:'🐈', unitPrice:288, qty:1 },
-  ],
-  subtotal: 288,
-  shipping: 0,
-  total: 288,
-  payment: '支付宝',
-  paidAt: '2024年3月18日 14:33',
-  eta: '预计 3月21日（明天）送达',
-  trackingNo: 'SF1234567890',
-  trackingCo: '顺丰速运',
-};
+const CAPI = 'http://localhost:3001'
 
-const STATUS_STEPS = ['待付款','制作中','运输中','已完成'];
-const STATUS_IDX = { pending:0, making:1, shipped:2, done:3 };
-const STATUS_NAME = { pending:'等待付款', making:'正在制作', shipped:'快递运输中', done:'订单已完成' };
-const STATUS_ICON = { pending:'⏳', making:'🎨', shipped:'🚚', done:'✅' };
-const FILL_PCT = { pending:'0%', making:'33%', shipped:'66%', done:'100%' };
+const STATUS_STEPS = ['待付款','制作中','运输中','已完成']
+const STATUS_IDX = {
+  pending:0, paid:1, locked:1, processing:1, producing:1,
+  shipped:2, received:3, cancelled:-1, aftersale:-1
+}
+const STATUS_NAME = {
+  pending:'等待付款', paid:'正在制作', locked:'正在制作',
+  processing:'正在制作', producing:'正在制作',
+  shipped:'快递运输中', received:'订单已完成',
+  cancelled:'订单已取消', aftersale:'售后处理中'
+}
+const STATUS_ICON = {
+  pending:'⏳', paid:'🎨', locked:'🎨',
+  processing:'🎨', producing:'🎨',
+  shipped:'🚚', received:'✅',
+  cancelled:'❌', aftersale:'🔄'
+}
+const FILL_PCT = { 0:'0%', 1:'33%', 2:'66%', 3:'100%' }
+const REFUND_REASONS = ['不想要了','拍错了','价格有变动','质量问题（收货后）','其他原因']
 
-const REFUND_REASONS = ['不想要了','拍错了','价格有变动','质量问题（收货后）','其他原因'];
+let ORDER = null
+let selectedReason = null
+let tT
 
-let selectedReason = null;
-let rating = 0;
+/* ─── LOAD ─── */
+async function loadOrder() {
+  const id    = new URLSearchParams(location.search).get('id')
+  const token = localStorage.getItem('mowo_token')
+  if (!id) { showError('缺少订单 ID'); return }
+  if (!token) { showError('请先登录后查看订单'); return }
+
+  showSkeleton()
+  try {
+    const res  = await fetch(`${CAPI}/api/orders/${id}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    if (res.status === 401) { showError('登录已过期，请重新登录'); return }
+    if (res.status === 403) { showError('无权查看此订单'); return }
+    const json = await res.json()
+    if (!json.success) throw new Error(json.message)
+    ORDER = json.data
+    buildPage()
+  } catch(e) {
+    showError(e.message || '网络异常')
+  }
+}
 
 /* ─── BUILD PAGE ─── */
 function buildPage() {
-  const o = ORDER;
-  const stepIdx = STATUS_IDX[o.status];
-  const isActive = o.status !== 'done';
+  const o = ORDER
+  const stepIdx = STATUS_IDX[o.status] ?? -1
+  const heroFill = stepIdx >= 0 ? (FILL_PCT[stepIdx] || '0%') : '0%'
 
   // ── Status Hero
+  const etaHtml = buildEtaHtml(o)
+  const stepsHtml = STATUS_STEPS.map((s, si) => {
+    const dotCls = si < stepIdx ? ' done' : si === stepIdx ? ' current' : ''
+    const inner  = si === stepIdx ? '<div class="h-dot-inner"></div>' : ''
+    return `<div class="h-step">
+      <div class="h-dot${dotCls}">${inner}</div>
+      <span class="h-label${si === stepIdx ? ' cur' : ''}">${s}</span>
+    </div>`
+  }).join('')
+
   document.getElementById('statusHero').innerHTML = `
     <div class="hero-top">
       <div>
         <div class="hero-status-label">订单状态</div>
-        <div class="hero-status-val">${STATUS_NAME[o.status]}</div>
-        <div class="hero-order-no">NO. ${o.id}</div>
+        <div class="hero-status-val">${STATUS_NAME[o.status] || o.status}</div>
+        <div class="hero-order-no">NO. ${escHtml(o.orderNo || o.id)}</div>
       </div>
-      <div class="hero-icon">${STATUS_ICON[o.status]}</div>
+      <div class="hero-icon">${STATUS_ICON[o.status] || '📦'}</div>
     </div>
     <div class="hero-progress">
       <div class="hero-steps">
         <div class="hero-line"></div>
-        <div class="hero-line-fill" style="width:${FILL_PCT[o.status]}"></div>
-        ${STATUS_STEPS.map((s, si) => `
-          <div class="h-step">
-            <div class="h-dot${si < stepIdx ? ' done' : si === stepIdx ? ' current' : ''}">
-              ${si === stepIdx ? '<div class="h-dot-inner"></div>' : ''}
-            </div>
-            <span class="h-label${si === stepIdx ? ' cur' : ''}">${s}</span>
-          </div>`).join('')}
+        <div class="hero-line-fill" style="width:${heroFill}"></div>
+        ${stepsHtml}
       </div>
     </div>
-    ${o.eta ? `
-      <div class="hero-eta">
-        <span class="hero-eta-icon">🚚</span>
-        <div>
-          <div class="hero-eta-text"><span>${o.eta}</span></div>
-          ${o.trackingNo ? `<div class="hero-tracking">${o.trackingCo} · ${o.trackingNo}</div>` : ''}
-        </div>
-      </div>` : ''}`;
+    ${etaHtml}`
 
-  // ── Items
-  document.getElementById('itemsList').innerHTML = o.items.map(item => `
+  // ── Items（单条订单 = 单件商品）
+  const coverHtml = o.coverUrl
+    ? `<img src="${escHtml(o.coverUrl)}" alt="" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">`
+    : (o.sourceType === 'collab' ? '🎬' : '🎨')
+  const specParts = [o.modelName, o.size, o.frameCount ? o.frameCount + '帧' : null, o.material, o.colorName].filter(Boolean)
+  const specText  = specParts.join(' · ') || '—'
+
+  document.getElementById('itemsList').innerHTML = `
     <div class="order-item">
-      <div class="oi-cover" style="background:${item.bg}" onclick="goWork('${item.workId}')">${item.em}</div>
+      <div class="oi-cover" style="background:var(--cream)">${coverHtml}</div>
       <div class="oi-info">
-        <div class="oi-title" onclick="goWork('${item.workId}')">${item.title}</div>
-        <div class="oi-machine">⚙ ${item.machine}</div>
-        <div class="oi-qty">数量：${item.qty}</div>
+        <div class="oi-title">${escHtml(o.productTitle || '—')}</div>
+        <div class="oi-machine">⚙ ${escHtml(specText)}</div>
+        <div class="oi-qty">数量：1</div>
       </div>
-      <div class="oi-price">¥${item.unitPrice * item.qty}</div>
-    </div>`).join('');
+      <div class="oi-price">¥${Number(o.totalAmount || 0).toFixed(2)}</div>
+    </div>`
+
+  // ── Address
+  const phone = maskPhone(o.receiverPhone)
+  const addrLine = [o.receiverCity, o.receiverAddress].filter(Boolean).join(' ')
+  document.getElementById('addressBlock').innerHTML = o.receiverName ? `
+    <div class="addr-name">${escHtml(o.receiverName)}</div>
+    <div class="addr-phone">${escHtml(phone)}</div>
+    <div class="addr-full">${escHtml(addrLine || '—')}</div>` : '暂无收货地址信息'
 
   // ── Payment
+  const createdStr = o.createdAt ? new Date(o.createdAt).toLocaleString('zh-CN', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' }) : '—'
   document.getElementById('paymentRows').innerHTML = `
-    <div class="info-row"><span class="info-k">商品合计</span><span class="info-v">¥${o.subtotal}</span></div>
-    <div class="info-row"><span class="info-k">运费</span><span class="info-v">${o.shipping === 0 ? '包邮' : '¥' + o.shipping}</span></div>
-    <div class="info-row"><span class="info-k">支付方式</span><span class="info-v">${o.payment}</span></div>
-    <div class="info-row"><span class="info-k">付款时间</span><span class="info-v">${o.paidAt}</span></div>
-    <div class="info-row"><span class="info-k">实付金额</span><span class="info-v total">¥${o.total}</span></div>`;
+    <div class="info-row"><span class="info-k">商品合计</span><span class="info-v">¥${Number(o.totalAmount || 0).toFixed(2)}</span></div>
+    <div class="info-row"><span class="info-k">运费</span><span class="info-v">包邮</span></div>
+    <div class="info-row"><span class="info-k">下单时间</span><span class="info-v">${escHtml(createdStr)}</span></div>
+    <div class="info-row"><span class="info-k">实付金额</span><span class="info-v total">¥${Number(o.totalAmount || 0).toFixed(2)}</span></div>`
 
-  // ── Review
-  const rs = document.getElementById('reviewSection');
-  if (o.status === 'done') {
-    if (o.reviewed) {
-      rs.innerHTML = `
-        <div class="section reveal d4">
-          <div class="sec-head"><span class="sec-title"><span class="sec-title-icon">⭐</span> 我的评价</span></div>
-          <div style="padding:16px 20px;">
-            <div class="review-done"><span style="font-size:20px">✓</span>已评价，感谢你的反馈！</div>
-          </div>
-        </div>`;
-    } else {
-      rs.innerHTML = `
-        <div class="review-section reveal d4">
-          <div class="review-title"><span style="font-size:16px">⭐</span> 写一条评价</div>
-          <div class="stars-row" id="starsRow">
-            ${[1,2,3,4,5].map(n => `<span class="star-btn" data-n="${n}" onclick="setRating(${n})">★</span>`).join('')}
-          </div>
-          <textarea class="review-textarea" id="reviewText" placeholder="分享你对这件作品和机型的感受……"></textarea>
-          <button class="btn-submit-review" onclick="submitReview()">提交评价</button>
-        </div>`;
-    }
+  // ── Review section
+  const rs = document.getElementById('reviewSection')
+  if (o.status === 'received') {
+    rs.innerHTML = `
+      <div class="section reveal d4">
+        <div class="sec-head"><span class="sec-title"><span class="sec-title-icon">⭐</span> 订单评价</span></div>
+        <div style="padding:20px;text-align:center;color:var(--gray3);font-weight:700;font-size:13px;line-height:2">
+          评价功能即将上线 ✍️<br>感谢您选择哞屋！
+        </div>
+      </div>`
+  } else {
+    rs.innerHTML = ''
   }
 
   // ── Action bar
-  const ab = document.getElementById('actionBar');
-  ab.innerHTML = `<div class="action-bar-title">操作</div><div class="action-btns" id="actionBtns"></div>`;
-  const btns = document.getElementById('actionBtns');
+  buildActionBar(o)
+
+  document.querySelectorAll('.reveal').forEach(el => revObs.observe(el))
+}
+
+function buildEtaHtml(o) {
+  if (o.status === 'shipped') {
+    if (o.trackingNo) {
+      const co = escHtml(o.trackingCompany || '快递')
+      const no = escHtml(o.trackingNo)
+      return `<div class="hero-eta" style="cursor:pointer" onclick="copyTracking('${o.trackingNo}')">
+        <span class="hero-eta-icon">📦</span>
+        <div>
+          <div class="hero-eta-text"><span>${co} ${no}</span></div>
+          <div class="hero-tracking">点击复制快递单号</div>
+        </div>
+      </div>`
+    }
+    return `<div class="hero-eta">
+      <span class="hero-eta-icon">🚚</span>
+      <div class="hero-eta-text">已发货，请留意快递通知</div>
+    </div>`
+  }
+  if (['paid','locked','processing','producing'].includes(o.status)) {
+    return `<div class="hero-eta">
+      <span class="hero-eta-icon">🔧</span>
+      <div class="hero-eta-text">生产周期约 <span>7–14 个工作日</span></div>
+    </div>`
+  }
+  return ''
+}
+
+function buildActionBar(o) {
+  const ab = document.getElementById('actionBar')
+  let btns = ''
 
   if (o.status === 'pending') {
-    btns.innerHTML = `
-      <button class="btn-action primary" onclick="goPay()">去付款</button>
-      <button class="btn-action danger" onclick="openRefund()">取消订单</button>`;
-  } else if (o.status === 'making' || o.status === 'shipped') {
-    btns.innerHTML = `
-      <button class="btn-action outline" onclick="goContact()">联系客服</button>
-      <button class="btn-action danger" onclick="openRefund()">申请退款</button>`;
-  } else if (o.status === 'done') {
-    btns.innerHTML = `
-      <button class="btn-action primary" onclick="rebuy()">再次购买</button>
-      <button class="btn-action outline" onclick="goContact()">联系客服</button>
-      <button class="btn-action danger" onclick="openRefund()">申请退款</button>`;
+    btns = `<button class="btn-action outline" onclick="goContact()">联系客服</button>
+            <button class="btn-action danger" onclick="cancelOrder()">取消订单</button>`
+  } else if (['paid','locked','processing','producing'].includes(o.status)) {
+    btns = `<button class="btn-action outline" onclick="goContact()">联系客服</button>
+            <button class="btn-action danger" onclick="cancelOrder()">取消订单</button>`
+  } else if (o.status === 'shipped') {
+    btns = `<button class="btn-action yellow" onclick="confirmReceipt()">确认收货</button>
+            <button class="btn-action outline" onclick="goContact()">联系客服</button>`
+  } else if (o.status === 'received') {
+    btns = `<button class="btn-action outline" onclick="goContact()">联系客服</button>
+            <button class="btn-action danger" onclick="openRefund()">申请售后</button>`
+  } else if (o.status === 'aftersale') {
+    btns = `<button class="btn-action outline" onclick="goContact()">联系客服</button>`
+  } else if (o.status === 'cancelled') {
+    btns = `<button class="btn-action outline" onclick="goContact()">联系客服</button>`
   }
 
-  // re-observe reveals
-  document.querySelectorAll('.reveal').forEach(el => revObs.observe(el));
+  ab.innerHTML = `<div class="action-bar-title">操作</div><div class="action-btns">${btns}</div>`
+  ab.querySelectorAll('button').forEach(b => {
+    b.addEventListener('mouseenter', () => { if(ring) { ring.style.width='48px'; ring.style.height='48px' } })
+    b.addEventListener('mouseleave', () => { if(ring) { ring.style.width='32px'; ring.style.height='32px' } })
+  })
 }
 
-/* ─── STARS ─── */
-function setRating(n) {
-  rating = n;
-  document.querySelectorAll('.star-btn').forEach(s => {
-    s.classList.toggle('lit', parseInt(s.dataset.n) <= n);
-  });
+/* ─── API ACTIONS ─── */
+async function cancelOrder() {
+  if (!ORDER) return
+  if (!confirm('确认取消此订单？\n\n取消后不可恢复，如有疑问请先联系客服。')) return
+  const token = localStorage.getItem('mowo_token')
+  try {
+    const res  = await fetch(`${CAPI}/api/orders/${ORDER.id}/cancel`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    const json = await res.json()
+    if (json.success) {
+      toast('✓ 订单已取消')
+      setTimeout(() => loadOrder(), 800)
+    } else {
+      toast('❌ ' + (json.message || '操作失败，如需取消请联系客服'))
+    }
+  } catch(err) {
+    toast('❌ 网络异常，请稍后重试')
+  }
 }
 
-function submitReview() {
-  if (!rating) { toast('请先选择星级评分'); return; }
-  ORDER.reviewed = true;
-  toast('✓ 评价提交成功，谢谢你！');
-  buildPage();
+async function confirmReceipt() {
+  if (!ORDER) return
+  if (!confirm('确认已收到商品？\n\n确认后将正式完成订单，并启动售后保护期计算。')) return
+  const token = localStorage.getItem('mowo_token')
+  try {
+    const res  = await fetch(`${CAPI}/api/orders/${ORDER.id}/confirm-receipt`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    const json = await res.json()
+    if (json.success) {
+      toast('✓ 已确认收货，感谢您的支持！')
+      setTimeout(() => loadOrder(), 800)
+    } else {
+      toast('❌ ' + (json.message || '操作失败'))
+    }
+  } catch(err) {
+    toast('❌ 网络异常，请稍后重试')
+  }
 }
 
-/* ─── REBUY ─── */
-function rebuy() {
-  toast(`✓ 已将 ${ORDER.items[0].title} 加入购物车`);
+function copyTracking(no) {
+  navigator.clipboard.writeText(no).then(() => {
+    toast('✓ 快递单号已复制：' + no)
+  }).catch(() => {
+    toast('快递单号：' + no)
+  })
 }
 
-function goWork(id) {
-  const qs = new URLSearchParams();
-  qs.set('type', 'product');
-  qs.set('id', id);
-  window.location.href = `work-detail.html?${qs.toString()}`;
-}
-
-/* ─── REFUND ─── */
+/* ─── REFUND MODAL ─── */
 function openRefund() {
-  selectedReason = null;
+  selectedReason = null
   document.getElementById('refundReasons').innerHTML = REFUND_REASONS.map((r, i) => `
     <div class="reason-opt" id="reason-${i}" onclick="pickReason(${i})">
       <div class="reason-radio"></div>
       <span>${r}</span>
-    </div>`).join('');
-  document.getElementById('refundModal').classList.add('open');
-  document.body.style.overflow = 'hidden';
+    </div>`).join('')
+  document.getElementById('refundModal').classList.add('open')
+  document.body.style.overflow = 'hidden'
 }
-
 function pickReason(i) {
-  selectedReason = i;
-  document.querySelectorAll('.reason-opt').forEach((el, idx) => el.classList.toggle('sel', idx === i));
+  selectedReason = i
+  document.querySelectorAll('.reason-opt').forEach((el, idx) => el.classList.toggle('sel', idx === i))
 }
-
 function closeRefund() {
-  document.getElementById('refundModal').classList.remove('open');
-  document.body.style.overflow = '';
+  document.getElementById('refundModal').classList.remove('open')
+  document.body.style.overflow = ''
 }
-
 function submitRefund() {
-  if (selectedReason === null) { toast('请选择退款原因'); return; }
-  closeRefund();
-  toast('✓ 退款申请已提交，1-3 个工作日内处理');
+  if (selectedReason === null) { toast('请选择原因'); return }
+  closeRefund()
+  toast('✓ 申请已提交，客服将在 1–3 个工作日内联系您')
+}
+function handleModalBg(e) { if (e.target.id === 'refundModal') closeRefund() }
+
+/* ─── SKELETON ─── */
+function showSkeleton() {
+  document.getElementById('statusHero').innerHTML = `
+    <div style="display:flex;justify-content:space-between;margin-bottom:20px">
+      <div>
+        <div class="sk" style="width:60px;height:12px;margin-bottom:8px;border-radius:4px"></div>
+        <div class="sk" style="width:120px;height:24px;margin-bottom:6px;border-radius:6px"></div>
+        <div class="sk" style="width:160px;height:11px;border-radius:4px"></div>
+      </div>
+      <div class="sk" style="width:44px;height:44px;border-radius:50%"></div>
+    </div>
+    <div class="sk" style="width:100%;height:44px;border-radius:10px;margin-bottom:16px"></div>
+    <div class="sk" style="width:100%;height:40px;border-radius:10px"></div>`
+  document.getElementById('itemsList').innerHTML = `
+    <div style="display:flex;gap:14px;align-items:center;padding:16px 20px">
+      <div class="sk" style="width:68px;height:68px;border-radius:14px;flex-shrink:0"></div>
+      <div style="flex:1">
+        <div class="sk" style="width:80%;height:14px;margin-bottom:8px;border-radius:4px"></div>
+        <div class="sk" style="width:55%;height:12px;margin-bottom:6px;border-radius:4px"></div>
+        <div class="sk" style="width:40px;height:11px;border-radius:4px"></div>
+      </div>
+    </div>`
+}
+function showError(msg) {
+  document.getElementById('statusHero').innerHTML = `
+    <div style="text-align:center;padding:12px 0">
+      <div style="font-size:40px;margin-bottom:12px">😔</div>
+      <div style="font-weight:900;font-size:18px;margin-bottom:8px;color:var(--white)">加载失败</div>
+      <div style="font-weight:700;font-size:13px;opacity:.6;margin-bottom:18px">${escHtml(msg || '网络异常')}</div>
+      <button onclick="loadOrder()" style="background:var(--accent-y);color:var(--black);font-weight:900;font-size:13px;padding:10px 24px;border-radius:999px;cursor:pointer;border:none">重新加载</button>
+    </div>`
 }
 
-function handleModalBg(e) {
-  if (e.target.id === 'refundModal') closeRefund();
+/* ─── UTILS ─── */
+function maskPhone(phone) {
+  if (!phone) return '—'
+  const s = String(phone)
+  if (s.length === 11) return s.slice(0, 3) + ' **** ' + s.slice(7)
+  return s
+}
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
 }
 
 /* ─── NAV ─── */
-function goBack() { window.location.href = 'orders.html'; }
-function goContact() { window.location.href = 'contact.html'; }
-function goPay() {
-  const qs = new URLSearchParams();
-  if (ORDER && ORDER.id) qs.set('orderId', ORDER.id);
-  window.location.href = `checkout.html?${qs.toString()}`;
-}
+function goBack() { window.location.href = 'orders.html' }
+function goContact() { window.location.href = 'contact.html' }
 function toggleDD() {
-  const dd = document.getElementById('userDD'), btn = document.getElementById('navBtn');
-  const o = dd.classList.toggle('open');
-  btn.classList.toggle('open', o);
-  if (o) setTimeout(() => document.addEventListener('click', outsideDD), 0);
+  const dd = document.getElementById('userDD'), btn = document.getElementById('navBtn')
+  const o = dd.classList.toggle('open')
+  btn.classList.toggle('open', o)
+  if (o) setTimeout(() => document.addEventListener('click', outsideDD), 0)
 }
 function closeDD() {
-  document.getElementById('userDD').classList.remove('open');
-  document.getElementById('navBtn').classList.remove('open');
-  document.removeEventListener('click', outsideDD);
+  const dd = document.getElementById('userDD'), btn = document.getElementById('navBtn')
+  if (dd) dd.classList.remove('open')
+  if (btn) btn.classList.remove('open')
+  document.removeEventListener('click', outsideDD)
 }
 function outsideDD(e) {
-  if (!document.getElementById('navBtn').contains(e.target) && !document.getElementById('userDD').contains(e.target)) closeDD();
+  const btn = document.getElementById('navBtn'), dd = document.getElementById('userDD')
+  if (btn && dd && !btn.contains(e.target) && !dd.contains(e.target)) closeDD()
 }
 
 /* ─── TOAST ─── */
-let tT;
 function toast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  clearTimeout(tT); tT = setTimeout(() => t.classList.remove('show'), 2600);
+  const t = document.getElementById('toast')
+  t.textContent = msg; t.classList.add('show')
+  clearTimeout(tT); tT = setTimeout(() => t.classList.remove('show'), 2800)
 }
 
 /* ─── REVEAL ─── */
 const revObs = new IntersectionObserver(entries => {
-  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('on'); revObs.unobserve(e.target); } });
-}, { threshold: 0.04 });
-document.querySelectorAll('.reveal').forEach(el => revObs.observe(el));
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('on'); revObs.unobserve(e.target) } })
+}, { threshold: 0.04 })
+document.querySelectorAll('.reveal').forEach(el => revObs.observe(el))
+
+/* ─── SKELETON CSS ─── */
+;(function injectSkCss() {
+  const s = document.createElement('style')
+  s.textContent = '.sk{border-radius:8px;background:rgba(255,255,255,.1);}'
+  document.head.appendChild(s)
+})()
 
 /* ─── CURSOR ─── */
+let ring
 if (window.matchMedia('(pointer:fine)').matches) {
-  const dot = document.createElement('div'); dot.id = 'cdot';
-  const ring = document.createElement('div'); ring.id = 'cring';
-  document.body.append(dot, ring);
-  document.body.style.cursor = 'none';
-  let mx=0,my=0,rx=0,ry=0;
-  document.addEventListener('mousemove', e => { mx=e.clientX; my=e.clientY; dot.style.left=mx+'px'; dot.style.top=my+'px'; });
-  (function tick() { rx+=(mx-rx)*.12; ry+=(my-ry)*.12; ring.style.left=rx+'px'; ring.style.top=ry+'px'; requestAnimationFrame(tick); })();
-  document.querySelectorAll('a,button,.oi-cover,.oi-title,.reason-opt,.star-btn').forEach(el => {
-    el.addEventListener('mouseenter', () => { ring.style.width='48px'; ring.style.height='48px'; });
-    el.addEventListener('mouseleave', () => { ring.style.width='32px'; ring.style.height='32px'; });
-  });
+  const dot = document.createElement('div'); dot.id = 'cdot'
+  ring = document.createElement('div'); ring.id = 'cring'
+  document.body.append(dot, ring)
+  document.body.style.cursor = 'none'
+  let mx=0,my=0,rx=0,ry=0
+  document.addEventListener('mousemove', e => { mx=e.clientX; my=e.clientY; dot.style.left=mx+'px'; dot.style.top=my+'px' })
+  ;(function tick() { rx+=(mx-rx)*.12; ry+=(my-ry)*.12; ring.style.left=rx+'px'; ring.style.top=ry+'px'; requestAnimationFrame(tick) })()
+  document.querySelectorAll('a,button,.reason-opt').forEach(el => {
+    el.addEventListener('mouseenter', () => { ring.style.width='48px'; ring.style.height='48px' })
+    el.addEventListener('mouseleave', () => { ring.style.width='32px'; ring.style.height='32px' })
+  })
 }
 
 /* ─── INIT ─── */
-buildPage();
+loadOrder()
 </script>
 <script src="../js/auth.js"></script>
 </body>

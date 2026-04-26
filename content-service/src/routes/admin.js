@@ -350,9 +350,12 @@ export default async function adminRoutes(fastify) {
     const oldStatus = order.status
 
     await fastify.prisma.$transaction(async (tx) => {
-      // 1. 更新订单状态
+      // 1. 更新订单状态（shipped 时同步写入发货时间）
       await tx.customizeOrder.update({
-        where: { orderNo }, data: { status }
+        where: { orderNo },
+        data: status === 'shipped'
+          ? { status, shippedAt: new Date() }
+          : { status }
       })
 
       // 2. 订单变为「已收货」时，触发联名分红逻辑
@@ -399,7 +402,8 @@ export default async function adminRoutes(fastify) {
       return reply.code(400).send({ success: false, message: '无效的状态值' })
 
     const result = await fastify.prisma.customizeOrder.updateMany({
-      where: { orderNo: { in: orderNos } }, data: { status }
+      where: { orderNo: { in: orderNos } },
+      data: status === 'shipped' ? { status, shippedAt: new Date() } : { status }
     })
 
     try {
@@ -1689,10 +1693,10 @@ export default async function adminRoutes(fastify) {
       })
     }
 
-    // 更新所有订单状态为 shipped
+    // 更新所有订单状态为 shipped，同步写入发货时间
     await fastify.prisma.customizeOrder.updateMany({
       where: { trackingNo, status: { not: 'shipped' } },
-      data:  { status: 'shipped' }
+      data:  { status: 'shipped', shippedAt: new Date() }
     })
 
     try {

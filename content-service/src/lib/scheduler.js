@@ -412,5 +412,50 @@ export function startScheduler(fastify) {
   }
   scheduleDraftCleanup()
 
-  log.info('[scheduler] 定时任务已启动：冷却期检查（每小时）+ 储备金解冻（02:00）+ 库存快照（00:00）+ 授权检查（08:00）+ PreOrder超时（每2分钟）+ 草稿清理（03:00）')
+  // ─────────────────────────────────────────
+  // 任务七：14天自动确认收货
+  // 每小时运行，shipped 且 shippedAt 超过14天 → 自动转 received
+  // 同时触发联名作品冷却期（与手动确认收货逻辑一致）
+  // ─────────────────────────────────────────
+  async function autoConfirmReceipt() {
+    const threshold = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
+    try {
+      const orders = await fastify.prisma.customizeOrder.findMany({
+        where: { status: 'shipped', shippedAt: { lte: threshold } }
+      })
+      if (!orders.length) return
+
+      for (const order of orders) {
+        await fastify.prisma.$transaction(async tx => {
+          await tx.customizeOrder.update({
+            where: { id: order.id },
+            data:  { status: 'received' }
+          })
+
+          if (order.sourceType === 'collab') {
+            const coolingEndAt = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
+            await tx.collabOrder.updateMany({
+              where: {
+                orderId:       order.id,
+                revenueStatus: { in: ['estimated', 'cooling'] }
+              },
+              data: { revenueStatus: 'cooling', coolingEndAt }
+            })
+          }
+        }).catch(err => {
+          log.warn(`[scheduler] 自动确认收货单条失败 ${order.id}：${err.message}`)
+        })
+      }
+
+      log.info(`[scheduler] 14天自动确认收货：${orders.length} 笔订单已转为 received`)
+    } catch (err) {
+      log.error('[scheduler] 自动确认收货失败：' + err.message)
+    }
+  }
+
+  // 与冷却期检查共用每小时频率
+  setInterval(autoConfirmReceipt, HOUR_MS)
+  autoConfirmReceipt() // 启动时立即跑一次
+
+  log.info('[scheduler] 定时任务已启动：冷却期检查（每小时）+ 储备金解冻（02:00）+ 库存快照（00:00）+ 授权检查（08:00）+ PreOrder超时（每2分钟）+ 草稿清理（03:00）+ 14天自动收货（每小时）')
 }
