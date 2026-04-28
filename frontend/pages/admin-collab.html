@@ -211,17 +211,36 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
   .col-creator,.col-rate,.col-date{display:none;}
   .stats-grid{grid-template-columns:repeat(3,1fr);}
 }
+
+/* mobile sidebar */
+.menu-btn{width:36px;height:36px;border-radius:10px;background:var(--gray1);border:none;cursor:pointer;display:none;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.topbar-left{display:flex;align-items:center;gap:10px;}
+.sidebar-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:190;display:none;}
+.sidebar-backdrop.show{display:block;}
+@media(max-width:1023px){
+  .sidebar{transform:translateX(-100%);z-index:200;}
+  .sidebar.open{transform:none;}
+  .main{margin-left:0!important;}
+  .topbar{padding:0 16px;}
+  .menu-btn{display:flex;}
+  .topbar-time{display:none;}
+}
 </style>
 </head>
 <body>
 
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
 <aside class="sidebar" id="sidebar"></aside>
 
 <div class="main" id="main">
   <header class="topbar">
-    <span class="topbar-title">联名审核</span>
+    <div class="topbar-left">
+      <button class="menu-btn" id="menuBtn" onclick="openSidebar()">&#9776;</button>
+      <span class="topbar-title">联名审核</span>
+    </div>
     <div class="topbar-right">
       <span class="topbar-time" id="topbarTime"></span>
+    </div>
       <button class="btn btn-ghost btn-sm" onclick="loadWorks()">↻ 刷新</button>
     </div>
   </header>
@@ -812,6 +831,18 @@ function esc(str) {
   return String(str||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
 }
 </script>
+
+function openSidebar() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('sidebarBackdrop').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarBackdrop').classList.remove('show');
+  document.body.style.overflow = '';
+}
+
 <script src="../js/auth.js"></script>
 <script src="../js/admin-sidebar.js"></script>
 </body>

@@ -320,6 +320,10 @@ machine_model_skus（含price/previewImage/skuBarcode/sortOrder SKU排序/exampl
 customize_orders（含收件信息/快递信息/inventoryStatus/sourceType/collabWorkId）/
 operation_logs /
 collab_works（含isOnShelf/framePackOssPath/sizes/hoverGifUrl卡片GIF/creatorMarkups创作者加价JSON）/
+  ⚠️ coverUrl 字段规范：存储用户上传帧图第一张的 200×200 JPEG 缩略图 data URI（约 10~30KB）
+     由 generateCoverThumb()（src/lib/thumbnail.js）在 POST /api/collab/apply 时生成
+     前端直接用 <img src="data:..."> 渲染，无需 OSS 预签名，彻底规避 OSS 503 问题
+     animationFrames 字段存完整帧 OSS objectKey 数组（供 GIF 生成和详情页播放）/
 collab_orders / collab_activities /
 sku_inventory / inventory_logs / auth_codes /
 shipping_batches（已弃用）

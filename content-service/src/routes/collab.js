@@ -2,6 +2,7 @@
 // 公开接口 + 创作者申请
 
 import { calcRevenueRate } from '../lib/revenue.js'
+import { generateCoverThumb } from '../lib/thumbnail.js'
 
 export default async function collabRoutes(fastify) {
   const { prisma } = fastify
@@ -310,14 +311,30 @@ export default async function collabRoutes(fastify) {
         orderNoForRecord = orderNo
       }
 
-      // 若帧图是 data URI，上传到 OSS，替换为 objectKey（私有 Bucket，data URI 无法从服务器端访问）
+      // ① 生成封面缩略图（200×200 JPEG data URI，约 10~30KB）
+      //    coverUrl 存小尺寸 data URI，前端直接渲染，无需 OSS 预签名，彻底规避 503 风险
+      const rawFrames = safeJson(animationFramesJson, [])
+      const firstRawFrame = rawFrames[0]
+      coverKey = null
+      if (firstRawFrame?.startsWith('data:')) {
+        try {
+          coverKey = await generateCoverThumb(firstRawFrame)
+          fastify.log.info('[collab-apply] 封面缩略图生成完成')
+        } catch (e) {
+          fastify.log.warn('[collab-apply] 封面缩略图生成失败: ' + e.message)
+        }
+      } else if (firstRawFrame) {
+        // 已是 OSS objectKey（如从订单帧来），直接用
+        coverKey = firstRawFrame
+      }
+
+      // ② 上传完整帧图到 OSS（animationFrames 存 objectKey，用于 GIF 生成和详情页播放）
       try {
         animationFramesJson = await uploadDataUriFramesToOss(animationFramesJson, userId, fastify)
       } catch (e) {
         fastify.log.warn('[collab-apply] 帧图 OSS 上传失败: ' + e.message)
-        // 失败不阻断申请，保留原始 JSON（detail 接口会直接返回 data URI）
+        // 失败不阻断申请，保留原始 data URI（detail 接口会直接透传给前端）
       }
-      coverKey = safeJson(animationFramesJson)?.[0] ?? null
 
       // 验证 SKU
       const skuRecords = await prisma.machineModelSku.findMany({ where: { id: { in: supportedSkus }, isActive: true } })
