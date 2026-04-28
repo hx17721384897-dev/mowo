@@ -57,9 +57,12 @@ export default async function adminCollabRoutes(fastify) {
         newbieExpiredAt: w.newbieExpiredAt,
         activityRate: null,
       })
+      // 预签名封面图（list 不含完整 animationFrames，避免大量 base64 数据）
+      const coverUrl = presignAdminKey(w.coverUrl, fastify, 3600)
       return {
         ...w,
-        animationFrames: safeJson(w.animationFrames),
+        animationFrames: [],           // list 不返回帧数据，减小响应体积
+        coverUrl,                      // 已预签名，前端直接用
         supportedSkus: safeJson(w.supportedSkus),
         creator: profileMap[w.creatorId] ?? null,
         creatorLevel: { bullEnergy: cp.bullLevel ?? 1, isExclusive: cp.isExclusive ?? false },
@@ -438,4 +441,17 @@ export default async function adminCollabRoutes(fastify) {
 
 function safeJson(str) {
   try { return JSON.parse(str) } catch { return [] }
+}
+
+/**
+ * 对管理端 OSS key 进行预签名。
+ * - OSS objectKey（不含 http/data 前缀）→ 预签名 URL
+ * - data URI → 直接透传（管理员预览用）
+ * - 完整 http URL → 直接透传
+ * - null/空 → null
+ */
+function presignAdminKey(key, fastify, expires = 3600) {
+  if (!key) return null
+  if (key.startsWith('data:') || key.startsWith('http')) return key
+  return fastify.ossPresignGet(key, expires)
 }

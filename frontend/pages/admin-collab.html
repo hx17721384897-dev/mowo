@@ -458,19 +458,15 @@ function renderTable(works) {
   loadCovers(works)
 }
 
-async function loadCovers(works) {
+function loadCovers(works) {
+  // list 接口已返回预签名 coverUrl，直接渲染，无需额外 detail 请求
   for (const w of works) {
     if (!w.coverUrl) continue
-    try {
-      const r = await fetch(`${API}/api/admin/collab/works/${w.id}`, {
-        headers: { Authorization: `Bearer ${_token}` }
-      })
-      const j = await r.json()
-      if (j.success && j.data.coverUrl) {
-        const el = document.getElementById(`cover-${w.id}`)
-        if (el) el.innerHTML = `<img src="${j.data.coverUrl}" alt="">`
-      }
-    } catch {}
+    const el = document.getElementById(`cover-${w.id}`)
+    if (!el) continue
+    if (w.coverUrl.startsWith('data:') || w.coverUrl.startsWith('http')) {
+      el.innerHTML = `<img src="${w.coverUrl}" alt="" onerror="this.parentElement.textContent='📦'">`
+    }
   }
 }
 
