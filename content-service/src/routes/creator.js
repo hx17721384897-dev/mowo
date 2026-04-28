@@ -81,8 +81,14 @@ export default async function creatorRoutes(fastify) {
       return reply.code(403).send({ success: false, message: '无权访问' })
 
     const frameKeys = safeJson(work.animationFrames)
-    const frameUrls = frameKeys.map(key => fastify.ossPresignGet(key, 3600))
-    const coverUrl  = work.coverUrl ? fastify.ossPresignGet(work.coverUrl, 3600) : null
+    const frameUrls = frameKeys.map(key =>
+      (key && !key.startsWith('data:') && !key.startsWith('http'))
+        ? fastify.ossPresignGet(key, 3600)
+        : key
+    )
+    const coverUrl = (work.coverUrl && !work.coverUrl.startsWith('data:') && !work.coverUrl.startsWith('http'))
+      ? fastify.ossPresignGet(work.coverUrl, 3600)
+      : work.coverUrl || null
 
     return reply.send({
       success: true,

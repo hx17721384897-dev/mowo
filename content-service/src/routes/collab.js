@@ -82,8 +82,8 @@ export default async function collabRoutes(fastify) {
     const result = works.map(w => ({
       ...w,
       supportedSkus: safeJson(w.supportedSkus),
-      coverUrl: w.coverUrl ? fastify.ossPresignGet(w.coverUrl, 3600) : null,
-      hoverGifUrl: w.hoverGifUrl ? fastify.ossPresignGet(w.hoverGifUrl, 3600) : null,
+      coverUrl: presignOrNull(w.coverUrl, fastify, 3600),
+      hoverGifUrl: presignOrNull(w.hoverGifUrl, fastify, 3600),
       creator: profileMap[w.creatorId] ?? { userId: w.creatorId, nickname: '创作者', avatarUrl: null },
       likeCount: likeCountMap[w.id] ?? 0,
       isLiked: myLikedSet.has(w.id),
@@ -138,13 +138,13 @@ export default async function collabRoutes(fastify) {
 
     // 帧图：生成预签名URL
     const frameKeys = safeJson(work.animationFrames)
-    const frameUrls = frameKeys.map(key => fastify.ossPresignGet(key, 3600))
+    const frameUrls = frameKeys.map(key => presignOrPassthrough(key, fastify, 3600))
 
     // hover GIF 预签名 URL（如已生成）
-    const hoverGifUrl = work.hoverGifUrl ? fastify.ossPresignGet(work.hoverGifUrl, 3600) : null
+    const hoverGifUrl = presignOrNull(work.hoverGifUrl, fastify, 3600)
 
     // 封面图预签名
-    const coverUrl = work.coverUrl ? fastify.ossPresignGet(work.coverUrl, 3600) : null
+    const coverUrl = presignOrNull(work.coverUrl, fastify, 3600)
 
     // 点赞数 + 当前用户是否已点赞
     const likeCount = await prisma.like.count({ where: { targetType: 'collab_work', targetId: work.id } })
@@ -287,7 +287,6 @@ export default async function collabRoutes(fastify) {
         })
         if (!cp) { errors.push(`第 ${i+1} 款：动画作品不存在或不属于你`); continue }
         animationFramesJson = cp.animationFrames
-        coverKey = safeJson(cp.animationFrames)?.[0] ?? null
 
         // 重复检测：同一动画 + 完全相同的 SKU 集合 = 重复
         const skuKey = JSON.stringify([...supportedSkus].sort())
@@ -308,9 +307,17 @@ export default async function collabRoutes(fastify) {
         const existing = await prisma.collabWork.findFirst({ where: { orderNo, creatorId: userId, status: { not: 'rejected' } } })
         if (existing) { errors.push(`第 ${i+1} 款：该订单已申请过联名`); continue }
         animationFramesJson = order.frameUrls
-        coverKey = safeJson(order.frameUrls)?.[0] ?? null
         orderNoForRecord = orderNo
       }
+
+      // 若帧图是 data URI，上传到 OSS，替换为 objectKey（私有 Bucket，data URI 无法从服务器端访问）
+      try {
+        animationFramesJson = await uploadDataUriFramesToOss(animationFramesJson, userId, fastify)
+      } catch (e) {
+        fastify.log.warn('[collab-apply] 帧图 OSS 上传失败: ' + e.message)
+        // 失败不阻断申请，保留原始 JSON（detail 接口会直接返回 data URI）
+      }
+      coverKey = safeJson(animationFramesJson)?.[0] ?? null
 
       // 验证 SKU
       const skuRecords = await prisma.machineModelSku.findMany({ where: { id: { in: supportedSkus }, isActive: true } })
@@ -427,4 +434,68 @@ function safeJson(str, fallback = []) {
 function safeJsonObj(str) {
   if (str == null) return {}
   try { const v = JSON.parse(str); return (v && typeof v === 'object' && !Array.isArray(v)) ? v : {} } catch { return {} }
+}
+
+/**
+ * 若 key 是 OSS objectKey（不以 data:/http 开头），返回预签名 URL；
+ * 若 key 是 data URI 或完整 http URL，返回 null（list 不能返回大数据）；
+ * 若 key 为空，返回 null。
+ */
+function presignOrNull(key, fastify, expires = 3600) {
+  if (!key) return null
+  if (key.startsWith('data:') || key.startsWith('http')) return null
+  return fastify.ossPresignGet(key, expires)
+}
+
+/**
+ * 同上，但 data URI 和完整 http URL 直接透传（detail 接口帧图用）。
+ */
+function presignOrPassthrough(key, fastify, expires = 3600) {
+  if (!key) return null
+  if (key.startsWith('data:') || key.startsWith('http')) return key
+  return fastify.ossPresignGet(key, expires)
+}
+
+/**
+ * 将 JSON 数组中的 data URI 帧图批量上传到 OSS，返回替换后的 JSON 字符串。
+ * 已是 OSS objectKey 的帧保持不变。
+ * @param {string} framesJson - JSON string of frame URLs/data URIs
+ * @param {string} userId
+ * @param {object} fastify
+ */
+async function uploadDataUriFramesToOss(framesJson, userId, fastify) {
+  const frames = safeJson(framesJson, [])
+  if (!frames.length) return framesJson
+
+  // 如果没有 data URI，直接返回
+  if (!frames.some(f => typeof f === 'string' && f.startsWith('data:'))) return framesJson
+
+  const uid8 = userId.slice(-8)
+  const ts   = Date.now()
+  const { Buffer } = await import('buffer')
+  const uploadedKeys = []
+
+  for (let i = 0; i < frames.length; i++) {
+    const frame = frames[i]
+    if (!frame || typeof frame !== 'string') { uploadedKeys.push(null); continue }
+
+    if (!frame.startsWith('data:')) {
+      uploadedKeys.push(frame) // 已是 objectKey，保留
+      continue
+    }
+
+    const m = frame.match(/^data:([^;]+);base64,(.+)$/)
+    if (!m) { uploadedKeys.push(null); continue }
+
+    const [, mimeType, b64] = m
+    const buf = Buffer.from(b64, 'base64')
+    const ext = mimeType.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg'
+    const frameNo = String(i + 1).padStart(3, '0')
+    const key = `collab/frames/${uid8}/${ts}/${frameNo}.${ext}`
+
+    await fastify.oss.put(key, buf, { headers: { 'Content-Type': mimeType } })
+    uploadedKeys.push(key)
+  }
+
+  return JSON.stringify(uploadedKeys.filter(Boolean))
 }

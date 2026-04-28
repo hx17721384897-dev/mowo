@@ -79,8 +79,14 @@ export default async function adminCollabRoutes(fastify) {
     if (!work) return reply.code(404).send({ success: false, message: '作品不存在' })
 
     const frameKeys = safeJson(work.animationFrames)
-    const frameUrls = frameKeys.map(key => fastify.ossPresignGet(key, 3600))
-    const coverUrl = work.coverUrl ? fastify.ossPresignGet(work.coverUrl, 3600) : null
+    const frameUrls = frameKeys.map(key =>
+      (key && !key.startsWith('data:') && !key.startsWith('http'))
+        ? fastify.ossPresignGet(key, 3600)
+        : key  // data URI 直接透传给管理员预览
+    )
+    const coverUrl = (work.coverUrl && !work.coverUrl.startsWith('data:') && !work.coverUrl.startsWith('http'))
+      ? fastify.ossPresignGet(work.coverUrl, 3600)
+      : work.coverUrl || null
 
     return reply.send({
       success: true,
@@ -198,10 +204,12 @@ export default async function adminCollabRoutes(fastify) {
 
     // 异步生成 hover GIF（不阻塞审核响应）
     const frameKeys = safeJson(work.animationFrames)
-    if (frameKeys.length > 0) {
+    // data URI 无法从服务器端 fetch，跳过 GIF 生成（新申请的作品帧已上传到 OSS）
+    const ossFrameKeys = frameKeys.filter(k => k && !k.startsWith('data:') && !k.startsWith('http'))
+    if (ossFrameKeys.length > 0) {
       setImmediate(async () => {
         try {
-          const frameUrls = frameKeys.map(k => fastify.ossPresignGet(k, 7200))
+          const frameUrls = ossFrameKeys.map(k => fastify.ossPresignGet(k, 7200))
           const gifKey = await generateAndUploadHoverGif({
             collabWorkId: work.id,
             frameUrls,
