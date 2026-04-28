@@ -65,6 +65,7 @@ async function generateGifBuffer(frameUrls) {
   encoder.setQuality(10) // 1 最高质量，数字越大越快但质量越低
   encoder.writeHeader()
 
+  let addedFrames = 0
   for (const url of urls) {
     try {
       const buf = await fetchImageBuffer(url)
@@ -72,10 +73,16 @@ async function generateGifBuffer(frameUrls) {
       drawFrameCentered(ctx, img)
       encoder.setDelay(GIF_DELAY)
       encoder.addFrame(ctx)
+      addedFrames++
     } catch (e) {
       // 跳过下载失败的帧，记日志即可
       console.warn('[gif-generator] 跳过帧:', url, e.message)
     }
+  }
+
+  // 若所有帧都失败（如 OSS 503），抛错不上传空 GIF，防止 hover 显示黑色
+  if (addedFrames === 0) {
+    throw new Error(`所有帧下载失败（共 ${urls.length} 帧），不生成 GIF`)
   }
 
   encoder.finish()

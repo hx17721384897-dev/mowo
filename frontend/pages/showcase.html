@@ -409,14 +409,15 @@ function buildCard(w) {
   let mediaHtml
   if (cover) {
     if (gifUrl) {
+      // hover 时切换到 GIF；onerror 时清除 data-gif 防止反复失败，回落静态封面
       mediaHtml = `<img
         src="${esc(cover)}"
         data-cover="${esc(cover)}"
         data-gif="${esc(gifUrl)}"
         alt="${esc(w.title || '')}"
         loading="lazy"
-        onmouseenter="this.src=this.dataset.gif"
-        onmouseleave="this.src=this.dataset.cover">`
+        onmouseenter="hoverGif(this,true)"
+        onmouseleave="hoverGif(this,false)">`
     } else {
       mediaHtml = `<img src="${esc(cover)}" alt="${esc(w.title || '')}" loading="lazy">`
     }
@@ -476,6 +477,24 @@ function parseCount(s) {
 function fmtCount(n) {
   if (!n) return '0'
   return n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : String(n)
+}
+
+/* ── Hover GIF 切换（带容错） ── */
+function hoverGif(img, enter) {
+  if (enter) {
+    const gif = img.dataset.gif
+    if (!gif) return   // 已因失败被清除
+    // 预加载 GIF，成功才切换，失败则禁用 hover
+    const probe = new Image()
+    probe.onload  = () => { img.src = gif }
+    probe.onerror = () => {
+      img.dataset.gif = ''    // 清除，避免后续 hover 重试
+      console.warn('[showcase] hover GIF 加载失败，已禁用动效')
+    }
+    probe.src = gif
+  } else {
+    img.src = img.dataset.cover
+  }
 }
 
 /* ── 跳转 ── */

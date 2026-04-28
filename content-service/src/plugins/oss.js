@@ -10,6 +10,7 @@ export default fp(async function (fastify) {
     accessKeyId:     process.env.OSS_ACCESS_KEY_ID,
     accessKeySecret: process.env.OSS_ACCESS_KEY_SECRET,
     bucket:          process.env.OSS_BUCKET,
+    secure:          true,   // 强制 HTTPS，避免 http:// presigned URL 返回 503
   })
 
   // 挂载到 fastify 实例，路由里用 fastify.oss 访问

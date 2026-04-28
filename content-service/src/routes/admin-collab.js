@@ -237,6 +237,34 @@ export default async function adminCollabRoutes(fastify) {
 
 
   // ─────────────────────────────────────────────
+  // 重新生成 hover GIF（用于已审核通过但 GIF 为空/损坏的作品）
+  // ─────────────────────────────────────────────
+
+  /**
+   * POST /api/admin/collab/:id/regen-gif
+   * 立即重新生成 hover GIF 并更新 hoverGifUrl
+   */
+  fastify.post('/admin/collab/:id/regen-gif', { preHandler: requireAdmin }, async (req, reply) => {
+    const work = await prisma.collabWork.findUnique({ where: { id: req.params.id } })
+    if (!work) return reply.code(404).send({ success: false, message: '作品不存在' })
+    if (work.status !== 'approved') return reply.code(400).send({ success: false, message: '仅已审核通过的作品可重新生成 GIF' })
+
+    const frameKeys = safeJson(work.animationFrames).filter(k => k && !k.startsWith('data:') && !k.startsWith('http'))
+    if (frameKeys.length === 0)
+      return reply.code(400).send({ success: false, message: '没有可用的 OSS 帧图（帧图可能仍为 data URI 格式）' })
+
+    try {
+      const frameUrls = frameKeys.map(k => fastify.ossPresignGet(k, 7200))
+      const gifKey = await generateAndUploadHoverGif({ collabWorkId: work.id, frameUrls, oss: fastify.oss })
+      await prisma.collabWork.update({ where: { id: work.id }, data: { hoverGifUrl: gifKey } })
+      return reply.send({ success: true, data: { hoverGifUrl: gifKey } })
+    } catch (e) {
+      fastify.log.warn('[hover-gif] 重新生成失败: ' + e.message)
+      return reply.code(500).send({ success: false, message: 'GIF 生成失败: ' + e.message })
+    }
+  })
+
+  // ─────────────────────────────────────────────
   // 联名作品上下架
   // ─────────────────────────────────────────────
 
