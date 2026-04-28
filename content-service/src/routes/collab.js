@@ -112,7 +112,7 @@ export default async function collabRoutes(fastify) {
 
     // 获取支持的SKU详情（含 exampleMedia + 加价后价格）
     const skuIds = safeJson(work.supportedSkus)
-    const creatorMarkups = safeJson(work.creatorMarkups, {})
+    const creatorMarkups = safeJsonObj(work.creatorMarkups)
     const rawSkus = skuIds.length
       ? await prisma.machineModelSku.findMany({
           where: { id: { in: skuIds } },
@@ -419,6 +419,12 @@ export default async function collabRoutes(fastify) {
   }
 }
 
-function safeJson(str) {
-  try { return JSON.parse(str) } catch { return [] }
+function safeJson(str, fallback = []) {
+  if (str == null) return fallback
+  try { const v = JSON.parse(str); return v ?? fallback } catch { return fallback }
+}
+
+function safeJsonObj(str) {
+  if (str == null) return {}
+  try { const v = JSON.parse(str); return (v && typeof v === 'object' && !Array.isArray(v)) ? v : {} } catch { return {} }
 }
