@@ -393,7 +393,6 @@ function renderWorks(reset = false) {
 
 function buildCard(w) {
   const cover = w.coverUrl || ''
-  const gifUrl = w.hoverGifUrl || ''
   const name = esc(w.creator?.nickname || '创作者')
   const initial = name.charAt(0)
   const avatarUrl = w.creator?.avatarUrl || ''
@@ -405,22 +404,18 @@ function buildCard(w) {
   const likeIcon = w.isLiked ? '♥' : '♡'
   const likeCount = fmtCount(w.likeCount || 0)
 
-  // 图片 HTML：有封面图才显示；有 GIF 则 hover 切换
+  // 图片 HTML：hover 时客户端帧循环（不依赖 GIF，直接读 OSS 帧图）
   let mediaHtml
   if (cover) {
-    if (gifUrl) {
-      // hover 时切换到 GIF；onerror 时清除 data-gif 防止反复失败，回落静态封面
-      mediaHtml = `<img
-        src="${esc(cover)}"
-        data-cover="${esc(cover)}"
-        data-gif="${esc(gifUrl)}"
-        alt="${esc(w.title || '')}"
-        loading="lazy"
-        onmouseenter="hoverGif(this,true)"
-        onmouseleave="hoverGif(this,false)">`
-    } else {
-      mediaHtml = `<img src="${esc(cover)}" alt="${esc(w.title || '')}" loading="lazy">`
-    }
+    mediaHtml = `<img
+      class="card-frame-img"
+      src="${esc(cover)}"
+      data-cover="${esc(cover)}"
+      data-work-id="${esc(w.id)}"
+      alt="${esc(w.title || '')}"
+      loading="lazy"
+      onmouseenter="cardHoverStart(this)"
+      onmouseleave="cardHoverEnd(this)">`
   } else {
     mediaHtml = `<div class="card-media-placeholder">🎨</div>`
   }
@@ -479,22 +474,66 @@ function fmtCount(n) {
   return n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : String(n)
 }
 
-/* ── Hover GIF 切换（带容错） ── */
-function hoverGif(img, enter) {
-  if (enter) {
-    const gif = img.dataset.gif
-    if (!gif) return   // 已因失败被清除
-    // 预加载 GIF，成功才切换，失败则禁用 hover
-    const probe = new Image()
-    probe.onload  = () => { img.src = gif }
-    probe.onerror = () => {
-      img.dataset.gif = ''    // 清除，避免后续 hover 重试
-      console.warn('[showcase] hover GIF 加载失败，已禁用动效')
-    }
-    probe.src = gif
-  } else {
-    img.src = img.dataset.cover
+/* ── 卡片 Hover 帧循环（客户端，不依赖 GIF / OSS 预签名 GIF）── */
+const _hoverCache  = {}   // workId → frames[]
+const _hoverTimers = new WeakMap()  // img → { timer, idx }
+
+async function cardHoverStart(img) {
+  const workId = img.dataset.workId
+  if (!workId) return
+
+  // 已缓存帧图，直接开始
+  if (_hoverCache[workId]) {
+    _startCycle(img, _hoverCache[workId])
+    return
   }
+
+  // 第一次 hover：从详情接口拉帧图列表
+  try {
+    const token   = localStorage.getItem('mowo_token') || ''
+    const headers = token ? { Authorization: `Bearer ${token}` } : {}
+    const res  = await fetch(`${API}/api/collab/works/${workId}`, { headers })
+    const json = await res.json()
+    const frames = json.data?.animationFrames || []
+    if (!frames.length) return  // 没有帧，不动
+
+    // 预加载前几帧再开始，避免空白闪烁
+    await _preloadFirst(frames, 3)
+    _hoverCache[workId] = frames
+    _startCycle(img, frames)
+  } catch (e) {
+    // 拉取失败，保持静态封面即可
+  }
+}
+
+function cardHoverEnd(img) {
+  _stopCycle(img)
+  img.src = img.dataset.cover
+}
+
+function _startCycle(img, frames) {
+  _stopCycle(img)   // 清除可能的旧 timer
+  let idx = 0
+  const FPS = 8     // 卡片 hover 帧率（可调）
+  const delay = Math.round(1000 / FPS)
+  img.src = frames[0]
+  const timer = setInterval(() => {
+    idx = (idx + 1) % frames.length
+    img.src = frames[idx]
+  }, delay)
+  _hoverTimers.set(img, timer)
+}
+
+function _stopCycle(img) {
+  const t = _hoverTimers.get(img)
+  if (t != null) { clearInterval(t); _hoverTimers.delete(img) }
+}
+
+function _preloadFirst(frames, n) {
+  const slice = frames.slice(0, n)
+  return Promise.all(slice.map(url => new Promise(resolve => {
+    const i = new Image(); i.onload = i.onerror = resolve; i.src = url
+  })))
 }
 
 /* ── 跳转 ── */
