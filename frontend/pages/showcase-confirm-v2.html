@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>联名作品详情 — 哞屋 MOWO</title>
+<!-- 全局设计系统（新版） -->
+<link rel="stylesheet" href="../css/design-system.css">
+<style>
+/* ── 页面专属样式（使用新设计系统 token） ── */
+
+/* 返回按钮 */
+.breadcrumb-wrap {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 20px var(--pad-desk) 0;
+}
+@media (max-width: 1023px) { .breadcrumb-wrap { padding: 16px var(--pad-mobile) 0; } }
+
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text3);
+  transition: color 0.2s;
+}
+.back-btn:hover { color: var(--dark); }
+.back-arrow { font-size: 16px; transition: transform 0.2s var(--ease); }
+.back-btn:hover .back-arrow { transform: translateX(-3px); }
+
+/* ── 详情布局 ── */
+.detail-wrap {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 20px var(--pad-desk) 80px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 32px;
+}
+@media (min-width: 900px) {
+  .detail-wrap { grid-template-columns: 420px 1fr; gap: 48px; padding: 24px var(--pad-desk) 100px; align-items: start; }
+}
+@media (min-width: 1200px) { .detail-wrap { grid-template-columns: 460px 1fr; } }
+@media (max-width: 1023px) { .detail-wrap { padding: 16px var(--pad-mobile) 80px; } }
+
+/* ── 左：画廊 ── */
+.detail-media { position: relative; }
+@media (min-width: 900px) { .detail-media { position: sticky; top: calc(var(--nav-h) + 24px); } }
+
+.gallery-main {
+  width: 100%;
+  aspect-ratio: 1/1;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  position: relative;
+  margin-bottom: 12px;
+}
+@media (max-width: 899px) { .gallery-main { aspect-ratio: 4/3; max-height: 60vw; } }
+
+.gallery-slide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s var(--ease);
+}
+.gallery-slide.active { opacity: 1; pointer-events: all; }
+.gallery-slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gallery-placeholder {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 64px; opacity: 0.25; background: var(--bg2);
+}
+
+.gallery-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.92);
+  border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  color: var(--dark);
+  cursor: pointer;
+  z-index: 5;
+  transition: all 0.2s var(--ease);
+  box-shadow: 0 2px 12px rgba(44,31,20,0.1);
+}
+.gallery-arrow:hover { background: #fff; box-shadow: 0 4px 20px rgba(44,31,20,0.15); transform: translateY(-50%) scale(1.06); }
+.gallery-arrow-prev { left: 12px; }
+.gallery-arrow-next { right: 12px; }
+.gallery-arrow.hidden { display: none; }
+
+.gallery-counter {
+  position: absolute;
+  bottom: 12px; right: 12px;
+  z-index: 5;
+  background: rgba(44,31,20,0.5);
+  color: #fff;
+  backdrop-filter: blur(8px);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+}
+
+.gallery-thumbs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+.gallery-thumbs::-webkit-scrollbar { display: none; }
+@media (max-width: 899px) { .gallery-thumbs { display: none; } }
+
+.gallery-thumb {
+  flex-shrink: 0;
+  width: 64px; height: 64px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 2px solid transparent;
+  cursor: pointer;
+  background: var(--bg2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  opacity: 0.6;
+  transition: border-color 0.2s, transform 0.2s, opacity 0.2s;
+}
+.gallery-thumb:hover { opacity: 0.85; transform: scale(1.04); }
+.gallery-thumb.active { border-color: var(--accent); opacity: 1; }
+.gallery-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+/* ── 右：详情信息 ── */
+
+/* 创作者行 */
+.author-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.author-av {
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  background: var(--warm);
+  border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+  overflow: hidden;
+  color: var(--text2);
+}
+.author-av img { width: 100%; height: 100%; object-fit: cover; }
+.author-meta { flex: 1; min-width: 0; }
+.author-handle { font-weight: 600; font-size: 15px; color: var(--dark); }
+.author-stats { font-weight: 500; font-size: 12px; color: var(--text3); margin-top: 2px; }
+
+.follow-btn {
+  margin-left: auto;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 7px 18px;
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--border);
+  color: var(--text2);
+  background: #fff;
+  transition: all 0.2s;
+  display: flex; align-items: center; flex-shrink: 0;
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+.follow-btn:hover { border-color: var(--accent); color: var(--accent); }
+.follow-btn.following { background: var(--dark); color: #fff; border-color: var(--dark); }
+
+/* 标题和徽章 */
+.badge-row { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+.badge-exclusive { background: var(--tag-bg); color: var(--accent); }
+.badge-newbie { background: #fff3e0; color: #e07020; }
+
+.work-title {
+  font-family: var(--font-serif);
+  font-size: clamp(20px, 3vw, 28px);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  color: var(--dark);
+  margin-bottom: 16px;
+}
+
+/* 数据行 */
+.stats-row {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+.stat-item { display: flex; align-items: center; gap: 6px; }
+.stat-icon { font-size: 15px; }
+.stat-val { font-weight: 700; font-size: 15px; color: var(--dark); }
+.stat-lab { font-weight: 500; font-size: 11px; color: var(--text3); }
+
+.like-big {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 18px;
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--border);
+  font-weight: 600; font-size: 14px;
+  color: var(--text3);
+  background: #fff;
+  transition: all 0.2s;
+  margin-left: auto;
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+.like-big:hover { border-color: var(--red); color: var(--red); }
+.like-big.liked { background: #fff0f0; border-color: var(--red); color: var(--red); }
+.like-big-icon { font-size: 17px; transition: transform 0.25s var(--ease); }
+.like-big.liked .like-big-icon, .like-big:hover .like-big-icon { transform: scale(1.2); }
+
+/* 描述 */
+.work-desc {
+  font-size: 14px;
+  line-height: 1.9;
+  color: var(--text2);
+  margin-bottom: 24px;
+}
+
+/* SKU 选配 */
+.section-label {
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 10px;
+}
+.sku-group { margin-bottom: 16px; }
+.sku-opts { display: flex; gap: 8px; flex-wrap: wrap; }
+.sku-opt {
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  font-weight: 500;
+  font-size: 13px;
+  background: #fff;
+  color: var(--text);
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+.sku-opt:hover { border-color: var(--text3); }
+.sku-opt.selected { border-color: var(--accent); background: var(--tag-bg); color: var(--accent2); }
+
+/* CTA 区块 */
+.cta-block {
+  background: var(--dark);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.cta-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.cta-price {
+  font-weight: 700;
+  font-size: 30px;
+  letter-spacing: -0.02em;
+  color: var(--gold);
+}
+.cta-price-unit {
+  font-weight: 500;
+  font-size: 13px;
+  color: rgba(255,255,255,0.45);
+}
+.cta-btns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.btn-cart {
+  height: 50px;
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+  font-size: 14px;
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  border: 1.5px solid rgba(255,255,255,0.2);
+  transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+.btn-cart:hover { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.35); }
+.btn-buy {
+  height: 50px;
+  border-radius: var(--radius-pill);
+  font-weight: 700;
+  font-size: 14px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  transition: opacity 0.2s, transform 0.2s;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+.btn-buy:hover { opacity: 0.88; transform: translateY(-1px); }
+.btn-cart:disabled, .btn-buy:disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
+
+/* 联名说明 */
+.collab-info {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+}
+.collab-label {
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 6px;
+}
+.collab-note {
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.7;
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%) translateY(12px);
+  background: var(--dark);
+  color: #fff;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 10px 22px;
+  border-radius: var(--radius-pill);
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s var(--ease);
+  z-index: 9000;
+  white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* 加载状态 */
+.page-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  font-size: 15px;
+  color: var(--text3);
+}
+
+/* ── 帧播放器 ── */
+.fp-wrap {
+  position: relative;
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: var(--dark);
+  display: flex; align-items: center; justify-content: center;
+}
+.fp-img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.fp-bar {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  background: rgba(44,31,20,0.7);
+  backdrop-filter: blur(10px);
+  pointer-events: all;
+}
+.fp-progress {
+  position: absolute;
+  top: 0; left: 0;
+  height: 3px;
+  background: var(--accent);
+  transition: none;
+  pointer-events: none;
+}
+.fp-bar-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px 4px;
+  pointer-events: none;
+}
+.fp-bar-meta { font-weight: 500; font-size: 10px; letter-spacing: 0.04em; color: rgba(255,255,255,0.5); }
+.fp-bar-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 20px 12px;
+}
+.fp-step-btn {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  padding: 0 20px;
+  height: 36px;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.7);
+  cursor: pointer;
+  transition: all 0.15s;
+  min-width: 72px;
+}
+.fp-step-btn:hover:not(:disabled) { background: rgba(255,255,255,0.2); color: #fff; border-color: rgba(255,255,255,0.35); }
+.fp-step-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+.fp-play-btn {
+  font-family: var(--font-sans);
+  font-size: 20px;
+  width: 50px; height: 50px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.2s var(--ease), opacity 0.2s;
+  flex-shrink: 0;
+  box-shadow: 0 4px 16px rgba(200,150,90,0.4);
+}
+.fp-play-btn:hover { transform: scale(1.1); opacity: 0.9; }
+.fp-play-btn:active { transform: scale(0.95); }
+
+/* Reveal 动画 */
+.reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.6s var(--ease), transform 0.6s var(--ease); }
+.reveal.on { opacity: 1; transform: none; }
+.d1 { transition-delay: 0.08s; }
+.d2 { transition-delay: 0.16s; }
+.d3 { transition-delay: 0.24s; }
+
+/* Footer */
+footer {
+  background: var(--dark);
+  color: rgba(255,255,255,0.4);
+  padding: 48px var(--pad-desk) 36px;
+}
+@media (max-width: 1023px) { footer { padding: 48px var(--pad-mobile) 36px; } }
+.foot-row {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+@media (min-width: 640px) { .foot-row { flex-direction: row; align-items: center; justify-content: space-between; } }
+.foot-logo { font-family: var(--font-serif); font-weight: 600; font-size: 20px; color: #fff; }
+.foot-links { display: flex; gap: 24px; flex-wrap: wrap; }
+.foot-links a {
+  font-size: 13px;
+  color: rgba(255,255,255,0.35);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.foot-links a:hover { color: #fff; }
+.foot-copy { max-width: 1100px; margin: 24px auto 0; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<!-- ── 导航栏（新版，保留 auth.js 依赖的 id/class） ── -->
+<nav class="nav">
+  <a href="index.html" class="nav-logo">
+    <div class="nav-logo-icon">哞</div>
+    <span>哞屋 <span style="font-weight:400;font-size:13px;color:var(--text2)">MOWO</span></span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="about.html">关于我们</a></li>
+    <li><a href="products.html">产品介绍</a></li>
+    <li><a href="showcase.html" class="active">画师联名</a></li>
+    <li><a href="customize-start.html">创作中心</a></li>
+    <li><a href="contact.html">联络我们</a></li>
+  </ul>
+  <div class="nav-right">
+    <!-- 购物车图标（登录后显示角标） -->
+    <div class="nav-icon-btn" onclick="location.href='cart.html'" title="购物车" id="navCartBtn" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+        <line x1="3" y1="6" x2="21" y2="6"/>
+        <path d="M16 10a4 4 0 0 1-8 0"/>
+      </svg>
+      <span class="nav-cart-badge" id="navCartCount" style="display:none">0</span>
+    </div>
+    <!-- 登录按钮 / 用户头像（auth.js 控制） -->
+    <button class="nav-login" id="navLoginBtn">登录</button>
+    <!-- 汉堡菜单 -->
+    <button class="burger" id="navBurger" aria-label="菜单">☰</button>
+  </div>
+</nav>
+
+<!-- 移动菜单 -->
+<div class="mobile-menu" id="mobileMenu">
+  <a href="index.html">首页</a>
+  <a href="about.html">关于我们</a>
+  <a href="products.html">产品介绍</a>
+  <a href="showcase.html">画师联名</a>
+  <a href="customize-start.html">创作中心</a>
+  <a href="contact.html">联络我们</a>
+  <div class="mobile-menu-footer" id="mobileMenuFooter"></div>
+</div>
+
+<!-- 面包屑 -->
+<div class="breadcrumb-wrap">
+  <a href="showcase.html" class="back-btn">
+    <span class="back-arrow">←</span>
+    <span>返回画师联名</span>
+  </a>
+</div>
+
+<!-- 内容区（JS 动态渲染） -->
+<div id="pageRoot">
+  <div class="page-loading">加载中…</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<footer>
+  <div class="foot-row">
+    <span class="foot-logo">哞屋 MOWO</span>
+    <div class="foot-links">
+      <a href="about.html">关于我们</a>
+      <a href="products.html">产品介绍</a>
+      <a href="showcase.html">画师联名</a>
+      <a href="customize-start.html">创作中心</a>
+      <a href="contact.html">联络我们</a>
+    </div>
+  </div>
+  <p class="foot-copy">© 2025 哞屋 MOWO. All rights reserved.</p>
+</footer>
+
+<script src="../js/auth.js"></script>
+<script>
+/* ════════════════════════════════════════════════════════════
+ * showcase-confirm-v2.html — 业务逻辑
+ * 与原版 showcase-confirm.html 完全一致，仅样式系统已升级
+ * 不修改此 <script> 内任何逻辑
+ * ════════════════════════════════════════════════════════════ */
+const API = (location.hostname === '127.0.0.1' ? 'http://127.0.0.1:3001' : 'http://localhost:3001')
+const urlParams = new URLSearchParams(location.search)
+const workId = urlParams.get('workId')
+
+let workData = null
+let skuList = []
+let selectedSkuId = null
+let currentSlide = 0
+let slides = []
+let isLiked = false
+let likeCount = 0
+let isFollowing = false
+
+/* ── Frame Player state ── */
+const FP = {
+  frames: [],
+  loaded: [],
+  idx: 0,
+  playing: false,
+  timer: null,
+  ready: false,
+}
+
+const FP_STEPS = [2, 4, 6, 8, 10, 13, 16, 20]
+let fpStepIdx = 4
+
+function fpCurrentFps() { return FP_STEPS[fpStepIdx] }
+
+function fpStart() {
+  if (FP.timer) clearInterval(FP.timer)
+  if (!FP.frames.length) return
+  FP.playing = true
+  FP.timer = setInterval(fpTick, Math.round(1000 / fpCurrentFps()))
+  const btn = document.getElementById('fpPlayBtn')
+  if (btn) btn.textContent = '⏸'
+}
+
+function fpStop() {
+  clearInterval(FP.timer); FP.timer = null
+  FP.playing = false
+  const btn = document.getElementById('fpPlayBtn')
+  if (btn) btn.textContent = '▶'
+}
+
+function fpToggle() { FP.playing ? fpStop() : fpStart() }
+
+function fpStepSpeed(dir) {
+  const next = Math.max(0, Math.min(FP_STEPS.length - 1, fpStepIdx + dir))
+  if (next === fpStepIdx) return
+  fpStepIdx = next
+  const lbl = document.getElementById('fpSpeedLabel')
+  if (lbl) lbl.textContent = fpCurrentFps()
+  const slower = document.getElementById('fpSlowerBtn')
+  const faster = document.getElementById('fpFasterBtn')
+  if (slower) slower.disabled = fpStepIdx <= 0
+  if (faster) faster.disabled = fpStepIdx >= FP_STEPS.length - 1
+  if (FP.playing) fpStart()
+}
+
+function fpTick() {
+  if (!FP.frames.length) return
+  FP.idx = (FP.idx + 1) % FP.frames.length
+  const img = document.getElementById('fpImg')
+  const bar = document.getElementById('fpProgress')
+  if (img) img.src = FP.frames[FP.idx]
+  if (bar) bar.style.width = ((FP.idx + 1) / FP.frames.length * 100) + '%'
+}
+
+function fpPreload(urls) {
+  FP.frames = urls; FP.loaded = []; FP.idx = 0
+  urls.forEach(url => { const i = new Image(); i.src = url; FP.loaded.push(i) })
+  const fpImg = document.getElementById('fpImg')
+  if (fpImg && urls.length) fpImg.src = urls[0]
+  FP.ready = true
+}
+
+/* ── Init ── */
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!workId) { window.location.href = './showcase.html'; return }
+  await loadWork()
+})
+
+async function loadWork() {
+  try {
+    const token = localStorage.getItem('mowo_token') || ''
+    const headers = token ? { Authorization: `Bearer ${token}` } : {}
+    const res = await fetch(`${API}/api/collab/works/${workId}`, { headers })
+    const data = await res.json()
+    if (!data.success) throw new Error(data.message || '作品不存在')
+    workData = data.data
+    skuList = workData.supportedSkus || []
+    isLiked = workData.isLiked || false
+    likeCount = workData.likeCount || 0
+
+    if (token && workData.creatorId) {
+      try {
+        const fr = await fetch(`${API}/api/users/${workData.creatorId}/follow-status`, { headers })
+        const fd = await fr.json()
+        if (fd.success) isFollowing = fd.data?.following ?? false
+      } catch {}
+    }
+
+    renderPage()
+  } catch (e) {
+    document.getElementById('pageRoot').innerHTML =
+      `<div class="page-loading">${esc(e.message)}</div>`
+  }
+}
+
+/* ── Render ── */
+function renderPage() {
+  const w = workData
+  const creator = w.creator || {}
+  const creatorName = creator.nickname || '认证创作者'
+  const creatorInitial = creatorName.charAt(0)
+
+  slides = []
+  const frames = Array.isArray(w.animationFrames) ? w.animationFrames : []
+  slides.push({ type: 'player' })
+
+  const exampleSeen = new Set()
+  ;(w.supportedSkus || []).forEach(s => {
+    (s.exampleMedia || []).forEach(url => {
+      if (!exampleSeen.has(url)) { exampleSeen.add(url); slides.push({ type: 'img', src: url }) }
+    })
+  })
+
+  if (frames.length) { fpPreload(frames) }
+
+  const avatarHtml = creator.avatarUrl
+    ? `<img src="${esc(creator.avatarUrl)}" alt="avatar">`
+    : esc(creatorInitial)
+
+  const minPrice = skuList.length
+    ? Math.min(...skuList.map(s => s.finalPrice ?? s.price ?? 0))
+    : null
+  const priceLabel = minPrice != null ? `¥${Number(minPrice).toFixed(0)}` : '询价'
+
+  let skuHtml = ''
+  if (skuList.length) {
+    const sizes = [...new Set(skuList.map(s => s.size).filter(Boolean))]
+    const materials = [...new Set(skuList.map(s => s.material).filter(Boolean))]
+
+    if (sizes.length) skuHtml += `
+      <div class="sku-group">
+        <p class="section-label">尺寸规格</p>
+        <div class="sku-opts" id="sizeOpts">
+          ${sizes.map(sz => `<button class="sku-opt" data-dim="size" data-val="${esc(sz)}" onclick="selectDim('size','${esc(sz)}')">${esc(sz)}</button>`).join('')}
+        </div>
+      </div>`
+
+    if (materials.length) skuHtml += `
+      <div class="sku-group">
+        <p class="section-label">材质</p>
+        <div class="sku-opts" id="matOpts">
+          ${materials.map(m => `<button class="sku-opt" data-dim="mat" data-val="${esc(m)}" onclick="selectDim('mat','${esc(m)}')">${esc(m)}</button>`).join('')}
+        </div>
+      </div>`
+  }
+
+  const fpHtml = frames.length > 0
+    ? `<div class="fp-wrap">
+        <img id="fpImg" class="fp-img" src="${esc(frames[0])}" alt="动画帧">
+        <div class="fp-bar">
+          <div class="fp-progress" id="fpProgress" style="width:0%"></div>
+          <div class="fp-bar-info">
+            <span class="fp-bar-meta">© MOWOBOX · @${esc(creatorName)}</span>
+            <span class="fp-bar-meta"><span id="fpSpeedLabel">10</span> fps · ${frames.length} 帧</span>
+          </div>
+          <div class="fp-bar-controls">
+            <button class="fp-step-btn" id="fpSlowerBtn" onclick="fpStepSpeed(-1)">‹ 慢</button>
+            <button class="fp-play-btn" id="fpPlayBtn" onclick="fpToggle()">▶</button>
+            <button class="fp-step-btn" id="fpFasterBtn" onclick="fpStepSpeed(1)">快 ›</button>
+          </div>
+        </div>
+      </div>`
+    : `<div class="gallery-placeholder">🎨</div>`
+
+  document.getElementById('pageRoot').innerHTML = `
+  <div class="detail-wrap">
+
+    <!-- 左：画廊 -->
+    <div class="detail-media reveal">
+      <div class="gallery-main" id="galleryMain">
+        ${buildSlides(fpHtml)}
+        <button class="gallery-arrow gallery-arrow-prev${slides.length <= 1 ? ' hidden' : ''}" onclick="moveSlide(-1)">‹</button>
+        <button class="gallery-arrow gallery-arrow-next${slides.length <= 1 ? ' hidden' : ''}" onclick="moveSlide(1)">›</button>
+        ${slides.length > 1 ? `<div class="gallery-counter" id="galleryCounter">1 / ${slides.length}</div>` : ''}
+      </div>
+      <div class="gallery-thumbs" id="galleryThumbs">${buildThumbs(frames[0])}</div>
+    </div>
+
+    <!-- 右：详情 -->
+    <div class="detail-info">
+
+      <!-- 创作者行 -->
+      <div class="author-row reveal d1">
+        <div class="author-av">${avatarHtml}</div>
+        <div class="author-meta">
+          <div class="author-handle">@${esc(creatorName)}</div>
+          <div class="author-stats">${fmtCount(creator.followerCount || 0)} 粉丝</div>
+        </div>
+        <button class="follow-btn ${isFollowing ? 'following' : ''}" id="followBtn"
+          onclick="toggleFollow('${esc(w.creatorId)}')">
+          ${isFollowing ? '✓ 已关注' : '+ 关注'}
+        </button>
+      </div>
+
+      <!-- 标题 -->
+      <h1 class="work-title reveal d2">${esc(w.title || '联名作品')}</h1>
+
+      <!-- 数据行 -->
+      <div class="stats-row reveal d2">
+        <div class="stat-item">
+          <span class="stat-icon">🎞️</span>
+          <span class="stat-val">${frames.length}</span>
+          <span class="stat-lab">帧动画</span>
+        </div>
+        <button class="like-big ${isLiked ? 'liked' : ''}" id="likeBigBtn" onclick="toggleLike()">
+          <span class="like-big-icon">${isLiked ? '♥' : '♡'}</span>
+          <span id="likeBigCount">${fmtCount(likeCount)}</span>
+        </button>
+      </div>
+
+      <!-- 描述 -->
+      ${w.description ? `<p class="work-desc reveal d3">${esc(w.description)}</p>` : ''}
+
+      <!-- SKU 选配 -->
+      ${skuHtml}
+
+      <!-- CTA 区块 -->
+      <div class="cta-block reveal d3">
+        <div class="cta-price-row">
+          <span class="cta-price" id="ctaPrice">${priceLabel}</span>
+          <span class="cta-price-unit">起 · 含硬件</span>
+        </div>
+        <div class="cta-btns">
+          <button class="btn-cart" id="btnCart" onclick="addToCart()" ${skuList.length ? '' : 'disabled'}>
+            🛒 加入购物车
+          </button>
+          <button class="btn-buy" id="btnBuy" onclick="buyNow()" ${skuList.length ? '' : 'disabled'}>
+            立即购买
+          </button>
+        </div>
+      </div>
+
+      <!-- 联名说明 -->
+      <div class="collab-info reveal">
+        <p class="collab-label">关于联名</p>
+        <p class="collab-note">
+          购买此作品即直接支持创作者。创作者将在冷静期结束后获得销售分成。
+        </p>
+      </div>
+
+    </div>
+  </div>`
+
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.reveal').forEach(el => {
+      const obs = new IntersectionObserver(entries => {
+        entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('on'); obs.unobserve(e.target) } })
+      }, { threshold: 0.08 })
+      obs.observe(el)
+    })
+  })
+}
+
+/* ── Gallery ── */
+function buildSlides(fpHtml) {
+  return slides.map((s, i) => {
+    const active = i === 0 ? ' active' : ''
+    if (s.type === 'player') return `<div class="gallery-slide${active}">${fpHtml}</div>`
+    return `<div class="gallery-slide${active}"><img src="${esc(s.src)}" alt="示例物料 ${i}" loading="lazy" style="width:100%;height:100%;object-fit:contain;background:var(--dark);"></div>`
+  }).join('')
+}
+
+function buildThumbs(firstFrameSrc) {
+  return slides.map((s, i) => {
+    const active = i === 0 ? ' active' : ''
+    if (s.type === 'player') {
+      const thumbSrc = firstFrameSrc ? `<img src="${esc(firstFrameSrc)}" alt="动画">` : '🎞️'
+      return `<div class="gallery-thumb${active}" onclick="goSlide(${i})" title="动画播放">${thumbSrc}</div>`
+    }
+    return `<div class="gallery-thumb${active}" onclick="goSlide(${i})"><img src="${esc(s.src)}" alt="示例 ${i}" loading="lazy"></div>`
+  }).join('')
+}
+
+function goSlide(idx) {
+  const all = document.querySelectorAll('.gallery-slide')
+  const thumbs = document.querySelectorAll('.gallery-thumb')
+  if (!all.length) return
+  all[currentSlide]?.classList.remove('active')
+  thumbs[currentSlide]?.classList.remove('active')
+  currentSlide = (idx + slides.length) % slides.length
+  all[currentSlide]?.classList.add('active')
+  thumbs[currentSlide]?.classList.add('active')
+  const counter = document.getElementById('galleryCounter')
+  if (counter) counter.textContent = `${currentSlide + 1} / ${slides.length}`
+}
+
+function moveSlide(dir) { goSlide(currentSlide + dir) }
+
+/* ── SKU 选配 ── */
+let selectedSize = null
+let selectedMat = null
+
+function selectDim(dim, val) {
+  if (dim === 'size') {
+    selectedSize = val
+    document.querySelectorAll('[data-dim="size"]').forEach(b => b.classList.toggle('selected', b.dataset.val === val))
+  } else {
+    selectedMat = val
+    document.querySelectorAll('[data-dim="mat"]').forEach(b => b.classList.toggle('selected', b.dataset.val === val))
+  }
+  matchSku()
+}
+
+function matchSku() {
+  const matched = skuList.find(s => {
+    const sizeOk = !selectedSize || s.size === selectedSize
+    const matOk = !selectedMat || s.material === selectedMat
+    return sizeOk && matOk
+  })
+  selectedSkuId = matched?.id || null
+
+  if (matched) {
+    const finalPrice = matched.finalPrice ?? matched.price ?? 0
+    const el = document.getElementById('ctaPrice')
+    if (el) el.textContent = `¥${Number(finalPrice).toFixed(0)}`
+  }
+
+  const hasChoice = skuList.length > 0
+  const ready = !hasChoice || selectedSkuId
+  const btnCart = document.getElementById('btnCart')
+  const btnBuy = document.getElementById('btnBuy')
+  if (btnCart) btnCart.disabled = !ready
+  if (btnBuy) btnBuy.disabled = !ready
+}
+
+/* ── 点赞 ── */
+async function toggleLike() {
+  const token = localStorage.getItem('mowo_token')
+  if (!token) { if (typeof openAuthModal === 'function') openAuthModal(); return }
+
+  isLiked = !isLiked
+  likeCount = isLiked ? likeCount + 1 : Math.max(0, likeCount - 1)
+  const btn = document.getElementById('likeBigBtn')
+  const countEl = document.getElementById('likeBigCount')
+  if (btn) {
+    btn.classList.toggle('liked', isLiked)
+    btn.querySelector('.like-big-icon').textContent = isLiked ? '♥' : '♡'
+  }
+  if (countEl) countEl.textContent = fmtCount(likeCount)
+
+  try {
+    await fetch(`${API}/api/collab/works/${workId}/like`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` }
+    })
+  } catch {
+    isLiked = !isLiked
+    likeCount = isLiked ? likeCount + 1 : Math.max(0, likeCount - 1)
+    if (btn) {
+      btn.classList.toggle('liked', isLiked)
+      btn.querySelector('.like-big-icon').textContent = isLiked ? '♥' : '♡'
+    }
+    if (countEl) countEl.textContent = fmtCount(likeCount)
+  }
+}
+
+/* ── 关注 ── */
+async function toggleFollow(creatorId) {
+  const token = localStorage.getItem('mowo_token')
+  if (!token) { if (typeof openAuthModal === 'function') openAuthModal(); return }
+
+  const btn = document.getElementById('followBtn')
+  const prev = isFollowing
+  isFollowing = !isFollowing
+  if (btn) {
+    btn.classList.toggle('following', isFollowing)
+    btn.textContent = isFollowing ? '✓ 已关注' : '+ 关注'
+  }
+
+  try {
+    const res = await fetch(`${API}/api/users/${creatorId}/follow`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    const data = await res.json()
+    if (!data.success) throw new Error()
+    isFollowing = data.following ?? isFollowing
+    if (btn) {
+      btn.classList.toggle('following', isFollowing)
+      btn.textContent = isFollowing ? '✓ 已关注' : '+ 关注'
+    }
+    showToast(isFollowing ? '已关注创作者' : '已取消关注')
+  } catch {
+    isFollowing = prev
+    if (btn) {
+      btn.classList.toggle('following', isFollowing)
+      btn.textContent = isFollowing ? '✓ 已关注' : '+ 关注'
+    }
+  }
+}
+
+/* ── 购物车 ── */
+async function addToCart() {
+  const token = localStorage.getItem('mowo_token')
+  if (!token) {
+    const cart = JSON.parse(localStorage.getItem('mowo_guest_cart') || '[]')
+    const exists = cart.find(i => i.contentId === workId && i.hardwareSkuId === (selectedSkuId || ''))
+    if (exists) { exists.quantity++ } else {
+      cart.push({ contentId: workId, hardwareSkuId: selectedSkuId || '', itemType: 'MARKET', title: workData?.title || '联名作品', quantity: 1 })
+    }
+    localStorage.setItem('mowo_guest_cart', JSON.stringify(cart))
+    showToast('🛒 已加入购物车（登录后可结算）')
+    return
+  }
+
+  if (!selectedSkuId && skuList.length > 0) { showToast('请先选择规格'); return }
+  const skuId = selectedSkuId || skuList[0]?.id
+  if (!skuId) { showToast('暂无可用规格'); return }
+
+  const btn = document.getElementById('btnCart')
+  if (btn) btn.disabled = true
+  try {
+    const res = await fetch(`${API}/api/cart/add`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ itemType: 'MARKET', contentId: workId, hardwareSkuId: skuId, quantity: 1 })
+    })
+    const data = await res.json()
+    if (!data.success) throw new Error(data.message || '加入失败')
+    showToast('🛒 已加入购物车')
+  } catch (e) {
+    showToast(e.message || '加入购物车失败')
+  } finally {
+    if (btn) btn.disabled = false
+  }
+}
+
+/* ── 立即购买 ── */
+async function buyNow() {
+  const token = localStorage.getItem('mowo_token')
+  if (!token) { window.location.href = './cart.html'; return }
+  if (!selectedSkuId && skuList.length > 0) { showToast('请先选择规格'); return }
+  const skuId = selectedSkuId || skuList[0]?.id
+  if (!skuId) { showToast('暂无可用规格'); return }
+
+  const btn = document.getElementById('btnBuy')
+  if (btn) btn.disabled = true
+  try {
+    const res = await fetch(`${API}/api/cart/add`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ itemType: 'MARKET', contentId: workId, hardwareSkuId: skuId, quantity: 1 })
+    })
+    const data = await res.json()
+    if (!data.success) throw new Error(data.message || '操作失败')
+    sessionStorage.setItem('mowo_checkout_items', JSON.stringify([data.data.id]))
+    window.location.href = './checkout.html'
+  } catch (e) {
+    showToast(e.message || '操作失败，请重试')
+    if (btn) btn.disabled = false
+  }
+}
+
+/* ── 工具函数 ── */
+function showToast(msg, ms = 2500) {
+  const el = document.getElementById('toast')
+  el.textContent = msg
+  el.classList.add('show')
+  setTimeout(() => el.classList.remove('show'), ms)
+}
+
+function fmtCount(n) {
+  if (!n) return '0'
+  return n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : String(n)
+}
+
+function esc(s) {
+  if (!s) return ''
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')
+}
+</script>
+</body>
+</html>
