@@ -564,6 +564,28 @@ const API = (location.hostname === '127.0.0.1' ? 'http://127.0.0.1:3001' : 'http
 const urlParams = new URLSearchParams(location.search)
 const workId = urlParams.get('workId')
 
+/* ── Demo 模拟数据（无 workId 时加载，用于样式预览） ── */
+const DEMO_DATA = {
+  id: 'demo',
+  title: '《会动的小猫咪》联名定制机',
+  description: '用 24 帧画出了一只在阳光下伸懒腰的橘猫，每一帧都是手绘，手摇动画机让它真的"动"起来了！',
+  animationFrames: [],
+  likeCount: 312,
+  isLiked: false,
+  creatorId: 'demo-creator',
+  creator: {
+    nickname: '橘子味的夏天',
+    followerCount: 2800,
+    avatarUrl: null,
+  },
+  supportedSkus: [
+    { id: 'sku-1', size: '5x5cm', material: '哑光白卡', finalPrice: 199 },
+    { id: 'sku-2', size: '5x5cm', material: '镜面银卡', finalPrice: 239 },
+    { id: 'sku-3', size: '8x8cm', material: '哑光白卡', finalPrice: 259 },
+    { id: 'sku-4', size: '8x8cm', material: '镜面银卡', finalPrice: 299 },
+  ],
+}
+
 let workData = null
 let skuList = []
 let selectedSkuId = null
@@ -638,7 +660,15 @@ function fpPreload(urls) {
 
 /* ── Init ── */
 document.addEventListener('DOMContentLoaded', async () => {
-  if (!workId) { window.location.href = './showcase.html'; return }
+  if (!workId) {
+    // 无 workId：加载 demo 数据，用于样式预览
+    workData = DEMO_DATA
+    skuList = DEMO_DATA.supportedSkus
+    isLiked = DEMO_DATA.isLiked
+    likeCount = DEMO_DATA.likeCount
+    renderPage()
+    return
+  }
   await loadWork()
 })
 
