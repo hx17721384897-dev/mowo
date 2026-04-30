@@ -38,16 +38,20 @@ img { max-width: 100%; display: block; }
 nav {
   position: sticky; top: 0; z-index: 900;
   height: var(--nav-h);
-  background: #fff;
+  background: rgba(250, 247, 242, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--border);
-  display: flex; align-items: center;
+  /* 三列 Grid：logo | 居中链接 | 右侧操作 */
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
   padding: 0 var(--pad);
-  gap: 32px;
 }
 .nav-logo {
   display: flex; align-items: center; gap: 8px;
   font-weight: 800; font-size: 17px; color: var(--dark);
-  white-space: nowrap; flex-shrink: 0; text-decoration: none;
+  white-space: nowrap; text-decoration: none;
 }
 .nav-logo-icon {
   width: 34px; height: 34px;
@@ -55,15 +59,21 @@ nav {
   display: flex; align-items: center; justify-content: center;
   color: #fff; font-size: 16px; font-weight: 900;
 }
-.nav-links { display: flex; gap: 28px; flex: 1; list-style: none; }
+.nav-links {
+  display: flex; gap: 32px; list-style: none;
+  /* 中间列自动居中 */
+}
 .nav-links a {
-  font-weight: 700; font-size: 14px; color: var(--text2);
+  font-weight: 600; font-size: 14px; color: var(--text2);
   padding: 4px 0;
   border-bottom: 2px solid transparent;
   transition: color .2s, border-color .2s;
 }
 .nav-links a:hover, .nav-links a.active { color: var(--dark); border-bottom-color: var(--accent); }
-.nav-right { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+.nav-right {
+  display: flex; align-items: center; gap: 14px;
+  justify-content: flex-end; /* 右对齐 */
+}
 .nav-icon {
   width: 36px; height: 36px; border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
@@ -88,9 +98,10 @@ nav {
 .nav-login:hover, #navLoginBtn:hover { background: var(--accent2); }
 .burger { display: none; width: 36px; height: 36px; align-items: center; justify-content: center; color: var(--text2); font-size: 20px; }
 @media (max-width:1023px) {
-  nav { padding: 0 20px; gap: 12px; }
+  nav { grid-template-columns: 1fr auto; padding: 0 20px; }
   .nav-links { display: none; }
   .burger { display: flex; }
+  .nav-right { gap: 8px; }
 }
 
 /* ── BREADCRUMB ── */
@@ -119,6 +130,7 @@ nav {
 
 /* ── GALLERY ── */
 .gallery { position: sticky; top: calc(var(--nav-h) + 16px); }
+@media (max-width:900px) { .gallery { position: static; } }
 .gallery-main {
   width: 100%; aspect-ratio: 1;
   border-radius: 16px; overflow: hidden;
@@ -556,9 +568,73 @@ button:disabled, .btn-cart:disabled, .btn-buy:disabled { opacity: .4; cursor: no
   border-radius: 10px; font-size: 14px; font-weight: 800;
   white-space: nowrap;
 }
-@media (max-width:600px) {
-  .sticky-product { flex: 1; }
-  .sticky-qty, .sticky-price { display: none; }
+@media (max-width:900px) {
+  /* 移动端 sticky 栏只保留两个按钮 */
+  .sticky-product, .sticky-price, .sticky-qty { display: none !important; }
+  .sticky-bar { padding: 10px 16px; }
+  .sticky-btns { flex: 1; gap: 10px; }
+  .sticky-cart, .sticky-buy { flex: 1; padding: 14px 0; font-size: 15px; border-radius: 12px; text-align: center; justify-content: center; }
+  /* 移动端隐藏主区域 SKU 选配和操作按钮 */
+  #skuConfigArea, #btnConfigArea { display: none; }
+}
+
+/* ── SKU 底部抽屉（移动端） ── */
+.sku-overlay {
+  position: fixed; inset: 0;
+  background: rgba(44,31,20,.5);
+  z-index: 1500;
+  opacity: 0; pointer-events: none;
+  transition: opacity .3s;
+}
+.sku-overlay.open { opacity: 1; pointer-events: all; }
+
+.sku-sheet {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--bg);
+  border-radius: 20px 20px 0 0;
+  padding: 0 20px 32px;
+  z-index: 1501;
+  transform: translateY(100%);
+  transition: transform .35s var(--ease);
+  max-height: 88vh;
+  overflow-y: auto;
+}
+.sku-sheet.open { transform: translateY(0); }
+.sku-sheet-handle {
+  width: 40px; height: 4px;
+  background: var(--border); border-radius: 99px;
+  margin: 14px auto 0;
+}
+.sku-sheet-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 0 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+.sku-sheet-header h3 { font-size: 15px; font-weight: 800; color: var(--dark); }
+.sku-sheet-close {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--bg2); color: var(--text2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; line-height: 1; cursor: pointer; border: none;
+  font-family: var(--font);
+}
+#skuSheetBody { padding-bottom: 8px; }
+#skuSheetBody .sku-section { margin-bottom: 18px; }
+.sheet-confirm-btn {
+  width: 100%; padding: 15px;
+  border-radius: 12px; border: none;
+  font-size: 16px; font-weight: 800; font-family: var(--font);
+  cursor: pointer; margin-top: 8px;
+  transition: opacity .2s;
+}
+.sheet-confirm-btn:active { opacity: .8; }
+.sheet-confirm-cart {
+  background: #fff; color: var(--accent);
+  border: 2px solid var(--accent);
+}
+.sheet-confirm-buy {
+  background: var(--dark); color: #fff;
 }
 
 /* ── TOAST ── */
@@ -809,9 +885,23 @@ footer { background: var(--dark); color: rgba(255,255,255,.4); padding: 44px var
     <input class="sticky-qty-num" type="number" id="stickyQty" value="1" min="1" max="99">
   </div>
   <div class="sticky-btns">
-    <button class="sticky-cart" onclick="addToCart()">加入购物车</button>
-    <button class="sticky-buy" onclick="buyNow()">立即购买</button>
+    <button class="sticky-cart" onclick="handleStickyCart()">加入购物车</button>
+    <button class="sticky-buy" onclick="handleStickyBuy()">立即购买</button>
   </div>
+</div>
+
+<!-- ── 移动端 SKU 选配抽屉 ── -->
+<div class="sku-overlay" id="skuOverlay" onclick="closeSkuSheet()"></div>
+<div class="sku-sheet" id="skuSheet">
+  <div class="sku-sheet-handle"></div>
+  <div class="sku-sheet-header">
+    <h3 id="skuSheetTitle">请选择规格</h3>
+    <button class="sku-sheet-close" onclick="closeSkuSheet()">×</button>
+  </div>
+  <div id="skuSheetBody">
+    <!-- skuConfigArea 将在 openSkuSheet() 时移入此处 -->
+  </div>
+  <button class="sheet-confirm-btn sheet-confirm-cart" id="sheetConfirmBtn" onclick="confirmSheetAction()">确认加入购物车</button>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -1037,7 +1127,7 @@ function renderPage() {
     </div>
 
     <!-- 右：产品信息 -->
-    <div class="product-info reveal d1">
+    <div class="product-info reveal d1" id="productRight">
       <div class="hot-tag">🔥 热销款</div>
       <h1 class="product-title">${esc(w.title||'联名作品')}</h1>
       <p class="product-subtitle">一张画，让它动起来</p>
@@ -1093,37 +1183,40 @@ function renderPage() {
       <!-- 描述 -->
       ${w.description?`<p class="work-desc">${esc(w.description)}</p>`:''}
 
-      <!-- 尺寸选择 -->
-      ${sizeHtml}
-
-      <!-- 材质选择 -->
-      ${matHtml}
-
-      <!-- 数量 -->
-      <div class="qty-row">
-        <span class="qty-label">数量</span>
-        <div class="qty-ctrl">
-          <button class="qty-btn" onclick="changeQty(-1)">−</button>
-          <input class="qty-num" id="qtyInput" type="number" value="1" min="1" max="99" onchange="qty=parseInt(this.value)||1">
-          <button class="qty-btn" onclick="changeQty(1)">+</button>
+      <!-- SKU 选配区（移动端隐藏，点按钮后在抽屉里显示） -->
+      <div id="skuConfigArea">
+        <!-- 尺寸选择 -->
+        ${sizeHtml}
+        <!-- 材质选择 -->
+        ${matHtml}
+        <!-- 数量 -->
+        <div class="qty-row">
+          <span class="qty-label">数量</span>
+          <div class="qty-ctrl">
+            <button class="qty-btn" onclick="changeQty(-1)">−</button>
+            <input class="qty-num" id="qtyInput" type="number" value="1" min="1" max="99" onchange="qty=parseInt(this.value)||1">
+            <button class="qty-btn" onclick="changeQty(1)">+</button>
+          </div>
         </div>
       </div>
 
-      <!-- 按钮 -->
-      <div class="btn-row">
-        <button class="btn-cart" id="btnCart" onclick="addToCart()" ${skuList.length?'':'disabled'}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg>
-          加入购物车
-        </button>
-        <button class="btn-buy" id="btnBuy" onclick="buyNow()" ${skuList.length?'':'disabled'}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>
-          立即购买
+      <!-- 操作按钮区（移动端隐藏，由 sticky 栏触发抽屉） -->
+      <div id="btnConfigArea">
+        <div class="btn-row">
+          <button class="btn-cart" id="btnCart" onclick="addToCart()" ${skuList.length?'':'disabled'}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg>
+            加入购物车
+          </button>
+          <button class="btn-buy" id="btnBuy" onclick="buyNow()" ${skuList.length?'':'disabled'}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>
+            立即购买
+          </button>
+        </div>
+        <button class="btn-diy" onclick="location.href='customize-start.html'">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          去 DIY 创作动画
         </button>
       </div>
-      <button class="btn-diy" onclick="location.href='customize-start.html'">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-        去 DIY 创作动画
-      </button>
     </div>
   </div>`
 
@@ -1335,6 +1428,59 @@ function showToast(msg,ms=2500){
 }
 function fmtCount(n){if(!n)return'0';return n>=1000?(n/1000).toFixed(1).replace(/\.0$/,'')+'k':String(n)}
 function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+
+/* ── 移动端 SKU 抽屉 ── */
+let _sheetAction = 'cart'
+let _skuMounted = false
+
+function handleStickyCart(){
+  if(window.innerWidth <= 900){ openSkuSheet('cart') } else { addToCart() }
+}
+function handleStickyBuy(){
+  if(window.innerWidth <= 900){ openSkuSheet('buy') } else { buyNow() }
+}
+
+function openSkuSheet(action){
+  _sheetAction = action
+  // 更新标题和确认按钮
+  const title = document.getElementById('skuSheetTitle')
+  const btn   = document.getElementById('sheetConfirmBtn')
+  if(title) title.textContent = workData?.title || '请选择规格'
+  if(btn){
+    btn.textContent = action === 'cart' ? '确认加入购物车' : '确认立即购买'
+    btn.className = 'sheet-confirm-btn ' + (action === 'cart' ? 'sheet-confirm-cart' : 'sheet-confirm-buy')
+  }
+  // 将 skuConfigArea 移入抽屉（首次）
+  const area  = document.getElementById('skuConfigArea')
+  const mount = document.getElementById('skuSheetBody')
+  if(area && mount){
+    mount.appendChild(area)       // DOM 移动，不复制
+    area.style.display = 'block'  // 覆盖媒体查询的 display:none
+  }
+  // 展开抽屉
+  document.getElementById('skuOverlay').classList.add('open')
+  document.getElementById('skuSheet').classList.add('open')
+  document.body.style.overflow = 'hidden'
+}
+
+function closeSkuSheet(){
+  document.getElementById('skuOverlay').classList.remove('open')
+  document.getElementById('skuSheet').classList.remove('open')
+  document.body.style.overflow = ''
+  // 将 skuConfigArea 归还到 productRight（保持 DOM 完整，媒体查询负责隐藏）
+  const area  = document.getElementById('skuConfigArea')
+  const right = document.getElementById('productRight')
+  if(area && right && !right.contains(area)){
+    area.style.display = ''  // 还原，让 CSS 接管
+    right.appendChild(area)
+  }
+}
+
+function confirmSheetAction(){
+  closeSkuSheet()
+  // 等抽屉关闭动画结束后再执行，避免 toast 被遮住
+  setTimeout(()=>{ _sheetAction === 'cart' ? addToCart() : buyNow() }, 360)
+}
 </script>
 </body>
 </html>
