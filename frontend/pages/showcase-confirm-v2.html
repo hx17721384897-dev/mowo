@@ -4,490 +4,603 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>联名作品详情 — 哞屋 MOWO</title>
-<!-- 全局设计系统（新版） -->
-<link rel="stylesheet" href="../css/design-system.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
-/* ── 页面专属样式（使用新设计系统 token） ── */
-
-/* 返回按钮 */
-.breadcrumb-wrap {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 20px var(--pad-desk) 0;
+:root {
+  --bg:      #faf7f2;
+  --bg2:     #f5efe4;
+  --warm:    #e8d5b0;
+  --accent:  #c8965a;
+  --accent2: #8b5e3c;
+  --dark:    #2c1f14;
+  --text:    #3d2e1e;
+  --text2:   #7a6552;
+  --text3:   #a89078;
+  --gold:    #d4a843;
+  --red:     #e84c4c;
+  --green:   #52a878;
+  --border:  #e0cdb5;
+  --tag-bg:  #fdf5e8;
+  --font:    'Nunito', 'Noto Sans SC', sans-serif;
+  --ease:    cubic-bezier(0.22, 1, 0.36, 1);
+  --nav-h:   60px;
+  --pad:     40px;
 }
-@media (max-width: 1023px) { .breadcrumb-wrap { padding: 16px var(--pad-mobile) 0; } }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; font-size: 14px; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+a { text-decoration: none; color: inherit; }
+button { font-family: var(--font); cursor: pointer; border: none; background: none; }
+img { max-width: 100%; display: block; }
 
-.back-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text3);
-  transition: color 0.2s;
-}
-.back-btn:hover { color: var(--dark); }
-.back-arrow { font-size: 16px; transition: transform 0.2s var(--ease); }
-.back-btn:hover .back-arrow { transform: translateX(-3px); }
-
-/* ── 详情布局 ── */
-.detail-wrap {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 20px var(--pad-desk) 80px;
-  display: grid;
-  grid-template-columns: 1fr;
+/* ── NAV ── */
+nav {
+  position: sticky; top: 0; z-index: 900;
+  height: var(--nav-h);
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center;
+  padding: 0 var(--pad);
   gap: 32px;
 }
-@media (min-width: 900px) {
-  .detail-wrap { grid-template-columns: 420px 1fr; gap: 48px; padding: 24px var(--pad-desk) 100px; align-items: start; }
+.nav-logo {
+  display: flex; align-items: center; gap: 8px;
+  font-weight: 800; font-size: 17px; color: var(--dark);
+  white-space: nowrap; flex-shrink: 0; text-decoration: none;
 }
-@media (min-width: 1200px) { .detail-wrap { grid-template-columns: 460px 1fr; } }
-@media (max-width: 1023px) { .detail-wrap { padding: 16px var(--pad-mobile) 80px; } }
+.nav-logo-icon {
+  width: 34px; height: 34px;
+  background: var(--dark); border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 16px; font-weight: 900;
+}
+.nav-links { display: flex; gap: 28px; flex: 1; list-style: none; }
+.nav-links a {
+  font-weight: 700; font-size: 14px; color: var(--text2);
+  padding: 4px 0;
+  border-bottom: 2px solid transparent;
+  transition: color .2s, border-color .2s;
+}
+.nav-links a:hover, .nav-links a.active { color: var(--dark); border-bottom-color: var(--accent); }
+.nav-right { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+.nav-icon {
+  width: 36px; height: 36px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text2); cursor: pointer;
+  transition: background .15s; position: relative;
+}
+.nav-icon:hover { background: var(--bg2); }
+.nav-icon svg { width: 20px; height: 20px; }
+.nav-cart-dot {
+  position: absolute; top: 3px; right: 3px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--red); color: #fff;
+  font-size: 10px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+}
+.nav-login, #navLoginBtn {
+  padding: 7px 18px;
+  background: var(--dark); color: #fff;
+  border-radius: 999px; font-size: 13px; font-weight: 700;
+  transition: background .2s;
+}
+.nav-login:hover, #navLoginBtn:hover { background: var(--accent2); }
+.burger { display: none; width: 36px; height: 36px; align-items: center; justify-content: center; color: var(--text2); font-size: 20px; }
+@media (max-width:1023px) {
+  nav { padding: 0 20px; gap: 12px; }
+  .nav-links { display: none; }
+  .burger { display: flex; }
+}
 
-/* ── 左：画廊 ── */
-.detail-media { position: relative; }
-@media (min-width: 900px) { .detail-media { position: sticky; top: calc(var(--nav-h) + 24px); } }
+/* ── BREADCRUMB ── */
+.breadcrumb {
+  padding: 12px var(--pad);
+  max-width: 1140px; margin: 0 auto;
+  font-size: 12px; color: var(--text3);
+  display: flex; gap: 6px; align-items: center;
+}
+.breadcrumb a { color: var(--text3); }
+.breadcrumb a:hover { color: var(--accent); }
+@media (max-width:1023px) { .breadcrumb { padding: 10px 20px; } }
 
+/* ── PRODUCT SECTION ── */
+.product-section {
+  max-width: 1140px; margin: 0 auto;
+  padding: 0 var(--pad) 40px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 52px;
+  align-items: start;
+}
+@media (max-width:900px) {
+  .product-section { grid-template-columns: 1fr; gap: 28px; padding: 0 20px 32px; }
+}
+
+/* ── GALLERY ── */
+.gallery { position: sticky; top: calc(var(--nav-h) + 16px); }
 .gallery-main {
-  width: 100%;
-  aspect-ratio: 1/1;
-  border-radius: var(--radius-lg);
-  overflow: hidden;
+  width: 100%; aspect-ratio: 1;
+  border-radius: 16px; overflow: hidden;
   background: var(--bg2);
-  border: 1px solid var(--border);
-  position: relative;
-  margin-bottom: 12px;
+  position: relative; cursor: pointer;
 }
-@media (max-width: 899px) { .gallery-main { aspect-ratio: 4/3; max-height: 60vw; } }
+.gallery-main img, .gallery-main-content { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-.gallery-slide {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.35s var(--ease);
+/* 帧播放器 */
+.fp-wrap { position: relative; width: 100%; height: 100%; background: var(--dark); display: flex; align-items: center; justify-content: center; }
+.fp-img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.fp-bar { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(44,31,20,.72); backdrop-filter: blur(10px); }
+.fp-progress { position: absolute; top: 0; left: 0; height: 3px; background: var(--accent); pointer-events: none; }
+.fp-bar-info { display: flex; align-items: center; justify-content: space-between; padding: 7px 14px 3px; }
+.fp-bar-meta { font-size: 10px; font-weight: 600; letter-spacing: .04em; color: rgba(255,255,255,.5); }
+.fp-bar-controls { display: flex; align-items: center; justify-content: space-between; padding: 3px 18px 10px; }
+.fp-step-btn {
+  font-family: var(--font); font-weight: 700; font-size: 12px;
+  padding: 0 18px; height: 34px; border-radius: 999px;
+  border: 1.5px solid rgba(255,255,255,.18);
+  background: rgba(255,255,255,.08); color: rgba(255,255,255,.7);
+  cursor: pointer; min-width: 68px;
+  transition: all .15s;
 }
-.gallery-slide.active { opacity: 1; pointer-events: all; }
-.gallery-slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.fp-step-btn:hover:not(:disabled) { background: rgba(255,255,255,.2); color: #fff; border-color: rgba(255,255,255,.35); }
+.fp-step-btn:disabled { opacity: .25; cursor: not-allowed; }
+.fp-play-btn {
+  font-size: 20px; width: 48px; height: 48px; border-radius: 50%;
+  background: var(--accent); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform .2s var(--ease), opacity .2s;
+  box-shadow: 0 4px 16px rgba(200,150,90,.4);
+}
+.fp-play-btn:hover { transform: scale(1.1); opacity: .9; }
+.fp-play-btn:active { transform: scale(.95); }
+
+/* 占位 */
 .gallery-placeholder {
   width: 100%; height: 100%;
+  background: linear-gradient(145deg, var(--warm), var(--bg2));
   display: flex; align-items: center; justify-content: center;
-  font-size: 64px; opacity: 0.25; background: var(--bg2);
+  font-size: 64px; opacity: .6;
 }
 
+/* 画廊箭头 */
 .gallery-arrow {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 40px; height: 40px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.92);
-  border: 1px solid var(--border);
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 38px; height: 38px; border-radius: 50%;
+  background: rgba(255,255,255,.9); border: 1px solid var(--border);
   display: flex; align-items: center; justify-content: center;
-  font-size: 16px;
-  color: var(--dark);
-  cursor: pointer;
-  z-index: 5;
-  transition: all 0.2s var(--ease);
-  box-shadow: 0 2px 12px rgba(44,31,20,0.1);
+  font-size: 15px; color: var(--dark); cursor: pointer; z-index: 5;
+  transition: all .2s; box-shadow: 0 2px 10px rgba(44,31,20,.1);
 }
-.gallery-arrow:hover { background: #fff; box-shadow: 0 4px 20px rgba(44,31,20,0.15); transform: translateY(-50%) scale(1.06); }
-.gallery-arrow-prev { left: 12px; }
-.gallery-arrow-next { right: 12px; }
+.gallery-arrow:hover { background: #fff; box-shadow: 0 4px 18px rgba(44,31,20,.15); }
+.gallery-arrow.prev { left: 10px; }
+.gallery-arrow.next { right: 10px; }
 .gallery-arrow.hidden { display: none; }
-
 .gallery-counter {
-  position: absolute;
-  bottom: 12px; right: 12px;
-  z-index: 5;
-  background: rgba(44,31,20,0.5);
-  color: #fff;
-  backdrop-filter: blur(8px);
-  font-weight: 600;
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  padding: 4px 10px;
-  border-radius: var(--radius-pill);
+  position: absolute; bottom: 10px; right: 12px; z-index: 5;
+  background: rgba(44,31,20,.5); color: #fff;
+  font-size: 10px; font-weight: 700; letter-spacing: .06em;
+  padding: 3px 9px; border-radius: 999px;
 }
 
-.gallery-thumbs {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  padding-bottom: 2px;
+/* 缩略图行 */
+.thumb-row {
+  display: flex; gap: 10px; margin-top: 12px;
+  overflow-x: auto; padding-bottom: 4px; position: relative;
+  align-items: center;
 }
-.gallery-thumbs::-webkit-scrollbar { display: none; }
-@media (max-width: 899px) { .gallery-thumbs { display: none; } }
-
-.gallery-thumb {
-  flex-shrink: 0;
-  width: 64px; height: 64px;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  border: 2px solid transparent;
-  cursor: pointer;
-  background: var(--bg2);
+.thumb-row::-webkit-scrollbar { display: none; }
+.thumb-arr {
+  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+  background: #fff; border: 1px solid var(--border);
   display: flex; align-items: center; justify-content: center;
-  font-size: 20px;
-  opacity: 0.6;
-  transition: border-color 0.2s, transform 0.2s, opacity 0.2s;
+  font-size: 13px; color: var(--text2); cursor: pointer;
+  transition: all .2s; box-shadow: 0 1px 6px rgba(44,31,20,.08);
 }
-.gallery-thumb:hover { opacity: 0.85; transform: scale(1.04); }
-.gallery-thumb.active { border-color: var(--accent); opacity: 1; }
-.gallery-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.thumb-arr:hover { border-color: var(--accent); color: var(--accent); }
+.thumb {
+  flex-shrink: 0; width: 76px; height: 76px;
+  border-radius: 10px; overflow: hidden;
+  border: 2px solid transparent; cursor: pointer;
+  background: var(--bg2); transition: border-color .2s, transform .2s;
+}
+.thumb:hover { transform: scale(1.04); }
+.thumb.active { border-color: var(--accent); }
+.thumb img { width: 100%; height: 100%; object-fit: cover; }
+.thumb-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 26px; background: linear-gradient(135deg, var(--warm), var(--bg2)); }
 
-/* ── 右：详情信息 ── */
+/* ── PRODUCT INFO ── */
+.product-info {}
+
+.hot-tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--tag-bg); color: var(--accent);
+  border-radius: 4px; padding: 2px 9px;
+  font-size: 12px; font-weight: 700; margin-bottom: 10px;
+}
+.product-title { font-size: clamp(20px, 2.8vw, 26px); font-weight: 900; color: var(--dark); line-height: 1.25; margin-bottom: 5px; }
+.product-subtitle { font-size: 14px; color: var(--text2); font-weight: 600; margin-bottom: 13px; }
 
 /* 创作者行 */
-.author-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-.author-av {
-  width: 48px; height: 48px;
-  border-radius: 50%;
-  background: var(--warm);
-  border: 2px solid var(--border);
+.creator-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+.creator-av {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: var(--warm); border: 2px solid var(--border);
   display: flex; align-items: center; justify-content: center;
-  font-size: 20px;
-  flex-shrink: 0;
-  overflow: hidden;
-  color: var(--text2);
+  font-size: 16px; flex-shrink: 0; overflow: hidden; color: var(--text2);
 }
-.author-av img { width: 100%; height: 100%; object-fit: cover; }
-.author-meta { flex: 1; min-width: 0; }
-.author-handle { font-weight: 600; font-size: 15px; color: var(--dark); }
-.author-stats { font-weight: 500; font-size: 12px; color: var(--text3); margin-top: 2px; }
-
+.creator-av img { width: 100%; height: 100%; object-fit: cover; }
+.creator-name { font-weight: 700; font-size: 13px; color: var(--dark); }
+.creator-fans { font-size: 11px; color: var(--text3); margin-top: 1px; }
 .follow-btn {
-  margin-left: auto;
-  font-weight: 600;
-  font-size: 13px;
-  padding: 7px 18px;
-  border-radius: var(--radius-pill);
-  border: 2px solid var(--border);
-  color: var(--text2);
-  background: #fff;
-  transition: all 0.2s;
-  display: flex; align-items: center; flex-shrink: 0;
-  cursor: pointer;
-  font-family: var(--font-sans);
+  margin-left: auto; font-weight: 700; font-size: 12px;
+  padding: 6px 16px; border-radius: 999px;
+  border: 1.5px solid var(--border); color: var(--text2); background: #fff;
+  transition: all .2s;
 }
 .follow-btn:hover { border-color: var(--accent); color: var(--accent); }
 .follow-btn.following { background: var(--dark); color: #fff; border-color: var(--dark); }
 
-/* 标题和徽章 */
-.badge-row { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
-.badge-exclusive { background: var(--tag-bg); color: var(--accent); }
-.badge-newbie { background: #fff3e0; color: #e07020; }
+/* 评分行 */
+.rating-row { display: flex; align-items: center; gap: 9px; margin-bottom: 14px; }
+.stars { color: var(--gold); font-size: 15px; letter-spacing: 1px; }
+.rating-score { font-weight: 800; color: var(--gold); font-size: 14px; }
+.rating-count { color: var(--text3); font-size: 13px; }
+.sold { color: var(--text3); font-size: 13px; }
+.divider-v { width: 1px; height: 13px; background: var(--border); }
 
-.work-title {
-  font-family: var(--font-serif);
-  font-size: clamp(20px, 3vw, 28px);
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  line-height: 1.3;
-  color: var(--dark);
-  margin-bottom: 16px;
+/* 点赞行 */
+.like-row { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+.like-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 16px; border-radius: 999px;
+  border: 1.5px solid var(--border); color: var(--text2); background: #fff;
+  font-weight: 700; font-size: 13px;
+  transition: all .2s;
 }
+.like-btn:hover { border-color: var(--red); color: var(--red); }
+.like-btn.liked { background: #fff0f0; border-color: var(--red); color: var(--red); }
+.like-icon { font-size: 16px; transition: transform .25s var(--ease); }
+.like-btn.liked .like-icon, .like-btn:hover .like-icon { transform: scale(1.25); }
 
-/* 数据行 */
-.stats-row {
-  display: flex;
-  gap: 20px;
-  align-items: center;
-  padding: 14px 0;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 20px;
+/* 价格区 */
+.price-row {
+  background: var(--tag-bg); border-radius: 12px;
+  padding: 14px 18px; margin-bottom: 16px;
 }
-.stat-item { display: flex; align-items: center; gap: 6px; }
-.stat-icon { font-size: 15px; }
-.stat-val { font-weight: 700; font-size: 15px; color: var(--dark); }
-.stat-lab { font-weight: 500; font-size: 11px; color: var(--text3); }
+.price { font-size: 32px; font-weight: 900; color: var(--red); letter-spacing: -1px; }
+.price-sub { font-size: 12px; color: var(--text3); margin-top: 3px; }
 
-.like-big {
-  display: flex; align-items: center; gap: 8px;
-  padding: 9px 18px;
-  border-radius: var(--radius-pill);
-  border: 2px solid var(--border);
-  font-weight: 600; font-size: 14px;
-  color: var(--text3);
-  background: #fff;
-  transition: all 0.2s;
-  margin-left: auto;
-  cursor: pointer;
-  font-family: var(--font-sans);
-}
-.like-big:hover { border-color: var(--red); color: var(--red); }
-.like-big.liked { background: #fff0f0; border-color: var(--red); color: var(--red); }
-.like-big-icon { font-size: 17px; transition: transform 0.25s var(--ease); }
-.like-big.liked .like-big-icon, .like-big:hover .like-big-icon { transform: scale(1.2); }
+/* 信任条 */
+.trust-row { display: flex; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
+.trust-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text2); font-weight: 600; }
+.trust-item svg { width: 14px; height: 14px; color: var(--accent); }
 
 /* 描述 */
-.work-desc {
-  font-size: 14px;
-  line-height: 1.9;
-  color: var(--text2);
-  margin-bottom: 24px;
-}
+.work-desc { font-size: 13px; line-height: 1.8; color: var(--text2); margin-bottom: 18px; font-weight: 600; }
 
-/* SKU 选配 */
-.section-label {
-  font-weight: 600;
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text3);
-  margin-bottom: 10px;
+/* 选项区 */
+.option-section { margin-bottom: 16px; }
+.option-label { font-size: 12px; font-weight: 800; color: var(--text2); margin-bottom: 10px; letter-spacing: .04em; }
+.option-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.option-btn {
+  border: 2px solid var(--border); border-radius: 10px;
+  padding: 10px 14px; cursor: pointer; background: #fff;
+  display: flex; align-items: center; gap: 10px;
+  transition: border-color .2s, background .2s;
+  font-family: var(--font);
 }
-.sku-group { margin-bottom: 16px; }
-.sku-opts { display: flex; gap: 8px; flex-wrap: wrap; }
-.sku-opt {
-  padding: 8px 16px;
-  border-radius: var(--radius-sm);
-  border: 1.5px solid var(--border);
-  font-weight: 500;
-  font-size: 13px;
-  background: #fff;
-  color: var(--text);
-  transition: border-color 0.2s, background 0.2s, color 0.2s;
-  cursor: pointer;
-  font-family: var(--font-sans);
-}
-.sku-opt:hover { border-color: var(--text3); }
-.sku-opt.selected { border-color: var(--accent); background: var(--tag-bg); color: var(--accent2); }
-
-/* CTA 区块 */
-.cta-block {
-  background: var(--dark);
-  border-radius: var(--radius-lg);
-  padding: 20px;
-  margin-bottom: 16px;
-}
-.cta-price-row {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-.cta-price {
-  font-weight: 700;
-  font-size: 30px;
-  letter-spacing: -0.02em;
-  color: var(--gold);
-}
-.cta-price-unit {
-  font-weight: 500;
-  font-size: 13px;
-  color: rgba(255,255,255,0.45);
-}
-.cta-btns {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-.btn-cart {
-  height: 50px;
-  border-radius: var(--radius-pill);
-  font-weight: 600;
-  font-size: 14px;
-  background: rgba(255,255,255,0.1);
-  color: #fff;
-  border: 1.5px solid rgba(255,255,255,0.2);
-  transition: all 0.2s;
-  display: flex; align-items: center; justify-content: center; gap: 6px;
-  cursor: pointer;
-  font-family: var(--font-sans);
-}
-.btn-cart:hover { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.35); }
-.btn-buy {
-  height: 50px;
-  border-radius: var(--radius-pill);
-  font-weight: 700;
-  font-size: 14px;
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  transition: opacity 0.2s, transform 0.2s;
+.option-btn.active { border-color: var(--accent); background: var(--tag-bg); }
+.option-btn:hover:not(.active) { border-color: var(--text3); }
+.option-btn-thumb {
+  width: 40px; height: 40px; border-radius: 6px;
+  overflow: hidden; background: var(--bg2);
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
-  font-family: var(--font-sans);
+  font-size: 20px; flex-shrink: 0;
 }
-.btn-buy:hover { opacity: 0.88; transform: translateY(-1px); }
-.btn-cart:disabled, .btn-buy:disabled { opacity: 0.35; cursor: not-allowed; pointer-events: none; }
+.option-btn-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.option-btn-label { font-size: 13px; font-weight: 700; color: var(--text); }
+.option-btn-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
 
-/* 联名说明 */
-.collab-info {
-  background: #fff;
+/* 套装/材质按钮（带价差） */
+.kit-btn {
+  border: 2px solid var(--border); border-radius: 10px;
+  padding: 11px 14px; cursor: pointer; background: #fff;
+  display: flex; flex-direction: column; min-width: 130px;
+  transition: border-color .2s, background .2s;
+  font-family: var(--font);
+}
+.kit-btn.active { border-color: var(--accent); background: var(--tag-bg); }
+.kit-btn:hover:not(.active) { border-color: var(--text3); }
+.kit-btn-top { display: flex; align-items: center; justify-content: space-between; }
+.kit-name { font-size: 13px; font-weight: 800; color: var(--text); }
+.kit-plus { font-size: 12px; color: var(--red); font-weight: 800; }
+.kit-desc { font-size: 11px; color: var(--text3); margin-top: 4px; font-weight: 600; }
+
+/* 数量 */
+.qty-row { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.qty-label { font-size: 12px; font-weight: 800; color: var(--text2); }
+.qty-ctrl { display: flex; align-items: center; border: 2px solid var(--border); border-radius: 10px; overflow: hidden; }
+.qty-btn { width: 36px; height: 36px; background: #fff; font-size: 18px; color: var(--text2); display: flex; align-items: center; justify-content: center; transition: background .15s; }
+.qty-btn:hover { background: var(--bg2); }
+.qty-num { width: 44px; height: 36px; text-align: center; font-size: 15px; font-weight: 800; border: none; border-left: 1px solid var(--border); border-right: 1px solid var(--border); background: #fff; color: var(--dark); outline: none; font-family: var(--font); }
+
+/* CTA 按钮 */
+.btn-row { display: flex; gap: 10px; margin-bottom: 10px; }
+.btn-cart {
+  flex: 1; height: 50px; border-radius: 12px;
+  background: #fff; border: 2px solid var(--accent);
+  color: var(--accent); font-size: 14px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  transition: background .2s;
+}
+.btn-cart:hover { background: var(--tag-bg); }
+.btn-buy {
+  flex: 1; height: 50px; border-radius: 12px;
+  background: var(--dark); border: 2px solid var(--dark);
+  color: #fff; font-size: 14px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  transition: background .2s;
+}
+.btn-buy:hover { background: var(--accent2); border-color: var(--accent2); }
+.btn-diy {
+  width: 100%; height: 46px; border-radius: 12px;
+  background: #fff; border: 2px solid var(--border);
+  color: var(--text2); font-size: 13px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  transition: border-color .2s, color .2s;
+}
+.btn-diy:hover { border-color: var(--accent); color: var(--accent); }
+button:disabled, .btn-cart:disabled, .btn-buy:disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
+
+/* ── FEATURE BADGES ── */
+.feature-badges { max-width: 1140px; margin: 0 auto; padding: 0 var(--pad) 44px; }
+.badges-inner {
+  background: #fff; border-radius: 16px;
+  padding: 22px 28px;
+  display: grid; grid-template-columns: repeat(4, 1fr);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 14px 16px;
 }
-.collab-label {
-  font-weight: 600;
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text3);
-  margin-bottom: 6px;
-}
-.collab-note {
-  font-size: 12px;
-  color: var(--text2);
-  line-height: 1.7;
+.badge-item { display: flex; align-items: center; gap: 12px; padding: 0 16px; border-right: 1px solid var(--border); }
+.badge-item:first-child { padding-left: 0; }
+.badge-item:last-child { border-right: none; padding-right: 0; }
+.badge-icon { width: 38px; height: 38px; background: var(--tag-bg); border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.badge-title { font-size: 13px; font-weight: 800; color: var(--dark); }
+.badge-sub { font-size: 11px; color: var(--text3); margin-top: 2px; font-weight: 600; }
+@media (max-width:700px) {
+  .badges-inner { grid-template-columns: repeat(2,1fr); }
+  .badge-item { border-right: none; border-bottom: 1px solid var(--border); padding: 12px 0; }
+  .badge-item:nth-child(3), .badge-item:nth-child(4) { border-bottom: none; }
 }
 
-/* Toast */
-.toast {
-  position: fixed;
-  bottom: 32px;
-  left: 50%;
-  transform: translateX(-50%) translateY(12px);
-  background: var(--dark);
-  color: #fff;
-  font-weight: 600;
-  font-size: 13px;
-  padding: 10px 22px;
-  border-radius: var(--radius-pill);
-  opacity: 0;
-  pointer-events: none;
-  transition: all 0.3s var(--ease);
-  z-index: 9000;
+/* ── 公共 SECTION ── */
+.section { max-width: 1140px; margin: 0 auto; padding: 0 var(--pad) 48px; }
+@media (max-width:1023px) { .section, .feature-badges, .product-section { padding-left: 20px; padding-right: 20px; } .breadcrumb { padding-left: 20px; padding-right: 20px; } }
+.section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.section-title { font-size: 19px; font-weight: 900; color: var(--dark); }
+.see-more { font-size: 13px; color: var(--text3); display: flex; align-items: center; gap: 3px; transition: color .2s; font-weight: 700; }
+.see-more:hover { color: var(--accent); }
+
+/* ── 更多创意（作品横排） ── */
+.works-scroll-wrap { position: relative; }
+.works-scroll {
+  display: flex; gap: 12px;
+  overflow-x: auto; scrollbar-width: none;
+  padding-bottom: 4px;
+  scroll-behavior: smooth;
+}
+.works-scroll::-webkit-scrollbar { display: none; }
+.work-card {
+  flex-shrink: 0; width: 200px;
+  border-radius: 12px; overflow: hidden;
+  background: var(--bg2); cursor: pointer;
+  transition: transform .2s;
+  border: 1px solid var(--border);
+}
+.work-card:hover { transform: translateY(-3px); }
+.work-card-img {
+  width: 100%; aspect-ratio: 1;
+  background: var(--warm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px; overflow: hidden; position: relative;
+}
+.work-card-img img { width: 100%; height: 100%; object-fit: cover; }
+.work-card-body { padding: 10px 12px; background: #fff; }
+.work-card-title { font-size: 13px; font-weight: 700; color: var(--dark); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.work-card-author { font-size: 11px; color: var(--text3); margin-top: 2px; font-weight: 600; }
+.works-nav-btn {
+  position: absolute; top: 50%; transform: translateY(-60%);
+  width: 32px; height: 32px; border-radius: 50%;
+  background: #fff; border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; color: var(--text2); cursor: pointer; z-index: 5;
+  box-shadow: 0 2px 10px rgba(44,31,20,.1);
+  transition: all .2s;
+}
+.works-nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+.works-nav-btn.prev { left: -16px; }
+.works-nav-btn.next { right: -16px; }
+
+/* ── 三步流程 ── */
+.steps-wrapper { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: center; }
+@media (max-width:700px) { .steps-wrapper { grid-template-columns: 1fr; } }
+.steps-left { display: flex; align-items: center; }
+.step-item { flex: 1; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.step-img {
+  width: 100%; aspect-ratio: 1; border-radius: 12px;
+  background: var(--bg2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 38px; margin-bottom: 10px; overflow: hidden;
+}
+.step-img img { width: 100%; height: 100%; object-fit: cover; }
+.step-arrow { font-size: 22px; color: var(--accent); flex-shrink: 0; margin: 0 3px; padding-bottom: 28px; }
+.step-num {
+  width: 22px; height: 22px; background: var(--accent); color: #fff;
+  border-radius: 50%; font-size: 11px; font-weight: 900;
+  display: flex; align-items: center; justify-content: center; margin: 0 auto 5px;
+}
+.step-name { font-size: 13px; font-weight: 800; color: var(--dark); }
+.step-sub { font-size: 11px; color: var(--text3); margin-top: 2px; font-weight: 600; }
+.what-box { background: var(--bg2); border-radius: 16px; padding: 26px; display: flex; gap: 18px; align-items: flex-start; }
+.what-text h3 { font-size: 17px; font-weight: 900; color: var(--dark); margin-bottom: 9px; }
+.what-text p { font-size: 13px; color: var(--text2); line-height: 1.75; font-weight: 600; }
+.btn-learn {
+  margin-top: 14px; padding: 7px 18px;
+  background: var(--dark); color: #fff;
+  border-radius: 8px; font-size: 13px; font-weight: 700;
+  transition: background .2s;
+}
+.btn-learn:hover { background: var(--accent2); }
+.what-visual {
+  width: 90px; height: 90px; background: var(--warm);
+  border-radius: 12px; display: flex; align-items: center;
+  justify-content: center; font-size: 44px; flex-shrink: 0;
+  overflow: hidden;
+}
+.what-visual img { width: 100%; height: 100%; object-fit: cover; }
+
+/* ── 产品细节 ── */
+.details-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width:700px) { .details-layout { grid-template-columns: 1fr; } }
+.detail-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; }
+.detail-card { border-radius: 12px; overflow: hidden; background: var(--bg2); }
+.detail-img { aspect-ratio: 1; background: var(--warm); display: flex; align-items: center; justify-content: center; font-size: 34px; }
+.detail-img img { width: 100%; height: 100%; object-fit: cover; }
+.detail-info { padding: 9px 11px; }
+.detail-name { font-size: 13px; font-weight: 800; color: var(--dark); }
+.detail-sub { font-size: 11px; color: var(--text3); margin-top: 2px; font-weight: 600; line-height: 1.5; }
+.specs-table { background: #fff; border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
+.spec-row { display: flex; border-bottom: 1px solid var(--border); padding: 9px 14px; gap: 10px; }
+.spec-row:last-child { border-bottom: none; }
+.spec-key { width: 80px; font-size: 12px; color: var(--text3); flex-shrink: 0; font-weight: 600; }
+.spec-val { font-size: 13px; color: var(--text); flex: 1; font-weight: 700; line-height: 1.6; }
+
+/* ── 场景卡 ── */
+.scenarios-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
+@media (max-width:700px) { .scenarios-grid { grid-template-columns: repeat(2,1fr); } }
+.scenario-card {
+  border-radius: 14px; overflow: hidden;
+  aspect-ratio: .85; cursor: pointer; position: relative;
+  transition: transform .2s;
+}
+.scenario-card:hover { transform: translateY(-4px); }
+.scenario-bg { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 56px; }
+.s1 { background: linear-gradient(145deg,#f4d5a8,#e8b870); }
+.s2 { background: linear-gradient(145deg,#d4c5a8,#b8a880); }
+.s3 { background: linear-gradient(145deg,#a8c5d4,#7ba8b8); }
+.s4 { background: linear-gradient(145deg,#c5a8d4,#a87bb8); }
+.scenario-overlay { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent,rgba(30,18,8,.7)); padding: 14px 13px 12px; }
+.scenario-name { font-size: 15px; font-weight: 900; color: #fff; }
+.scenario-sub { font-size: 11px; color: rgba(255,255,255,.8); margin-top: 2px; font-weight: 600; }
+
+/* ── 评价区 ── */
+.review-tags { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+.review-tag {
+  padding: 5px 13px; border-radius: 999px;
+  background: var(--bg2); border: 1px solid var(--border);
+  font-size: 12px; color: var(--text2); cursor: pointer;
+  transition: all .2s; font-weight: 700;
+}
+.review-tag:hover, .review-tag.active { background: var(--dark); color: #fff; border-color: var(--dark); }
+.reviews-layout { display: flex; gap: 28px; }
+.reviews-score { text-align: center; flex-shrink: 0; padding-right: 28px; border-right: 1px solid var(--border); }
+.score-big { font-size: 52px; font-weight: 900; color: var(--dark); line-height: 1; }
+.score-stars { font-size: 18px; color: var(--gold); margin: 4px 0; }
+.score-sub { font-size: 12px; color: var(--text3); font-weight: 600; }
+.reviews-list { flex: 1; display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
+@media (max-width:800px) { .reviews-list { grid-template-columns: 1fr 1fr; } .score-big { font-size: 38px; } }
+@media (max-width:500px) { .reviews-layout { flex-direction: column; } .reviews-score { border-right: none; padding-right: 0; border-bottom: 1px solid var(--border); padding-bottom: 16px; } .reviews-list { grid-template-columns: 1fr; } }
+.review-card { background: #fff; border-radius: 12px; padding: 14px; border: 1px solid var(--border); }
+.reviewer { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.reviewer-av {
+  width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; color: #fff; font-weight: 800; flex-shrink: 0;
+}
+.reviewer-name { font-size: 13px; font-weight: 700; color: var(--dark); }
+.review-stars { font-size: 12px; color: var(--gold); }
+.review-text { font-size: 12px; color: var(--text2); line-height: 1.65; font-weight: 600; }
+
+/* ── 粘性底栏 ── */
+.sticky-bar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: #fff; border-top: 1px solid var(--border);
+  padding: 10px var(--pad);
+  display: flex; align-items: center; gap: 16px;
+  z-index: 800; box-shadow: 0 -4px 20px rgba(44,31,20,.06);
+}
+@media (max-width:1023px) { .sticky-bar { padding: 10px 20px; } }
+.sticky-product { display: flex; align-items: center; gap: 11px; flex: 1; min-width: 0; }
+.sticky-thumb {
+  width: 46px; height: 46px; border-radius: 8px; flex-shrink: 0;
+  background: var(--bg2); display: flex; align-items: center; justify-content: center;
+  font-size: 22px; overflow: hidden;
+}
+.sticky-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.sticky-name { font-size: 13px; font-weight: 700; color: var(--dark); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.sticky-variant { font-size: 11px; color: var(--text3); font-weight: 600; }
+.sticky-price { font-size: 20px; font-weight: 900; color: var(--red); flex-shrink: 0; }
+.sticky-qty { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+.sticky-qty span { font-size: 13px; color: var(--text2); font-weight: 700; }
+.sticky-qty-num { width: 48px; text-align: center; border: 1px solid var(--border); border-radius: 6px; padding: 5px; font-size: 13px; font-family: var(--font); font-weight: 700; }
+.sticky-btns { display: flex; gap: 9px; flex-shrink: 0; }
+.sticky-cart {
+  padding: 9px 22px; background: #fff;
+  border: 2px solid var(--accent); color: var(--accent);
+  border-radius: 10px; font-size: 14px; font-weight: 800;
   white-space: nowrap;
+}
+.sticky-buy {
+  padding: 9px 22px; background: var(--dark);
+  border: 2px solid var(--dark); color: #fff;
+  border-radius: 10px; font-size: 14px; font-weight: 800;
+  white-space: nowrap;
+}
+@media (max-width:600px) {
+  .sticky-product { flex: 1; }
+  .sticky-qty, .sticky-price { display: none; }
+}
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 80px; left: 50%;
+  transform: translateX(-50%) translateY(12px);
+  background: var(--dark); color: #fff;
+  font-weight: 800; font-size: 13px;
+  padding: 10px 22px; border-radius: 999px;
+  opacity: 0; pointer-events: none;
+  transition: all .3s var(--ease); z-index: 9000; white-space: nowrap;
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 /* 加载状态 */
-.page-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 60vh;
-  font-size: 15px;
-  color: var(--text3);
-}
+.page-loading { display: flex; align-items: center; justify-content: center; min-height: 50vh; font-size: 15px; color: var(--text3); font-weight: 700; }
 
-/* ── 帧播放器 ── */
-.fp-wrap {
-  position: relative;
-  width: 100%; height: 100%;
-  overflow: hidden;
-  background: var(--dark);
-  display: flex; align-items: center; justify-content: center;
-}
-.fp-img { width: 100%; height: 100%; object-fit: contain; display: block; }
-.fp-bar {
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  background: rgba(44,31,20,0.7);
-  backdrop-filter: blur(10px);
-  pointer-events: all;
-}
-.fp-progress {
-  position: absolute;
-  top: 0; left: 0;
-  height: 3px;
-  background: var(--accent);
-  transition: none;
-  pointer-events: none;
-}
-.fp-bar-info {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 16px 4px;
-  pointer-events: none;
-}
-.fp-bar-meta { font-weight: 500; font-size: 10px; letter-spacing: 0.04em; color: rgba(255,255,255,0.5); }
-.fp-bar-controls {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 4px 20px 12px;
-}
-.fp-step-btn {
-  font-family: var(--font-sans);
-  font-weight: 600;
-  font-size: 12px;
-  letter-spacing: 0.04em;
-  padding: 0 20px;
-  height: 36px;
-  border-radius: var(--radius-pill);
-  border: 1.5px solid rgba(255,255,255,0.18);
-  background: rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.7);
-  cursor: pointer;
-  transition: all 0.15s;
-  min-width: 72px;
-}
-.fp-step-btn:hover:not(:disabled) { background: rgba(255,255,255,0.2); color: #fff; border-color: rgba(255,255,255,0.35); }
-.fp-step-btn:disabled { opacity: 0.25; cursor: not-allowed; }
-.fp-play-btn {
-  font-family: var(--font-sans);
-  font-size: 20px;
-  width: 50px; height: 50px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  transition: transform 0.2s var(--ease), opacity 0.2s;
-  flex-shrink: 0;
-  box-shadow: 0 4px 16px rgba(200,150,90,0.4);
-}
-.fp-play-btn:hover { transform: scale(1.1); opacity: 0.9; }
-.fp-play-btn:active { transform: scale(0.95); }
-
-/* Reveal 动画 */
-.reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.6s var(--ease), transform 0.6s var(--ease); }
-.reveal.on { opacity: 1; transform: none; }
-.d1 { transition-delay: 0.08s; }
-.d2 { transition-delay: 0.16s; }
-.d3 { transition-delay: 0.24s; }
-
-/* Footer */
-footer {
-  background: var(--dark);
-  color: rgba(255,255,255,0.4);
-  padding: 48px var(--pad-desk) 36px;
-}
-@media (max-width: 1023px) { footer { padding: 48px var(--pad-mobile) 36px; } }
-.foot-row {
-  max-width: 1100px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-@media (min-width: 640px) { .foot-row { flex-direction: row; align-items: center; justify-content: space-between; } }
-.foot-logo { font-family: var(--font-serif); font-weight: 600; font-size: 20px; color: #fff; }
-.foot-links { display: flex; gap: 24px; flex-wrap: wrap; }
-.foot-links a {
-  font-size: 13px;
-  color: rgba(255,255,255,0.35);
-  text-decoration: none;
-  transition: color 0.2s;
-}
+/* ── FOOTER ── */
+footer { background: var(--dark); color: rgba(255,255,255,.4); padding: 44px var(--pad) 100px; }
+@media (max-width:1023px) { footer { padding: 44px 20px 100px; } }
+.foot-inner { max-width: 1140px; margin: 0 auto; }
+.foot-row { display: flex; flex-direction: column; gap: 14px; }
+@media (min-width:640px) { .foot-row { flex-direction: row; align-items: center; justify-content: space-between; } }
+.foot-logo { font-weight: 900; font-size: 19px; color: #fff; }
+.foot-links { display: flex; gap: 22px; flex-wrap: wrap; }
+.foot-links a { font-weight: 700; font-size: 13px; color: rgba(255,255,255,.35); transition: color .2s; }
 .foot-links a:hover { color: #fff; }
-.foot-copy { max-width: 1100px; margin: 24px auto 0; font-size: 12px; }
+.foot-copy { font-weight: 700; font-size: 12px; margin-top: 22px; }
+
+/* Reveal */
+.reveal { opacity: 0; transform: translateY(18px); transition: opacity .55s var(--ease), transform .55s var(--ease); }
+.reveal.on { opacity: 1; transform: none; }
+.d1{transition-delay:.06s}.d2{transition-delay:.12s}.d3{transition-delay:.18s}.d4{transition-delay:.24s}
 </style>
 </head>
 <body>
 
-<!-- ── 导航栏（新版，保留 auth.js 依赖的 id/class） ── -->
-<nav class="nav">
+<!-- ── NAV ── -->
+<nav>
   <a href="index.html" class="nav-logo">
     <div class="nav-logo-icon">哞</div>
-    <span>哞屋 <span style="font-weight:400;font-size:13px;color:var(--text2)">MOWO</span></span>
+    哞屋 MOWO
   </a>
   <ul class="nav-links">
     <li><a href="about.html">关于我们</a></li>
@@ -497,178 +610,299 @@ footer {
     <li><a href="contact.html">联络我们</a></li>
   </ul>
   <div class="nav-right">
-    <!-- 购物车图标（登录后显示角标） -->
-    <div class="nav-icon-btn" onclick="location.href='cart.html'" title="购物车" id="navCartBtn" style="display:none">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-        <line x1="3" y1="6" x2="21" y2="6"/>
-        <path d="M16 10a4 4 0 0 1-8 0"/>
-      </svg>
-      <span class="nav-cart-badge" id="navCartCount" style="display:none">0</span>
+    <div class="nav-icon" onclick="location.href='showcase.html'" title="搜索">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
     </div>
-    <!-- 登录按钮 / 用户头像（auth.js 控制） -->
+    <div class="nav-icon" id="navCartIcon" onclick="location.href='cart.html'" title="购物车" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg>
+      <span class="nav-cart-dot" id="navCartCount" style="display:none">0</span>
+    </div>
     <button class="nav-login" id="navLoginBtn">登录</button>
-    <!-- 汉堡菜单 -->
-    <button class="burger" id="navBurger" aria-label="菜单">☰</button>
+    <button class="burger" id="navBurger">☰</button>
   </div>
 </nav>
 
-<!-- 移动菜单 -->
-<div class="mobile-menu" id="mobileMenu">
-  <a href="index.html">首页</a>
-  <a href="about.html">关于我们</a>
-  <a href="products.html">产品介绍</a>
-  <a href="showcase.html">画师联名</a>
-  <a href="customize-start.html">创作中心</a>
-  <a href="contact.html">联络我们</a>
-  <div class="mobile-menu-footer" id="mobileMenuFooter"></div>
+<!-- ── BREADCRUMB ── -->
+<div class="breadcrumb">
+  <a href="index.html">首页</a> ›
+  <a href="showcase.html">画师联名</a> ›
+  <span id="bcTitle">联名作品详情</span>
 </div>
 
-<!-- 面包屑 -->
-<div class="breadcrumb-wrap">
-  <a href="showcase.html" class="back-btn">
-    <span class="back-arrow">←</span>
-    <span>返回画师联名</span>
-  </a>
-</div>
-
-<!-- 内容区（JS 动态渲染） -->
-<div id="pageRoot">
+<!-- ── 产品主区域（JS 渲染后替换） ── -->
+<div id="productRoot">
   <div class="page-loading">加载中…</div>
+</div>
+
+<!-- ── 特性徽章（静态） ── -->
+<div class="feature-badges reveal">
+  <div class="badges-inner">
+    <div class="badge-item">
+      <div class="badge-icon">⚙️</div>
+      <div><div class="badge-title">纯机械驱动</div><div class="badge-sub">无需电池，手摇即可驱动</div></div>
+    </div>
+    <div class="badge-item">
+      <div class="badge-icon">✨</div>
+      <div><div class="badge-title">激发创造力</div><div class="badge-sub">从涂到动画，创意无限</div></div>
+    </div>
+    <div class="badge-item">
+      <div class="badge-icon">🪵</div>
+      <div><div class="badge-title">高品质木制</div><div class="badge-sub">激光切割，打磨光滑</div></div>
+    </div>
+    <div class="badge-item">
+      <div class="badge-icon">🎮</div>
+      <div><div class="badge-title">动手又好玩</div><div class="badge-sub">DIY 拼装，乐趣满满</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 更多创意 ── -->
+<div class="section reveal d1">
+  <div class="section-header">
+    <div class="section-title">更多创意</div>
+    <a href="showcase.html" class="see-more">查看更多作品 ›</a>
+  </div>
+  <div class="works-scroll-wrap">
+    <button class="works-nav-btn prev" id="worksScrollPrev" onclick="scrollWorks(-1)">‹</button>
+    <div class="works-scroll" id="worksScroll">
+      <!-- JS 渲染 -->
+      <div class="work-card"><div class="work-card-img"><div style="width:100%;height:100%;background:linear-gradient(135deg,#fde9cc,#f5c87a);display:flex;align-items:center;justify-content:center;font-size:40px">🐻</div></div><div class="work-card-body"><div class="work-card-title">小熊的日常</div><div class="work-card-author">@橘子味的夏天</div></div></div>
+      <div class="work-card"><div class="work-card-img"><div style="width:100%;height:100%;background:linear-gradient(135deg,#cce4fd,#7ac0f5);display:flex;align-items:center;justify-content:center;font-size:40px">🚀</div></div><div class="work-card-body"><div class="work-card-title">太空漫游</div><div class="work-card-author">@星际旅行家</div></div></div>
+      <div class="work-card"><div class="work-card-img"><div style="width:100%;height:100%;background:linear-gradient(135deg,#fdeece,#f5d27a);display:flex;align-items:center;justify-content:center;font-size:40px">🕺</div></div><div class="work-card-body"><div class="work-card-title">跳舞的小人</div><div class="work-card-author">@动感小子</div></div></div>
+      <div class="work-card"><div class="work-card-img"><div style="width:100%;height:100%;background:linear-gradient(135deg,#ccfdda,#7af5a3);display:flex;align-items:center;justify-content:center;font-size:40px">🦕</div></div><div class="work-card-body"><div class="work-card-title">小恐龙冒险</div><div class="work-card-author">@恐龙爱好者</div></div></div>
+      <div class="work-card"><div class="work-card-img"><div style="width:100%;height:100%;background:linear-gradient(135deg,#fdccf8,#f57aee);display:flex;align-items:center;justify-content:center;font-size:40px">🌸</div></div><div class="work-card-body"><div class="work-card-title">魔法时刻</div><div class="work-card-author">@魔法少女</div></div></div>
+    </div>
+    <button class="works-nav-btn next" id="worksScrollNext" onclick="scrollWorks(1)">›</button>
+  </div>
+</div>
+
+<!-- ── 三步开启动画之旅 ── -->
+<div class="section reveal d2">
+  <div class="section-header"><div class="section-title">三步开启动画之旅</div></div>
+  <div class="steps-wrapper">
+    <div class="steps-left">
+      <div class="step-item">
+        <div class="step-img">🗂️</div>
+        <div class="step-num">1</div>
+        <div class="step-name">插入卡片</div>
+        <div class="step-sub">将画好的卡片插入翻页夹</div>
+      </div>
+      <div class="step-arrow">›</div>
+      <div class="step-item">
+        <div class="step-img">🔄</div>
+        <div class="step-num">2</div>
+        <div class="step-name">转动手柄</div>
+        <div class="step-sub">匀速转动翻页手柄</div>
+      </div>
+      <div class="step-arrow">›</div>
+      <div class="step-item">
+        <div class="step-img">🎉</div>
+        <div class="step-num">3</div>
+        <div class="step-name">动画播放</div>
+        <div class="step-sub">享受你的创意动画</div>
+      </div>
+    </div>
+    <div class="what-box">
+      <div class="what-text">
+        <h3>什么是动盒子？</h3>
+        <p>动盒子是一款通过手摇驱动，让一张张画面动起来的机械动画机。灵感来自经典的翻页动画原理，每一次动作，都是一次创意的呈现。</p>
+        <button class="btn-learn" onclick="location.href='about.html'">了解更多</button>
+      </div>
+      <div class="what-visual">🎞️</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 产品细节 ── -->
+<div class="section reveal d3">
+  <div class="section-header"><div class="section-title">产品细节</div></div>
+  <div class="details-layout">
+    <div class="detail-grid">
+      <div class="detail-card">
+        <div class="detail-img">🪵</div>
+        <div class="detail-info"><div class="detail-name">优质木材</div><div class="detail-sub">环保木材，激光切割<br>结构精准牢固</div></div>
+      </div>
+      <div class="detail-card">
+        <div class="detail-img">📄</div>
+        <div class="detail-info"><div class="detail-name">顺滑翻页轴</div><div class="detail-sub">翻页流畅不卡顿<br>动画更流畅</div></div>
+      </div>
+      <div class="detail-card">
+        <div class="detail-img">🖐️</div>
+        <div class="detail-info"><div class="detail-name">舒适手柄</div><div class="detail-sub">人体工学设计<br>转动轻松不费力</div></div>
+      </div>
+      <div class="detail-card">
+        <div class="detail-img">✨</div>
+        <div class="detail-info"><div class="detail-name">精致工艺</div><div class="detail-sub">细节打磨光滑<br>质感满满</div></div>
+      </div>
+    </div>
+    <div class="specs-table" id="specsTable">
+      <div class="spec-row"><span class="spec-key">作品名称</span><span class="spec-val" id="specTitle">—</span></div>
+      <div class="spec-row"><span class="spec-key">动画帧数</span><span class="spec-val" id="specFrames">—</span></div>
+      <div class="spec-row"><span class="spec-key">机器材质</span><span class="spec-val">优质木材</span></div>
+      <div class="spec-row"><span class="spec-key">产品尺寸</span><span class="spec-val" id="specSize">多规格可选</span></div>
+      <div class="spec-row"><span class="spec-key">卡片材质</span><span class="spec-val" id="specMat">多材质可选</span></div>
+      <div class="spec-row"><span class="spec-key">适用年龄</span><span class="spec-val">8岁以上</span></div>
+      <div class="spec-row"><span class="spec-key">包装清单</span><span class="spec-val" id="specPack">动画机主体 ×1<br>联名卡片 ×N<br>说明书 ×1</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 适合各种场景 ── -->
+<div class="section reveal d4">
+  <div class="section-header"><div class="section-title">适合各种场景</div></div>
+  <div class="scenarios-grid">
+    <div class="scenario-card"><div class="scenario-bg s1">🎁</div><div class="scenario-overlay"><div class="scenario-name">创意礼物</div><div class="scenario-sub">送给爱创作的人，一份独特的心意</div></div></div>
+    <div class="scenario-card"><div class="scenario-bg s2">🖥️</div><div class="scenario-overlay"><div class="scenario-name">桌面摆件</div><div class="scenario-sub">精致小巧，点缀你的生活</div></div></div>
+    <div class="scenario-card"><div class="scenario-bg s3">🧩</div><div class="scenario-overlay"><div class="scenario-name">解压玩具</div><div class="scenario-sub">转动手柄，放松身心</div></div></div>
+    <div class="scenario-card"><div class="scenario-bg s4">📱</div><div class="scenario-overlay"><div class="scenario-name">视频创作</div><div class="scenario-sub">拍摄素材神器，记录创作瞬间</div></div></div>
+  </div>
+</div>
+
+<!-- ── 用户评价（静态占位） ── -->
+<div class="section reveal">
+  <div class="section-header">
+    <div class="section-title">用户评价（256）</div>
+    <a href="#" class="see-more">查看全部评价 ›</a>
+  </div>
+  <div class="review-tags">
+    <span class="review-tag active">做工精致 98</span>
+    <span class="review-tag">创意十足 86</span>
+    <span class="review-tag">孩子喜欢 72</span>
+    <span class="review-tag">包装精美 65</span>
+    <span class="review-tag">操作简单 53</span>
+  </div>
+  <div class="reviews-layout">
+    <div class="reviews-score">
+      <div class="score-big">4.9</div>
+      <div class="score-stars">★★★★★</div>
+      <div class="score-sub">基于 256 条评价</div>
+    </div>
+    <div class="reviews-list">
+      <div class="review-card">
+        <div class="reviewer"><div class="reviewer-av" style="background:linear-gradient(135deg,var(--warm),var(--accent))">小</div><div><div class="reviewer-name">@小树皮糖</div><div class="review-stars">★★★★★</div></div></div>
+        <p class="review-text">太有趣了！自己画的动画真的动，成就感爆棚！女儿也超级喜欢，推荐！</p>
+      </div>
+      <div class="review-card">
+        <div class="reviewer"><div class="reviewer-av" style="background:linear-gradient(135deg,#a8d4f5,#5a9fd4)">L</div><div><div class="reviewer-name">@Lemonade</div><div class="review-stars">★★★★★</div></div></div>
+        <p class="review-text">送给男朋友当生日礼物，他超级喜欢，每天在家个不停，送礼神器！</p>
+      </div>
+      <div class="review-card">
+        <div class="reviewer"><div class="reviewer-av" style="background:linear-gradient(135deg,#f5d4a8,#d4945a)">D</div><div><div class="reviewer-name">@DancingMan</div><div class="review-stars">★★★★★</div></div></div>
+        <p class="review-text">DIY 过程很有意思，和孩子一起完成的，亲子时光无价，强烈推荐！</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 粘性底栏 ── -->
+<div class="sticky-bar" id="stickyBar" style="display:none">
+  <div class="sticky-product">
+    <div class="sticky-thumb" id="stickyThumb">🎬</div>
+    <div>
+      <div class="sticky-name" id="stickyName">联名作品</div>
+      <div class="sticky-variant" id="stickyVariant">请选择规格</div>
+    </div>
+  </div>
+  <div class="sticky-price" id="stickyPrice">—</div>
+  <div class="sticky-qty">
+    <span>数量</span>
+    <input class="sticky-qty-num" type="number" id="stickyQty" value="1" min="1" max="99">
+  </div>
+  <div class="sticky-btns">
+    <button class="sticky-cart" onclick="addToCart()">加入购物车</button>
+    <button class="sticky-buy" onclick="buyNow()">立即购买</button>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
+<!-- ── FOOTER ── -->
 <footer>
-  <div class="foot-row">
-    <span class="foot-logo">哞屋 MOWO</span>
-    <div class="foot-links">
-      <a href="about.html">关于我们</a>
-      <a href="products.html">产品介绍</a>
-      <a href="showcase.html">画师联名</a>
-      <a href="customize-start.html">创作中心</a>
-      <a href="contact.html">联络我们</a>
+  <div class="foot-inner">
+    <div class="foot-row">
+      <span class="foot-logo">哞屋 MOWO</span>
+      <div class="foot-links">
+        <a href="about.html">关于我们</a>
+        <a href="products.html">产品介绍</a>
+        <a href="showcase.html">画师联名</a>
+        <a href="customize-start.html">创作中心</a>
+        <a href="contact.html">联络我们</a>
+      </div>
     </div>
+    <p class="foot-copy">© 2025 哞屋 MOWO. All rights reserved.</p>
   </div>
-  <p class="foot-copy">© 2025 哞屋 MOWO. All rights reserved.</p>
 </footer>
 
 <script src="../js/auth.js"></script>
 <script>
-/* ════════════════════════════════════════════════════════════
- * showcase-confirm-v2.html — 业务逻辑
- * 与原版 showcase-confirm.html 完全一致，仅样式系统已升级
- * 不修改此 <script> 内任何逻辑
- * ════════════════════════════════════════════════════════════ */
-const API = (location.hostname === '127.0.0.1' ? 'http://127.0.0.1:3001' : 'http://localhost:3001')
+/* ══════════════════════════════════════════════════════
+ * showcase-confirm-v2 · 业务逻辑
+ * ══════════════════════════════════════════════════════ */
+const API = location.hostname === '127.0.0.1' ? 'http://127.0.0.1:3001' : 'http://localhost:3001'
 const urlParams = new URLSearchParams(location.search)
 const workId = urlParams.get('workId')
 
-/* ── Demo 模拟数据（无 workId 时加载，用于样式预览） ── */
-const DEMO_DATA = {
-  id: 'demo',
-  title: '《会动的小猫咪》联名定制机',
+let workData = null, skuList = [], selectedSkuId = null
+let isLiked = false, likeCount = 0, isFollowing = false
+let currentSlide = 0, slides = []
+let selectedSize = null, selectedMat = null, qty = 1
+
+/* ── Demo 数据（无 workId 时用于样式预览） ── */
+const DEMO = {
+  id: 'demo', title: '《会动的小猫咪》联名定制机',
   description: '用 24 帧画出了一只在阳光下伸懒腰的橘猫，每一帧都是手绘，手摇动画机让它真的"动"起来了！',
-  animationFrames: [],
-  likeCount: 312,
-  isLiked: false,
+  animationFrames: [], likeCount: 312, isLiked: false,
   creatorId: 'demo-creator',
-  creator: {
-    nickname: '橘子味的夏天',
-    followerCount: 2800,
-    avatarUrl: null,
-  },
+  creator: { nickname: '橘子味的夏天', followerCount: 2800, avatarUrl: null },
   supportedSkus: [
-    { id: 'sku-1', size: '5x5cm', material: '哑光白卡', finalPrice: 199 },
-    { id: 'sku-2', size: '5x5cm', material: '镜面银卡', finalPrice: 239 },
-    { id: 'sku-3', size: '8x8cm', material: '哑光白卡', finalPrice: 259 },
-    { id: 'sku-4', size: '8x8cm', material: '镜面银卡', finalPrice: 299 },
-  ],
+    { id: 's1', size: '5×5 cm', material: '哑光白卡', finalPrice: 199 },
+    { id: 's2', size: '5×5 cm', material: '镜面银卡', finalPrice: 239 },
+    { id: 's3', size: '8×8 cm', material: '哑光白卡', finalPrice: 259 },
+    { id: 's4', size: '8×8 cm', material: '镜面银卡', finalPrice: 299 },
+  ]
 }
 
-let workData = null
-let skuList = []
-let selectedSkuId = null
-let currentSlide = 0
-let slides = []
-let isLiked = false
-let likeCount = 0
-let isFollowing = false
-
-/* ── Frame Player state ── */
-const FP = {
-  frames: [],
-  loaded: [],
-  idx: 0,
-  playing: false,
-  timer: null,
-  ready: false,
-}
-
-const FP_STEPS = [2, 4, 6, 8, 10, 13, 16, 20]
+/* ── 帧播放器 ── */
+const FP = { frames: [], idx: 0, playing: false, timer: null }
+const FP_STEPS = [2,4,6,8,10,13,16,20]
 let fpStepIdx = 4
-
-function fpCurrentFps() { return FP_STEPS[fpStepIdx] }
+const fpFps = () => FP_STEPS[fpStepIdx]
 
 function fpStart() {
   if (FP.timer) clearInterval(FP.timer)
   if (!FP.frames.length) return
-  FP.playing = true
-  FP.timer = setInterval(fpTick, Math.round(1000 / fpCurrentFps()))
-  const btn = document.getElementById('fpPlayBtn')
-  if (btn) btn.textContent = '⏸'
+  FP.playing = true; FP.timer = setInterval(fpTick, Math.round(1000/fpFps()))
+  const b = document.getElementById('fpPlayBtn'); if (b) b.textContent = '⏸'
 }
-
 function fpStop() {
-  clearInterval(FP.timer); FP.timer = null
-  FP.playing = false
-  const btn = document.getElementById('fpPlayBtn')
-  if (btn) btn.textContent = '▶'
+  clearInterval(FP.timer); FP.timer = null; FP.playing = false
+  const b = document.getElementById('fpPlayBtn'); if (b) b.textContent = '▶'
 }
-
 function fpToggle() { FP.playing ? fpStop() : fpStart() }
-
 function fpStepSpeed(dir) {
-  const next = Math.max(0, Math.min(FP_STEPS.length - 1, fpStepIdx + dir))
-  if (next === fpStepIdx) return
-  fpStepIdx = next
-  const lbl = document.getElementById('fpSpeedLabel')
-  if (lbl) lbl.textContent = fpCurrentFps()
-  const slower = document.getElementById('fpSlowerBtn')
-  const faster = document.getElementById('fpFasterBtn')
-  if (slower) slower.disabled = fpStepIdx <= 0
-  if (faster) faster.disabled = fpStepIdx >= FP_STEPS.length - 1
+  const n = Math.max(0, Math.min(FP_STEPS.length-1, fpStepIdx+dir))
+  if (n === fpStepIdx) return; fpStepIdx = n
+  const lbl = document.getElementById('fpSpeedLabel'); if (lbl) lbl.textContent = fpFps()
+  const sl = document.getElementById('fpSlowerBtn'), fa = document.getElementById('fpFasterBtn')
+  if (sl) sl.disabled = fpStepIdx <= 0; if (fa) fa.disabled = fpStepIdx >= FP_STEPS.length-1
   if (FP.playing) fpStart()
 }
-
 function fpTick() {
   if (!FP.frames.length) return
   FP.idx = (FP.idx + 1) % FP.frames.length
-  const img = document.getElementById('fpImg')
-  const bar = document.getElementById('fpProgress')
+  const img = document.getElementById('fpImg'), bar = document.getElementById('fpProgress')
   if (img) img.src = FP.frames[FP.idx]
-  if (bar) bar.style.width = ((FP.idx + 1) / FP.frames.length * 100) + '%'
+  if (bar) bar.style.width = ((FP.idx+1)/FP.frames.length*100)+'%'
 }
-
 function fpPreload(urls) {
-  FP.frames = urls; FP.loaded = []; FP.idx = 0
-  urls.forEach(url => { const i = new Image(); i.src = url; FP.loaded.push(i) })
-  const fpImg = document.getElementById('fpImg')
-  if (fpImg && urls.length) fpImg.src = urls[0]
-  FP.ready = true
+  FP.frames = urls; FP.idx = 0
+  urls.forEach(u => { const i = new Image(); i.src = u })
+  const img = document.getElementById('fpImg'); if (img && urls.length) img.src = urls[0]
 }
 
 /* ── Init ── */
 document.addEventListener('DOMContentLoaded', async () => {
-  if (!workId) {
-    // 无 workId：加载 demo 数据，用于样式预览
-    workData = DEMO_DATA
-    skuList = DEMO_DATA.supportedSkus
-    isLiked = DEMO_DATA.isLiked
-    likeCount = DEMO_DATA.likeCount
-    renderPage()
-    return
-  }
+  if (!workId) { workData = DEMO; skuList = DEMO.supportedSkus; isLiked = DEMO.isLiked; likeCount = DEMO.likeCount; renderPage(); return }
   await loadWork()
 })
 
@@ -679,11 +913,8 @@ async function loadWork() {
     const res = await fetch(`${API}/api/collab/works/${workId}`, { headers })
     const data = await res.json()
     if (!data.success) throw new Error(data.message || '作品不存在')
-    workData = data.data
-    skuList = workData.supportedSkus || []
-    isLiked = workData.isLiked || false
-    likeCount = workData.likeCount || 0
-
+    workData = data.data; skuList = workData.supportedSkus || []
+    isLiked = workData.isLiked || false; likeCount = workData.likeCount || 0
     if (token && workData.creatorId) {
       try {
         const fr = await fetch(`${API}/api/users/${workData.creatorId}/follow-status`, { headers })
@@ -691,72 +922,45 @@ async function loadWork() {
         if (fd.success) isFollowing = fd.data?.following ?? false
       } catch {}
     }
-
     renderPage()
-  } catch (e) {
-    document.getElementById('pageRoot').innerHTML =
-      `<div class="page-loading">${esc(e.message)}</div>`
+    loadMoreWorks()
+  } catch(e) {
+    document.getElementById('productRoot').innerHTML = `<div class="page-loading">${esc(e.message)}</div>`
   }
 }
 
-/* ── Render ── */
+/* ── 渲染产品主区域 ── */
 function renderPage() {
-  const w = workData
-  const creator = w.creator || {}
-  const creatorName = creator.nickname || '认证创作者'
-  const creatorInitial = creatorName.charAt(0)
-
-  slides = []
+  const w = workData, cr = w.creator || {}
   const frames = Array.isArray(w.animationFrames) ? w.animationFrames : []
-  slides.push({ type: 'player' })
+  const crName = cr.nickname || '认证创作者'
 
-  const exampleSeen = new Set()
-  ;(w.supportedSkus || []).forEach(s => {
-    (s.exampleMedia || []).forEach(url => {
-      if (!exampleSeen.has(url)) { exampleSeen.add(url); slides.push({ type: 'img', src: url }) }
-    })
-  })
+  // 面包屑
+  const bc = document.getElementById('bcTitle'); if (bc) bc.textContent = w.title || '联名作品'
 
-  if (frames.length) { fpPreload(frames) }
+  // 构建轮播 slides
+  slides = [{ type: 'player' }]
+  const seen = new Set()
+  ;(w.supportedSkus || []).forEach(s => (s.exampleMedia||[]).forEach(url => { if(!seen.has(url)){seen.add(url);slides.push({type:'img',src:url})} }))
 
-  const avatarHtml = creator.avatarUrl
-    ? `<img src="${esc(creator.avatarUrl)}" alt="avatar">`
-    : esc(creatorInitial)
+  if (frames.length) fpPreload(frames)
 
-  const minPrice = skuList.length
-    ? Math.min(...skuList.map(s => s.finalPrice ?? s.price ?? 0))
-    : null
-  const priceLabel = minPrice != null ? `¥${Number(minPrice).toFixed(0)}` : '询价'
+  // 计算价格
+  const minPrice = skuList.length ? Math.min(...skuList.map(s=>s.finalPrice??s.price??0)) : null
+  const basePrice = skuList.length ? Math.min(...skuList.map(s=>s.finalPrice??s.price??0)) : 0
 
-  let skuHtml = ''
-  if (skuList.length) {
-    const sizes = [...new Set(skuList.map(s => s.size).filter(Boolean))]
-    const materials = [...new Set(skuList.map(s => s.material).filter(Boolean))]
+  // SKU 分组
+  const sizes = [...new Set(skuList.map(s=>s.size).filter(Boolean))]
+  const mats = [...new Set(skuList.map(s=>s.material).filter(Boolean))]
 
-    if (sizes.length) skuHtml += `
-      <div class="sku-group">
-        <p class="section-label">尺寸规格</p>
-        <div class="sku-opts" id="sizeOpts">
-          ${sizes.map(sz => `<button class="sku-opt" data-dim="size" data-val="${esc(sz)}" onclick="selectDim('size','${esc(sz)}')">${esc(sz)}</button>`).join('')}
-        </div>
-      </div>`
-
-    if (materials.length) skuHtml += `
-      <div class="sku-group">
-        <p class="section-label">材质</p>
-        <div class="sku-opts" id="matOpts">
-          ${materials.map(m => `<button class="sku-opt" data-dim="mat" data-val="${esc(m)}" onclick="selectDim('mat','${esc(m)}')">${esc(m)}</button>`).join('')}
-        </div>
-      </div>`
-  }
-
+  // 帧播放器 HTML
   const fpHtml = frames.length > 0
     ? `<div class="fp-wrap">
         <img id="fpImg" class="fp-img" src="${esc(frames[0])}" alt="动画帧">
         <div class="fp-bar">
           <div class="fp-progress" id="fpProgress" style="width:0%"></div>
           <div class="fp-bar-info">
-            <span class="fp-bar-meta">© MOWOBOX · @${esc(creatorName)}</span>
+            <span class="fp-bar-meta">© MOWOBOX · @${esc(crName)}</span>
             <span class="fp-bar-meta"><span id="fpSpeedLabel">10</span> fps · ${frames.length} 帧</span>
           </div>
           <div class="fp-bar-controls">
@@ -768,312 +972,369 @@ function renderPage() {
       </div>`
     : `<div class="gallery-placeholder">🎨</div>`
 
-  document.getElementById('pageRoot').innerHTML = `
-  <div class="detail-wrap">
+  // 缩略图
+  const thumbsHtml = slides.map((s,i) => {
+    const ac = i===0?' active':''
+    if (s.type==='player') {
+      const src = frames[0] ? `<img src="${esc(frames[0])}" alt="">` : '<div class="thumb-placeholder">🎞️</div>'
+      return `<div class="thumb${ac}" onclick="goSlide(${i})">${src}</div>`
+    }
+    return `<div class="thumb${ac}" onclick="goSlide(${i})"><img src="${esc(s.src)}" alt="" loading="lazy"></div>`
+  }).join('')
+
+  // SKU 尺寸按钮
+  const sizeHtml = sizes.length ? `
+    <div class="option-section">
+      <div class="option-label">尺寸规格</div>
+      <div class="option-row">
+        ${sizes.map(sz => `<button class="option-btn" data-dim="size" data-val="${esc(sz)}" onclick="selectDim('size','${esc(sz)}')">
+          <div class="option-btn-thumb">📐</div>
+          <div><div class="option-btn-label">${esc(sz)}</div></div>
+        </button>`).join('')}
+      </div>
+    </div>` : ''
+
+  // 材质按钮（带价差）
+  const matHtml = mats.length ? `
+    <div class="option-section">
+      <div class="option-label">卡片材质</div>
+      <div class="option-row">
+        ${mats.map(m => {
+          const minForMat = Math.min(...skuList.filter(s=>s.material===m).map(s=>s.finalPrice??s.price??0))
+          const diff = minForMat - basePrice
+          const diffStr = diff > 0 ? `+¥${diff}` : ''
+          return `<button class="kit-btn" data-dim="mat" data-val="${esc(m)}" onclick="selectDim('mat','${esc(m)}')">
+            <div class="kit-btn-top"><span class="kit-name">${esc(m)}</span>${diffStr?`<span class="kit-plus">${diffStr}</span>`:''}</div>
+            <div class="kit-desc">${m.includes('镜面')?'高光银镜面，质感出众':'哑光纸面，颜色还原佳'}</div>
+          </button>`
+        }).join('')}
+      </div>
+    </div>` : ''
+
+  // 创作者头像
+  const avHtml = cr.avatarUrl ? `<img src="${esc(cr.avatarUrl)}" alt="">` : esc(crName.charAt(0))
+
+  document.getElementById('productRoot').innerHTML = `
+  <div class="product-section">
 
     <!-- 左：画廊 -->
-    <div class="detail-media reveal">
+    <div class="gallery reveal">
       <div class="gallery-main" id="galleryMain">
-        ${buildSlides(fpHtml)}
-        <button class="gallery-arrow gallery-arrow-prev${slides.length <= 1 ? ' hidden' : ''}" onclick="moveSlide(-1)">‹</button>
-        <button class="gallery-arrow gallery-arrow-next${slides.length <= 1 ? ' hidden' : ''}" onclick="moveSlide(1)">›</button>
-        ${slides.length > 1 ? `<div class="gallery-counter" id="galleryCounter">1 / ${slides.length}</div>` : ''}
+        ${slides.map((s,i)=>{
+          const ac=i===0?' active':''
+          if(s.type==='player') return `<div class="gallery-slide${ac}" style="position:absolute;inset:0;opacity:${i===0?1:0};transition:opacity .35s;pointer-events:${i===0?'all':'none'}">${fpHtml}</div>`
+          return `<div class="gallery-slide${ac}" style="position:absolute;inset:0;opacity:${i===0?1:0};transition:opacity .35s;pointer-events:${i===0?'all':'none'}"><img src="${esc(s.src)}" alt="" style="width:100%;height:100%;object-fit:contain;background:var(--dark)"></div>`
+        }).join('')}
+        <button class="gallery-arrow prev${slides.length<=1?' hidden':''}" onclick="moveSlide(-1)">‹</button>
+        <button class="gallery-arrow next${slides.length<=1?' hidden':''}" onclick="moveSlide(1)">›</button>
+        ${slides.length>1?`<div class="gallery-counter" id="galCounter">1 / ${slides.length}</div>`:''}
       </div>
-      <div class="gallery-thumbs" id="galleryThumbs">${buildThumbs(frames[0])}</div>
+      <div class="thumb-row">
+        <button class="thumb-arr" onclick="thumbsScroll(-1)">‹</button>
+        <div style="display:flex;gap:10px;overflow:hidden;flex:1" id="thumbsInner">${thumbsHtml}</div>
+        <button class="thumb-arr" onclick="thumbsScroll(1)">›</button>
+      </div>
     </div>
 
-    <!-- 右：详情 -->
-    <div class="detail-info">
+    <!-- 右：产品信息 -->
+    <div class="product-info reveal d1">
+      <div class="hot-tag">🔥 热销款</div>
+      <h1 class="product-title">${esc(w.title||'联名作品')}</h1>
+      <p class="product-subtitle">一张画，让它动起来</p>
 
       <!-- 创作者行 -->
-      <div class="author-row reveal d1">
-        <div class="author-av">${avatarHtml}</div>
-        <div class="author-meta">
-          <div class="author-handle">@${esc(creatorName)}</div>
-          <div class="author-stats">${fmtCount(creator.followerCount || 0)} 粉丝</div>
+      <div class="creator-row">
+        <div class="creator-av">${avHtml}</div>
+        <div>
+          <div class="creator-name">@${esc(crName)}</div>
+          <div class="creator-fans">${fmtCount(cr.followerCount||0)} 粉丝</div>
         </div>
-        <button class="follow-btn ${isFollowing ? 'following' : ''}" id="followBtn"
-          onclick="toggleFollow('${esc(w.creatorId)}')">
-          ${isFollowing ? '✓ 已关注' : '+ 关注'}
+        <button class="follow-btn ${isFollowing?'following':''}" id="followBtn" onclick="toggleFollow('${esc(w.creatorId||'')}')">
+          ${isFollowing?'✓ 已关注':'+ 关注'}
         </button>
       </div>
 
-      <!-- 标题 -->
-      <h1 class="work-title reveal d2">${esc(w.title || '联名作品')}</h1>
+      <!-- 评分 -->
+      <div class="rating-row">
+        <span class="stars">★★★★★</span>
+        <span class="rating-score">4.9</span>
+        <span class="rating-count">（256条评价）</span>
+        <span class="divider-v"></span>
+        <span class="sold">已售 1.2k+</span>
+      </div>
 
-      <!-- 数据行 -->
-      <div class="stats-row reveal d2">
-        <div class="stat-item">
-          <span class="stat-icon">🎞️</span>
-          <span class="stat-val">${frames.length}</span>
-          <span class="stat-lab">帧动画</span>
-        </div>
-        <button class="like-big ${isLiked ? 'liked' : ''}" id="likeBigBtn" onclick="toggleLike()">
-          <span class="like-big-icon">${isLiked ? '♥' : '♡'}</span>
-          <span id="likeBigCount">${fmtCount(likeCount)}</span>
+      <!-- 点赞 -->
+      <div class="like-row">
+        <button class="like-btn ${isLiked?'liked':''}" id="likeBigBtn" onclick="toggleLike()">
+          <span class="like-icon">${isLiked?'♥':'♡'}</span>
+          <span id="likeCount">${fmtCount(likeCount)}</span> 人喜欢
         </button>
+      </div>
+
+      <!-- 价格 -->
+      <div class="price-row">
+        <div class="price" id="priceDisplay">¥${minPrice!=null?Number(minPrice).toFixed(0):'—'}</div>
+        <div class="price-sub">含税 · 满99免运费 · 起售价，规格不同价格不同</div>
+      </div>
+
+      <!-- 信任条 -->
+      <div class="trust-row">
+        <div class="trust-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>7天无理由退换
+        </div>
+        <div class="trust-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>安全支付
+        </div>
+        <div class="trust-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><polygon points="16,8 20,8 23,11 23,16 16,16 16,8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>快速发货
+        </div>
       </div>
 
       <!-- 描述 -->
-      ${w.description ? `<p class="work-desc reveal d3">${esc(w.description)}</p>` : ''}
+      ${w.description?`<p class="work-desc">${esc(w.description)}</p>`:''}
 
-      <!-- SKU 选配 -->
-      ${skuHtml}
+      <!-- 尺寸选择 -->
+      ${sizeHtml}
 
-      <!-- CTA 区块 -->
-      <div class="cta-block reveal d3">
-        <div class="cta-price-row">
-          <span class="cta-price" id="ctaPrice">${priceLabel}</span>
-          <span class="cta-price-unit">起 · 含硬件</span>
-        </div>
-        <div class="cta-btns">
-          <button class="btn-cart" id="btnCart" onclick="addToCart()" ${skuList.length ? '' : 'disabled'}>
-            🛒 加入购物车
-          </button>
-          <button class="btn-buy" id="btnBuy" onclick="buyNow()" ${skuList.length ? '' : 'disabled'}>
-            立即购买
-          </button>
+      <!-- 材质选择 -->
+      ${matHtml}
+
+      <!-- 数量 -->
+      <div class="qty-row">
+        <span class="qty-label">数量</span>
+        <div class="qty-ctrl">
+          <button class="qty-btn" onclick="changeQty(-1)">−</button>
+          <input class="qty-num" id="qtyInput" type="number" value="1" min="1" max="99" onchange="qty=parseInt(this.value)||1">
+          <button class="qty-btn" onclick="changeQty(1)">+</button>
         </div>
       </div>
 
-      <!-- 联名说明 -->
-      <div class="collab-info reveal">
-        <p class="collab-label">关于联名</p>
-        <p class="collab-note">
-          购买此作品即直接支持创作者。创作者将在冷静期结束后获得销售分成。
-        </p>
+      <!-- 按钮 -->
+      <div class="btn-row">
+        <button class="btn-cart" id="btnCart" onclick="addToCart()" ${skuList.length?'':'disabled'}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg>
+          加入购物车
+        </button>
+        <button class="btn-buy" id="btnBuy" onclick="buyNow()" ${skuList.length?'':'disabled'}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>
+          立即购买
+        </button>
       </div>
-
+      <button class="btn-diy" onclick="location.href='customize-start.html'">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        去 DIY 创作动画
+      </button>
     </div>
   </div>`
 
-  requestAnimationFrame(() => {
-    document.querySelectorAll('.reveal').forEach(el => {
-      const obs = new IntersectionObserver(entries => {
-        entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('on'); obs.unobserve(e.target) } })
-      }, { threshold: 0.08 })
+  // 更新规格表
+  updateSpecs()
+
+  // 粘性底栏
+  const bar = document.getElementById('stickyBar'); if(bar) bar.style.display='flex'
+  const sn = document.getElementById('stickyName'); if(sn) sn.textContent = w.title||'联名作品'
+  const sp = document.getElementById('stickyPrice'); if(sp) sp.textContent = minPrice!=null?`¥${Number(minPrice).toFixed(0)}`:'—'
+  // 粘性底栏缩略图
+  if(frames.length){const st=document.getElementById('stickyThumb');if(st){st.innerHTML=`<img src="${esc(frames[0])}" style="width:100%;height:100%;object-fit:cover;">`;}}
+
+  // reveal 动画
+  requestAnimationFrame(()=>{
+    document.querySelectorAll('.reveal').forEach(el=>{
+      const obs=new IntersectionObserver(entries=>{
+        entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('on');obs.unobserve(e.target)}})
+      },{threshold:.06})
       obs.observe(el)
     })
   })
 }
 
-/* ── Gallery ── */
-function buildSlides(fpHtml) {
-  return slides.map((s, i) => {
-    const active = i === 0 ? ' active' : ''
-    if (s.type === 'player') return `<div class="gallery-slide${active}">${fpHtml}</div>`
-    return `<div class="gallery-slide${active}"><img src="${esc(s.src)}" alt="示例物料 ${i}" loading="lazy" style="width:100%;height:100%;object-fit:contain;background:var(--dark);"></div>`
-  }).join('')
-}
-
-function buildThumbs(firstFrameSrc) {
-  return slides.map((s, i) => {
-    const active = i === 0 ? ' active' : ''
-    if (s.type === 'player') {
-      const thumbSrc = firstFrameSrc ? `<img src="${esc(firstFrameSrc)}" alt="动画">` : '🎞️'
-      return `<div class="gallery-thumb${active}" onclick="goSlide(${i})" title="动画播放">${thumbSrc}</div>`
-    }
-    return `<div class="gallery-thumb${active}" onclick="goSlide(${i})"><img src="${esc(s.src)}" alt="示例 ${i}" loading="lazy"></div>`
-  }).join('')
-}
-
-function goSlide(idx) {
-  const all = document.querySelectorAll('.gallery-slide')
-  const thumbs = document.querySelectorAll('.gallery-thumb')
-  if (!all.length) return
-  all[currentSlide]?.classList.remove('active')
+/* ── 画廊切换 ── */
+function goSlide(idx){
+  const all=document.querySelectorAll('.gallery-slide')
+  const thumbs=document.querySelectorAll('.thumb')
+  if(!all.length)return
+  all[currentSlide].style.opacity='0'; all[currentSlide].style.pointerEvents='none'
   thumbs[currentSlide]?.classList.remove('active')
-  currentSlide = (idx + slides.length) % slides.length
-  all[currentSlide]?.classList.add('active')
+  currentSlide=(idx+slides.length)%slides.length
+  all[currentSlide].style.opacity='1'; all[currentSlide].style.pointerEvents='all'
   thumbs[currentSlide]?.classList.add('active')
-  const counter = document.getElementById('galleryCounter')
-  if (counter) counter.textContent = `${currentSlide + 1} / ${slides.length}`
+  const c=document.getElementById('galCounter'); if(c) c.textContent=`${currentSlide+1} / ${slides.length}`
 }
-
-function moveSlide(dir) { goSlide(currentSlide + dir) }
+function moveSlide(dir){goSlide(currentSlide+dir)}
+function thumbsScroll(dir){
+  const el=document.getElementById('thumbsInner'); if(el) el.scrollLeft+=dir*90
+}
 
 /* ── SKU 选配 ── */
-let selectedSize = null
-let selectedMat = null
-
-function selectDim(dim, val) {
-  if (dim === 'size') {
-    selectedSize = val
-    document.querySelectorAll('[data-dim="size"]').forEach(b => b.classList.toggle('selected', b.dataset.val === val))
-  } else {
-    selectedMat = val
-    document.querySelectorAll('[data-dim="mat"]').forEach(b => b.classList.toggle('selected', b.dataset.val === val))
-  }
+function selectDim(dim, val){
+  if(dim==='size') selectedSize=val
+  else selectedMat=val
+  document.querySelectorAll(`[data-dim="${dim}"]`).forEach(b=>b.classList.toggle('active',b.dataset.val===val))
+  document.querySelectorAll(`[data-dim="${dim}"]`).forEach(b=>{
+    if(b.classList.contains('option-btn')) b.classList.toggle('active',b.dataset.val===val)
+    if(b.classList.contains('kit-btn')) b.classList.toggle('active',b.dataset.val===val)
+  })
   matchSku()
 }
 
-function matchSku() {
-  const matched = skuList.find(s => {
-    const sizeOk = !selectedSize || s.size === selectedSize
-    const matOk = !selectedMat || s.material === selectedMat
-    return sizeOk && matOk
+function matchSku(){
+  const m=skuList.find(s=>{
+    const ok1=!selectedSize||s.size===selectedSize
+    const ok2=!selectedMat||s.material===selectedMat
+    return ok1&&ok2
   })
-  selectedSkuId = matched?.id || null
-
-  if (matched) {
-    const finalPrice = matched.finalPrice ?? matched.price ?? 0
-    const el = document.getElementById('ctaPrice')
-    if (el) el.textContent = `¥${Number(finalPrice).toFixed(0)}`
+  selectedSkuId=m?.id||null
+  if(m){
+    const p=m.finalPrice??m.price??0
+    const el=document.getElementById('priceDisplay'); if(el) el.textContent=`¥${Number(p).toFixed(0)}`
+    const sp=document.getElementById('stickyPrice'); if(sp) sp.textContent=`¥${Number(p).toFixed(0)}`
   }
-
-  const hasChoice = skuList.length > 0
-  const ready = !hasChoice || selectedSkuId
-  const btnCart = document.getElementById('btnCart')
-  const btnBuy = document.getElementById('btnBuy')
-  if (btnCart) btnCart.disabled = !ready
-  if (btnBuy) btnBuy.disabled = !ready
+  const parts=[]
+  if(selectedSize) parts.push(selectedSize)
+  if(selectedMat) parts.push(selectedMat)
+  const sv=document.getElementById('stickyVariant'); if(sv) sv.textContent=parts.length?parts.join(' · '):'请选择规格'
+  const ready=!skuList.length||selectedSkuId
+  const bc=document.getElementById('btnCart'), bb=document.getElementById('btnBuy')
+  if(bc) bc.disabled=!ready; if(bb) bb.disabled=!ready
+  updateSpecs()
 }
 
+function updateSpecs(){
+  const w=workData; if(!w)return
+  const frames=Array.isArray(w.animationFrames)?w.animationFrames:[]
+  const el=n=>document.getElementById(n)
+  if(el('specTitle')) el('specTitle').textContent=w.title||'—'
+  if(el('specFrames')) el('specFrames').textContent=frames.length?`${frames.length} 帧`:'—'
+  if(el('specSize')&&selectedSize) el('specSize').textContent=selectedSize
+  if(el('specMat')&&selectedMat) el('specMat').textContent=selectedMat
+  if(el('specPack')&&frames.length) el('specPack').innerHTML=`动画机主体 ×1<br>联名卡片 ×${frames.length}<br>说明书 ×1`
+}
+
+/* ── 数量 ── */
+function changeQty(d){
+  const input=document.getElementById('qtyInput'); if(!input)return
+  let v=parseInt(input.value)+d
+  v=Math.max(1,Math.min(99,v)); input.value=v; qty=v
+  const sq=document.getElementById('stickyQty'); if(sq) sq.value=v
+}
+document.getElementById('stickyQty')?.addEventListener('change',function(){qty=parseInt(this.value)||1;const qi=document.getElementById('qtyInput');if(qi)qi.value=qty})
+
 /* ── 点赞 ── */
-async function toggleLike() {
-  const token = localStorage.getItem('mowo_token')
-  if (!token) { if (typeof openAuthModal === 'function') openAuthModal(); return }
-
-  isLiked = !isLiked
-  likeCount = isLiked ? likeCount + 1 : Math.max(0, likeCount - 1)
-  const btn = document.getElementById('likeBigBtn')
-  const countEl = document.getElementById('likeBigCount')
-  if (btn) {
-    btn.classList.toggle('liked', isLiked)
-    btn.querySelector('.like-big-icon').textContent = isLiked ? '♥' : '♡'
-  }
-  if (countEl) countEl.textContent = fmtCount(likeCount)
-
-  try {
-    await fetch(`${API}/api/collab/works/${workId}/like`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` }
-    })
-  } catch {
-    isLiked = !isLiked
-    likeCount = isLiked ? likeCount + 1 : Math.max(0, likeCount - 1)
-    if (btn) {
-      btn.classList.toggle('liked', isLiked)
-      btn.querySelector('.like-big-icon').textContent = isLiked ? '♥' : '♡'
-    }
-    if (countEl) countEl.textContent = fmtCount(likeCount)
+async function toggleLike(){
+  const token=localStorage.getItem('mowo_token')
+  if(!token){if(typeof openAuthModal==='function')openAuthModal();return}
+  isLiked=!isLiked; likeCount=isLiked?likeCount+1:Math.max(0,likeCount-1)
+  const btn=document.getElementById('likeBigBtn'),cnt=document.getElementById('likeCount')
+  if(btn){btn.classList.toggle('liked',isLiked);btn.querySelector('.like-icon').textContent=isLiked?'♥':'♡'}
+  if(cnt)cnt.textContent=fmtCount(likeCount)
+  try{
+    await fetch(`${API}/api/collab/works/${workId}/like`,{method:'POST',headers:{Authorization:`Bearer ${token}`}})
+  }catch{
+    isLiked=!isLiked;likeCount=isLiked?likeCount+1:Math.max(0,likeCount-1)
+    if(btn){btn.classList.toggle('liked',isLiked);btn.querySelector('.like-icon').textContent=isLiked?'♥':'♡'}
+    if(cnt)cnt.textContent=fmtCount(likeCount)
   }
 }
 
 /* ── 关注 ── */
-async function toggleFollow(creatorId) {
-  const token = localStorage.getItem('mowo_token')
-  if (!token) { if (typeof openAuthModal === 'function') openAuthModal(); return }
-
-  const btn = document.getElementById('followBtn')
-  const prev = isFollowing
-  isFollowing = !isFollowing
-  if (btn) {
-    btn.classList.toggle('following', isFollowing)
-    btn.textContent = isFollowing ? '✓ 已关注' : '+ 关注'
-  }
-
-  try {
-    const res = await fetch(`${API}/api/users/${creatorId}/follow`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    const data = await res.json()
-    if (!data.success) throw new Error()
-    isFollowing = data.following ?? isFollowing
-    if (btn) {
-      btn.classList.toggle('following', isFollowing)
-      btn.textContent = isFollowing ? '✓ 已关注' : '+ 关注'
-    }
-    showToast(isFollowing ? '已关注创作者' : '已取消关注')
-  } catch {
-    isFollowing = prev
-    if (btn) {
-      btn.classList.toggle('following', isFollowing)
-      btn.textContent = isFollowing ? '✓ 已关注' : '+ 关注'
-    }
+async function toggleFollow(creatorId){
+  const token=localStorage.getItem('mowo_token')
+  if(!token){if(typeof openAuthModal==='function')openAuthModal();return}
+  const btn=document.getElementById('followBtn'), prev=isFollowing
+  isFollowing=!isFollowing
+  if(btn){btn.classList.toggle('following',isFollowing);btn.textContent=isFollowing?'✓ 已关注':'+ 关注'}
+  try{
+    const res=await fetch(`${API}/api/users/${creatorId}/follow`,{method:'POST',headers:{Authorization:`Bearer ${token}`}})
+    const data=await res.json(); if(!data.success)throw new Error()
+    isFollowing=data.following??isFollowing
+    if(btn){btn.classList.toggle('following',isFollowing);btn.textContent=isFollowing?'✓ 已关注':'+ 关注'}
+    showToast(isFollowing?'已关注创作者':'已取消关注')
+  }catch{
+    isFollowing=prev
+    if(btn){btn.classList.toggle('following',isFollowing);btn.textContent=isFollowing?'✓ 已关注':'+ 关注'}
   }
 }
 
 /* ── 购物车 ── */
-async function addToCart() {
-  const token = localStorage.getItem('mowo_token')
-  if (!token) {
-    const cart = JSON.parse(localStorage.getItem('mowo_guest_cart') || '[]')
-    const exists = cart.find(i => i.contentId === workId && i.hardwareSkuId === (selectedSkuId || ''))
-    if (exists) { exists.quantity++ } else {
-      cart.push({ contentId: workId, hardwareSkuId: selectedSkuId || '', itemType: 'MARKET', title: workData?.title || '联名作品', quantity: 1 })
-    }
-    localStorage.setItem('mowo_guest_cart', JSON.stringify(cart))
-    showToast('🛒 已加入购物车（登录后可结算）')
-    return
+async function addToCart(){
+  const token=localStorage.getItem('mowo_token')
+  if(!token){
+    const cart=JSON.parse(localStorage.getItem('mowo_guest_cart')||'[]')
+    const ex=cart.find(i=>i.contentId===workId&&i.hardwareSkuId===(selectedSkuId||''))
+    if(ex)ex.quantity+=qty
+    else cart.push({contentId:workId,hardwareSkuId:selectedSkuId||'',itemType:'MARKET',title:workData?.title||'联名作品',quantity:qty})
+    localStorage.setItem('mowo_guest_cart',JSON.stringify(cart))
+    showToast('🛒 已加入购物车（登录后可结算）'); return
   }
-
-  if (!selectedSkuId && skuList.length > 0) { showToast('请先选择规格'); return }
-  const skuId = selectedSkuId || skuList[0]?.id
-  if (!skuId) { showToast('暂无可用规格'); return }
-
-  const btn = document.getElementById('btnCart')
-  if (btn) btn.disabled = true
-  try {
-    const res = await fetch(`${API}/api/cart/add`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ itemType: 'MARKET', contentId: workId, hardwareSkuId: skuId, quantity: 1 })
-    })
-    const data = await res.json()
-    if (!data.success) throw new Error(data.message || '加入失败')
+  if(!selectedSkuId&&skuList.length>0){showToast('请先选择规格');return}
+  const skuId=selectedSkuId||skuList[0]?.id
+  if(!skuId){showToast('暂无可用规格');return}
+  const btn=document.getElementById('btnCart'); if(btn)btn.disabled=true
+  try{
+    const res=await fetch(`${API}/api/cart/add`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},body:JSON.stringify({itemType:'MARKET',contentId:workId,hardwareSkuId:skuId,quantity:qty})})
+    const data=await res.json(); if(!data.success)throw new Error(data.message||'加入失败')
     showToast('🛒 已加入购物车')
-  } catch (e) {
-    showToast(e.message || '加入购物车失败')
-  } finally {
-    if (btn) btn.disabled = false
-  }
+  }catch(e){showToast(e.message||'加入购物车失败')}
+  finally{if(btn)btn.disabled=false}
 }
 
 /* ── 立即购买 ── */
-async function buyNow() {
-  const token = localStorage.getItem('mowo_token')
-  if (!token) { window.location.href = './cart.html'; return }
-  if (!selectedSkuId && skuList.length > 0) { showToast('请先选择规格'); return }
-  const skuId = selectedSkuId || skuList[0]?.id
-  if (!skuId) { showToast('暂无可用规格'); return }
-
-  const btn = document.getElementById('btnBuy')
-  if (btn) btn.disabled = true
-  try {
-    const res = await fetch(`${API}/api/cart/add`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ itemType: 'MARKET', contentId: workId, hardwareSkuId: skuId, quantity: 1 })
-    })
-    const data = await res.json()
-    if (!data.success) throw new Error(data.message || '操作失败')
-    sessionStorage.setItem('mowo_checkout_items', JSON.stringify([data.data.id]))
-    window.location.href = './checkout.html'
-  } catch (e) {
-    showToast(e.message || '操作失败，请重试')
-    if (btn) btn.disabled = false
-  }
+async function buyNow(){
+  const token=localStorage.getItem('mowo_token')
+  if(!token){window.location.href='./cart.html';return}
+  if(!selectedSkuId&&skuList.length>0){showToast('请先选择规格');return}
+  const skuId=selectedSkuId||skuList[0]?.id
+  if(!skuId){showToast('暂无可用规格');return}
+  const btn=document.getElementById('btnBuy'); if(btn)btn.disabled=true
+  try{
+    const res=await fetch(`${API}/api/cart/add`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},body:JSON.stringify({itemType:'MARKET',contentId:workId,hardwareSkuId:skuId,quantity:qty})})
+    const data=await res.json(); if(!data.success)throw new Error(data.message||'操作失败')
+    sessionStorage.setItem('mowo_checkout_items',JSON.stringify([data.data.id]))
+    window.location.href='./checkout.html'
+  }catch(e){showToast(e.message||'操作失败，请重试');if(btn)btn.disabled=false}
 }
+
+/* ── 更多创意（从 API 加载） ── */
+async function loadMoreWorks(){
+  try{
+    const token=localStorage.getItem('mowo_token')||''
+    const headers=token?{Authorization:`Bearer ${token}`}:{}
+    const res=await fetch(`${API}/api/collab/works?limit=10&status=on_shelf`,{headers})
+    const data=await res.json(); if(!data.success||!data.data?.items?.length)return
+    const items=data.data.items.filter(i=>i.id!==workId).slice(0,8)
+    if(!items.length)return
+    const scroll=document.getElementById('worksScroll'); if(!scroll)return
+    scroll.innerHTML=items.map(item=>{
+      const cover=item.coverUrl?`<img src="${esc(item.coverUrl)}" alt="" onerror="this.style.display='none'">`:`<div style="width:100%;height:100%;background:linear-gradient(135deg,var(--warm),var(--bg2));display:flex;align-items:center;justify-content:center;font-size:36px">🎨</div>`
+      const cr=item.creator?.nickname||'创作者'
+      return `<div class="work-card" onclick="location.href='showcase-confirm-v2.html?workId=${esc(item.id)}'">
+        <div class="work-card-img">${cover}</div>
+        <div class="work-card-body">
+          <div class="work-card-title">${esc(item.title||'联名作品')}</div>
+          <div class="work-card-author">@${esc(cr)}</div>
+        </div>
+      </div>`
+    }).join('')
+  }catch{}
+}
+
+/* ── 横向滚动 ── */
+function scrollWorks(dir){
+  const el=document.getElementById('worksScroll'); if(el) el.scrollLeft+=dir*220
+}
+
+/* ── 评价标签 ── */
+document.querySelectorAll('.review-tag').forEach(t=>{
+  t.addEventListener('click',function(){document.querySelectorAll('.review-tag').forEach(x=>x.classList.remove('active'));this.classList.add('active')})
+})
 
 /* ── 工具函数 ── */
-function showToast(msg, ms = 2500) {
-  const el = document.getElementById('toast')
-  el.textContent = msg
-  el.classList.add('show')
-  setTimeout(() => el.classList.remove('show'), ms)
+function showToast(msg,ms=2500){
+  const el=document.getElementById('toast'); el.textContent=msg
+  el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),ms)
 }
-
-function fmtCount(n) {
-  if (!n) return '0'
-  return n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : String(n)
-}
-
-function esc(s) {
-  if (!s) return ''
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')
-}
+function fmtCount(n){if(!n)return'0';return n>=1000?(n/1000).toFixed(1).replace(/\.0$/,'')+'k':String(n)}
+function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 </script>
 </body>
 </html>
