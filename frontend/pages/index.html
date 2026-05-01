@@ -36,21 +36,36 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 
 /* ===== Hero ===== */
 .hero{
-  background:linear-gradient(135deg,#f5c947 0%,#f7d36a 55%,#f8dc88 100%);
-  padding:0;overflow:hidden;position:relative;
+  position:relative;overflow:hidden;
+  min-height:540px;display:flex;align-items:center;
 }
-.hero-inner{
-  display:grid;
-  grid-template-columns:1fr 1.15fr;
-  align-items:center;
-  min-height:500px;
+/* 背景图层 */
+.hero-bg{
+  position:absolute;inset:0;
 }
+.hero-bg img{
+  width:100%;height:100%;object-fit:cover;object-position:center right;
+  display:block;
+}
+/* 渐变遮罩：左侧不透明→右侧渐隐 */
+.hero-overlay{
+  position:absolute;inset:0;
+  background:linear-gradient(to right,
+    rgba(245,195,60,.97) 0%,
+    rgba(247,210,80,.90) 38%,
+    rgba(248,220,100,.65) 58%,
+    rgba(248,225,110,.10) 78%,
+    transparent 100%);
+}
+/* 文字区（浮于图片上） */
 .hero-text{
-  padding:80px 48px 80px 80px;
+  position:relative;z-index:1;
+  padding:80px 0 80px 80px;
+  max-width:560px;
 }
 .hero-text h1{
-  font-size:58px;font-weight:800;line-height:1.1;
-  letter-spacing:-.02em;color:var(--text);margin-bottom:14px;
+  font-size:60px;font-weight:800;line-height:1.08;
+  letter-spacing:-.025em;color:var(--text);margin-bottom:14px;
 }
 .hero-sub{color:#5a4428;font-size:15px;margin-bottom:40px;letter-spacing:.04em}
 .hero-cta{
@@ -62,16 +77,6 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 }
 .hero-cta:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(44,31,20,.3)}
 .hero-cta svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.2}
-.hero-img{
-  height:100%;min-height:500px;
-  position:relative;overflow:hidden;
-  display:flex;align-items:center;justify-content:flex-end;
-}
-.hero-img img{
-  width:100%;height:100%;object-fit:cover;
-  object-position:left center;
-  border-radius: 0;
-}
 
 /* ===== 通用 section ===== */
 section{padding:72px 0}
@@ -106,9 +111,10 @@ section{padding:72px 0}
 }
 .style-img img{width:100%;height:100%;object-fit:cover;transition:transform .4s var(--ease)}
 .style-card:hover .style-img img{transform:scale(1.04)}
-.style-body{padding:18px 18px 20px;display:flex;flex-direction:column;gap:12px}
+.style-body{padding:18px 18px 20px;display:flex;flex-direction:column;flex:1;gap:10px}
 .style-name{font-size:15px;font-weight:600}
-.style-meta{font-size:12px;color:var(--text-soft);line-height:1.5}
+.style-meta{font-size:12px;color:var(--text-soft);line-height:1.4;flex:1}
+.style-more{margin-top:auto}
 .style-more{
   display:flex;align-items:center;justify-content:center;gap:6px;
   padding:11px 0;background:#2c1f14;color:#fce2b3;
@@ -182,16 +188,37 @@ section{padding:72px 0}
 .creative-meta strong{display:block;font-size:13px;font-weight:600;margin-bottom:2px}
 .creative-meta span{font-size:11px;opacity:.72}
 
-/* ===== 用户评价 ===== */
-.reviews-wrap{background:var(--bg-card);border-radius:24px;padding:60px 52px}
-.reviews-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:22px;margin-top:32px}
-.review-card{background:#fff;border-radius:14px;padding:28px;display:flex;flex-direction:column;gap:14px}
-.review-quote::before{content:'"';color:var(--accent);font-size:40px;font-weight:700;line-height:.8;display:block;margin-bottom:8px}
-.review-quote{font-size:14px;line-height:1.8;color:var(--text)}
-.review-user{display:flex;align-items:center;gap:12px;padding-top:14px;border-top:1px solid var(--line)}
-.review-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-deep));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;flex-shrink:0}
-.review-name{font-size:13px;font-weight:600}
-.review-tag{font-size:11.5px;color:var(--text-soft);margin-top:2px}
+/* ===== 用户评价 — 高端独立站风格 ===== */
+.reviews-section{padding:96px 0;background:#2c1f14}
+.reviews-section .sec-title{color:#fce2b3}
+.reviews-section .sec-head{margin-bottom:0}
+.reviews-eyebrow{
+  font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:12px;display:block;
+}
+.reviews-headline{font-size:42px;font-weight:700;color:#fce2b3;line-height:1.15;margin-bottom:56px}
+.reviews-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:rgba(252,226,179,.1)}
+.review-card{
+  padding:40px 36px;background:#2c1f14;
+  display:flex;flex-direction:column;gap:0;
+  transition:background .25s;
+}
+.review-card:hover{background:#3a2a1c}
+.review-stars{display:flex;gap:3px;margin-bottom:22px}
+.review-stars svg{width:14px;height:14px;fill:#f5c947;stroke:none}
+.review-quote{
+  font-size:15px;line-height:1.85;color:rgba(252,226,179,.88);
+  flex:1;margin-bottom:32px;font-style:italic;
+}
+.review-author{display:flex;align-items:center;gap:14px;padding-top:24px;border-top:1px solid rgba(252,226,179,.12)}
+.review-avatar{
+  width:42px;height:42px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,var(--accent),var(--accent-deep));
+  color:#fff;display:flex;align-items:center;justify-content:center;
+  font-weight:700;font-size:14px;letter-spacing:0;
+}
+.review-name{font-size:13.5px;font-weight:700;color:#fce2b3}
+.review-tag{font-size:11.5px;color:rgba(252,226,179,.5);margin-top:3px}
 
 /* ===== 保障行 ===== */
 .trust{background:var(--bg-trust);padding:52px 0}
@@ -233,29 +260,30 @@ footer{background:#1a1410;color:#a99a82;padding:28px 0}
 /* ===== 响应式 ===== */
 @media (max-width:1100px){
   .container{padding:0 32px}
-  .hero-text{padding:64px 40px 64px 56px}
+  .hero-text{padding:64px 40px 64px 48px}
   .hero-text h1{font-size:48px}
   .styles-grid{grid-template-columns:repeat(2,1fr)}
   .creative-grid{grid-template-columns:repeat(2,1fr)}
   .features-grid,.trust-grid{grid-template-columns:repeat(2,1fr)}
   .what-box{grid-template-columns:1fr;padding:44px;gap:36px}
-  .reviews-wrap{padding:48px 36px}
+  .reviews-grid{grid-template-columns:1fr}
 }
 @media (max-width:760px){
   .container{padding:0 20px}
-  .hero-inner{grid-template-columns:1fr}
-  .hero-img{display:none}
-  .hero-text{padding:44px 24px 52px}
-  .hero-text h1{font-size:36px}
+  .hero{min-height:420px}
+  .hero-text{padding:48px 0 56px}
+  .hero-text h1{font-size:34px}
+  .hero-overlay{background:linear-gradient(to right,rgba(245,195,60,.97) 0%,rgba(247,210,80,.94) 55%,rgba(248,220,100,.75) 100%)}
   section{padding:48px 0}
   .sec-title{font-size:22px}
-  .styles-grid,.creative-grid{grid-template-columns:repeat(2,1fr);gap:14px}
-  .features-grid{grid-template-columns:1fr 1fr;gap:18px}
-  .trust-grid{grid-template-columns:1fr 1fr;gap:18px}
+  .styles-grid,.creative-grid{grid-template-columns:repeat(2,1fr);gap:12px}
+  .features-grid{grid-template-columns:1fr 1fr;gap:16px}
+  .trust-grid{grid-template-columns:1fr 1fr;gap:16px}
   .what-box{padding:28px;border-radius:18px}
-  .reviews-wrap{padding:36px 22px;border-radius:18px}
-  .reviews-grid{grid-template-columns:1fr;gap:14px}
-  .review-card{padding:22px}
+  .reviews-section{padding:64px 0}
+  .reviews-headline{font-size:28px;margin-bottom:36px}
+  .reviews-grid{grid-template-columns:1fr;gap:1px}
+  .review-card{padding:32px 24px}
   .footer-row{flex-direction:column;gap:16px;text-align:center}
   .footer-links{justify-content:center;gap:12px}
 }
@@ -271,7 +299,14 @@ footer{background:#1a1410;color:#a99a82;padding:28px 0}
 
 <!-- ============ Hero ============ -->
 <section class="hero">
-  <div class="hero-inner">
+  <!-- 全屏背景图 -->
+  <div class="hero-bg">
+    <img src="../assets/hero-main.png" alt="哞屋动盒子产品图">
+  </div>
+  <!-- 渐变遮罩 -->
+  <div class="hero-overlay"></div>
+  <!-- 浮层文字 -->
+  <div class="container">
     <div class="hero-text reveal">
       <h1>转动手柄<br>让创意动起来</h1>
       <div class="hero-sub">动盒子 · 手摇动画机</div>
@@ -279,9 +314,6 @@ footer{background:#1a1410;color:#a99a82;padding:28px 0}
         探索动盒子
         <svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
       </a>
-    </div>
-    <div class="hero-img">
-      <img src="../assets/hero-main.png" alt="哞屋动盒子产品图">
     </div>
   </div>
 </section>
@@ -322,7 +354,7 @@ footer{background:#1a1410;color:#a99a82;padding:28px 0}
         <div class="style-img">📦</div>
         <div class="style-body">
           <div class="style-name">动盒子 · 经典款</div>
-          <div class="style-meta">最受欢迎的入门选择，手感细腻，木质精工</div>
+          <div class="style-meta">最受欢迎的入门选择</div>
           <span class="style-more">查看更多 <svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
         </div>
       </a>
@@ -330,7 +362,7 @@ footer{background:#1a1410;color:#a99a82;padding:28px 0}
         <div class="style-img" style="background:linear-gradient(135deg,#d4c8a8,#c4b890)">🎁</div>
         <div class="style-body">
           <div class="style-name">动盒子 · 迷你款</div>
-          <div class="style-meta">小巧便携，随身把玩，随时随地创作</div>
+          <div class="style-meta">小巧便携，随身把玩</div>
           <span class="style-more">查看更多 <svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
         </div>
       </a>
@@ -338,7 +370,7 @@ footer{background:#1a1410;color:#a99a82;padding:28px 0}
         <div class="style-img" style="background:linear-gradient(135deg,#3a2a1c,#5a3f28)">📽️</div>
         <div class="style-body">
           <div class="style-name">动盒子 · 复古放映机</div>
-          <div class="style-meta">复古胶片风格，独特的视觉体验</div>
+          <div class="style-meta">复古胶片风格，机械美感十足</div>
           <span class="style-more">查看更多 <svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
         </div>
       </a>
@@ -346,7 +378,7 @@ footer{background:#1a1410;color:#a99a82;padding:28px 0}
         <div class="style-img" style="background:linear-gradient(135deg,#e0d0a8,#c8b878)">🛠️</div>
         <div class="style-body">
           <div class="style-name">DIY 套件</div>
-          <div class="style-meta">从零开始亲手组装，享受纯粹的创造快乐</div>
+          <div class="style-meta">从零组装，享受纯粹创造的快乐</div>
           <span class="style-more">查看更多 <svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
         </div>
       </a>
@@ -397,26 +429,51 @@ footer{background:#1a1410;color:#a99a82;padding:28px 0}
 </section>
 
 <!-- ============ 他们说 ============ -->
-<section>
+<section class="reviews-section">
   <div class="container">
-    <div class="reviews-wrap reveal">
-      <h2 class="sec-title">他们说</h2>
-      <div class="reviews-grid">
-        <div class="review-card">
-          <div class="review-quote">第一次拿到动盒子的时候，我整整玩了一下午。看着自己画的小人在木盒里动起来，那种感觉真的很奇妙，像把童年的记忆拼了回来。</div>
-          <div class="review-user"><div class="review-avatar">林</div><div><div class="review-name">林同学</div><div class="review-tag">大学生 · 经典款</div></div></div>
+    <span class="reviews-eyebrow">真实用户反馈</span>
+    <h2 class="reviews-headline">他们这样说</h2>
+    <div class="reviews-grid reveal">
+      <div class="review-card">
+        <div class="review-stars">
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
         </div>
-        <div class="review-card">
-          <div class="review-quote">送给五岁的女儿，她现在每天都拉着我转动手柄。我们一起画一张张的画，再看它们动起来——这是我们这一年最珍贵的亲子时光。</div>
-          <div class="review-user"><div class="review-avatar">陈</div><div><div class="review-name">陈先生</div><div class="review-tag">爸爸 · DIY 套件</div></div></div>
+        <p class="review-quote">第一次拿到动盒子，整整玩了一下午。看着自己画的小人在木盒里动起来，像把童年的记忆拼了回来。</p>
+        <div class="review-author">
+          <div class="review-avatar">林</div>
+          <div><div class="review-name">林同学</div><div class="review-tag">大学生 · 经典款</div></div>
         </div>
-        <div class="review-card">
-          <div class="review-quote">作为一个手账爱好者，动盒子让我的小本子有了新的玩法。把日常瞬间画进去，转一下就是一段会动的回忆，超治愈。</div>
-          <div class="review-user"><div class="review-avatar">小</div><div><div class="review-name">小柚子</div><div class="review-tag">手账博主 · 迷你款</div></div></div>
+      </div>
+      <div class="review-card">
+        <div class="review-stars">
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
         </div>
-        <div class="review-card">
-          <div class="review-quote">设计师朋友推荐买的，没想到这么好玩。木质做工很精致，转动手柄的手感非常细腻，放在工位上每次卡壳的时候转一下，瞬间就有灵感。</div>
-          <div class="review-user"><div class="review-avatar">M</div><div><div class="review-name">Miya</div><div class="review-tag">UI 设计师 · 复古款</div></div></div>
+        <p class="review-quote">送给五岁女儿，她每天拉着我转手柄。一起画画、看它动起来——这是我们这一年最珍贵的亲子时光。</p>
+        <div class="review-author">
+          <div class="review-avatar">陈</div>
+          <div><div class="review-name">陈先生</div><div class="review-tag">爸爸 · DIY 套件</div></div>
+        </div>
+      </div>
+      <div class="review-card">
+        <div class="review-stars">
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        </div>
+        <p class="review-quote">木质做工很精致，手柄转动的手感非常细腻。放在工位上每次卡壳就转一下，瞬间有灵感了。</p>
+        <div class="review-author">
+          <div class="review-avatar">M</div>
+          <div><div class="review-name">Miya</div><div class="review-tag">UI 设计师 · 复古款</div></div>
         </div>
       </div>
     </div>
