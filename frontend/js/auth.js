@@ -382,7 +382,8 @@ function injectAuthModal() {
 ───────────────────────────────────────── */
 function injectNavUser() {
   if (document.getElementById('mowoNavUser')) return;
-  const navRight = document.querySelector('.nav-right');
+  // 兼容新版 nav.js（.mowo-nav-right）和旧版（.nav-right）
+  const navRight = document.querySelector('.mowo-nav-right') || document.querySelector('.nav-right');
   if (!navRight) return;
 
   const el = document.createElement('div');

@@ -160,6 +160,26 @@
 }
 .mowo-cart-btn[data-count="0"]::after { display: none; }
 
+/* ── auth.js 注入的用户头像区 —— 适配暖色导航栏 ── */
+.mowo-nav-right .nav-user { display: none; }
+.mowo-nav-right .nav-user.show { display: flex; align-items: center; }
+/* 头像按钮：去掉白底，改用导航栏悬停色 */
+.mowo-nav-right .nav-avatar-btn {
+  border-color: transparent;
+  background: none;
+}
+.mowo-nav-right .nav-avatar-btn:hover {
+  background: var(--nav-hover);
+  border-color: rgba(44,31,20,.18);
+}
+.mowo-nav-right .nav-avatar-btn.open {
+  background: rgba(44,31,20,.1);
+  border-color: rgba(44,31,20,.3);
+}
+/* 用户名文字颜色匹配导航栏 */
+.mowo-nav-right .nav-uname  { color: var(--nav-text); }
+.mowo-nav-right .nav-chevron { color: var(--nav-text); opacity: .6; }
+
 /* 汉堡按钮（移动端） */
 .mowo-menu-btn {
   display: none;
