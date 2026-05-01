@@ -4,349 +4,274 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>哞屋造物 MOWOBOX · 转动手柄，让创意动起来</title>
+<link rel="stylesheet" href="../css/nav.css">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
   --bg:#faf7f2;
   --bg-card:#f1ebe0;
+  --bg-trust:#ede4d3;
   --text:#2c1f14;
   --text-soft:#6b5544;
   --accent:#c8965a;
   --accent-deep:#a87742;
-  --nav-dark:#2a1d12;
-  --nav-text:#e8dcc8;
-  --hero-yellow:#f5c947;
-  --hero-yellow-soft:#f7d572;
   --line:#e3d9c8;
   --shadow:0 4px 20px rgba(44,31,20,.06);
   --shadow-lg:0 12px 40px rgba(44,31,20,.1);
+  --ease:cubic-bezier(.22,1,.36,1);
 }
 html,body{background:var(--bg);color:var(--text);font-family:'PingFang SC','Microsoft YaHei',-apple-system,system-ui,sans-serif;line-height:1.55;overflow-x:hidden}
 a{color:inherit;text-decoration:none}
 img{display:block;max-width:100%}
 button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
-.container{max-width:1280px;margin:0 auto;padding:0 32px}
+.container{max-width:1280px;margin:0 auto;padding:0 48px}
 
 /* ===== 自定义光标（仅桌面） ===== */
 @media (pointer:fine){
   body{cursor:none}
-  .cursor-dot{position:fixed;top:0;left:0;width:8px;height:8px;background:var(--accent);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:transform .15s ease}
-  .cursor-ring{position:fixed;top:0;left:0;width:32px;height:32px;border:1.5px solid var(--accent);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:transform .25s ease,opacity .25s ease}
-  a,button,.clickable{cursor:none}
+  .cursor-dot{position:fixed;top:0;left:0;width:8px;height:8px;background:var(--accent);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:transform .12s}
+  .cursor-ring{position:fixed;top:0;left:0;width:32px;height:32px;border:1.5px solid var(--accent);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%)}
+  a,button{cursor:none}
 }
-
-/* ===== 顶部导航（深咖啡棕） ===== */
-nav{
-  position:sticky;top:0;z-index:100;
-  display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
-  height:64px;padding:0 32px;
-  background:var(--nav-dark);
-  color:var(--nav-text);
-  border-bottom:1px solid rgba(232,220,200,.08);
-}
-.nav-left{display:flex;align-items:center;gap:14px}
-.nav-logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;letter-spacing:.02em}
-.nav-logo-mark{width:32px;height:32px;background:var(--nav-text);color:var(--nav-dark);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px}
-.nav-logo-text small{display:block;font-size:11px;font-weight:400;opacity:.7;letter-spacing:.15em;margin-top:-2px}
-.nav-mid{display:flex;gap:38px;font-size:14px}
-.nav-mid a{position:relative;padding:8px 0;color:var(--nav-text);opacity:.85;transition:opacity .2s}
-.nav-mid a:hover,.nav-mid a.active{opacity:1}
-.nav-mid a.active::after{content:'';position:absolute;bottom:-2px;left:50%;transform:translateX(-50%);width:24px;height:2px;background:var(--accent);border-radius:2px}
-.nav-right{display:flex;justify-content:flex-end;align-items:center;gap:18px}
-.nav-icon{width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:50%;color:var(--nav-text);opacity:.8;transition:opacity .2s,background .2s}
-.nav-icon:hover{opacity:1;background:rgba(232,220,200,.08)}
-.nav-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.6}
-.cart-badge{position:relative}
-.cart-badge::after{content:attr(data-count);position:absolute;top:6px;right:6px;width:16px;height:16px;background:var(--accent);color:#fff;font-size:10px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600}
-.cart-badge[data-count="0"]::after{display:none}
-.nav-login{padding:8px 18px;border:1px solid rgba(232,220,200,.3);border-radius:20px;color:var(--nav-text);font-size:13px;transition:all .2s}
-.nav-login:hover{background:var(--nav-text);color:var(--nav-dark)}
-.menu-btn{display:none;width:40px;height:40px;align-items:center;justify-content:center;color:var(--nav-text)}
-.menu-btn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2}
 
 /* ===== Hero ===== */
 .hero{
-  background:linear-gradient(135deg,var(--hero-yellow) 0%,var(--hero-yellow-soft) 60%,#f8d987 100%);
-  padding:80px 0 90px;position:relative;overflow:hidden;
+  background:linear-gradient(135deg,#f5c947 0%,#f7d36a 55%,#f8dc88 100%);
+  padding:0;overflow:hidden;position:relative;
 }
-.hero-inner{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center}
-.hero-text h1{font-size:64px;font-weight:800;line-height:1.1;letter-spacing:-.01em;color:var(--text);margin-bottom:16px}
-.hero-sub{color:var(--text-soft);font-size:15px;margin-bottom:36px;letter-spacing:.05em}
-.hero-cta{display:inline-flex;align-items:center;gap:10px;padding:16px 32px;background:var(--nav-dark);color:var(--nav-text);font-size:15px;font-weight:600;border-radius:32px;transition:transform .2s,box-shadow .2s}
-.hero-cta:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(42,29,18,.3)}
-.hero-cta svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2}
-.hero-visual{position:relative;display:flex;align-items:center;justify-content:center;min-height:380px}
-.hero-box{
-  width:100%;max-width:480px;aspect-ratio:5/4;
-  background:#e6c574;border-radius:18px;
-  display:flex;align-items:center;justify-content:center;
-  position:relative;box-shadow:0 30px 60px rgba(168,119,66,.25);
+.hero-inner{
+  display:grid;
+  grid-template-columns:1fr 1.15fr;
+  align-items:center;
+  min-height:500px;
 }
-/* CSS 拟物动盒子（占位艺术） */
-.box-art{
-  width:60%;height:65%;background:#f4e4c3;border-radius:8px;
-  display:flex;align-items:center;justify-content:center;
-  position:relative;border:3px solid #b88950;
+.hero-text{
+  padding:80px 48px 80px 80px;
 }
-.box-art::before,.box-art::after{
-  content:'';position:absolute;width:14px;height:60%;background:#7a4f24;border-radius:3px;
+.hero-text h1{
+  font-size:58px;font-weight:800;line-height:1.1;
+  letter-spacing:-.02em;color:var(--text);margin-bottom:14px;
 }
-.box-art::before{left:-7px}
-.box-art::after{right:-7px}
-.box-art-paper{width:75%;height:55%;background:#fff;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:48px}
-.box-handle{
-  position:absolute;right:-10%;top:42%;width:18%;aspect-ratio:1;
-  background:#f4e4c3;border:3px solid #b88950;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
+.hero-sub{color:#5a4428;font-size:15px;margin-bottom:40px;letter-spacing:.04em}
+.hero-cta{
+  display:inline-flex;align-items:center;gap:10px;
+  padding:15px 30px;
+  background:#2c1f14;color:#fce2b3;
+  font-size:15px;font-weight:600;border-radius:32px;
+  transition:transform .2s,box-shadow .2s;
 }
-.box-handle::after{content:'';width:30%;height:60%;background:#7a4f24;border-radius:3px;position:absolute;top:55%;right:0;transform:translateX(50%) rotate(15deg)}
-.spark{position:absolute;font-size:40px;color:var(--text);font-weight:900}
-.spark-1{top:8%;right:8%}
-.spark-2{top:30%;right:-2%;font-size:28px}
+.hero-cta:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(44,31,20,.3)}
+.hero-cta svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.2}
+.hero-img{
+  height:100%;min-height:500px;
+  position:relative;overflow:hidden;
+  display:flex;align-items:center;justify-content:flex-end;
+}
+.hero-img img{
+  width:100%;height:100%;object-fit:cover;
+  object-position:left center;
+  border-radius: 0;
+}
 
 /* ===== 通用 section ===== */
-section{padding:80px 0}
+section{padding:72px 0}
 .sec-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:36px;gap:24px}
-.sec-title{font-size:28px;font-weight:700;letter-spacing:-.01em}
-.sec-link{font-size:14px;color:var(--text-soft);display:flex;align-items:center;gap:6px;transition:color .2s}
+.sec-title{font-size:26px;font-weight:700;letter-spacing:-.01em}
+.sec-link{font-size:13.5px;color:var(--text-soft);display:flex;align-items:center;gap:5px;transition:color .2s;white-space:nowrap}
 .sec-link:hover{color:var(--accent-deep)}
-.sec-link svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
+.sec-link svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.2}
 
 /* ===== 功能徽章 ===== */
-.features{padding:48px 0;border-bottom:1px solid var(--line)}
-.features-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:32px}
+.features{padding:44px 0}
+.features .container{border-bottom:1px solid var(--line);padding-bottom:44px}
+.features-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:28px}
 .feature-item{display:flex;gap:14px;align-items:flex-start}
-.feature-icon{flex:none;width:40px;height:40px;border-radius:50%;background:var(--bg-card);display:flex;align-items:center;justify-content:center;color:var(--accent-deep)}
-.feature-icon svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.6}
-.feature-item h4{font-size:15px;font-weight:600;margin-bottom:4px}
-.feature-item p{font-size:12.5px;color:var(--text-soft);line-height:1.5}
+.feature-icon{flex:none;width:38px;height:38px;border-radius:50%;background:var(--bg-card);display:flex;align-items:center;justify-content:center;color:var(--accent-deep)}
+.feature-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.6}
+.feature-item h4{font-size:14.5px;font-weight:600;margin-bottom:3px}
+.feature-item p{font-size:12px;color:var(--text-soft);line-height:1.5}
 
 /* ===== 动盒系列 ===== */
-.styles-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px}
+.styles-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:22px}
 .style-card{
-  background:var(--bg-card);border-radius:16px;overflow:hidden;
+  background:var(--bg-card);border-radius:18px;overflow:hidden;
   display:flex;flex-direction:column;
-  transition:transform .25s ease,box-shadow .25s ease;
+  transition:transform .25s var(--ease),box-shadow .25s var(--ease);
 }
-.style-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
-.style-img{aspect-ratio:1;background:linear-gradient(135deg,#e8d8b8,#d8c298);display:flex;align-items:center;justify-content:center;font-size:64px;color:#a07840;opacity:.85}
-.style-img.bg2{background:linear-gradient(135deg,#3a2a1c,#5a3f28)}
-.style-img.bg3{background:linear-gradient(135deg,#f0e2c4,#e0c894)}
-.style-img.bg4{background:linear-gradient(135deg,#e8d8b8,#cab088)}
-.style-body{padding:18px 18px 22px;display:flex;flex-direction:column;gap:14px}
-.style-name{font-size:16px;font-weight:600}
-.style-meta{font-size:12.5px;color:var(--text-soft)}
+.style-card:hover{transform:translateY(-5px);box-shadow:var(--shadow-lg)}
+.style-img{
+  aspect-ratio:1;overflow:hidden;
+  background:linear-gradient(135deg,#e8d8b8,#d8c298);
+  display:flex;align-items:center;justify-content:center;font-size:60px;
+}
+.style-img img{width:100%;height:100%;object-fit:cover;transition:transform .4s var(--ease)}
+.style-card:hover .style-img img{transform:scale(1.04)}
+.style-body{padding:18px 18px 20px;display:flex;flex-direction:column;gap:12px}
+.style-name{font-size:15px;font-weight:600}
+.style-meta{font-size:12px;color:var(--text-soft);line-height:1.5}
 .style-more{
-  display:inline-flex;align-items:center;justify-content:center;gap:6px;
-  padding:10px 0;background:var(--nav-dark);color:var(--nav-text);
-  font-size:13px;font-weight:500;border-radius:10px;transition:background .2s;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  padding:11px 0;background:#2c1f14;color:#fce2b3;
+  font-size:13px;font-weight:500;border-radius:10px;
+  transition:background .2s;
 }
 .style-more:hover{background:var(--accent-deep)}
-.style-more svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
+.style-more svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.2}
 
 /* ===== 什么是动盒子 ===== */
 .what-box{
   background:var(--bg-card);border-radius:24px;padding:60px;
-  display:grid;grid-template-columns:1fr 1.1fr;gap:60px;align-items:center;
+  display:grid;grid-template-columns:1fr 1.05fr;gap:60px;align-items:center;
 }
-.what-box h2{font-size:26px;font-weight:700;margin-bottom:18px}
-.what-box p{color:var(--text-soft);font-size:14.5px;line-height:1.75;margin-bottom:12px}
-.what-box .more-btn{
-  display:inline-flex;align-items:center;gap:8px;margin-top:24px;
-  padding:12px 24px;background:var(--nav-dark);color:var(--nav-text);
+.what-box h2{font-size:24px;font-weight:700;margin-bottom:16px}
+.what-box p{color:var(--text-soft);font-size:14.5px;line-height:1.8;margin-bottom:10px}
+.more-btn{
+  display:inline-flex;align-items:center;gap:8px;margin-top:22px;
+  padding:12px 24px;background:#2c1f14;color:#fce2b3;
   font-size:13px;font-weight:500;border-radius:24px;transition:transform .2s;
 }
-.what-box .more-btn:hover{transform:translateY(-2px)}
-.what-box .more-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
-.diagram-box{
-  aspect-ratio:4/3;background:#f7f1e5;border:2px dashed #cdbfa6;
-  border-radius:14px;display:flex;align-items:center;justify-content:center;
-  flex-direction:column;color:#a89478;text-align:center;padding:24px;gap:10px;
-  position:relative;overflow:hidden;
+.more-btn:hover{transform:translateY(-2px)}
+.more-btn svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.2}
+.diagram-wrap{
+  border-radius:16px;overflow:hidden;
+  aspect-ratio:4/3;
+  background:var(--bg);
 }
-.diagram-box img{width:100%;height:100%;object-fit:contain}
-.diagram-box .placeholder{display:flex;flex-direction:column;align-items:center;gap:8px}
-.diagram-box .placeholder svg{width:48px;height:48px;stroke:currentColor;fill:none;stroke-width:1.2;opacity:.6}
-.diagram-box .placeholder strong{font-size:14px;font-weight:600;color:#8a7456}
-.diagram-box .placeholder span{font-size:12px;opacity:.7}
+.diagram-wrap img{
+  width:100%;height:100%;object-fit:contain;
+  padding:16px;
+}
+.diagram-placeholder{
+  width:100%;height:100%;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:10px;color:#a89478;text-align:center;padding:24px;
+  border:2px dashed #cdbfa6;border-radius:14px;
+}
+.diagram-placeholder svg{width:44px;height:44px;stroke:currentColor;fill:none;stroke-width:1.2;opacity:.6}
+.diagram-placeholder strong{font-size:13px;color:#8a7456}
+.diagram-placeholder span{font-size:11.5px;opacity:.7}
 
 /* ===== 创意 ===== */
-.creative-track{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:16px}
+.creative-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
 .creative-card{
-  border-radius:14px;overflow:hidden;background:#1a1410;
-  position:relative;aspect-ratio:1;
-  cursor:pointer;transition:transform .25s;
+  border-radius:16px;overflow:hidden;background:#1a1410;
+  position:relative;aspect-ratio:1;cursor:pointer;
+  transition:transform .25s var(--ease);
 }
 .creative-card:hover{transform:translateY(-4px)}
 .creative-thumb{
-  width:100%;height:100%;display:flex;align-items:center;justify-content:center;
-  background:linear-gradient(135deg,#3a2a1c,#5a3f28);font-size:48px;
-  position:relative;
+  width:100%;height:100%;
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#3a2a1c,#5a3f28);
+  font-size:52px;
 }
-.creative-card .play{
+.creative-thumb img{width:100%;height:100%;object-fit:cover}
+.play-btn{
   position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-  width:42px;height:42px;border-radius:50%;
+  width:44px;height:44px;border-radius:50%;
   background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;
+  transition:transform .2s;
 }
-.creative-card .play svg{width:18px;height:18px;fill:var(--text);margin-left:2px}
-.creative-card .meta{
-  position:absolute;left:0;right:0;bottom:0;padding:12px 14px;
-  background:linear-gradient(to top,rgba(0,0,0,.78),transparent);
+.creative-card:hover .play-btn{transform:translate(-50%,-50%) scale(1.1)}
+.play-btn svg{width:18px;height:18px;fill:#2c1f14;margin-left:2px}
+.creative-meta{
+  position:absolute;left:0;right:0;bottom:0;padding:14px 16px;
+  background:linear-gradient(to top,rgba(0,0,0,.82),transparent);
   color:#fff;
 }
-.creative-card .meta strong{display:block;font-size:13px;font-weight:600;margin-bottom:2px}
-.creative-card .meta span{font-size:11px;opacity:.75}
+.creative-meta strong{display:block;font-size:13px;font-weight:600;margin-bottom:2px}
+.creative-meta span{font-size:11px;opacity:.72}
 
 /* ===== 用户评价 ===== */
-.reviews{background:var(--bg-card);border-radius:24px;padding:64px 48px}
-.reviews-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:28px;margin-top:32px}
+.reviews-wrap{background:var(--bg-card);border-radius:24px;padding:60px 52px}
+.reviews-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:22px;margin-top:32px}
 .review-card{background:#fff;border-radius:14px;padding:28px;display:flex;flex-direction:column;gap:14px}
-.review-quote{font-size:14.5px;line-height:1.75;color:var(--text)}
-.review-quote::before{content:'"';color:var(--accent);font-size:42px;font-weight:700;line-height:0.8;display:block;margin-bottom:8px}
+.review-quote::before{content:'"';color:var(--accent);font-size:40px;font-weight:700;line-height:.8;display:block;margin-bottom:8px}
+.review-quote{font-size:14px;line-height:1.8;color:var(--text)}
 .review-user{display:flex;align-items:center;gap:12px;padding-top:14px;border-top:1px solid var(--line)}
-.review-avatar{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-deep));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px}
+.review-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-deep));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;flex-shrink:0}
 .review-name{font-size:13px;font-weight:600}
 .review-tag{font-size:11.5px;color:var(--text-soft);margin-top:2px}
 
 /* ===== 保障行 ===== */
-.trust{padding:56px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
-.trust-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:32px}
+.trust{background:var(--bg-trust);padding:52px 0}
+.trust-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:28px}
 .trust-item{display:flex;gap:14px;align-items:center}
-.trust-icon{flex:none;width:42px;height:42px;border-radius:50%;background:var(--bg-card);display:flex;align-items:center;justify-content:center;color:var(--accent-deep)}
+.trust-icon{flex:none;width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;color:var(--accent-deep)}
 .trust-icon svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.6}
 .trust-item h5{font-size:14px;font-weight:600;margin-bottom:2px}
 .trust-item p{font-size:12px;color:var(--text-soft)}
 
 /* ===== CTA banner ===== */
-.cta-banner{
-  background:var(--nav-dark);color:var(--nav-text);
-  padding:64px 0;text-align:center;
-}
-.cta-banner h2{font-size:24px;font-weight:600;margin-bottom:24px}
+.cta-banner{background:#2c1f14;color:#fce2b3;padding:64px 0;text-align:center}
+.cta-banner h2{font-size:22px;font-weight:600;margin-bottom:24px;line-height:1.5}
 .cta-banner-btn{
   display:inline-flex;align-items:center;gap:8px;
-  padding:16px 36px;background:var(--bg);color:var(--text);
-  border-radius:32px;font-size:14px;font-weight:600;
-  transition:transform .2s;
+  padding:15px 36px;background:var(--bg);color:var(--text);
+  border-radius:32px;font-size:14px;font-weight:600;transition:transform .2s;
 }
 .cta-banner-btn:hover{transform:translateY(-2px)}
-.cta-banner-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
+.cta-banner-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.2}
 
 /* ===== 页脚 ===== */
-footer{background:#1a1410;color:#a99a82;padding:32px 0}
+footer{background:#1a1410;color:#a99a82;padding:28px 0}
 .footer-row{display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap}
-.footer-brand{display:flex;align-items:center;gap:10px;font-weight:600;color:#e8dcc8;font-size:14px}
-.footer-brand .nav-logo-mark{width:28px;height:28px;font-size:12px;background:#e8dcc8;color:#1a1410}
-.footer-links{display:flex;gap:24px;font-size:12.5px}
+.footer-brand{display:flex;align-items:center;gap:10px;font-weight:600;color:#e8dcc8;font-size:13.5px}
+.footer-brand .mowo-logo-mark{width:28px;height:28px;font-size:12px;background:#e8dcc8;color:#1a1410;border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:900}
+.footer-links{display:flex;gap:20px;font-size:12px;flex-wrap:wrap}
+.footer-links a{transition:color .2s}
 .footer-links a:hover{color:#e8dcc8}
-.footer-social{display:flex;gap:8px}
-.footer-social a{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(232,220,200,.06);transition:background .2s}
-.footer-social a:hover{background:rgba(232,220,200,.16)}
-.footer-social svg{width:14px;height:14px;stroke:#a99a82;fill:none;stroke-width:1.8}
-
-/* ===== 移动端菜单 ===== */
-.mobile-menu{
-  position:fixed;inset:0;z-index:200;background:var(--nav-dark);color:var(--nav-text);
-  display:flex;flex-direction:column;
-  transform:translateX(100%);transition:transform .3s ease;visibility:hidden;
-}
-.mobile-menu.open{transform:translateX(0);visibility:visible}
-.mobile-menu-head{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid rgba(232,220,200,.1)}
-.mobile-menu-close{width:36px;height:36px;display:flex;align-items:center;justify-content:center;color:var(--nav-text)}
-.mobile-menu-close svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2}
-.mobile-menu-body{flex:1;overflow-y:auto;padding:24px}
-.mobile-menu-body a{display:block;padding:18px 0;font-size:18px;border-bottom:1px solid rgba(232,220,200,.06)}
-.mobile-menu-foot{padding:24px;border-top:1px solid rgba(232,220,200,.1)}
-.mobile-menu-foot button,.mobile-menu-foot .mobile-avatar{width:100%}
-.mobile-menu-foot .mobile-login-btn{padding:14px;background:var(--accent);color:#fff;border-radius:10px;font-size:15px;font-weight:600}
-.mobile-avatar{display:none;align-items:center;gap:14px;padding:14px;background:rgba(232,220,200,.06);border-radius:12px}
-.mobile-avatar.show{display:flex}
-.mobile-avatar-img{width:42px;height:42px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600}
-.mobile-avatar-name{font-size:15px;font-weight:600}
+.footer-social{display:flex;gap:6px}
+.footer-social a{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(232,220,200,.07);transition:background .2s}
+.footer-social a:hover{background:rgba(232,220,200,.18)}
+.footer-social svg{width:13px;height:13px;stroke:#a99a82;fill:none;stroke-width:1.8}
 
 /* ===== 滚动揭示 ===== */
-.reveal{opacity:0;transform:translateY(20px);transition:all .7s var(--ease,cubic-bezier(.22,1,.36,1))}
+.reveal{opacity:0;transform:translateY(18px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
 .reveal.in{opacity:1;transform:none}
 
 /* ===== 响应式 ===== */
-@media (max-width:1024px){
+@media (max-width:1100px){
+  .container{padding:0 32px}
+  .hero-text{padding:64px 40px 64px 56px}
   .hero-text h1{font-size:48px}
-  .styles-grid,.creative-track{grid-template-columns:repeat(2,1fr)}
-  .features-grid,.trust-grid{grid-template-columns:repeat(2,1fr);gap:24px}
-  .what-box{grid-template-columns:1fr;padding:40px;gap:32px}
+  .styles-grid{grid-template-columns:repeat(2,1fr)}
+  .creative-grid{grid-template-columns:repeat(2,1fr)}
+  .features-grid,.trust-grid{grid-template-columns:repeat(2,1fr)}
+  .what-box{grid-template-columns:1fr;padding:44px;gap:36px}
+  .reviews-wrap{padding:48px 36px}
 }
 @media (max-width:760px){
   .container{padding:0 20px}
-  nav{padding:0 16px;height:56px;grid-template-columns:auto 1fr auto}
-  .nav-mid,.nav-right .nav-icon-account,.nav-right .nav-login{display:none}
-  .nav-left{justify-self:start}
-  .nav-logo{font-size:16px}
-  .nav-logo-mark{width:28px;height:28px;font-size:12px}
-  .menu-btn{display:flex}
-  .nav-right{justify-self:end;gap:6px}
-  .hero{padding:36px 0 50px}
-  .hero-inner{grid-template-columns:1fr;gap:32px;text-align:left}
+  .hero-inner{grid-template-columns:1fr}
+  .hero-img{display:none}
+  .hero-text{padding:44px 24px 52px}
   .hero-text h1{font-size:36px}
-  .hero-cta{padding:14px 26px;font-size:14px}
   section{padding:48px 0}
   .sec-title{font-size:22px}
-  .styles-grid,.creative-track{grid-template-columns:repeat(2,1fr);gap:14px}
-  .style-img{font-size:42px}
-  .style-body{padding:14px}
-  .style-name{font-size:14px}
-  .what-box{padding:28px;border-radius:18px}
-  .reviews{padding:40px 24px;border-radius:18px}
-  .reviews-grid{grid-template-columns:1fr;gap:16px}
-  .review-card{padding:22px}
-  .footer-row{flex-direction:column;gap:18px;text-align:center}
-  .footer-links{flex-wrap:wrap;justify-content:center;gap:14px;font-size:12px}
-  .cta-banner{padding:48px 0}
-  .cta-banner h2{font-size:18px}
+  .styles-grid,.creative-grid{grid-template-columns:repeat(2,1fr);gap:14px}
   .features-grid{grid-template-columns:1fr 1fr;gap:18px}
-  .feature-item p{font-size:11.5px}
   .trust-grid{grid-template-columns:1fr 1fr;gap:18px}
+  .what-box{padding:28px;border-radius:18px}
+  .reviews-wrap{padding:36px 22px;border-radius:18px}
+  .reviews-grid{grid-template-columns:1fr;gap:14px}
+  .review-card{padding:22px}
+  .footer-row{flex-direction:column;gap:16px;text-align:center}
+  .footer-links{justify-content:center;gap:12px}
 }
 </style>
 </head>
 <body>
 
-<div class="cursor-dot"></div><div class="cursor-ring"></div>
+<div class="cursor-dot"></div>
+<div class="cursor-ring"></div>
 
-<!-- ============ 顶部导航 ============ -->
-<nav>
-  <div class="nav-left">
-    <button class="menu-btn" onclick="openMenu()" aria-label="菜单">
-      <svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-    </button>
-    <a href="index.html" class="nav-logo">
-      <span class="nav-logo-mark">M</span>
-      <span class="nav-logo-text">MOWOBOX<small>哞屋造物</small></span>
-    </a>
-  </div>
-  <div class="nav-mid">
-    <a href="index.html" class="active">首页</a>
-    <a href="showcase.html">动盒系列</a>
-    <a href="customize-start.html">DIY 工坊</a>
-    <a href="showcase.html">创意社区</a>
-    <a href="about.html">关于我们</a>
-  </div>
-  <div class="nav-right">
-    <a class="nav-icon" href="showcase.html" aria-label="搜索">
-      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-    </a>
-    <a class="nav-icon nav-icon-account" href="settings.html" aria-label="账户">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
-    </a>
-    <a class="nav-icon cart-badge" href="cart.html" data-count="0" aria-label="购物车">
-      <svg viewBox="0 0 24 24"><path d="M3 4h2l2.5 12h11l2.5-9H6"/><circle cx="9" cy="20" r="1.6"/><circle cx="18" cy="20" r="1.6"/></svg>
-    </a>
-    <button class="nav-login nav-login-btn" id="navLoginBtn">登录</button>
-  </div>
-</nav>
+<!-- ============ 共享导航栏（nav.js 注入） ============ -->
+<script src="../js/nav.js"></script>
 
 <!-- ============ Hero ============ -->
 <section class="hero">
-  <div class="container hero-inner">
+  <div class="hero-inner">
     <div class="hero-text reveal">
       <h1>转动手柄<br>让创意动起来</h1>
       <div class="hero-sub">动盒子 · 手摇动画机</div>
@@ -355,37 +280,32 @@ footer{background:#1a1410;color:#a99a82;padding:32px 0}
         <svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
       </a>
     </div>
-    <div class="hero-visual reveal">
-      <div class="hero-box">
-        <div class="box-art">
-          <div class="box-art-paper">🐻</div>
-        </div>
-        <div class="box-handle"></div>
-        <span class="spark spark-1">·</span>
-        <span class="spark spark-2">·</span>
-      </div>
+    <div class="hero-img">
+      <img src="../assets/hero-main.png" alt="哞屋动盒子产品图">
     </div>
   </div>
 </section>
 
 <!-- ============ 4 个功能徽章 ============ -->
 <section class="features">
-  <div class="container features-grid">
-    <div class="feature-item reveal">
-      <div class="feature-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
-      <div><h4>经典机械原理</h4><p>无需电子，纯机械驱动</p></div>
-    </div>
-    <div class="feature-item reveal">
-      <div class="feature-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
-      <div><h4>激发创造力</h4><p>一张张画，变成生动故事</p></div>
-    </div>
-    <div class="feature-item reveal">
-      <div class="feature-icon"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.27 6.96 8.73 5.05 8.73-5.05M12 22.08V12"/></svg></div>
-      <div><h4>高品质木制</h4><p>激光切割，精密耐用</p></div>
-    </div>
-    <div class="feature-item reveal">
-      <div class="feature-icon"><svg viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/></svg></div>
-      <div><h4>动手又好玩</h4><p>DIY 组装，乐趣满满</p></div>
+  <div class="container">
+    <div class="features-grid">
+      <div class="feature-item reveal">
+        <div class="feature-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.82 1.18V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0-1.18-2.82H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68V4a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 2.82 1.18l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 2z"/></svg></div>
+        <div><h4>经典机械原理</h4><p>无需电子，纯机械驱动</p></div>
+      </div>
+      <div class="feature-item reveal">
+        <div class="feature-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+        <div><h4>激发创造力</h4><p>一张张画，变成生动故事</p></div>
+      </div>
+      <div class="feature-item reveal">
+        <div class="feature-icon"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.27 6.96 8.73 5.05 8.73-5.05M12 22.08V12"/></svg></div>
+        <div><h4>高品质木制</h4><p>激光切割，精密耐用</p></div>
+      </div>
+      <div class="feature-item reveal">
+        <div class="feature-icon"><svg viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/></svg></div>
+        <div><h4>动手又好玩</h4><p>DIY 组装，乐趣满满</p></div>
+      </div>
     </div>
   </div>
 </section>
@@ -401,40 +321,32 @@ footer{background:#1a1410;color:#a99a82;padding:32px 0}
       <a href="showcase.html?style=classic" class="style-card reveal">
         <div class="style-img">📦</div>
         <div class="style-body">
-          <div>
-            <div class="style-name">动盒子 · 经典款</div>
-            <div class="style-meta">最受欢迎的入门选择</div>
-          </div>
+          <div class="style-name">动盒子 · 经典款</div>
+          <div class="style-meta">最受欢迎的入门选择，手感细腻，木质精工</div>
           <span class="style-more">查看更多 <svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
         </div>
       </a>
       <a href="showcase.html?style=mini" class="style-card reveal">
-        <div class="style-img bg2" style="font-size:48px">🎁</div>
+        <div class="style-img" style="background:linear-gradient(135deg,#d4c8a8,#c4b890)">🎁</div>
         <div class="style-body">
-          <div>
-            <div class="style-name">动盒子 · 迷你款</div>
-            <div class="style-meta">小巧便携，随手把玩</div>
-          </div>
+          <div class="style-name">动盒子 · 迷你款</div>
+          <div class="style-meta">小巧便携，随身把玩，随时随地创作</div>
           <span class="style-more">查看更多 <svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
         </div>
       </a>
       <a href="showcase.html?style=retro" class="style-card reveal">
-        <div class="style-img bg3">📽️</div>
+        <div class="style-img" style="background:linear-gradient(135deg,#3a2a1c,#5a3f28)">📽️</div>
         <div class="style-body">
-          <div>
-            <div class="style-name">动盒子 · 复古放映机</div>
-            <div class="style-meta">复古胶片质感</div>
-          </div>
+          <div class="style-name">动盒子 · 复古放映机</div>
+          <div class="style-meta">复古胶片风格，独特的视觉体验</div>
           <span class="style-more">查看更多 <svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
         </div>
       </a>
       <a href="showcase.html?style=diy" class="style-card reveal">
-        <div class="style-img bg4">🛠️</div>
+        <div class="style-img" style="background:linear-gradient(135deg,#e0d0a8,#c8b878)">🛠️</div>
         <div class="style-body">
-          <div>
-            <div class="style-name">DIY 套件</div>
-            <div class="style-meta">从零开始动手组装</div>
-          </div>
+          <div class="style-name">DIY 套件</div>
+          <div class="style-meta">从零开始亲手组装，享受纯粹的创造快乐</div>
           <span class="style-more">查看更多 <svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
         </div>
       </a>
@@ -455,13 +367,13 @@ footer{background:#1a1410;color:#a99a82;padding:32px 0}
           <svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
         </a>
       </div>
-      <div class="diagram-box">
-        <img id="boxDiagram" src="/api/site-config/box-diagram" alt="动盒子结构线稿"
-             onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-        <div class="placeholder" style="display:flex">
-          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 16l5-5 4 4 5-5 4 4M9 10a1 1 0 1 0-.001-2.001A1 1 0 0 0 9 10z"/></svg>
+      <div class="diagram-wrap">
+        <img id="boxDiagram" src="../assets/box-diagram.png" alt="动盒子结构线稿"
+             onerror="this.style.display='none';document.getElementById('diagramPlaceholder').style.display='flex'">
+        <div id="diagramPlaceholder" class="diagram-placeholder" style="display:none">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 16l5-5 4 4 5-5 4 4M9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>
           <strong>产品线稿图（待上传）</strong>
-          <span>后台启用「首页内容管理」后将自动显示</span>
+          <span>后台启用「首页内容管理」后自动显示</span>
         </div>
       </div>
     </div>
@@ -475,24 +387,20 @@ footer{background:#1a1410;color:#a99a82;padding:32px 0}
       <h2 class="sec-title">看看大家的创意</h2>
       <a href="showcase.html" class="sec-link">探索更多 <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></a>
     </div>
-    <div class="creative-track">
-      <div class="creative-card reveal"><div class="creative-thumb">🐱</div><div class="play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div><div class="meta"><strong>小猫的日常</strong><span>@MOMO</span></div></div>
-      <div class="creative-card reveal"><div class="creative-thumb" style="background:linear-gradient(135deg,#1a1a2e,#0f3460)">🚀</div><div class="play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div><div class="meta"><strong>太空漫游</strong><span>@星辰大海</span></div></div>
-      <div class="creative-card reveal"><div class="creative-thumb" style="background:linear-gradient(135deg,#fefefe,#e0e0e0)">💃</div><div class="play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div><div class="meta"><strong>跳舞的小人</strong><span>@DancingMan</span></div></div>
-      <div class="creative-card reveal"><div class="creative-thumb" style="background:linear-gradient(135deg,#3a2a1c,#5a3f28)">🦖</div><div class="play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div><div class="meta"><strong>小恐龙冒险</strong><span>@恐龙爱好者</span></div></div>
-      <div class="creative-card reveal"><div class="creative-thumb" style="background:linear-gradient(135deg,#fbeee6,#f4d6c8)">✨</div><div class="play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div><div class="meta"><strong>魔法时刻</strong><span>@MagicTime</span></div></div>
-      <div class="creative-card reveal"><div class="creative-thumb" style="background:linear-gradient(135deg,#a3e4d7,#48c9b0)">🐳</div><div class="play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div><div class="meta"><strong>深海之旅</strong><span>@OceanDream</span></div></div>
+    <div class="creative-grid">
+      <div class="creative-card reveal"><div class="creative-thumb">🐱</div><div class="play-btn"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div><div class="creative-meta"><strong>小猫的日常</strong><span>@MOMO</span></div></div>
+      <div class="creative-card reveal"><div class="creative-thumb" style="background:linear-gradient(135deg,#1a1a2e,#0f3460)">🚀</div><div class="play-btn"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div><div class="creative-meta"><strong>太空漫游</strong><span>@星辰大海</span></div></div>
+      <div class="creative-card reveal"><div class="creative-thumb" style="background:linear-gradient(135deg,#e8e0d0,#d4c8a8)">💃</div><div class="play-btn"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div><div class="creative-meta"><strong>跳舞的小人</strong><span>@DancingMan</span></div></div>
+      <div class="creative-card reveal"><div class="creative-thumb" style="background:linear-gradient(135deg,#3a2a1c,#6a4a2c)">🦖</div><div class="play-btn"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div><div class="creative-meta"><strong>小恐龙冒险</strong><span>@恐龙爱好者</span></div></div>
     </div>
   </div>
 </section>
 
-<!-- ============ 他们说 用户评价 ============ -->
+<!-- ============ 他们说 ============ -->
 <section>
   <div class="container">
-    <div class="reviews reveal">
-      <div class="sec-head" style="margin-bottom:0">
-        <h2 class="sec-title">他们说</h2>
-      </div>
+    <div class="reviews-wrap reveal">
+      <h2 class="sec-title">他们说</h2>
       <div class="reviews-grid">
         <div class="review-card">
           <div class="review-quote">第一次拿到动盒子的时候，我整整玩了一下午。看着自己画的小人在木盒里动起来，那种感觉真的很奇妙，像把童年的记忆拼了回来。</div>
@@ -527,7 +435,7 @@ footer{background:#1a1410;color:#a99a82;padding:32px 0}
       <div><h5>安心购物</h5><p>7 天无理由退换</p></div>
     </div>
     <div class="trust-item reveal">
-      <div class="trust-icon"><svg viewBox="0 0 24 24"><path d="M3 11a9 9 0 0 1 18 0v3a3 3 0 0 1-3 3h-1v-7h4M3 11v3a3 3 0 0 0 3 3h1v-7H3"/></svg></div>
+      <div class="trust-icon"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.35 2 2 0 0 1 3.6 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.6a16 16 0 0 0 6 6l.96-.96a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 16l.19.92z"/></svg></div>
       <div><h5>优质客服</h5><p>随时为您服务</p></div>
     </div>
     <div class="trust-item reveal">
@@ -552,7 +460,7 @@ footer{background:#1a1410;color:#a99a82;padding:32px 0}
 <footer>
   <div class="container footer-row">
     <a href="index.html" class="footer-brand">
-      <span class="nav-logo-mark">M</span>
+      <span class="mowo-logo-mark">M</span>
       MOWOBOX 哞屋造物
     </a>
     <div class="footer-links">
@@ -565,92 +473,29 @@ footer{background:#1a1410;color:#a99a82;padding:32px 0}
       <a href="contact.html">联系我们</a>
     </div>
     <div class="footer-social">
-      <a href="#" aria-label="Instagram"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".8" fill="#a99a82"/></svg></a>
-      <a href="#" aria-label="YouTube"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="m10 9 5 3-5 3z" fill="#a99a82"/></svg></a>
+      <a href="#" aria-label="Instagram"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".9" fill="#a99a82" stroke="none"/></svg></a>
+      <a href="#" aria-label="YouTube"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="m10 9 5 3-5 3z" fill="#a99a82" stroke="none"/></svg></a>
       <a href="#" aria-label="WeChat"><svg viewBox="0 0 24 24"><circle cx="9" cy="10" r="6"/><circle cx="16" cy="15" r="5"/></svg></a>
     </div>
   </div>
 </footer>
 
-<!-- ============ 移动端菜单 ============ -->
-<div class="mobile-menu" id="mobileMenu">
-  <div class="mobile-menu-head">
-    <a href="index.html" class="nav-logo"><span class="nav-logo-mark">M</span><span class="nav-logo-text">MOWOBOX</span></a>
-    <button class="mobile-menu-close" onclick="closeMenu()" aria-label="关闭"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-  </div>
-  <div class="mobile-menu-body">
-    <a href="index.html">首页</a>
-    <a href="showcase.html">动盒系列</a>
-    <a href="customize-start.html">DIY 工坊</a>
-    <a href="showcase.html">创意社区</a>
-    <a href="about.html">关于我们</a>
-    <a href="cart.html">购物车</a>
-    <a href="orders.html">我的订单</a>
-    <a href="settings.html">账号设置</a>
-  </div>
-  <div class="mobile-menu-foot">
-    <button class="mobile-login-btn" id="mobileLoginBtn">登录 / 注册</button>
-    <div class="mobile-avatar" id="mobileMenuAvatar">
-      <div class="mobile-avatar-img" id="mobileMenuAvatarBtn">U</div>
-      <div class="mobile-avatar-name" id="mobileMenuAvatarName">用户</div>
-    </div>
-  </div>
-</div>
-
 <script src="../js/auth.js"></script>
 <script>
 // 自定义光标
 (function(){
-  if(!matchMedia('(pointer:fine)').matches)return
-  const dot=document.querySelector('.cursor-dot'),ring=document.querySelector('.cursor-ring')
-  let mx=0,my=0,rx=0,ry=0
-  document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;dot.style.transform=`translate(${mx}px,${my}px) translate(-50%,-50%)`})
-  ;(function loop(){rx+=(mx-rx)*.18;ry+=(my-ry)*.18;ring.style.transform=`translate(${rx}px,${ry}px) translate(-50%,-50%)`;requestAnimationFrame(loop)})()
-  document.querySelectorAll('a,button,.clickable').forEach(el=>{
-    el.addEventListener('mouseenter',()=>ring.style.transform=ring.style.transform.replace(/scale.*/,'')+' scale(1.6)')
-    el.addEventListener('mouseleave',()=>ring.style.transform=ring.style.transform.replace(/scale.*/,''))
-  })
-})()
-
-// 移动端菜单
-function openMenu(){document.getElementById('mobileMenu').classList.add('open');document.body.style.overflow='hidden'}
-function closeMenu(){document.getElementById('mobileMenu').classList.remove('open');document.body.style.overflow=''}
-
-// 移动菜单登录态同步（auth.js 处理 #navLoginBtn 时同步到 #mobileLoginBtn / #mobileMenuAvatar）
-;(function syncMobileAuth(){
-  const navBtn=document.getElementById('navLoginBtn')
-  const mobileBtn=document.getElementById('mobileLoginBtn')
-  const mobileAvatar=document.getElementById('mobileMenuAvatar')
-  const mobileAvatarBtn=document.getElementById('mobileMenuAvatarBtn')
-  const mobileAvatarName=document.getElementById('mobileMenuAvatarName')
-  if(!navBtn||!mobileBtn)return
-  const sync=()=>{
-    const isLoggedIn=navBtn.style.display==='none'||navBtn.classList.contains('logged-in')
-    const userInfo=localStorage.getItem('mowo_user')
-    if(isLoggedIn||userInfo){
-      mobileBtn.style.display='none'
-      mobileAvatar.classList.add('show')
-      try{
-        const u=JSON.parse(userInfo||'{}')
-        const name=u.nickname||u.phone||'用户'
-        mobileAvatarName.textContent=name
-        mobileAvatarBtn.textContent=(name[0]||'U').toUpperCase()
-      }catch(e){}
-    }else{
-      mobileBtn.style.display='block'
-      mobileAvatar.classList.remove('show')
-    }
-  }
-  sync()
-  new MutationObserver(sync).observe(navBtn,{attributes:true,childList:true,subtree:true})
-  mobileBtn.addEventListener('click',()=>{closeMenu();navBtn.click()})
-})()
+  if(!matchMedia('(pointer:fine)').matches)return;
+  var dot=document.querySelector('.cursor-dot'),ring=document.querySelector('.cursor-ring');
+  var mx=0,my=0,rx=0,ry=0;
+  document.addEventListener('mousemove',function(e){mx=e.clientX;my=e.clientY;dot.style.transform='translate('+mx+'px,'+my+'px) translate(-50%,-50%)'});
+  (function loop(){rx+=(mx-rx)*.16;ry+=(my-ry)*.16;ring.style.transform='translate('+rx+'px,'+ry+'px) translate(-50%,-50%)';requestAnimationFrame(loop)})();
+})();
 
 // 滚动揭示
-const io=new IntersectionObserver(entries=>{
-  entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})
-},{threshold:.12})
-document.querySelectorAll('.reveal').forEach(el=>io.observe(el))
+var io=new IntersectionObserver(function(entries){
+  entries.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}});
+},{threshold:.1});
+document.querySelectorAll('.reveal').forEach(function(el){io.observe(el)});
 </script>
 </body>
 </html>
