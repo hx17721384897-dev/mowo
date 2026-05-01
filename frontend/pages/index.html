@@ -37,7 +37,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 /* ===== Hero ===== */
 .hero{
   position:relative;overflow:hidden;
-  min-height:540px;display:flex;align-items:center;
+  min-height:600px;display:flex;align-items:center;
 }
 /* 背景图层 */
 .hero-bg{
@@ -60,8 +60,9 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 /* 文字区（浮于图片上） */
 .hero-text{
   position:relative;z-index:1;
-  padding:80px 0 80px 80px;
+  padding:80px 48px 80px clamp(48px,8vw,160px);
   max-width:560px;
+  width:50%;
 }
 .hero-text h1{
   font-size:60px;font-weight:800;line-height:1.08;
@@ -260,7 +261,7 @@ footer{background:#1a1410;color:#a99a82;padding:28px 0}
 /* ===== 响应式 ===== */
 @media (max-width:1100px){
   .container{padding:0 32px}
-  .hero-text{padding:64px 40px 64px 48px}
+  .hero-text{padding:64px 48px 64px clamp(32px,5vw,80px);width:56%}
   .hero-text h1{font-size:48px}
   .styles-grid{grid-template-columns:repeat(2,1fr)}
   .creative-grid{grid-template-columns:repeat(2,1fr)}
@@ -270,9 +271,9 @@ footer{background:#1a1410;color:#a99a82;padding:28px 0}
 }
 @media (max-width:760px){
   .container{padding:0 20px}
-  .hero{min-height:420px}
-  .hero-text{padding:48px 0 56px}
-  .hero-text h1{font-size:34px}
+  .hero{min-height:440px}
+  .hero-text{padding:56px 24px 60px 24px;width:100%;max-width:100%}
+  .hero-text h1{font-size:36px}
   .hero-overlay{background:linear-gradient(to right,rgba(245,195,60,.97) 0%,rgba(247,210,80,.94) 55%,rgba(248,220,100,.75) 100%)}
   section{padding:48px 0}
   .sec-title{font-size:22px}
@@ -305,16 +306,14 @@ footer{background:#1a1410;color:#a99a82;padding:28px 0}
   </div>
   <!-- 渐变遮罩 -->
   <div class="hero-overlay"></div>
-  <!-- 浮层文字 -->
-  <div class="container">
-    <div class="hero-text reveal">
-      <h1>转动手柄<br>让创意动起来</h1>
-      <div class="hero-sub">动盒子 · 手摇动画机</div>
-      <a href="showcase.html" class="hero-cta">
-        探索动盒子
-        <svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
-      </a>
-    </div>
+  <!-- 浮层文字（直接在 section 内，不套 container，用 clamp padding 定位） -->
+  <div class="hero-text reveal">
+    <h1>转动手柄<br>让创意动起来</h1>
+    <div class="hero-sub">动盒子 · 手摇动画机</div>
+    <a href="showcase.html" class="hero-cta">
+      探索动盒子
+      <svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+    </a>
   </div>
 </section>
 
