@@ -80,7 +80,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .hero-cta svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2.2}
 
 /* ===== 通用 section ===== */
-section{padding:72px 0}
+section{padding:60px 0}
 .sec-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:36px;gap:24px}
 .sec-title{font-size:26px;font-weight:700;letter-spacing:-.01em}
 .sec-link{font-size:13.5px;color:var(--text-soft);display:flex;align-items:center;gap:5px;transition:color .2s;white-space:nowrap}
@@ -125,7 +125,7 @@ section{padding:72px 0}
 .style-more:hover{background:var(--accent-deep)}
 .style-more svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.2}
 
-/* ===== 什么是动盒子 ===== */
+/* ===== 什么是动盒 ===== */
 .what-box{
   background:var(--bg-card);border-radius:24px;padding:60px;
   display:grid;grid-template-columns:1fr 1.05fr;gap:60px;align-items:center;
@@ -190,36 +190,36 @@ section{padding:72px 0}
 .creative-meta span{font-size:11px;opacity:.72}
 
 /* ===== 用户评价 — 高端独立站风格 ===== */
-.reviews-section{padding:96px 0;background:#3e2b1b}
-.reviews-section .sec-title{color:#fce2b3}
+.reviews-section{padding:80px 0;background:#ede1cc}
+.reviews-section .sec-title{color:var(--text)}
 .reviews-section .sec-head{margin-bottom:0}
 .reviews-eyebrow{
   font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;
-  color:var(--accent);margin-bottom:12px;display:block;
+  color:var(--accent-deep);margin-bottom:12px;display:block;
 }
-.reviews-headline{font-size:42px;font-weight:700;color:#fce2b3;line-height:1.15;margin-bottom:56px}
-.reviews-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:rgba(252,226,179,.1)}
+.reviews-headline{font-size:42px;font-weight:700;color:var(--text);line-height:1.15;margin-bottom:56px}
+.reviews-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:rgba(44,31,20,.1)}
 .review-card{
-  padding:40px 36px;background:#3e2b1b;
+  padding:40px 36px;background:#ede1cc;
   display:flex;flex-direction:column;gap:0;
   transition:background .25s;
 }
-.review-card:hover{background:#4d3625}
+.review-card:hover{background:#e4d5b8}
 .review-stars{display:flex;gap:3px;margin-bottom:22px}
-.review-stars svg{width:14px;height:14px;fill:#f5c947;stroke:none}
+.review-stars svg{width:14px;height:14px;fill:#c8965a;stroke:none}
 .review-quote{
-  font-size:15px;line-height:1.85;color:rgba(252,226,179,.88);
+  font-size:15px;line-height:1.85;color:var(--text-soft);
   flex:1;margin-bottom:32px;font-style:italic;
 }
-.review-author{display:flex;align-items:center;gap:14px;padding-top:24px;border-top:1px solid rgba(252,226,179,.12)}
+.review-author{display:flex;align-items:center;gap:14px;padding-top:24px;border-top:1px solid rgba(44,31,20,.12)}
 .review-avatar{
   width:42px;height:42px;border-radius:50%;flex-shrink:0;
   background:linear-gradient(135deg,var(--accent),var(--accent-deep));
   color:#fff;display:flex;align-items:center;justify-content:center;
   font-weight:700;font-size:14px;letter-spacing:0;
 }
-.review-name{font-size:13.5px;font-weight:700;color:#fce2b3}
-.review-tag{font-size:11.5px;color:rgba(252,226,179,.5);margin-top:3px}
+.review-name{font-size:13.5px;font-weight:700;color:var(--text)}
+.review-tag{font-size:11.5px;color:var(--text-soft);margin-top:3px}
 
 /* ===== 保障行 ===== */
 .trust{background:var(--bg-trust);padding:52px 0}
@@ -281,7 +281,7 @@ footer{background:#1a1410;color:#a99a82;padding:28px 0}
   .features-grid{grid-template-columns:1fr 1fr;gap:16px}
   .trust-grid{grid-template-columns:1fr 1fr;gap:16px}
   .what-box{padding:28px;border-radius:18px}
-  .reviews-section{padding:64px 0}
+  .reviews-section{padding:56px 0}
   .reviews-headline{font-size:28px;margin-bottom:36px}
   .reviews-grid{grid-template-columns:1fr;gap:1px}
   .review-card{padding:32px 24px}
@@ -302,16 +302,16 @@ footer{background:#1a1410;color:#a99a82;padding:28px 0}
 <section class="hero">
   <!-- 全屏背景图 -->
   <div class="hero-bg">
-    <img src="../assets/hero-main.png" alt="哞屋动盒子产品图">
+    <img src="../assets/hero-main.png" alt="哞屋动盒产品图">
   </div>
   <!-- 渐变遮罩 -->
   <div class="hero-overlay"></div>
   <!-- 浮层文字（直接在 section 内，不套 container，用 clamp padding 定位） -->
   <div class="hero-text reveal">
     <h1>转动手柄<br>让创意动起来</h1>
-    <div class="hero-sub">动盒子 · 手摇动画机</div>
+    <div class="hero-sub">动盒 · 手摇动画机</div>
     <a href="showcase.html" class="hero-cta">
-      探索动盒子
+      探索动盒
       <svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
     </a>
   </div>
@@ -352,7 +352,7 @@ footer{background:#1a1410;color:#a99a82;padding:28px 0}
       <a href="showcase.html?style=classic" class="style-card reveal">
         <div class="style-img">📦</div>
         <div class="style-body">
-          <div class="style-name">动盒子 · 经典款</div>
+          <div class="style-name">动盒 · 经典款</div>
           <div class="style-meta">最受欢迎的入门选择</div>
           <span class="style-more">查看更多 <svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
         </div>
@@ -360,7 +360,7 @@ footer{background:#1a1410;color:#a99a82;padding:28px 0}
       <a href="showcase.html?style=mini" class="style-card reveal">
         <div class="style-img" style="background:linear-gradient(135deg,#d4c8a8,#c4b890)">🎁</div>
         <div class="style-body">
-          <div class="style-name">动盒子 · 迷你款</div>
+          <div class="style-name">动盒 · 迷你款</div>
           <div class="style-meta">小巧便携，随身把玩</div>
           <span class="style-more">查看更多 <svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
         </div>
@@ -368,7 +368,7 @@ footer{background:#1a1410;color:#a99a82;padding:28px 0}
       <a href="showcase.html?style=retro" class="style-card reveal">
         <div class="style-img" style="background:linear-gradient(135deg,#3a2a1c,#5a3f28)">📽️</div>
         <div class="style-body">
-          <div class="style-name">动盒子 · 复古放映机</div>
+          <div class="style-name">动盒 · 复古放映机</div>
           <div class="style-meta">复古胶片风格，机械美感十足</div>
           <span class="style-more">查看更多 <svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
         </div>
@@ -385,13 +385,13 @@ footer{background:#1a1410;color:#a99a82;padding:28px 0}
   </div>
 </section>
 
-<!-- ============ 什么是动盒子 ============ -->
+<!-- ============ 什么是动盒 ============ -->
 <section>
   <div class="container">
     <div class="what-box reveal">
       <div>
-        <h2>什么是动盒子？</h2>
-        <p>动盒子是一款通过手摇驱动，让一张张画面动起来的机械动画机。</p>
+        <h2>什么是动盒？</h2>
+        <p>动盒是一款通过手摇驱动，让一张张画面动起来的机械动画机。</p>
         <p>灵感来自经典的翻页动画原理，每一次转动，都是一次创意的呈现。</p>
         <a href="about.html" class="more-btn">
           了解更多
@@ -399,7 +399,7 @@ footer{background:#1a1410;color:#a99a82;padding:28px 0}
         </a>
       </div>
       <div class="diagram-wrap">
-        <img id="boxDiagram" src="../assets/box-diagram.png" alt="动盒子结构线稿"
+        <img id="boxDiagram" src="../assets/box-diagram.png" alt="动盒结构线稿"
              onerror="this.style.display='none';document.getElementById('diagramPlaceholder').style.display='flex'">
         <div id="diagramPlaceholder" class="diagram-placeholder" style="display:none">
           <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 16l5-5 4 4 5-5 4 4M9 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>
@@ -441,7 +441,7 @@ footer{background:#1a1410;color:#a99a82;padding:28px 0}
           <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
           <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
         </div>
-        <p class="review-quote">第一次拿到动盒子，整整玩了一下午。看着自己画的小人在木盒里动起来，像把童年的记忆拼了回来。</p>
+        <p class="review-quote">第一次拿到动盒，整整玩了一下午。看着自己画的小人在木盒里动起来，像把童年的记忆拼了回来。</p>
         <div class="review-author">
           <div class="review-avatar">林</div>
           <div><div class="review-name">林同学</div><div class="review-tag">大学生 · 经典款</div></div>
@@ -506,7 +506,7 @@ footer{background:#1a1410;color:#a99a82;padding:28px 0}
   <div class="container">
     <h2>准备好创造属于你的动画故事了吗？</h2>
     <a href="customize-start.html" class="cta-banner-btn">
-      开始你的动盒子之旅
+      开始你的动盒之旅
       <svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
     </a>
   </div>
