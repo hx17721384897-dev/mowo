@@ -51,9 +51,9 @@
     '</div>' +
     '<div class="mowo-nav-right">' +
       '<a class="mowo-nav-icon" href="showcase.html" aria-label="搜索">' + IC.search + '</a>' +
-      /* auth.js 会在 #navLoginBtn 之前插入 .nav-user 头像区 */
-      '<button class="mowo-nav-icon nav-login-btn" id="navLoginBtn" aria-label="登录 / 个人中心">' + IC.user + '</button>' +
       '<a class="mowo-nav-icon mowo-cart-btn" href="cart.html" data-count="0" aria-label="购物车">' + IC.cart + '</a>' +
+      /* auth.js 会在 #navLoginBtn 之前插入 .nav-user 头像区，头像始终在最右 */
+      '<button class="mowo-nav-icon nav-login-btn" id="navLoginBtn" aria-label="登录 / 个人中心">' + IC.user + '</button>' +
     '</div>' +
   '</nav>';
 
