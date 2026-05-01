@@ -3,842 +3,654 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>哞屋 MOWO — 让每帧热爱，都能被触摸</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<title>哞屋造物 MOWOBOX · 转动手柄，让创意动起来</title>
 <style>
-:root {
-  --bg:      #faf7f2;
-  --bg2:     #f5efe4;
-  --warm:    #e8d5b0;
-  --accent:  #c8965a;
-  --accent2: #8b5e3c;
-  --dark:    #2c1f14;
-  --text:    #3d2e1e;
-  --text2:   #7a6552;
-  --text3:   #a89078;
-  --gold:    #d4a843;
-  --red:     #e84c4c;
-  --green:   #52a878;
-  --border:  #e0cdb5;
-  --tag-bg:  #fdf5e8;
-  --hero-bg: #f5e6c8;
-  --font:    'Nunito', 'Noto Sans SC', sans-serif;
-  --ease:    cubic-bezier(0.22, 1, 0.36, 1);
-  --nav-h:   64px;
-  --pad:     48px;
-  --pad-m:   20px;
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#faf7f2;
+  --bg-card:#f1ebe0;
+  --text:#2c1f14;
+  --text-soft:#6b5544;
+  --accent:#c8965a;
+  --accent-deep:#a87742;
+  --nav-dark:#2a1d12;
+  --nav-text:#e8dcc8;
+  --hero-yellow:#f5c947;
+  --hero-yellow-soft:#f7d572;
+  --line:#e3d9c8;
+  --shadow:0 4px 20px rgba(44,31,20,.06);
+  --shadow-lg:0 12px 40px rgba(44,31,20,.1);
 }
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; font-size: 14px; }
-body { font-family: var(--font); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
-a { text-decoration: none; color: inherit; }
-button { font-family: var(--font); cursor: pointer; border: none; background: none; }
-img { max-width: 100%; display: block; }
+html,body{background:var(--bg);color:var(--text);font-family:'PingFang SC','Microsoft YaHei',-apple-system,system-ui,sans-serif;line-height:1.55;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+img{display:block;max-width:100%}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+.container{max-width:1280px;margin:0 auto;padding:0 32px}
 
-/* ══ NAV（Grid 三列，链接真正居中）══ */
-nav {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 900;
-  height: var(--nav-h);
-  background: rgba(250,247,242,.92);
-  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--border);
-  display: grid; grid-template-columns: 1fr auto 1fr;
-  align-items: center; padding: 0 var(--pad);
-}
-.nav-logo {
-  display: flex; align-items: center; gap: 8px;
-  font-weight: 800; font-size: 17px; color: var(--dark);
-  white-space: nowrap; text-decoration: none;
-}
-.nav-logo-icon {
-  width: 36px; height: 36px; background: var(--dark); border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  color: #fff; font-size: 18px; font-weight: 900;
-}
-.nav-links { display: flex; gap: 32px; list-style: none; }
-.nav-links a {
-  font-weight: 600; font-size: 14px; color: var(--text2);
-  padding: 4px 0; border-bottom: 2px solid transparent;
-  transition: color .2s, border-color .2s;
-}
-.nav-links a:hover, .nav-links a.active { color: var(--dark); border-bottom-color: var(--accent); }
-.nav-right { display: flex; align-items: center; gap: 12px; justify-content: flex-end; }
-.nav-login, #navLoginBtn {
-  padding: 8px 20px; background: var(--dark); color: #fff;
-  border-radius: 999px; font-size: 13px; font-weight: 700; transition: background .2s;
-}
-.nav-login:hover, #navLoginBtn:hover { background: var(--accent2); }
-.burger {
-  display: none; width: 38px; height: 38px; border-radius: 10px;
-  align-items: center; justify-content: center;
-  color: var(--text2); font-size: 22px; cursor: pointer;
-}
-@media (max-width: 1023px) {
-  nav { grid-template-columns: 1fr auto; padding: 0 var(--pad-m); }
-  .nav-links { display: none; }
-  .burger { display: flex; }
-  .nav-right { gap: 6px; }
+/* ===== 自定义光标（仅桌面） ===== */
+@media (pointer:fine){
+  body{cursor:none}
+  .cursor-dot{position:fixed;top:0;left:0;width:8px;height:8px;background:var(--accent);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:transform .15s ease}
+  .cursor-ring{position:fixed;top:0;left:0;width:32px;height:32px;border:1.5px solid var(--accent);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:transform .25s ease,opacity .25s ease}
+  a,button,.clickable{cursor:none}
 }
 
-/* ══ MOBILE MENU（完整保留原版所有 ID，auth.js 依赖）══ */
-.mobile-menu {
-  position: fixed; inset: 0; background: var(--dark); z-index: 1000;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 32px;
-  opacity: 0; pointer-events: none; transition: opacity .35s var(--ease);
+/* ===== 顶部导航（深咖啡棕） ===== */
+nav{
+  position:sticky;top:0;z-index:100;
+  display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
+  height:64px;padding:0 32px;
+  background:var(--nav-dark);
+  color:var(--nav-text);
+  border-bottom:1px solid rgba(232,220,200,.08);
 }
-.mobile-menu.open { opacity: 1; pointer-events: all; }
-.mobile-menu a { font-weight: 900; font-size: clamp(28px,8vw,46px); color: rgba(250,247,242,.9); transition: color .2s; }
-.mobile-menu a:hover { color: var(--accent); }
-.mobile-menu-footer {
-  position: absolute; bottom: 48px; left: 0; right: 0;
-  display: flex; flex-direction: column; align-items: center; gap: 12px;
-}
-.mobile-login-btn {
-  font-family: var(--font); font-weight: 900; font-size: 15px;
-  padding: 14px 48px; background: var(--accent); color: #fff;
-  border-radius: 999px; border: none; cursor: pointer; transition: opacity .2s;
-}
-.mobile-login-btn:hover { opacity: .85; }
-.mobile-menu-avatar { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.mobile-menu-avatar-btn {
-  width: 56px; height: 56px; border-radius: 50%;
-  background: var(--accent); color: #fff; font-weight: 900; font-size: 22px;
-  display: flex; align-items: center; justify-content: center;
-  border: none; cursor: pointer; transition: opacity .2s;
-}
-.mobile-menu-avatar-btn:hover { opacity: .8; }
-.mobile-menu-avatar-name { font-weight: 700; font-size: 13px; color: rgba(250,247,242,.5); }
+.nav-left{display:flex;align-items:center;gap:14px}
+.nav-logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;letter-spacing:.02em}
+.nav-logo-mark{width:32px;height:32px;background:var(--nav-text);color:var(--nav-dark);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px}
+.nav-logo-text small{display:block;font-size:11px;font-weight:400;opacity:.7;letter-spacing:.15em;margin-top:-2px}
+.nav-mid{display:flex;gap:38px;font-size:14px}
+.nav-mid a{position:relative;padding:8px 0;color:var(--nav-text);opacity:.85;transition:opacity .2s}
+.nav-mid a:hover,.nav-mid a.active{opacity:1}
+.nav-mid a.active::after{content:'';position:absolute;bottom:-2px;left:50%;transform:translateX(-50%);width:24px;height:2px;background:var(--accent);border-radius:2px}
+.nav-right{display:flex;justify-content:flex-end;align-items:center;gap:18px}
+.nav-icon{width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:50%;color:var(--nav-text);opacity:.8;transition:opacity .2s,background .2s}
+.nav-icon:hover{opacity:1;background:rgba(232,220,200,.08)}
+.nav-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.6}
+.cart-badge{position:relative}
+.cart-badge::after{content:attr(data-count);position:absolute;top:6px;right:6px;width:16px;height:16px;background:var(--accent);color:#fff;font-size:10px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600}
+.cart-badge[data-count="0"]::after{display:none}
+.nav-login{padding:8px 18px;border:1px solid rgba(232,220,200,.3);border-radius:20px;color:var(--nav-text);font-size:13px;transition:all .2s}
+.nav-login:hover{background:var(--nav-text);color:var(--nav-dark)}
+.menu-btn{display:none;width:40px;height:40px;align-items:center;justify-content:center;color:var(--nav-text)}
+.menu-btn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2}
 
-/* ══ HERO ══ */
-#hero {
-  min-height: 100vh; padding-top: var(--nav-h);
-  background: var(--hero-bg);
-  display: flex; align-items: center;
-  position: relative; overflow: hidden;
+/* ===== Hero ===== */
+.hero{
+  background:linear-gradient(135deg,var(--hero-yellow) 0%,var(--hero-yellow-soft) 60%,#f8d987 100%);
+  padding:80px 0 90px;position:relative;overflow:hidden;
 }
-#hero::before {
-  content: ''; position: absolute; top: -10%; right: -5%;
-  width: 60vw; height: 80vh;
-  background: radial-gradient(ellipse, rgba(212,168,67,.28) 0%, transparent 70%);
-  pointer-events: none;
+.hero-inner{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center}
+.hero-text h1{font-size:64px;font-weight:800;line-height:1.1;letter-spacing:-.01em;color:var(--text);margin-bottom:16px}
+.hero-sub{color:var(--text-soft);font-size:15px;margin-bottom:36px;letter-spacing:.05em}
+.hero-cta{display:inline-flex;align-items:center;gap:10px;padding:16px 32px;background:var(--nav-dark);color:var(--nav-text);font-size:15px;font-weight:600;border-radius:32px;transition:transform .2s,box-shadow .2s}
+.hero-cta:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(42,29,18,.3)}
+.hero-cta svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2}
+.hero-visual{position:relative;display:flex;align-items:center;justify-content:center;min-height:380px}
+.hero-box{
+  width:100%;max-width:480px;aspect-ratio:5/4;
+  background:#e6c574;border-radius:18px;
+  display:flex;align-items:center;justify-content:center;
+  position:relative;box-shadow:0 30px 60px rgba(168,119,66,.25);
 }
-.hero-inner {
-  width: 100%; max-width: 1200px; margin: 0 auto;
-  padding: 60px var(--pad);
-  display: grid; grid-template-columns: 1fr 1fr;
-  align-items: center; gap: 48px;
+/* CSS 拟物动盒子（占位艺术） */
+.box-art{
+  width:60%;height:65%;background:#f4e4c3;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  position:relative;border:3px solid #b88950;
 }
-@media (max-width: 900px) {
-  .hero-inner { grid-template-columns: 1fr; padding: 48px var(--pad-m) 60px; text-align: center; }
+.box-art::before,.box-art::after{
+  content:'';position:absolute;width:14px;height:60%;background:#7a4f24;border-radius:3px;
 }
-.hero-tag {
-  font-weight: 800; font-size: 12px; letter-spacing: .2em; text-transform: uppercase;
-  color: var(--accent2); margin-bottom: 16px;
-  opacity: 0; animation: fup .7s var(--ease) .3s forwards;
+.box-art::before{left:-7px}
+.box-art::after{right:-7px}
+.box-art-paper{width:75%;height:55%;background:#fff;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:48px}
+.box-handle{
+  position:absolute;right:-10%;top:42%;width:18%;aspect-ratio:1;
+  background:#f4e4c3;border:3px solid #b88950;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
 }
-.hero-headline {
-  font-weight: 900; font-size: clamp(36px,5.5vw,72px);
-  line-height: 1.1; letter-spacing: -.02em; color: var(--dark); margin-bottom: 18px;
-  opacity: 0; animation: fup .7s var(--ease) .5s forwards;
-}
-.hero-headline em {
-  font-style: normal; position: relative; display: inline-block;
-}
-.hero-headline em::after {
-  content: ''; position: absolute; bottom: 4px; left: 0; right: 0;
-  height: 8px; background: var(--accent); z-index: -1; border-radius: 4px; opacity: .5;
-}
-.hero-sub {
-  font-weight: 600; font-size: clamp(14px,1.8vw,17px);
-  color: var(--text2); line-height: 1.75; margin-bottom: 36px;
-  opacity: 0; animation: fup .7s var(--ease) .7s forwards;
-}
-.hero-btns {
-  display: flex; gap: 12px; flex-wrap: wrap;
-  opacity: 0; animation: fup .7s var(--ease) .9s forwards;
-}
-@media (max-width: 900px) { .hero-btns { justify-content: center; } }
-.btn-hero-primary {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 14px 28px; border-radius: 999px;
-  background: var(--dark); color: #fff; font-weight: 800; font-size: 15px;
-  box-shadow: 0 4px 0 rgba(44,31,20,.28); transition: transform .2s, box-shadow .2s;
-}
-.btn-hero-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 0 rgba(44,31,20,.28); }
-.btn-hero-secondary {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 14px 28px; border-radius: 999px;
-  background: var(--accent); color: #fff; font-weight: 800; font-size: 15px;
-  box-shadow: 0 4px 0 rgba(200,150,90,.32); transition: transform .2s, box-shadow .2s;
-}
-.btn-hero-secondary:hover { transform: translateY(-2px); box-shadow: 0 6px 0 rgba(200,150,90,.32); }
+.box-handle::after{content:'';width:30%;height:60%;background:#7a4f24;border-radius:3px;position:absolute;top:55%;right:0;transform:translateX(50%) rotate(15deg)}
+.spark{position:absolute;font-size:40px;color:var(--text);font-weight:900}
+.spark-1{top:8%;right:8%}
+.spark-2{top:30%;right:-2%;font-size:28px}
 
-/* Hero 动画设备 */
-.hero-device-wrap {
-  display: flex; align-items: center; justify-content: center; position: relative;
-  opacity: 0; animation: fup .8s var(--ease) .4s forwards;
+/* ===== 通用 section ===== */
+section{padding:80px 0}
+.sec-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:36px;gap:24px}
+.sec-title{font-size:28px;font-weight:700;letter-spacing:-.01em}
+.sec-link{font-size:14px;color:var(--text-soft);display:flex;align-items:center;gap:6px;transition:color .2s}
+.sec-link:hover{color:var(--accent-deep)}
+.sec-link svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
+
+/* ===== 功能徽章 ===== */
+.features{padding:48px 0;border-bottom:1px solid var(--line)}
+.features-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:32px}
+.feature-item{display:flex;gap:14px;align-items:flex-start}
+.feature-icon{flex:none;width:40px;height:40px;border-radius:50%;background:var(--bg-card);display:flex;align-items:center;justify-content:center;color:var(--accent-deep)}
+.feature-icon svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.6}
+.feature-item h4{font-size:15px;font-weight:600;margin-bottom:4px}
+.feature-item p{font-size:12.5px;color:var(--text-soft);line-height:1.5}
+
+/* ===== 动盒系列 ===== */
+.styles-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px}
+.style-card{
+  background:var(--bg-card);border-radius:16px;overflow:hidden;
+  display:flex;flex-direction:column;
+  transition:transform .25s ease,box-shadow .25s ease;
 }
-.hero-device { width: min(280px,70vw); position: relative; animation: float 5s ease-in-out 1.2s infinite; }
-@keyframes float { 0%,100%{ transform: translateY(0) rotate(-1.5deg); } 50%{ transform: translateY(-18px) rotate(1.5deg); } }
-.device-shell {
-  width: 100%; aspect-ratio: 3/4;
-  background: rgba(255,255,255,.72); border-radius: 48px; border: 2px solid var(--border);
-  box-shadow: 0 32px 80px rgba(44,31,20,.14), 0 8px 24px rgba(44,31,20,.07);
-  display: flex; align-items: center; justify-content: center;
-  position: relative; overflow: hidden;
+.style-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+.style-img{aspect-ratio:1;background:linear-gradient(135deg,#e8d8b8,#d8c298);display:flex;align-items:center;justify-content:center;font-size:64px;color:#a07840;opacity:.85}
+.style-img.bg2{background:linear-gradient(135deg,#3a2a1c,#5a3f28)}
+.style-img.bg3{background:linear-gradient(135deg,#f0e2c4,#e0c894)}
+.style-img.bg4{background:linear-gradient(135deg,#e8d8b8,#cab088)}
+.style-body{padding:18px 18px 22px;display:flex;flex-direction:column;gap:14px}
+.style-name{font-size:16px;font-weight:600}
+.style-meta{font-size:12.5px;color:var(--text-soft)}
+.style-more{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:10px 0;background:var(--nav-dark);color:var(--nav-text);
+  font-size:13px;font-weight:500;border-radius:10px;transition:background .2s;
 }
-.device-screen {
-  width: 76%; aspect-ratio: 1; background: var(--bg2); border-radius: 20px;
-  display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;
+.style-more:hover{background:var(--accent-deep)}
+.style-more svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
+
+/* ===== 什么是动盒子 ===== */
+.what-box{
+  background:var(--bg-card);border-radius:24px;padding:60px;
+  display:grid;grid-template-columns:1fr 1.1fr;gap:60px;align-items:center;
 }
-.zoe { width: 80px; height: 80px; position: relative; animation: spin 1.8s steps(12) infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-.spoke {
-  position: absolute; top: 50%; left: 50%;
-  width: 3px; height: 36px; margin-left: -1.5px;
-  border-radius: 3px; background: var(--dark); transform-origin: 50% 0%;
+.what-box h2{font-size:26px;font-weight:700;margin-bottom:18px}
+.what-box p{color:var(--text-soft);font-size:14.5px;line-height:1.75;margin-bottom:12px}
+.what-box .more-btn{
+  display:inline-flex;align-items:center;gap:8px;margin-top:24px;
+  padding:12px 24px;background:var(--nav-dark);color:var(--nav-text);
+  font-size:13px;font-weight:500;border-radius:24px;transition:transform .2s;
 }
-.spoke:nth-child(1)  { transform: rotate(0deg)   scaleY(1.0);  opacity: 1.0; }
-.spoke:nth-child(2)  { transform: rotate(30deg)  scaleY(.9);   opacity: .85; }
-.spoke:nth-child(3)  { transform: rotate(60deg)  scaleY(.8);   opacity: .7; }
-.spoke:nth-child(4)  { transform: rotate(90deg)  scaleY(.65);  opacity: .55; }
-.spoke:nth-child(5)  { transform: rotate(120deg) scaleY(.5);   opacity: .4; }
-.spoke:nth-child(6)  { transform: rotate(150deg) scaleY(.4);   opacity: .3; }
-.spoke:nth-child(7)  { transform: rotate(180deg) scaleY(.4);   opacity: .25; }
-.spoke:nth-child(8)  { transform: rotate(210deg) scaleY(.45);  opacity: .3; }
-.spoke:nth-child(9)  { transform: rotate(240deg) scaleY(.55);  opacity: .4; }
-.spoke:nth-child(10) { transform: rotate(270deg) scaleY(.7);   opacity: .55; }
-.spoke:nth-child(11) { transform: rotate(300deg) scaleY(.85);  opacity: .7; }
-.spoke:nth-child(12) { transform: rotate(330deg) scaleY(.95);  opacity: .85; }
-.run-char {
-  position: absolute; bottom: 10px; left: -20px;
-  display: flex; flex-direction: column; align-items: center; gap: 2px;
-  animation: run 2.8s linear infinite;
+.what-box .more-btn:hover{transform:translateY(-2px)}
+.what-box .more-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
+.diagram-box{
+  aspect-ratio:4/3;background:#f7f1e5;border:2px dashed #cdbfa6;
+  border-radius:14px;display:flex;align-items:center;justify-content:center;
+  flex-direction:column;color:#a89478;text-align:center;padding:24px;gap:10px;
+  position:relative;overflow:hidden;
 }
-.run-head { width: 11px; height: 11px; background: var(--dark); border-radius: 50%; }
-.run-body { width: 14px; height: 10px; background: var(--dark); border-radius: 4px; animation: bob .28s steps(2) infinite; }
-@keyframes run { 0%{ left: -20px } 100%{ left: calc(100% + 20px) } }
-@keyframes bob { 0%{ border-radius: 4px 4px 8px 4px } 50%{ border-radius: 4px 4px 4px 8px } }
-.hero-badge {
-  position: absolute; font-weight: 900; font-size: 11px;
-  padding: 6px 13px; border-radius: 999px; letter-spacing: .04em;
-  white-space: nowrap; pointer-events: none; animation: badge-bob 3s ease-in-out infinite;
+.diagram-box img{width:100%;height:100%;object-fit:contain}
+.diagram-box .placeholder{display:flex;flex-direction:column;align-items:center;gap:8px}
+.diagram-box .placeholder svg{width:48px;height:48px;stroke:currentColor;fill:none;stroke-width:1.2;opacity:.6}
+.diagram-box .placeholder strong{font-size:14px;font-weight:600;color:#8a7456}
+.diagram-box .placeholder span{font-size:12px;opacity:.7}
+
+/* ===== 创意 ===== */
+.creative-track{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:16px}
+.creative-card{
+  border-radius:14px;overflow:hidden;background:#1a1410;
+  position:relative;aspect-ratio:1;
+  cursor:pointer;transition:transform .25s;
 }
-.hero-badge-1 { top:-6%; left:-20%; background:var(--gold);   color:var(--dark); transform:rotate(-12deg); --r:-12deg; animation-delay:0s; }
-.hero-badge-2 { top:18%; right:-22%; background:var(--accent); color:#fff;        transform:rotate(8deg);  --r:8deg;  animation-delay:.8s; }
-.hero-badge-3 { bottom:20%; left:-22%; background:var(--green); color:#fff;       transform:rotate(6deg);  --r:6deg;  animation-delay:1.4s; }
-.hero-badge-4 { bottom:4%; right:-18%; background:var(--warm);  color:var(--dark);transform:rotate(-8deg); --r:-8deg; animation-delay:.4s; }
-@keyframes badge-bob { 0%,100%{ transform: translateY(0) rotate(var(--r)); } 50%{ transform: translateY(-7px) rotate(var(--r)); } }
-.scroll-hint {
-  position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%);
-  display: flex; flex-direction: column; align-items: center; gap: 6px;
-  opacity: 0; animation: fup .8s var(--ease) 1.5s forwards;
+.creative-card:hover{transform:translateY(-4px)}
+.creative-thumb{
+  width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#3a2a1c,#5a3f28);font-size:48px;
+  position:relative;
 }
-.scroll-hint span { font-weight: 700; font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--text3); }
-.scroll-dot { width: 6px; height: 6px; background: var(--text3); border-radius: 50%; animation: bdot 1.5s ease-in-out infinite; }
-@keyframes bdot { 0%,100%{ transform: translateY(0) } 50%{ transform: translateY(6px) } }
-@keyframes fup { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
-
-/* ══ 功能特点徽章 ══ */
-.features-bar { background: #fff; border-bottom: 1px solid var(--border); padding: 32px var(--pad); }
-.features-grid { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: repeat(4,1fr); gap: 24px; }
-@media (max-width: 700px) { .features-grid { grid-template-columns: repeat(2,1fr); gap: 16px; } }
-.feature-item { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
-.feature-icon { width: 52px; height: 52px; border-radius: 14px; background: var(--tag-bg); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 24px; }
-.feature-name { font-weight: 800; font-size: 13px; color: var(--dark); }
-.feature-desc { font-size: 11px; color: var(--text3); font-weight: 600; line-height: 1.5; }
-
-/* ══ Section 通用工具类 ══ */
-.section-wrap { padding: 72px var(--pad); }
-@media (max-width: 1023px) { .section-wrap { padding: 56px var(--pad-m); } }
-.section-inner { max-width: 1160px; margin: 0 auto; }
-.section-head { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 32px; }
-.section-title { font-weight: 900; font-size: clamp(22px,3.5vw,36px); color: var(--dark); line-height: 1.2; }
-.section-link { font-weight: 700; font-size: 13px; color: var(--text3); border-bottom: 1.5px solid var(--border); padding-bottom: 2px; white-space: nowrap; transition: color .2s, border-color .2s; }
-.section-link:hover { color: var(--accent); border-color: var(--accent); }
-
-/* ══ 联名作品 Grid ══ */
-.works-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 20px; }
-@media (max-width: 900px) { .works-grid { grid-template-columns: repeat(2,1fr); gap: 14px; } }
-.work-card {
-  background: #fff; border-radius: 16px; border: 1px solid var(--border);
-  overflow: hidden; cursor: pointer;
-  transition: transform .25s var(--ease), box-shadow .25s;
+.creative-card .play{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:42px;height:42px;border-radius:50%;
+  background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;
 }
-.work-card:hover { transform: translateY(-5px); box-shadow: 0 16px 40px rgba(44,31,20,.1); }
-.work-card-cover { width: 100%; aspect-ratio: 1; background: var(--bg2); display: flex; align-items: center; justify-content: center; font-size: 40px; overflow: hidden; }
-.work-card-cover img { width: 100%; height: 100%; object-fit: cover; }
-.work-card-body { padding: 12px 14px 14px; }
-.work-card-title { font-weight: 800; font-size: 13px; color: var(--dark); margin-bottom: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.work-card-meta  { font-size: 11px; color: var(--text3); font-weight: 600; margin-bottom: 8px; }
-.work-card-price { font-size: 16px; font-weight: 900; color: var(--red); }
-.work-card-price-hint { font-size: 10px; color: var(--text3); font-weight: 600; }
-/* 骨架屏 */
-.skel { background: linear-gradient(90deg,var(--bg2) 0%,var(--warm) 50%,var(--bg2) 100%); background-size: 200%; animation: skel 1.4s ease-in-out infinite; border-radius: 10px; }
-@keyframes skel { 0%{ background-position: 200% } 100%{ background-position: -200% } }
-.work-card-skel .work-card-cover { background: none; }
-.skel-img  { width: 100%; aspect-ratio: 1; }
-.skel-line { height: 12px; margin-bottom: 8px; }
-.skel-line.w70 { width: 70%; }
-.skel-line.w40 { width: 40%; }
+.creative-card .play svg{width:18px;height:18px;fill:var(--text);margin-left:2px}
+.creative-card .meta{
+  position:absolute;left:0;right:0;bottom:0;padding:12px 14px;
+  background:linear-gradient(to top,rgba(0,0,0,.78),transparent);
+  color:#fff;
+}
+.creative-card .meta strong{display:block;font-size:13px;font-weight:600;margin-bottom:2px}
+.creative-card .meta span{font-size:11px;opacity:.75}
 
-/* ══ 什么是哞屋动盒子 ══ */
-.what-bg { background: var(--bg2); padding: 0 var(--pad); }
-@media (max-width: 1023px) { .what-bg { padding: 0 var(--pad-m); } }
-.what-inner { max-width: 1100px; margin: 0 auto; padding: 72px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; }
-@media (max-width: 800px) { .what-inner { grid-template-columns: 1fr; gap: 32px; padding: 56px 0; } }
-.what-text h2 { font-weight: 900; font-size: clamp(24px,3.5vw,36px); color: var(--dark); margin-bottom: 16px; line-height: 1.2; }
-.what-text p  { font-weight: 600; font-size: 14px; color: var(--text2); line-height: 1.9; margin-bottom: 20px; }
-.what-btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; border-radius: 10px; background: var(--dark); color: #fff; font-weight: 800; font-size: 14px; transition: background .2s; }
-.what-btn:hover { background: var(--accent2); }
-.what-diagram { background: rgba(255,255,255,.7); border-radius: 20px; border: 1.5px solid var(--border); aspect-ratio: 4/3; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--text3); }
-.what-diagram span:first-child { font-size: 52px; opacity: .6; }
-.what-diagram span:last-child  { font-size: 12px; font-weight: 700; letter-spacing: .08em; }
+/* ===== 用户评价 ===== */
+.reviews{background:var(--bg-card);border-radius:24px;padding:64px 48px}
+.reviews-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:28px;margin-top:32px}
+.review-card{background:#fff;border-radius:14px;padding:28px;display:flex;flex-direction:column;gap:14px}
+.review-quote{font-size:14.5px;line-height:1.75;color:var(--text)}
+.review-quote::before{content:'"';color:var(--accent);font-size:42px;font-weight:700;line-height:0.8;display:block;margin-bottom:8px}
+.review-user{display:flex;align-items:center;gap:12px;padding-top:14px;border-top:1px solid var(--line)}
+.review-avatar{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-deep));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px}
+.review-name{font-size:13px;font-weight:600}
+.review-tag{font-size:11.5px;color:var(--text-soft);margin-top:2px}
 
-/* ══ 创意横向滚动 ══ */
-.creative-bg { background: var(--bg); }
-.creative-head-wrap { max-width: 1160px; margin: 0 auto; padding: 0 var(--pad); }
-@media (max-width: 1023px) { .creative-head-wrap { padding: 0 var(--pad-m); } }
-.creative-track { display: flex; gap: 16px; overflow-x: auto; padding: 4px var(--pad) 16px; scrollbar-width: none; -webkit-overflow-scrolling: touch; scroll-snap-type: x mandatory; }
-.creative-track::-webkit-scrollbar { display: none; }
-@media (max-width: 1023px) { .creative-track { padding: 4px var(--pad-m) 16px; } }
-.creative-card { flex: 0 0 min(160px,42vw); scroll-snap-align: start; background: #fff; border-radius: 14px; border: 1px solid var(--border); overflow: hidden; cursor: pointer; transition: transform .25s var(--ease); }
-.creative-card:hover { transform: translateY(-4px); }
-.creative-card-img { width: 100%; aspect-ratio: 1; background: var(--bg2); display: flex; align-items: center; justify-content: center; font-size: 30px; overflow: hidden; position: relative; }
-.creative-card-img img { width: 100%; height: 100%; object-fit: cover; }
-.creative-play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(44,31,20,.22); }
-.creative-play-icon { width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,.9); display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--dark); }
-.creative-card-body { padding: 10px 12px 12px; }
-.creative-card-title   { font-weight: 800; font-size: 12px; color: var(--dark); margin-bottom: 3px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.creative-card-creator { font-size: 11px; color: var(--text3); font-weight: 600; }
+/* ===== 保障行 ===== */
+.trust{padding:56px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.trust-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:32px}
+.trust-item{display:flex;gap:14px;align-items:center}
+.trust-icon{flex:none;width:42px;height:42px;border-radius:50%;background:var(--bg-card);display:flex;align-items:center;justify-content:center;color:var(--accent-deep)}
+.trust-icon svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.6}
+.trust-item h5{font-size:14px;font-weight:600;margin-bottom:2px}
+.trust-item p{font-size:12px;color:var(--text-soft)}
 
-/* ══ 用户评论「他们说」（完整保留原版内容）══ */
-.reviews-bg { background: var(--dark); color: rgba(250,247,242,.9); padding: 80px var(--pad); }
-@media (max-width: 1023px) { .reviews-bg { padding: 60px var(--pad-m); } }
-.reviews-inner { max-width: 1100px; margin: 0 auto; }
-.reviews-head  { text-align: center; margin-bottom: 52px; }
-.reviews-eyebrow { font-weight: 800; font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: rgba(250,247,242,.3); margin-bottom: 12px; }
-.reviews-title   { font-weight: 900; font-size: clamp(28px,5vw,52px); color: rgba(250,247,242,.92); line-height: 1.1; margin-bottom: 10px; }
-.reviews-sub     { font-weight: 700; font-size: 14px; color: rgba(250,247,242,.4); }
-.reviews-grid    { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-@media (max-width: 700px) { .reviews-grid { grid-template-columns: 1fr; } }
-.review-block { background: rgba(250,247,242,.04); border: 1px solid rgba(250,247,242,.08); border-radius: 24px; padding: 32px; }
-.review-tag { display: inline-flex; align-items: center; gap: 8px; font-weight: 800; font-size: 11px; letter-spacing: .15em; text-transform: uppercase; color: rgba(250,247,242,.4); margin-bottom: 20px; }
-.review-dot { width: 8px; height: 8px; border-radius: 50%; }
-.review-block:nth-child(1) .review-dot { background: var(--gold); }
-.review-block:nth-child(2) .review-dot { background: var(--accent); }
-.review-quote { font-weight: 800; font-size: clamp(14px,2vw,17px); line-height: 1.7; color: rgba(250,247,242,.85); margin-bottom: 24px; padding-left: 14px; border-left: 3px solid rgba(250,247,242,.12); }
-.testimonials { display: flex; flex-direction: column; gap: 18px; }
-.testimonial   { border-top: 1px solid rgba(250,247,242,.08); padding-top: 18px; }
-.testimonial p { font-weight: 700; font-size: 13px; line-height: 1.85; color: rgba(250,247,242,.42); margin-bottom: 6px; }
-.testimonial-meta { font-weight: 700; font-size: 11px; letter-spacing: .08em; color: rgba(250,247,242,.2); }
+/* ===== CTA banner ===== */
+.cta-banner{
+  background:var(--nav-dark);color:var(--nav-text);
+  padding:64px 0;text-align:center;
+}
+.cta-banner h2{font-size:24px;font-weight:600;margin-bottom:24px}
+.cta-banner-btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:16px 36px;background:var(--bg);color:var(--text);
+  border-radius:32px;font-size:14px;font-weight:600;
+  transition:transform .2s;
+}
+.cta-banner-btn:hover{transform:translateY(-2px)}
+.cta-banner-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
 
-/* ══ 信任保障行 ══ */
-.trust-bar { background: #fff; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 36px var(--pad); }
-.trust-grid { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: repeat(4,1fr); gap: 20px; }
-@media (max-width: 700px) { .trust-grid { grid-template-columns: repeat(2,1fr); } }
-.trust-item { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
-.trust-icon { font-size: 28px; }
-.trust-name { font-weight: 800; font-size: 13px; color: var(--dark); }
-.trust-desc { font-size: 11px; color: var(--text3); font-weight: 600; }
+/* ===== 页脚 ===== */
+footer{background:#1a1410;color:#a99a82;padding:32px 0}
+.footer-row{display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.footer-brand{display:flex;align-items:center;gap:10px;font-weight:600;color:#e8dcc8;font-size:14px}
+.footer-brand .nav-logo-mark{width:28px;height:28px;font-size:12px;background:#e8dcc8;color:#1a1410}
+.footer-links{display:flex;gap:24px;font-size:12.5px}
+.footer-links a:hover{color:#e8dcc8}
+.footer-social{display:flex;gap:8px}
+.footer-social a{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(232,220,200,.06);transition:background .2s}
+.footer-social a:hover{background:rgba(232,220,200,.16)}
+.footer-social svg{width:14px;height:14px;stroke:#a99a82;fill:none;stroke-width:1.8}
 
-/* ══ 底部 CTA 横幅 ══ */
-.cta-banner { background: var(--dark); padding: 80px var(--pad); text-align: center; }
-@media (max-width: 1023px) { .cta-banner { padding: 64px var(--pad-m); } }
-.cta-banner h2 { font-weight: 900; font-size: clamp(24px,4vw,44px); color: rgba(250,247,242,.95); line-height: 1.25; margin-bottom: 12px; }
-.cta-banner p  { font-weight: 600; font-size: 15px; color: rgba(250,247,242,.45); margin-bottom: 36px; }
-.cta-banner-btns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
-.cta-btn-warm { display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; border-radius: 999px; background: var(--accent); color: #fff; font-weight: 800; font-size: 15px; transition: opacity .2s; }
-.cta-btn-warm:hover { opacity: .85; }
-.cta-btn-outline { display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; border-radius: 999px; background: transparent; color: rgba(250,247,242,.7); font-weight: 800; font-size: 15px; border: 1.5px solid rgba(250,247,242,.22); transition: border-color .2s, color .2s; }
-.cta-btn-outline:hover { border-color: rgba(250,247,242,.55); color: rgba(250,247,242,.95); }
+/* ===== 移动端菜单 ===== */
+.mobile-menu{
+  position:fixed;inset:0;z-index:200;background:var(--nav-dark);color:var(--nav-text);
+  display:flex;flex-direction:column;
+  transform:translateX(100%);transition:transform .3s ease;visibility:hidden;
+}
+.mobile-menu.open{transform:translateX(0);visibility:visible}
+.mobile-menu-head{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid rgba(232,220,200,.1)}
+.mobile-menu-close{width:36px;height:36px;display:flex;align-items:center;justify-content:center;color:var(--nav-text)}
+.mobile-menu-close svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2}
+.mobile-menu-body{flex:1;overflow-y:auto;padding:24px}
+.mobile-menu-body a{display:block;padding:18px 0;font-size:18px;border-bottom:1px solid rgba(232,220,200,.06)}
+.mobile-menu-foot{padding:24px;border-top:1px solid rgba(232,220,200,.1)}
+.mobile-menu-foot button,.mobile-menu-foot .mobile-avatar{width:100%}
+.mobile-menu-foot .mobile-login-btn{padding:14px;background:var(--accent);color:#fff;border-radius:10px;font-size:15px;font-weight:600}
+.mobile-avatar{display:none;align-items:center;gap:14px;padding:14px;background:rgba(232,220,200,.06);border-radius:12px}
+.mobile-avatar.show{display:flex}
+.mobile-avatar-img{width:42px;height:42px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600}
+.mobile-avatar-name{font-size:15px;font-weight:600}
 
-/* ══ FOOTER（完整保留原版四列结构 + 暖棕配色）══ */
-footer { background: var(--dark); color: rgba(250,247,242,.45); padding: 80px var(--pad) 48px; border-top: 1px solid rgba(250,247,242,.06); }
-@media (max-width: 1023px) { footer { padding: 60px var(--pad-m) 36px; } }
-.foot-top { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 60px; padding-bottom: 56px; border-bottom: 1px solid rgba(250,247,242,.08); }
-@media (min-width: 1024px) { .foot-top { grid-template-columns: 1.8fr 1fr 1fr 1fr; } }
-.foot-brand-name { font-weight: 900; font-size: 24px; color: rgba(250,247,242,.95); margin-bottom: 2px; }
-.foot-brand-en   { font-weight: 700; font-size: 10px; letter-spacing: .22em; text-transform: uppercase; color: rgba(250,247,242,.3); display: block; margin-bottom: 14px; }
-.foot-desc { font-weight: 600; font-size: 13px; line-height: 1.8; color: rgba(250,247,242,.3); margin-bottom: 22px; }
-.foot-ctas { display: flex; gap: 10px; flex-wrap: wrap; }
-.foot-btn { font-weight: 800; font-size: 12px; padding: 10px 18px; border-radius: 999px; min-height: 40px; display: flex; align-items: center; cursor: pointer; transition: opacity .2s; }
-.foot-btn:hover { opacity: .75; }
-.foot-btn-warm  { background: var(--accent); color: #fff; }
-.foot-btn-ghost { background: transparent; color: rgba(250,247,242,.4); border: 1px solid rgba(250,247,242,.15); }
-.foot-col h4 { font-weight: 900; font-size: 10px; letter-spacing: .22em; text-transform: uppercase; color: rgba(250,247,242,.22); margin-bottom: 18px; }
-.foot-col ul { list-style: none; }
-.foot-col li  { margin-bottom: 11px; }
-.foot-col a   { font-weight: 700; font-size: 14px; color: rgba(250,247,242,.38); transition: color .2s; }
-.foot-col a:hover { color: rgba(250,247,242,.9); }
-.foot-bottom { display: flex; flex-direction: column; gap: 6px; }
-@media (min-width: 640px) { .foot-bottom { flex-direction: row; justify-content: space-between; align-items: center; } }
-.foot-bottom p { font-weight: 700; font-size: 12px; color: rgba(250,247,242,.18); }
+/* ===== 滚动揭示 ===== */
+.reveal{opacity:0;transform:translateY(20px);transition:all .7s var(--ease,cubic-bezier(.22,1,.36,1))}
+.reveal.in{opacity:1;transform:none}
 
-/* ══ REVEAL 滚动出现动画 ══ */
-.reveal { opacity: 0; transform: translateY(28px); transition: opacity .7s var(--ease), transform .7s var(--ease); }
-.reveal.on { opacity: 1; transform: none; }
-.d1{ transition-delay: .1s } .d2{ transition-delay: .2s } .d3{ transition-delay: .3s } .d4{ transition-delay: .4s }
+/* ===== 响应式 ===== */
+@media (max-width:1024px){
+  .hero-text h1{font-size:48px}
+  .styles-grid,.creative-track{grid-template-columns:repeat(2,1fr)}
+  .features-grid,.trust-grid{grid-template-columns:repeat(2,1fr);gap:24px}
+  .what-box{grid-template-columns:1fr;padding:40px;gap:32px}
+}
+@media (max-width:760px){
+  .container{padding:0 20px}
+  nav{padding:0 16px;height:56px;grid-template-columns:auto 1fr auto}
+  .nav-mid,.nav-right .nav-icon-account,.nav-right .nav-login{display:none}
+  .nav-left{justify-self:start}
+  .nav-logo{font-size:16px}
+  .nav-logo-mark{width:28px;height:28px;font-size:12px}
+  .menu-btn{display:flex}
+  .nav-right{justify-self:end;gap:6px}
+  .hero{padding:36px 0 50px}
+  .hero-inner{grid-template-columns:1fr;gap:32px;text-align:left}
+  .hero-text h1{font-size:36px}
+  .hero-cta{padding:14px 26px;font-size:14px}
+  section{padding:48px 0}
+  .sec-title{font-size:22px}
+  .styles-grid,.creative-track{grid-template-columns:repeat(2,1fr);gap:14px}
+  .style-img{font-size:42px}
+  .style-body{padding:14px}
+  .style-name{font-size:14px}
+  .what-box{padding:28px;border-radius:18px}
+  .reviews{padding:40px 24px;border-radius:18px}
+  .reviews-grid{grid-template-columns:1fr;gap:16px}
+  .review-card{padding:22px}
+  .footer-row{flex-direction:column;gap:18px;text-align:center}
+  .footer-links{flex-wrap:wrap;justify-content:center;gap:14px;font-size:12px}
+  .cta-banner{padding:48px 0}
+  .cta-banner h2{font-size:18px}
+  .features-grid{grid-template-columns:1fr 1fr;gap:18px}
+  .feature-item p{font-size:11.5px}
+  .trust-grid{grid-template-columns:1fr 1fr;gap:18px}
+}
 </style>
 </head>
 <body>
 
-<!-- ══ 移动端全屏菜单（保留原版全部 ID，auth.js 依赖）══ -->
-<div class="mobile-menu" id="mobileMenu">
-  <a href="about.html" onclick="closeMenu()">关于我们</a>
-  <a href="products.html" onclick="closeMenu()">产品介绍</a>
-  <a href="showcase.html" onclick="closeMenu()">画师联名</a>
-  <a href="customize-start.html" onclick="closeMenu()">创作中心</a>
-  <a href="contact.html" onclick="closeMenu()">联络我们</a>
-  <div class="mobile-menu-footer">
-    <button class="mobile-login-btn" id="mobileLoginBtn" onclick="closeMenu()">登录 / 注册</button>
-    <div class="mobile-menu-avatar" id="mobileMenuAvatar" style="display:none">
-      <button class="mobile-menu-avatar-btn" id="mobileMenuAvatarBtn" onclick="closeMenu()"></button>
-      <span class="mobile-menu-avatar-name" id="mobileMenuAvatarName"></span>
-    </div>
-  </div>
-</div>
+<div class="cursor-dot"></div><div class="cursor-ring"></div>
 
-<!-- ══ NAV ══ -->
+<!-- ============ 顶部导航 ============ -->
 <nav>
-  <a href="index.html" class="nav-logo">
-    <div class="nav-logo-icon">哞</div>
-    哞屋 MOWO
-  </a>
-  <ul class="nav-links">
-    <li><a href="about.html">关于我们</a></li>
-    <li><a href="products.html">产品介绍</a></li>
-    <li><a href="showcase.html">画师联名</a></li>
-    <li><a href="customize-start.html">创作中心</a></li>
-    <li><a href="contact.html">联络我们</a></li>
-  </ul>
+  <div class="nav-left">
+    <button class="menu-btn" onclick="openMenu()" aria-label="菜单">
+      <svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+    <a href="index.html" class="nav-logo">
+      <span class="nav-logo-mark">M</span>
+      <span class="nav-logo-text">MOWOBOX<small>哞屋造物</small></span>
+    </a>
+  </div>
+  <div class="nav-mid">
+    <a href="index.html" class="active">首页</a>
+    <a href="showcase.html">动盒系列</a>
+    <a href="customize-start.html">DIY 工坊</a>
+    <a href="showcase.html">创意社区</a>
+    <a href="about.html">关于我们</a>
+  </div>
   <div class="nav-right">
-    <button class="nav-login" id="navLoginBtn">登录</button>
-    <button class="burger" id="burger" onclick="toggleMenu()">☰</button>
+    <a class="nav-icon" href="showcase.html" aria-label="搜索">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    </a>
+    <a class="nav-icon nav-icon-account" href="settings.html" aria-label="账户">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+    </a>
+    <a class="nav-icon cart-badge" href="cart.html" data-count="0" aria-label="购物车">
+      <svg viewBox="0 0 24 24"><path d="M3 4h2l2.5 12h11l2.5-9H6"/><circle cx="9" cy="20" r="1.6"/><circle cx="18" cy="20" r="1.6"/></svg>
+    </a>
+    <button class="nav-login nav-login-btn" id="navLoginBtn">登录</button>
   </div>
 </nav>
 
-<!-- ══ HERO ══ -->
-<section id="hero">
-  <div class="hero-inner">
-    <!-- 左：文字 + 两个按钮（浏览作品 & 开始创作）-->
-    <div class="hero-text">
-      <p class="hero-tag">哞屋 MOWO · 手摇动画机</p>
-      <h1 class="hero-headline">让每帧热爱，<br><em>都能被触摸</em></h1>
-      <p class="hero-sub">把你喜欢的动画做成真实的、会转动的、握在手心的东西。</p>
-      <div class="hero-btns">
-        <a href="showcase.html" class="btn-hero-primary">浏览作品</a>
-        <a href="customize-start.html" class="btn-hero-secondary">开始创作 →</a>
-      </div>
+<!-- ============ Hero ============ -->
+<section class="hero">
+  <div class="container hero-inner">
+    <div class="hero-text reveal">
+      <h1>转动手柄<br>让创意动起来</h1>
+      <div class="hero-sub">动盒子 · 手摇动画机</div>
+      <a href="showcase.html" class="hero-cta">
+        探索动盒子
+        <svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+      </a>
     </div>
-    <!-- 右：CSS 动画设备 -->
-    <div class="hero-device-wrap">
-      <div class="hero-device">
-        <div class="hero-badge hero-badge-1">逐帧动画 ✦</div>
-        <div class="hero-badge hero-badge-2">可以转动！</div>
-        <div class="hero-badge hero-badge-3">原创设计</div>
-        <div class="hero-badge hero-badge-4">握在手心</div>
-        <div class="device-shell">
-          <div class="device-screen">
-            <div class="zoe">
-              <div class="spoke"></div><div class="spoke"></div>
-              <div class="spoke"></div><div class="spoke"></div>
-              <div class="spoke"></div><div class="spoke"></div>
-              <div class="spoke"></div><div class="spoke"></div>
-              <div class="spoke"></div><div class="spoke"></div>
-              <div class="spoke"></div><div class="spoke"></div>
-            </div>
-            <div class="run-char">
-              <div class="run-head"></div>
-              <div class="run-body"></div>
-            </div>
-          </div>
+    <div class="hero-visual reveal">
+      <div class="hero-box">
+        <div class="box-art">
+          <div class="box-art-paper">🐻</div>
         </div>
+        <div class="box-handle"></div>
+        <span class="spark spark-1">·</span>
+        <span class="spark spark-2">·</span>
       </div>
     </div>
-  </div>
-  <div class="scroll-hint">
-    <span>向下探索</span>
-    <div class="scroll-dot"></div>
   </div>
 </section>
 
-<!-- ══ 功能特点徽章 ══ -->
-<div class="features-bar">
-  <div class="features-grid">
+<!-- ============ 4 个功能徽章 ============ -->
+<section class="features">
+  <div class="container features-grid">
     <div class="feature-item reveal">
-      <div class="feature-icon">⚙️</div>
-      <div class="feature-name">经典机械原理</div>
-      <div class="feature-desc">无需电子，纯机械驱动</div>
+      <div class="feature-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
+      <div><h4>经典机械原理</h4><p>无需电子，纯机械驱动</p></div>
     </div>
-    <div class="feature-item reveal d1">
-      <div class="feature-icon">✨</div>
-      <div class="feature-name">激发创造力</div>
-      <div class="feature-desc">一张画，变成生动故事</div>
+    <div class="feature-item reveal">
+      <div class="feature-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+      <div><h4>激发创造力</h4><p>一张张画，变成生动故事</p></div>
     </div>
-    <div class="feature-item reveal d2">
-      <div class="feature-icon">🪵</div>
-      <div class="feature-name">高品质木制</div>
-      <div class="feature-desc">激光切割，精密耐用</div>
+    <div class="feature-item reveal">
+      <div class="feature-icon"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.27 6.96 8.73 5.05 8.73-5.05M12 22.08V12"/></svg></div>
+      <div><h4>高品质木制</h4><p>激光切割，精密耐用</p></div>
     </div>
-    <div class="feature-item reveal d3">
-      <div class="feature-icon">🎨</div>
-      <div class="feature-name">动手又好玩</div>
-      <div class="feature-desc">DIY 组装，乐趣满满</div>
+    <div class="feature-item reveal">
+      <div class="feature-icon"><svg viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/></svg></div>
+      <div><h4>动手又好玩</h4><p>DIY 组装，乐趣满满</p></div>
     </div>
   </div>
-</div>
+</section>
 
-<!-- ══ 联名作品 Grid（接 API）══ -->
-<div style="background:var(--bg)">
-  <div class="section-wrap">
-    <div class="section-inner">
-      <div class="section-head reveal">
-        <h2 class="section-title">画师联名作品</h2>
-        <a href="showcase.html" class="section-link">查看全部 →</a>
-      </div>
-      <div class="works-grid" id="collabWorksGrid">
-        <!-- 骨架屏占位，JS 加载后替换 -->
-        <div class="work-card work-card-skel"><div class="work-card-cover"><div class="skel skel-img"></div></div><div class="work-card-body"><div class="skel skel-line w70"></div><div class="skel skel-line w40"></div></div></div>
-        <div class="work-card work-card-skel"><div class="work-card-cover"><div class="skel skel-img"></div></div><div class="work-card-body"><div class="skel skel-line w70"></div><div class="skel skel-line w40"></div></div></div>
-        <div class="work-card work-card-skel"><div class="work-card-cover"><div class="skel skel-img"></div></div><div class="work-card-body"><div class="skel skel-line w70"></div><div class="skel skel-line w40"></div></div></div>
-        <div class="work-card work-card-skel"><div class="work-card-cover"><div class="skel skel-img"></div></div><div class="work-card-body"><div class="skel skel-line w70"></div><div class="skel skel-line w40"></div></div></div>
-      </div>
+<!-- ============ 动盒系列 ============ -->
+<section>
+  <div class="container">
+    <div class="sec-head reveal">
+      <h2 class="sec-title">动盒系列</h2>
+      <a href="showcase.html" class="sec-link">查看全部 <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></a>
     </div>
-  </div>
-</div>
-
-<!-- ══ 什么是哞屋动盒子 ══ -->
-<div class="what-bg">
-  <div class="what-inner">
-    <div class="what-text reveal">
-      <h2>什么是哞屋动盒子？</h2>
-      <p>动盒子是一款通过手摇驱动，让一张张画面动起来的机械动画机。灵感来自经典的翻页动画原理，每一次转动，都是一次创意的呈现。</p>
-      <p>配合平台的逐帧画作，你可以拥有一台独一无二的、会动的、握在手心里的艺术品。</p>
-      <a href="products.html" class="what-btn">了解更多 →</a>
-    </div>
-    <div class="what-diagram reveal d1">
-      <span>🎬</span>
-      <span>产品结构示意图占位</span>
-    </div>
-  </div>
-</div>
-
-<!-- ══ 看看画师们的创意（横向滚动，接 API）══ -->
-<div class="creative-bg">
-  <div class="section-wrap" style="padding-bottom:16px">
-    <div class="creative-head-wrap">
-      <div class="section-head reveal">
-        <h2 class="section-title">看看画师们的创意</h2>
-        <a href="showcase.html" class="section-link">查看更多作品 →</a>
-      </div>
-    </div>
-  </div>
-  <div class="creative-track" id="creativeTrack">
-    <!-- API 加载 -->
-  </div>
-  <div style="height:56px"></div>
-</div>
-
-<!-- ══ 用户评论「他们说」（完整保留原版内容）══ -->
-<div class="reviews-bg">
-  <div class="reviews-inner">
-    <div class="reviews-head">
-      <p class="reviews-eyebrow reveal">真实的声音</p>
-      <h2 class="reviews-title reveal d1">他们说</h2>
-      <p class="reviews-sub reveal d2">来自用户和创作者的真实感受。</p>
-    </div>
-    <div class="reviews-grid">
-      <div class="review-block reveal">
-        <div class="review-tag"><span class="review-dot"></span>收到它的人</div>
-        <p class="review-quote">看到它在手里转动的那一刻，我哭了。不是因为贵，是因为它真的动了——那个角色，我陪了它十年。</p>
-        <div class="testimonials">
-          <div class="testimonial">
-            <p>朋友帮我把我们的表情包做成了动画机当生日礼物，感觉比任何东西都有意义。</p>
-            <span class="testimonial-meta">来自上海的用户 · 消费者</span>
+    <div class="styles-grid">
+      <a href="showcase.html?style=classic" class="style-card reveal">
+        <div class="style-img">📦</div>
+        <div class="style-body">
+          <div>
+            <div class="style-name">动盒子 · 经典款</div>
+            <div class="style-meta">最受欢迎的入门选择</div>
           </div>
-          <div class="testimonial">
-            <p>第一次拿到就一直转，停不下来。她说这是今年最好的礼物。</p>
-            <span class="testimonial-meta">来自成都的用户 · 消费者</span>
-          </div>
+          <span class="style-more">查看更多 <svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
         </div>
+      </a>
+      <a href="showcase.html?style=mini" class="style-card reveal">
+        <div class="style-img bg2" style="font-size:48px">🎁</div>
+        <div class="style-body">
+          <div>
+            <div class="style-name">动盒子 · 迷你款</div>
+            <div class="style-meta">小巧便携，随手把玩</div>
+          </div>
+          <span class="style-more">查看更多 <svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
+        </div>
+      </a>
+      <a href="showcase.html?style=retro" class="style-card reveal">
+        <div class="style-img bg3">📽️</div>
+        <div class="style-body">
+          <div>
+            <div class="style-name">动盒子 · 复古放映机</div>
+            <div class="style-meta">复古胶片质感</div>
+          </div>
+          <span class="style-more">查看更多 <svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
+        </div>
+      </a>
+      <a href="showcase.html?style=diy" class="style-card reveal">
+        <div class="style-img bg4">🛠️</div>
+        <div class="style-body">
+          <div>
+            <div class="style-name">DIY 套件</div>
+            <div class="style-meta">从零开始动手组装</div>
+          </div>
+          <span class="style-more">查看更多 <svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg></span>
+        </div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 什么是动盒子 ============ -->
+<section>
+  <div class="container">
+    <div class="what-box reveal">
+      <div>
+        <h2>什么是动盒子？</h2>
+        <p>动盒子是一款通过手摇驱动，让一张张画面动起来的机械动画机。</p>
+        <p>灵感来自经典的翻页动画原理，每一次转动，都是一次创意的呈现。</p>
+        <a href="about.html" class="more-btn">
+          了解更多
+          <svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+        </a>
       </div>
-      <div class="review-block reveal d1">
-        <div class="review-tag"><span class="review-dot"></span>做出它的人</div>
-        <p class="review-quote">我从没想过自己的画有一天能变成实体产品。哞屋解决了我所有不懂的事——我只需要画好就够了。</p>
-        <div class="testimonials">
-          <div class="testimonial">
-            <p>第一个月就有二十多台卖出去了。以前做动画没有任何收入，现在感觉创作有了出口。</p>
-            <span class="testimonial-meta">@小墨 · 独立动画创作者</span>
-          </div>
-          <div class="testimonial">
-            <p>最喜欢有人买了我的动画机然后发消息说"它好可爱"——那种被看见的感觉，钱买不到。</p>
-            <span class="testimonial-meta">@Yuri_draw · 二次元插画师</span>
-          </div>
+      <div class="diagram-box">
+        <img id="boxDiagram" src="/api/site-config/box-diagram" alt="动盒子结构线稿"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+        <div class="placeholder" style="display:flex">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 16l5-5 4 4 5-5 4 4M9 10a1 1 0 1 0-.001-2.001A1 1 0 0 0 9 10z"/></svg>
+          <strong>产品线稿图（待上传）</strong>
+          <span>后台启用「首页内容管理」后将自动显示</span>
         </div>
       </div>
     </div>
   </div>
-</div>
+</section>
 
-<!-- ══ 信任保障 ══ -->
-<div class="trust-bar">
-  <div class="trust-grid">
+<!-- ============ 看看大家的创意 ============ -->
+<section>
+  <div class="container">
+    <div class="sec-head reveal">
+      <h2 class="sec-title">看看大家的创意</h2>
+      <a href="showcase.html" class="sec-link">探索更多 <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></a>
+    </div>
+    <div class="creative-track">
+      <div class="creative-card reveal"><div class="creative-thumb">🐱</div><div class="play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div><div class="meta"><strong>小猫的日常</strong><span>@MOMO</span></div></div>
+      <div class="creative-card reveal"><div class="creative-thumb" style="background:linear-gradient(135deg,#1a1a2e,#0f3460)">🚀</div><div class="play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div><div class="meta"><strong>太空漫游</strong><span>@星辰大海</span></div></div>
+      <div class="creative-card reveal"><div class="creative-thumb" style="background:linear-gradient(135deg,#fefefe,#e0e0e0)">💃</div><div class="play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div><div class="meta"><strong>跳舞的小人</strong><span>@DancingMan</span></div></div>
+      <div class="creative-card reveal"><div class="creative-thumb" style="background:linear-gradient(135deg,#3a2a1c,#5a3f28)">🦖</div><div class="play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div><div class="meta"><strong>小恐龙冒险</strong><span>@恐龙爱好者</span></div></div>
+      <div class="creative-card reveal"><div class="creative-thumb" style="background:linear-gradient(135deg,#fbeee6,#f4d6c8)">✨</div><div class="play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div><div class="meta"><strong>魔法时刻</strong><span>@MagicTime</span></div></div>
+      <div class="creative-card reveal"><div class="creative-thumb" style="background:linear-gradient(135deg,#a3e4d7,#48c9b0)">🐳</div><div class="play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div><div class="meta"><strong>深海之旅</strong><span>@OceanDream</span></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 他们说 用户评价 ============ -->
+<section>
+  <div class="container">
+    <div class="reviews reveal">
+      <div class="sec-head" style="margin-bottom:0">
+        <h2 class="sec-title">他们说</h2>
+      </div>
+      <div class="reviews-grid">
+        <div class="review-card">
+          <div class="review-quote">第一次拿到动盒子的时候，我整整玩了一下午。看着自己画的小人在木盒里动起来，那种感觉真的很奇妙，像把童年的记忆拼了回来。</div>
+          <div class="review-user"><div class="review-avatar">林</div><div><div class="review-name">林同学</div><div class="review-tag">大学生 · 经典款</div></div></div>
+        </div>
+        <div class="review-card">
+          <div class="review-quote">送给五岁的女儿，她现在每天都拉着我转动手柄。我们一起画一张张的画，再看它们动起来——这是我们这一年最珍贵的亲子时光。</div>
+          <div class="review-user"><div class="review-avatar">陈</div><div><div class="review-name">陈先生</div><div class="review-tag">爸爸 · DIY 套件</div></div></div>
+        </div>
+        <div class="review-card">
+          <div class="review-quote">作为一个手账爱好者，动盒子让我的小本子有了新的玩法。把日常瞬间画进去，转一下就是一段会动的回忆，超治愈。</div>
+          <div class="review-user"><div class="review-avatar">小</div><div><div class="review-name">小柚子</div><div class="review-tag">手账博主 · 迷你款</div></div></div>
+        </div>
+        <div class="review-card">
+          <div class="review-quote">设计师朋友推荐买的，没想到这么好玩。木质做工很精致，转动手柄的手感非常细腻，放在工位上每次卡壳的时候转一下，瞬间就有灵感。</div>
+          <div class="review-user"><div class="review-avatar">M</div><div><div class="review-name">Miya</div><div class="review-tag">UI 设计师 · 复古款</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 保障行 ============ -->
+<section class="trust">
+  <div class="container trust-grid">
     <div class="trust-item reveal">
-      <div class="trust-icon">🚚</div>
-      <div class="trust-name">全球配送</div>
-      <div class="trust-desc">快速安全送达</div>
+      <div class="trust-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg></div>
+      <div><h5>全球配送</h5><p>快速安全送达</p></div>
     </div>
-    <div class="trust-item reveal d1">
-      <div class="trust-icon">🛡️</div>
-      <div class="trust-name">安心购物</div>
-      <div class="trust-desc">7 天无理由退换</div>
+    <div class="trust-item reveal">
+      <div class="trust-icon"><svg viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.5 9.5 8 11 4.5-1.5 8-6 8-11V5z"/></svg></div>
+      <div><h5>安心购物</h5><p>7 天无理由退换</p></div>
     </div>
-    <div class="trust-item reveal d2">
-      <div class="trust-icon">💬</div>
-      <div class="trust-name">优质客服</div>
-      <div class="trust-desc">随时为您服务</div>
+    <div class="trust-item reveal">
+      <div class="trust-icon"><svg viewBox="0 0 24 24"><path d="M3 11a9 9 0 0 1 18 0v3a3 3 0 0 1-3 3h-1v-7h4M3 11v3a3 3 0 0 0 3 3h1v-7H3"/></svg></div>
+      <div><h5>优质客服</h5><p>随时为您服务</p></div>
     </div>
-    <div class="trust-item reveal d3">
-      <div class="trust-icon">🪵</div>
-      <div class="trust-name">环保木材</div>
-      <div class="trust-desc">可持续发展理念</div>
+    <div class="trust-item reveal">
+      <div class="trust-icon"><svg viewBox="0 0 24 24"><path d="M11 20A7 7 0 0 1 4 13c0-3 2-5 5-7 1 4 5 5 7 5 1 4-1 8-5 9z"/></svg></div>
+      <div><h5>环保木材</h5><p>可持续发展理念</p></div>
     </div>
   </div>
-</div>
+</section>
 
-<!-- ══ 底部 CTA 横幅（浏览联名 + 开始创作，双路径）══ -->
-<div class="cta-banner">
-  <h2 class="reveal">准备好创造属于你的<br>动画故事了吗？</h2>
-  <p class="reveal d1">从浏览画师作品，到开始你自己的创作之旅</p>
-  <div class="cta-banner-btns reveal d2">
-    <a href="showcase.html" class="cta-btn-warm">浏览画师联名 →</a>
-    <a href="customize-start.html" class="cta-btn-outline">开始创作 →</a>
+<!-- ============ CTA banner ============ -->
+<section class="cta-banner">
+  <div class="container">
+    <h2>准备好创造属于你的动画故事了吗？</h2>
+    <a href="customize-start.html" class="cta-banner-btn">
+      开始你的动盒子之旅
+      <svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+    </a>
   </div>
-</div>
+</section>
 
-<!-- ══ FOOTER（完整保留原版四列结构：品牌/导航/联络/关注）══ -->
+<!-- ============ 页脚 ============ -->
 <footer>
-  <div class="foot-top">
-    <div>
-      <div class="foot-brand-name">哞屋</div>
-      <span class="foot-brand-en">MOWO</span>
-      <p class="foot-desc">让每一帧热爱，都能被触摸。<br>为动画创作者和热爱者而生。</p>
-      <div class="foot-ctas">
-        <a href="customize-start.html" class="foot-btn foot-btn-warm">开始创作</a>
-        <a href="showcase.html" class="foot-btn foot-btn-ghost">画师联名</a>
-      </div>
+  <div class="container footer-row">
+    <a href="index.html" class="footer-brand">
+      <span class="nav-logo-mark">M</span>
+      MOWOBOX 哞屋造物
+    </a>
+    <div class="footer-links">
+      <a href="about.html">关于我们</a>
+      <a href="contact.html">帮助中心</a>
+      <a href="contact.html">配送信息</a>
+      <a href="contact.html">退换政策</a>
+      <a href="contact.html">隐私政策</a>
+      <a href="contact.html">条款服务</a>
+      <a href="contact.html">联系我们</a>
     </div>
-    <div class="foot-col">
-      <h4>导航</h4>
-      <ul>
-        <li><a href="about.html">关于我们</a></li>
-        <li><a href="products.html">产品介绍</a></li>
-        <li><a href="showcase.html">画师联名</a></li>
-        <li><a href="customize-start.html">创作中心</a></li>
-      </ul>
+    <div class="footer-social">
+      <a href="#" aria-label="Instagram"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".8" fill="#a99a82"/></svg></a>
+      <a href="#" aria-label="YouTube"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="m10 9 5 3-5 3z" fill="#a99a82"/></svg></a>
+      <a href="#" aria-label="WeChat"><svg viewBox="0 0 24 24"><circle cx="9" cy="10" r="6"/><circle cx="16" cy="15" r="5"/></svg></a>
     </div>
-    <div class="foot-col">
-      <h4>联络方式</h4>
-      <ul>
-        <li><a href="contact.html">商务合作</a></li>
-        <li><a href="contact.html">创作者入驻</a></li>
-        <li><a href="contact.html">用户反馈</a></li>
-        <li><a href="contact.html">招聘加入</a></li>
-      </ul>
-    </div>
-    <div class="foot-col">
-      <h4>关注我们</h4>
-      <ul>
-        <li><a href="contact.html">微博</a></li>
-        <li><a href="contact.html">小红书</a></li>
-        <li><a href="contact.html">B站</a></li>
-        <li><a href="contact.html">微信公众号</a></li>
-      </ul>
-    </div>
-  </div>
-  <div class="foot-bottom">
-    <p>© 2025 哞屋 MOWO. All rights reserved.</p>
-    <p>让动画，从屏幕走到手心</p>
   </div>
 </footer>
 
-<script>
-/* ── 移动端菜单 ── */
-function toggleMenu() {
-  const m = document.getElementById('mobileMenu');
-  const b = document.getElementById('burger');
-  const open = m.classList.toggle('open');
-  b.classList.toggle('open', open);
-  document.body.style.overflow = open ? 'hidden' : '';
-}
-function closeMenu() {
-  document.getElementById('mobileMenu').classList.remove('open');
-  document.getElementById('burger').classList.remove('open');
-  document.body.style.overflow = '';
-}
-
-/* ── 滚动出现动画 ── */
-const revealObs = new IntersectionObserver(entries => {
-  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('on'); revealObs.unobserve(e.target); } });
-}, { threshold: 0.06, rootMargin: '0px 0px -32px 0px' });
-document.querySelectorAll('.reveal').forEach(el => revealObs.observe(el));
-
-/* ── 桌面端自定义光标（原版保留）── */
-if (window.matchMedia('(pointer:fine)').matches) {
-  const c = document.createElement('div');
-  const r = document.createElement('div');
-  const cs = 'position:fixed;border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%)';
-  c.style.cssText = cs + ';width:8px;height:8px;background:#2c1f14';
-  r.style.cssText = cs + ';width:32px;height:32px;border:1.5px solid rgba(44,31,20,.3);transition:width .3s,height .3s,opacity .3s';
-  document.body.append(c, r);
-  document.body.style.cursor = 'none';
-  let mx = 0, my = 0, rx = 0, ry = 0;
-  document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; c.style.left = mx+'px'; c.style.top = my+'px'; });
-  (function tick() { rx += (mx-rx)*.12; ry += (my-ry)*.12; r.style.left = rx+'px'; r.style.top = ry+'px'; requestAnimationFrame(tick); })();
-  document.querySelectorAll('a,button').forEach(el => {
-    el.addEventListener('mouseenter', () => { r.style.width='52px';r.style.height='52px';r.style.opacity='.4'; });
-    el.addEventListener('mouseleave', () => { r.style.width='32px';r.style.height='32px';r.style.opacity='1'; });
-  });
-}
-
-/* ════════════════════════════
-   API：联名作品
-   当前：默认顺序（按上架时间）
-   如需热度排序：将 URL 改为 ?limit=8&status=on_shelf&sort=likes
-════════════════════════════ */
-const API_BASE = 'http://127.0.0.1:3001';
-
-const DEMO_WORKS = [
-  { id:'d1', title:'《会动的小猫咪》联名定制机', creator:{nickname:'橘子味的夏天'}, coverEmoji:'🐱', _price:199 },
-  { id:'d2', title:'《奔跑的小兔》',             creator:{nickname:'阿离'},          coverEmoji:'🐰', _price:239 },
-  { id:'d3', title:'《像素城市》系列',           creator:{nickname:'云起'},          coverEmoji:'🏙️', _price:259 },
-  { id:'d4', title:'《跳舞的小人》',             creator:{nickname:'DancingMan'},    coverEmoji:'🕺', _price:219 },
-  { id:'d5', title:'《小恐龙冒险》',             creator:{nickname:'恐龙爱好者'},    coverEmoji:'🦕', _price:229 },
-  { id:'d6', title:'《魔法时刻》',               creator:{nickname:'MagicTime'},     coverEmoji:'✨', _price:249 },
-  { id:'d7', title:'《太空漫游》',               creator:{nickname:'星辰大海'},      coverEmoji:'🚀', _price:269 },
-  { id:'d8', title:'《小猫的日常》',             creator:{nickname:'MOMO'},          coverEmoji:'😺', _price:209 },
-];
-
-function _esc(s) {
-  if (!s) return '';
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-function getMinPrice(w) {
-  if (w._price) return w._price;
-  if (w.supportedSkus && w.supportedSkus.length)
-    return Math.min(...w.supportedSkus.map(s => s.finalPrice ?? s.price ?? 0));
-  return null;
-}
-
-function renderCollabGrid(works) {
-  const grid = document.getElementById('collabWorksGrid');
-  if (!grid) return;
-  grid.innerHTML = works.slice(0,4).map((w,i) => {
-    const price = getMinPrice(w);
-    const cover = w.coverUrl;
-    const emoji = w.coverEmoji || '🎬';
-    const cr    = w.creator?.nickname || w.creator?.username || '创作者';
-    return `<div class="work-card reveal${i?` d${i}`:''}" onclick="location.href='showcase-confirm.html?workId=${_esc(w.id)}'">
-      <div class="work-card-cover">${cover?`<img src="${_esc(cover)}" alt="${_esc(w.title)}" loading="lazy">`:`<span>${emoji}</span>`}</div>
-      <div class="work-card-body">
-        <div class="work-card-title">${_esc(w.title)||'联名作品'}</div>
-        <div class="work-card-meta">@${_esc(cr)}</div>
-        ${price!=null?`<div class="work-card-price">¥${price}<span class="work-card-price-hint"> 起</span></div>`:''}
-      </div>
-    </div>`;
-  }).join('');
-  grid.querySelectorAll('.reveal').forEach(el => revealObs.observe(el));
-}
-
-function renderCreativeTrack(works) {
-  const track = document.getElementById('creativeTrack');
-  if (!track || !works.length) return;
-  track.innerHTML = works.map(w => {
-    const cover = w.coverUrl;
-    const emoji = w.coverEmoji || '🎬';
-    const cr    = w.creator?.nickname || w.creator?.username || '创作者';
-    return `<div class="creative-card" onclick="location.href='showcase-confirm.html?workId=${_esc(w.id)}'">
-      <div class="creative-card-img">
-        ${cover?`<img src="${_esc(cover)}" alt="${_esc(w.title)}" loading="lazy">`:`<span>${emoji}</span>`}
-        <div class="creative-play"><div class="creative-play-icon">▶</div></div>
-      </div>
-      <div class="creative-card-body">
-        <div class="creative-card-title">${_esc(w.title)||'联名作品'}</div>
-        <div class="creative-card-creator">@${_esc(cr)}</div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-async function loadWorks() {
-  try {
-    const res = await fetch(`${API_BASE}/api/collab/works?limit=8&status=on_shelf`);
-    if (!res.ok) throw new Error('err');
-    const data  = await res.json();
-    const works = data.data || data.works || (Array.isArray(data) ? data : []);
-    if (!works.length) throw new Error('empty');
-    renderCollabGrid(works);
-    renderCreativeTrack(works);
-  } catch (_) {
-    renderCollabGrid(DEMO_WORKS);
-    renderCreativeTrack(DEMO_WORKS);
-  }
-}
-loadWorks();
-</script>
+<!-- ============ 移动端菜单 ============ -->
+<div class="mobile-menu" id="mobileMenu">
+  <div class="mobile-menu-head">
+    <a href="index.html" class="nav-logo"><span class="nav-logo-mark">M</span><span class="nav-logo-text">MOWOBOX</span></a>
+    <button class="mobile-menu-close" onclick="closeMenu()" aria-label="关闭"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+  <div class="mobile-menu-body">
+    <a href="index.html">首页</a>
+    <a href="showcase.html">动盒系列</a>
+    <a href="customize-start.html">DIY 工坊</a>
+    <a href="showcase.html">创意社区</a>
+    <a href="about.html">关于我们</a>
+    <a href="cart.html">购物车</a>
+    <a href="orders.html">我的订单</a>
+    <a href="settings.html">账号设置</a>
+  </div>
+  <div class="mobile-menu-foot">
+    <button class="mobile-login-btn" id="mobileLoginBtn">登录 / 注册</button>
+    <div class="mobile-avatar" id="mobileMenuAvatar">
+      <div class="mobile-avatar-img" id="mobileMenuAvatarBtn">U</div>
+      <div class="mobile-avatar-name" id="mobileMenuAvatarName">用户</div>
+    </div>
+  </div>
+</div>
 
 <script src="../js/auth.js"></script>
-
 <script>
-/* ════════════════════════════
-   syncMobileAuth — 同步移动端登录状态
-   完整保留原版逻辑，ID 不可改动
-════════════════════════════ */
-(function syncMobileAuth() {
-  function applyState() {
-    var navLoginBtn     = document.getElementById('navLoginBtn');
-    var mowoNavUser     = document.getElementById('mowoNavUser');
-    var mobileLoginBtn  = document.getElementById('mobileLoginBtn');
-    var mobileAvatar    = document.getElementById('mobileMenuAvatar');
-    var mobileAvatarBtn = document.getElementById('mobileMenuAvatarBtn');
-    var mobileAvatarName= document.getElementById('mobileMenuAvatarName');
-    if (!mobileLoginBtn) return;
+// 自定义光标
+(function(){
+  if(!matchMedia('(pointer:fine)').matches)return
+  const dot=document.querySelector('.cursor-dot'),ring=document.querySelector('.cursor-ring')
+  let mx=0,my=0,rx=0,ry=0
+  document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;dot.style.transform=`translate(${mx}px,${my}px) translate(-50%,-50%)`})
+  ;(function loop(){rx+=(mx-rx)*.18;ry+=(my-ry)*.18;ring.style.transform=`translate(${rx}px,${ry}px) translate(-50%,-50%)`;requestAnimationFrame(loop)})()
+  document.querySelectorAll('a,button,.clickable').forEach(el=>{
+    el.addEventListener('mouseenter',()=>ring.style.transform=ring.style.transform.replace(/scale.*/,'')+' scale(1.6)')
+    el.addEventListener('mouseleave',()=>ring.style.transform=ring.style.transform.replace(/scale.*/,''))
+  })
+})()
 
-    var loggedIn = (navLoginBtn && navLoginBtn.style.display === 'none')
-                || (mowoNavUser && mowoNavUser.classList.contains('show'));
+// 移动端菜单
+function openMenu(){document.getElementById('mobileMenu').classList.add('open');document.body.style.overflow='hidden'}
+function closeMenu(){document.getElementById('mobileMenu').classList.remove('open');document.body.style.overflow=''}
 
-    if (loggedIn) {
-      mobileLoginBtn.style.display = 'none';
-      if (mobileAvatar) mobileAvatar.style.display = 'flex';
-      var uname   = document.getElementById('mowoNavUname');
-      var initial = document.getElementById('mowoNavAvatarInitial');
-      if (mobileAvatarBtn) mobileAvatarBtn.textContent = (initial && initial.textContent) || '?';
-      if (mobileAvatarName) mobileAvatarName.textContent = (uname && uname.textContent) || '我的账户';
-      if (mobileAvatarBtn) mobileAvatarBtn.onclick = function() {
-        document.getElementById('mowoNavAvatarBtn')?.click();
-        closeMenu();
-      };
-    } else {
-      mobileLoginBtn.style.display = '';
-      if (mobileAvatar) mobileAvatar.style.display = 'none';
-      mobileLoginBtn.onclick = function() { closeMenu(); window.openAuthModal && window.openAuthModal(); };
+// 移动菜单登录态同步（auth.js 处理 #navLoginBtn 时同步到 #mobileLoginBtn / #mobileMenuAvatar）
+;(function syncMobileAuth(){
+  const navBtn=document.getElementById('navLoginBtn')
+  const mobileBtn=document.getElementById('mobileLoginBtn')
+  const mobileAvatar=document.getElementById('mobileMenuAvatar')
+  const mobileAvatarBtn=document.getElementById('mobileMenuAvatarBtn')
+  const mobileAvatarName=document.getElementById('mobileMenuAvatarName')
+  if(!navBtn||!mobileBtn)return
+  const sync=()=>{
+    const isLoggedIn=navBtn.style.display==='none'||navBtn.classList.contains('logged-in')
+    const userInfo=localStorage.getItem('mowo_user')
+    if(isLoggedIn||userInfo){
+      mobileBtn.style.display='none'
+      mobileAvatar.classList.add('show')
+      try{
+        const u=JSON.parse(userInfo||'{}')
+        const name=u.nickname||u.phone||'用户'
+        mobileAvatarName.textContent=name
+        mobileAvatarBtn.textContent=(name[0]||'U').toUpperCase()
+      }catch(e){}
+    }else{
+      mobileBtn.style.display='block'
+      mobileAvatar.classList.remove('show')
     }
   }
+  sync()
+  new MutationObserver(sync).observe(navBtn,{attributes:true,childList:true,subtree:true})
+  mobileBtn.addEventListener('click',()=>{closeMenu();navBtn.click()})
+})()
 
-  function startObserving() {
-    var navLoginBtn = document.getElementById('navLoginBtn');
-    var mowoNavUser = document.getElementById('mowoNavUser');
-    if (navLoginBtn) new MutationObserver(applyState).observe(navLoginBtn, { attributes: true, attributeFilter: ['style'] });
-    if (mowoNavUser) new MutationObserver(applyState).observe(mowoNavUser, { attributes: true, attributeFilter: ['class'] });
-    applyState();
-  }
-
-  if (document.readyState === 'complete') { startObserving(); }
-  else { window.addEventListener('load', startObserving); }
-  setTimeout(applyState, 800);
-})();
+// 滚动揭示
+const io=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})
+},{threshold:.12})
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el))
 </script>
 </body>
 </html>
