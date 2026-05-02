@@ -211,32 +211,78 @@ VS Code Live Server，地址 http://127.0.0.1:5500
 
 ## 前端开发规范
 
-### 设计变量
+### 导航系统（两套，按页面类型选择）
+
+| 页面类型 | 导航方案 | 文件 |
+|----------|----------|------|
+| **公共展示页**（index / about / products / showcase / showcase-confirm / contact 等） | `nav.js` 注入 + `nav.css` 样式 | `frontend/js/nav.js` + `frontend/css/nav.css` |
+| **管理/创作者后台**（admin-* / creator-* / production-* 等） | `design-system.css` 内置 `.nav` 类 | `frontend/css/design-system.css` |
+
+#### 公共页面导航接入方式（nav.js）
+```html
+<!-- <head> 引入 -->
+<link rel="stylesheet" href="../css/nav.css">
+
+<!-- <body> 开头注入（同步，无 layout shift） -->
+<script src="../js/nav.js"></script>
+
+<!-- auth.js 放页面底部 -->
+<script src="../js/auth.js"></script>
+```
+- nav.js 用 `document.currentScript` 同步写入 `#mowo-nav`，不需要手写任何 `<nav>` HTML
+- 登录/头像区由 auth.js 自动注入到 `.mowo-nav-right`，无需额外代码
+- 活动链接高亮：nav.js 内部读取 `location.pathname` 自动加 `active` class
+
+#### 公共页面设计变量（nav.css + 页面内联）
 ```css
-:root {
-  --white:    #FFFFFF;
-  --cream:    #F5F3EF;
-  --black:    #111110;
-  --gray1:    #EBEBEA;
-  --gray2:    #C4C3BF;
-  --gray3:    #787874;
-  --accent-y: #F5E642;
-  --accent-o: #FF6B35;
-  --accent-g: #8FD694;
-  --accent-b: #7EC8E3;
-  --font:     'Nunito', 'Noto Sans SC', sans-serif;
-  --ease:     cubic-bezier(0.22, 1, 0.36, 1);
-}
+/* nav.css 已定义，页面直接使用 */
+--nav-bg:     #fce2b3   /* 导航栏背景·暖奶油 */
+--nav-text:   #2c1f14   /* 导航栏文字·深棕黑 */
+--nav-accent: #c8965a   /* 导航栏强调色·琥珀棕 */
+--nav-h:      64px      /* 导航栏高度 */
+
+/* 页面内 <style> 的 :root（各公共页一致） */
+--white:    #FFFFFF
+--cream:    #F5F3EF   /* 页面主背景 */
+--black:    #111110   /* 页面主文字 */
+--gray1:    #EBEBEA
+--gray2:    #C4C3BF
+--gray3:    #787874
+--accent-y: #F5E642   /* 品牌黄 */
+--accent-o: #FF6B35   /* 品牌橙 */
+--font:     'Nunito', 'Noto Sans SC', sans-serif
+--ease:     cubic-bezier(0.22, 1, 0.36, 1)
+```
+
+#### 管理/创作者后台设计变量（design-system.css）
+```css
+/* 引入方式 */
+<link rel="stylesheet" href="../css/design-system.css">
+
+/* 主要变量 */
+--bg:      #faf7f2    --bg2:    #f5efe4
+--accent:  #c8965a    --accent2:#8b5e3c
+--dark:    #2c1f14    --text:   #3d2e1e    --text2: #7a6552
+--border:  #e0cdb5    --tag-bg: #fdf5e8
+--font-sans: 'Noto Sans SC', sans-serif
+--font-serif:'Noto Serif SC', serif
+--nav-h:   60px
 ```
 
 ### auth.js 引入规范
+
+**公共页（使用 nav.js）：** auth.js 放在 `</body>` 前，nav.js 已插入 `#navLoginBtn`，auth.js 会自动找到并处理。
 ```html
-<script src="../js/auth.js"></script>
+<script src="../js/auth.js"></script>  <!-- 页面底部 -->
 ```
-导航栏登录按钮：
+
+**旧式手写导航页（如管理后台）：** 手写登录按钮，auth.js 通过 id 识别。
 ```html
 <button class="nav-login nav-login-btn" id="navLoginBtn">登录</button>
+<script src="../js/auth.js"></script>
 ```
+
+> ⚠️ auth.js 内部用 `document.querySelector('.mowo-nav-right') || document.querySelector('.nav-right')` 定位注入区，两套导航均兼容。
 
 ### 本地存储 key 约定
 ```
