@@ -31,16 +31,16 @@ button{font-family:var(--font);cursor:pointer;border:none;background:none;}
 /* ── PAGE HEADER（标题区，滚动后消失） ── */
 .page-header{
   background:var(--cream);
-  padding:28px var(--pad-mob) 20px;
+  padding:14px var(--pad-mob) 10px;
 }
-@media(min-width:1024px){.page-header{padding:36px var(--pad-desk) 24px;}}
+@media(min-width:1024px){.page-header{padding:18px var(--pad-desk) 12px;}}
 .ph-inner{max-width:1600px;margin:0 auto;}
 .ph-title{
-  font-size:clamp(26px,4vw,42px);font-weight:900;letter-spacing:-.02em;
-  margin-bottom:6px;display:flex;align-items:center;gap:10px;
+  font-size:clamp(18px,2vw,24px);font-weight:900;letter-spacing:-.02em;
+  margin-bottom:3px;display:flex;align-items:center;gap:8px;
 }
-.ph-spark{color:#c8965a;font-size:.75em;}
-.ph-sub{font-size:14px;font-weight:700;color:var(--gray3);}
+.ph-spark{color:#c8965a;font-size:.8em;}
+.ph-sub{font-size:12px;font-weight:700;color:var(--gray3);}
 
 /* ── CONTROL BAR（搜索+标签+排序，sticky） ── */
 .control-bar{
@@ -91,12 +91,12 @@ button{font-family:var(--font);cursor:pointer;border:none;background:none;}
 .sort-tab.active{background:var(--black);color:var(--white);}
 .sort-tab:hover:not(.active){color:var(--black);background:var(--gray1);}
 .incentive-link{
-  flex-shrink:0;font-weight:800;font-size:12px;color:var(--gray3);
+  flex-shrink:0;font-weight:800;font-size:12px;color:#7a5a1a;
   display:flex;align-items:center;gap:6px;
-  padding:5px 12px;border-radius:999px;border:1.5px solid var(--gray1);
-  background:var(--white);transition:all .18s;height:30px;white-space:nowrap;
+  padding:5px 14px;border-radius:999px;border:1.5px solid rgba(200,150,50,.45);
+  background:rgba(245,218,80,.22);transition:all .18s;height:30px;white-space:nowrap;
 }
-.incentive-link:hover{border-color:#c8965a;color:#c8965a;}
+.incentive-link:hover{background:rgba(245,218,80,.38);border-color:rgba(200,150,50,.7);color:#5a3d0a;}
 @media(max-width:760px){.incentive-link{display:none;}}
 
 /* ── MAIN ── */
@@ -134,11 +134,20 @@ button{font-family:var(--font);cursor:pointer;border:none;background:none;}
 .author-avatar{width:24px;height:24px;border-radius:50%;background:var(--accent-y);display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;overflow:hidden;border:1.5px solid var(--gray1);}
 .author-avatar img{width:100%;height:100%;object-fit:cover;}
 .author-name{font-weight:800;font-size:11px;color:var(--gray3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px;transition:color .2s;}
-.card-like{display:flex;align-items:center;gap:5px;font-weight:800;font-size:11px;color:var(--gray3);padding:4px 8px;border-radius:999px;transition:all .2s;min-height:28px;flex-shrink:0;}
+.card-actions{display:flex;align-items:center;gap:4px;flex-shrink:0;}
+.card-like{display:flex;align-items:center;gap:4px;font-weight:800;font-size:11px;color:var(--gray3);padding:4px 7px;border-radius:999px;transition:all .2s;min-height:28px;flex-shrink:0;}
 .card-like:hover{background:var(--cream);color:#C03030;}
 .card-like.liked{color:#C03030;}
 .like-icon{font-size:12px;transition:transform .2s var(--ease);}
 .card-like:hover .like-icon,.card-like.liked .like-icon{transform:scale(1.25);}
+.card-cart{
+  width:28px;height:28px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--black);color:var(--white);flex-shrink:0;
+  transition:background .2s,transform .2s var(--ease);
+}
+.card-cart:hover{background:#c8965a;transform:scale(1.08);}
+.card-cart svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;pointer-events:none;}
 
 /* ── SKELETON ── */
 .skeleton{background:linear-gradient(90deg,var(--gray1) 25%,#e8e7e3 50%,var(--gray1) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;}
@@ -171,6 +180,53 @@ button{font-family:var(--font);cursor:pointer;border:none;background:none;}
 /* REVEAL */
 .reveal{opacity:0;transform:translateY(20px);transition:opacity .6s var(--ease),transform .6s var(--ease);}
 .reveal.on{opacity:1;transform:none;}
+
+/* ── 创作激励 CTA 区 ── */
+.creator-cta{
+  background:#2c1f14;color:#fff;
+  padding:64px var(--pad-mob);
+}
+@media(min-width:1024px){.creator-cta{padding:72px var(--pad-desk);}}
+.cta-inner{max-width:960px;margin:0 auto;}
+.cta-badge{
+  display:inline-block;font-weight:900;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  padding:4px 12px;border-radius:999px;border:1.5px solid rgba(200,150,90,.5);
+  color:#c8965a;margin-bottom:16px;
+}
+.cta-heading{font-size:clamp(22px,3vw,34px);font-weight:900;letter-spacing:-.02em;margin-bottom:12px;line-height:1.25;}
+.cta-desc{font-size:14px;font-weight:700;color:rgba(255,255,255,.55);line-height:1.7;max-width:560px;margin-bottom:40px;}
+.cta-steps{
+  display:flex;flex-direction:column;gap:20px;margin-bottom:40px;
+}
+@media(min-width:768px){
+  .cta-steps{flex-direction:row;align-items:flex-start;gap:0;}
+  .cta-step-sep{display:flex!important;}
+}
+.cta-step{
+  flex:1;display:flex;align-items:flex-start;gap:14px;
+  padding:20px;border-radius:16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);
+}
+.cta-step-num{
+  flex-shrink:0;font-weight:900;font-size:11px;letter-spacing:.06em;
+  background:#c8965a;color:#fff;
+  width:28px;height:28px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;margin-top:2px;
+}
+.cta-step-content h3{font-weight:900;font-size:14px;margin-bottom:5px;color:#fff;}
+.cta-step-content p{font-weight:700;font-size:12px;color:rgba(255,255,255,.45);line-height:1.6;}
+.cta-step-sep{
+  display:none;
+  flex-shrink:0;align-items:center;padding:0 10px;
+  font-size:18px;color:rgba(255,255,255,.2);font-weight:900;margin-top:24px;
+}
+.cta-action{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:14px 32px;border-radius:999px;
+  background:var(--accent-y);color:var(--black);
+  font-weight:900;font-size:14px;letter-spacing:.02em;
+  transition:transform .2s var(--ease),box-shadow .2s;
+}
+.cta-action:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(245,230,66,.25);}
 
 /* FOOTER */
 footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad-mob) 36px;}
@@ -239,6 +295,41 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
     </button>
   </div>
 </main>
+
+<!-- 创作激励区 -->
+<section class="creator-cta">
+  <div class="cta-inner">
+    <div class="cta-badge">开放联名合作</div>
+    <h2 class="cta-heading">你的画，也能成为动起来的礼物</h2>
+    <p class="cta-desc">哞屋持续开放创作者联名合作。上传你的逐帧动画作品，通过官方审核后即可在展示页公开销售，每笔收益按分红规则结算，官方推荐作品额外获得流量加持。</p>
+    <div class="cta-steps">
+      <div class="cta-step">
+        <span class="cta-step-num">01</span>
+        <div class="cta-step-content">
+          <h3>上传作品</h3>
+          <p>将逐帧动画序列上传至平台，支持多帧 PNG / JPG，平台自动生成预览 GIF</p>
+        </div>
+      </div>
+      <div class="cta-step-sep">→</div>
+      <div class="cta-step">
+        <span class="cta-step-num">02</span>
+        <div class="cta-step-content">
+          <h3>审核上架</h3>
+          <p>官方在 3 个工作日内完成审核，通过后作品将出现在本页并开放购买</p>
+        </div>
+      </div>
+      <div class="cta-step-sep">→</div>
+      <div class="cta-step">
+        <span class="cta-step-num">03</span>
+        <div class="cta-step-content">
+          <h3>获得收益</h3>
+          <p>每笔销售按平台分红规则按周结算，优质作品可获官方推荐并提升牛量等级</p>
+        </div>
+      </div>
+    </div>
+    <a href="customize-start.html" class="cta-action">申请联名，上传我的作品 →</a>
+  </div>
+</section>
 
 <footer>
   <div class="foot-row">
@@ -418,10 +509,15 @@ function buildCard(w) {
           <div class="author-avatar">${avatarHtml}</div>
           <span class="author-name">@${name}</span>
         </div>
-        <button class="card-like ${liked}" onclick="event.stopPropagation();toggleLike(this,'${esc(w.id)}')">
-          <span class="like-icon">${likeIcon}</span>
-          <span class="like-count">${likeCount}</span>
-        </button>
+        <div class="card-actions">
+          <button class="card-like ${liked}" onclick="event.stopPropagation();toggleLike(this,'${esc(w.id)}')">
+            <span class="like-icon">${likeIcon}</span>
+            <span class="like-count">${likeCount}</span>
+          </button>
+          <a class="card-cart" href="./showcase-confirm.html?workId=${esc(w.id)}" onclick="event.stopPropagation()" aria-label="查看购买">
+            <svg viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+          </a>
+        </div>
       </div>
     </div>
   </div>`
