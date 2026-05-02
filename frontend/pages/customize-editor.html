@@ -1180,6 +1180,29 @@ function clearFile() {
   fileInput.value = '';
 }
 
+async function checkQuotaBeforeUpload() {
+  /* 重新编辑已有动画时不受配额限制 */
+  const params = new URLSearchParams(location.search);
+  if (params.get('editId') || params.get('productId')) return true;
+
+  const token = localStorage.getItem('mowo_token');
+  if (!token) return true; /* 未登录，让后续步骤兜底 */
+
+  const CAPI = location.hostname === '127.0.0.1' ? 'http://127.0.0.1:3001' : 'http://localhost:3001';
+  try {
+    const res  = await fetch(`${CAPI}/api/custom-products/quota`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const json = await res.json();
+    if (json.success && !json.data.canCreate) {
+      const { count, limit } = json.data;
+      showToast(`草稿箱已达上限（${count}/${limit}），请先在「我的动画」删除旧草稿`);
+      return false;
+    }
+  } catch(e) { /* 网络异常不阻断 */ }
+  return true;
+}
+
 function handleFiles(files) {
   if (!files.length) return;
   const imgExts   = ['png','jpg','jpeg','webp'];
@@ -1195,7 +1218,7 @@ function handleFiles(files) {
 
   const proceed = () => {
     if (isVideo) { selFile=files[0]; selFiles=[]; isMulti=false; showFilePrev(files[0]); }
-    else { selFiles=[...files].sort((a,b)=>a.name.localeCompare(b.name)); selFile=null; isMulti=true; showFilePrev(null,files.length); }
+    else { selFiles=[...files].sort((a,b)=>a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })); selFile=null; isMulti=true; showFilePrev(null,files.length); }
     btnStart.disabled = false;
   };
 
@@ -1213,9 +1236,12 @@ function handleFiles(files) {
     }
   };
 
-  doCheck().then(result => {
-    if (result.ok) proceed();
-    else showRatioWarning(result.actual, result.suggested, proceed);
+  checkQuotaBeforeUpload().then(canProceed => {
+    if (!canProceed) return;
+    doCheck().then(result => {
+      if (result.ok) proceed();
+      else showRatioWarning(result.actual, result.suggested, proceed);
+    });
   });
 }
 
@@ -2152,14 +2178,32 @@ document.getElementById('btnNextStep').addEventListener('click', async ()=>{
   }
 
   /* ── 买家模式（原有流程）── */
+  const urls = cl.map(i => frames[i]);
   try {
-    const urls = cl.map(i => frames[i]);
     localStorage.setItem('mowo_customize_frames', JSON.stringify(urls));
     const meta = JSON.parse(localStorage.getItem('mowo_customize_meta')||'{}');
     meta.frameCount = cnt;
-    meta.validTargets = validTargets; /* 可用规格传给下一页 */
+    meta.validTargets = validTargets;
     localStorage.setItem('mowo_customize_meta', JSON.stringify(meta));
   } catch(e) { console.warn('存储可能超出限制，帧数据较大', e); }
+
+  /* 登录状态下立即保存草稿到「我的动画」 */
+  const token = localStorage.getItem('mowo_token');
+  if (token) {
+    const CAPI = location.hostname === '127.0.0.1' ? 'http://127.0.0.1:3001' : 'http://localhost:3001';
+    try {
+      const res  = await fetch(`${CAPI}/api/custom-products`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ animationFrames: JSON.stringify(urls), frameCount: cnt }),
+      });
+      const json = await res.json();
+      if (json.success && json.data?.id) {
+        localStorage.setItem('mowo_customize_draft_id', json.data.id);
+      }
+    } catch(e) { /* 草稿保存失败不阻断流程 */ }
+  }
+
   location.href = `customize-confirm.html?type=${machineType}&frames=${cnt}&targets=${validTargets.join(',')}`;
 });
 

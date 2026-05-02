@@ -58,6 +58,22 @@ export default async function customProductRoutes(fastify) {
     return reply.send({ success: true, data: cp })
   })
 
+  // ── 草稿配额查询（前端在进入编辑流程前调用）──
+  fastify.get('/quota', {
+    preHandler: [fastify.authenticate]
+  }, async (req, reply) => {
+    const userId = req.user.userId
+    const certifyStatus = req.user.certifyStatus ?? 0
+    const limit = certifyStatus >= 2 ? 10 : 3
+    const count = await prisma.customProduct.count({
+      where: { userId, status: { in: ['draft', 'in_cart'] } }
+    })
+    return reply.send({
+      success: true,
+      data: { count, limit, canCreate: count < limit }
+    })
+  })
+
   // ── 列出当前用户的动画作品（创作者动画库）──
   fastify.get('/', {
     preHandler: [fastify.authenticate]

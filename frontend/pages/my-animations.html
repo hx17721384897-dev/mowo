@@ -106,6 +106,35 @@ a{text-decoration:none;color:inherit;}
 .btn-retry{padding:10px 24px;border-radius:999px;background:var(--gray1);font-weight:800;font-size:13px;color:var(--black);transition:background .2s;}
 .btn-retry:hover{background:var(--gray2);}
 
+/* ── DELETE BTN ── */
+.card-delete-btn{font-weight:800;font-size:12px;color:#CC2222;padding:4px 8px;border-radius:8px;transition:background .2s;cursor:pointer;}
+.card-delete-btn:hover{background:#FFF0F0;}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(8px);z-index:1200;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .25s var(--ease);}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.confirm-modal{background:var(--white);border-radius:24px;padding:28px;width:100%;max-width:380px;transform:translateY(16px) scale(.97);transition:transform .3s var(--ease);}
+.modal-overlay.open .confirm-modal{transform:none;}
+.confirm-icon{font-size:40px;margin-bottom:14px;text-align:center;}
+.confirm-title{font-weight:900;font-size:18px;text-align:center;margin-bottom:8px;}
+.confirm-sub{font-weight:700;font-size:13px;color:var(--gray3);text-align:center;margin-bottom:24px;line-height:1.6;}
+.confirm-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.confirm-btn{padding:11px 0;border-radius:999px;font-weight:800;font-size:13px;cursor:pointer;transition:all .2s;border:none;}
+.confirm-btn-cancel{background:var(--gray1);color:var(--black);}
+.confirm-btn-cancel:hover{background:var(--gray2);}
+.confirm-btn-delete{background:#FFF0F0;color:#CC2222;border:1.5px solid #FFCCCC;}
+.confirm-btn-delete:hover{background:#FFE0E0;}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--black);color:var(--white);font-weight:800;font-size:13px;padding:10px 22px;border-radius:999px;opacity:0;pointer-events:none;transition:all .3s var(--ease);z-index:9000;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ── RENAME ── */
+.card-name-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
+.card-name-row .card-model{margin-bottom:0;flex:1;min-width:0;}
+.rename-btn{font-size:13px;color:var(--gray2);padding:2px 5px;border-radius:6px;line-height:1;flex-shrink:0;cursor:pointer;transition:color .2s,background .2s;}
+.rename-btn:hover{color:var(--black);background:var(--gray1);}
+
 /* ── BURGER ── */
 .burger{display:flex;flex-direction:column;gap:5px;cursor:pointer;padding:8px;min-width:44px;min-height:44px;justify-content:center;align-items:center;}
 @media(min-width:1024px){.burger{display:none;}}
@@ -119,6 +148,15 @@ a{text-decoration:none;color:inherit;}
 .mobile-menu.open{opacity:1;pointer-events:all;}
 .mobile-menu a{font-weight:900;font-size:clamp(28px,8vw,48px);color:var(--white);transition:color .2s;}
 .mobile-menu a:hover{color:var(--accent-y);}
+.mobile-menu-footer{position:absolute;bottom:48px;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:12px;}
+.mobile-login-btn{font-family:var(--font);font-weight:900;font-size:16px;letter-spacing:.05em;padding:14px 48px;background:var(--accent-y);color:var(--black);border-radius:999px;border:none;cursor:pointer;transition:opacity .2s;min-height:52px;}
+.mobile-login-btn:hover{opacity:.85;}
+.mobile-menu-avatar{display:flex;flex-direction:column;align-items:center;gap:8px;}
+.mobile-menu-avatar-btn{width:56px;height:56px;border-radius:50%;background:var(--accent-y);color:var(--black);font-weight:900;font-size:22px;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;transition:opacity .2s;}
+.mobile-menu-avatar-btn:hover{opacity:.8;}
+.mobile-menu-avatar-name{font-weight:700;font-size:13px;color:rgba(255,255,255,.5);letter-spacing:.05em;}
+@media(max-width:1023px){.nav-login-text{display:none;}}
+@media(min-width:1024px){.nav-login-text{display:flex;}}
 </style>
 </head>
 <body>
@@ -130,6 +168,13 @@ a{text-decoration:none;color:inherit;}
   <a href="showcase.html" onclick="closeMenu()">画师联名</a>
   <a href="customize-start.html" onclick="closeMenu()">创作中心</a>
   <a href="contact.html" onclick="closeMenu()">联络我们</a>
+  <div class="mobile-menu-footer">
+    <button class="mobile-login-btn" id="mobileLoginBtn" onclick="closeMenu()">登录 / 注册</button>
+    <div class="mobile-menu-avatar" id="mobileMenuAvatar" style="display:none">
+      <button class="mobile-menu-avatar-btn" id="mobileMenuAvatarBtn" onclick="closeMenu()"></button>
+      <span class="mobile-menu-avatar-name" id="mobileMenuAvatarName"></span>
+    </div>
+  </div>
 </div>
 
 <!-- ── 导航栏 ── -->
@@ -146,7 +191,7 @@ a{text-decoration:none;color:inherit;}
     <li><a href="contact.html">联络我们</a></li>
   </ul>
   <div class="nav-right">
-    <button class="nav-login nav-login-btn" id="navLoginBtn">登录</button>
+    <button class="nav-login nav-login-btn nav-login-text" id="navLoginBtn">登录</button>
     <div class="burger" id="burger" onclick="toggleMenu()">
       <span></span><span></span><span></span>
     </div>
@@ -172,6 +217,37 @@ a{text-decoration:none;color:inherit;}
   <div id="contentArea"></div>
 </main>
 
+<!-- ── 重命名弹窗 ── -->
+<div class="modal-overlay" id="renameModal" onclick="handleRenameModalBg(event)">
+  <div class="confirm-modal" style="max-width:360px;">
+    <p class="confirm-title" style="margin-bottom:16px;">重命名动画</p>
+    <input id="renameInput" type="text" maxlength="40" placeholder="输入动画名称"
+      style="width:100%;height:42px;border:1.5px solid var(--gray1);border-radius:12px;padding:0 14px;font-family:var(--font);font-weight:700;font-size:13px;color:var(--black);background:var(--white);outline:none;transition:border-color .2s;margin-bottom:20px;display:block;"
+      onfocus="this.style.borderColor='var(--black)'" onblur="this.style.borderColor='var(--gray1)'"
+      onkeydown="handleRenameKey(event)">
+    <div class="confirm-actions">
+      <button class="confirm-btn confirm-btn-cancel" onclick="closeRenameModal()">取消</button>
+      <button class="confirm-btn confirm-btn-delete" id="btnConfirmRename" onclick="confirmRename()" style="background:var(--black);color:var(--white);border-color:var(--black);">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 删除确认弹窗 ── -->
+<div class="modal-overlay" id="deleteModal" onclick="handleDeleteModalBg(event)">
+  <div class="confirm-modal">
+    <div class="confirm-icon">🗑️</div>
+    <p class="confirm-title">确认删除这个动画？</p>
+    <p class="confirm-sub" id="deleteConfirmSub">删除后无法恢复。</p>
+    <div class="confirm-actions">
+      <button class="confirm-btn confirm-btn-cancel" onclick="closeDeleteModal()">取消</button>
+      <button class="confirm-btn confirm-btn-delete" id="btnConfirmDelete" onclick="confirmDelete()">确认删除</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
 <script src="../js/auth.js"></script>
 <script>
 const API = (location.hostname==='127.0.0.1'||location.hostname==='localhost')
@@ -179,12 +255,70 @@ const API = (location.hostname==='127.0.0.1'||location.hostname==='localhost')
 
 let _allItems = [];      // CustomProduct 列表
 let _currentFilter = 'all';
+let _deleteTarget = null;
+let _renameTarget = null;
+
+/* ── Toast ── */
+let _toastTimer;
+function showToast(msg, dur = 2400) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), dur);
+}
+
+/* ── 删除 ── */
+function askDelete(id) {
+  _deleteTarget = id;
+  const item = _allItems.find(i => i.id === id);
+  const cfg = safeJson(item?.configJson);
+  const name = cfg?.animName || fmtDate(item?.createdAt) || '该动画';
+  document.getElementById('deleteConfirmSub').textContent = `「${name}」删除后无法恢复。`;
+  document.getElementById('deleteModal').classList.add('open');
+}
+
+function closeDeleteModal() {
+  document.getElementById('deleteModal').classList.remove('open');
+  _deleteTarget = null;
+}
+
+function handleDeleteModalBg(e) {
+  if (e.target === document.getElementById('deleteModal')) closeDeleteModal();
+}
+
+async function confirmDelete() {
+  if (!_deleteTarget) return;
+  const btn = document.getElementById('btnConfirmDelete');
+  btn.disabled = true; btn.textContent = '删除中…';
+  const token = localStorage.getItem('mowo_token');
+  try {
+    const res = await fetch(`${API}/api/custom-products/${_deleteTarget}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.message);
+    _allItems = _allItems.filter(i => i.id !== _deleteTarget);
+    closeDeleteModal();
+    renderItems();
+    showToast('已删除');
+  } catch(e) {
+    showToast('删除失败：' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '确认删除';
+  }
+}
 
 /* ── 工具 ── */
 function safeJson(s) { try { return JSON.parse(s) } catch(e) { return null } }
 function fmtDate(d) {
   const dt = new Date(d);
   return `${dt.getFullYear()}.${String(dt.getMonth()+1).padStart(2,'0')}.${String(dt.getDate()).padStart(2,'0')}`;
+}
+function fmtDatetimeMin(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 }
 function cpStatusLabel(s) {
   return { draft:'草稿', in_cart:'已加购', ordered:'已下单', removed:'已删除' }[s] || '草稿';
@@ -193,6 +327,59 @@ function cpStatusClass(s) {
   if (s === 'ordered') return 'status-done';
   if (s === 'in_cart') return 'status-making';
   return 'status-pending';
+}
+
+/* ── 重命名 ── */
+function openRename(id) {
+  _renameTarget = id;
+  const item = _allItems.find(i => i.id === id);
+  const cfg = safeJson(item?.configJson);
+  document.getElementById('renameInput').value = cfg?.animName || '';
+  document.getElementById('renameModal').classList.add('open');
+  setTimeout(() => { const inp = document.getElementById('renameInput'); inp.focus(); inp.select(); }, 80);
+}
+
+function closeRenameModal() {
+  document.getElementById('renameModal').classList.remove('open');
+  _renameTarget = null;
+}
+
+function handleRenameModalBg(e) {
+  if (e.target === document.getElementById('renameModal')) closeRenameModal();
+}
+
+function handleRenameKey(e) {
+  if (e.key === 'Enter') confirmRename();
+  if (e.key === 'Escape') closeRenameModal();
+}
+
+async function confirmRename() {
+  if (!_renameTarget) return;
+  const newName = document.getElementById('renameInput').value.trim();
+  if (!newName) { showToast('请输入名称'); return; }
+  const btn = document.getElementById('btnConfirmRename');
+  btn.disabled = true; btn.textContent = '保存中…';
+  const token = localStorage.getItem('mowo_token');
+  try {
+    const item = _allItems.find(i => i.id === _renameTarget);
+    const existing = safeJson(item?.configJson) || {};
+    const updated = { ...existing, animName: newName };
+    const res = await fetch(`${API}/api/custom-products/${_renameTarget}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ configJson: JSON.stringify(updated) })
+    });
+    const json = await res.json();
+    if (!json.success) throw new Error(json.message);
+    if (item) item.configJson = JSON.stringify(updated);
+    closeRenameModal();
+    renderItems();
+    showToast('已重命名');
+  } catch(e) {
+    showToast('重命名失败：' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '保存';
+  }
 }
 
 /* ── 筛选 ── */
@@ -238,7 +425,8 @@ function animCard(item) {
   const specParts = [cfg.modelName, cfg.size,
     frameCount ? frameCount + '帧' : null,
     cfg.material, cfg.colorName].filter(Boolean);
-  const specStr = specParts.join(' ') || '定制动画';
+  const specStr = specParts.join(' ') || `定制动画 ${fmtDatetimeMin(item.createdAt)}`;
+  const displayName = cfg.animName || specStr;
 
   // 预览缩略图：优先 previewUrl，其次第一帧
   let thumbInner;
@@ -265,7 +453,10 @@ function animCard(item) {
       ${frameCount ? `<div class="card-thumb-frames">${frameCount}帧</div>` : ''}
     </div>
     <div class="card-body">
-      <div class="card-model">${specStr}</div>
+      <div class="card-name-row">
+        <div class="card-model">${displayName}</div>
+        <button class="rename-btn" onclick="event.stopPropagation();openRename('${item.id}')" title="重命名">✎</button>
+      </div>
       <div class="card-meta">
         ${daysLeft !== null ? `<span class="card-meta-item">🗂 工程${daysLeft > 0 ? daysLeft + '天' : '已过期'}</span>` : ''}
         <span class="card-meta-item">📅 ${dateStr}</span>
@@ -274,6 +465,7 @@ function animCard(item) {
     <div class="card-footer">
       <a href="${editHref}" class="card-link" onclick="event.stopPropagation()">✏️ 重新编辑</a>
       ${item.status === 'ordered' ? `<span class="card-link" style="color:var(--accent-g)">已下单 ✓</span>` : `<a href="customize-start.html" class="card-link">去选配 →</a>`}
+      <button class="card-delete-btn" onclick="event.stopPropagation();askDelete('${item.id}')">删除</button>
     </div>
   </div>`;
 }
@@ -344,6 +536,47 @@ window.addEventListener('mowoTokenRefreshed', loadAnimations);
 document.addEventListener('DOMContentLoaded', () => {
   setTimeout(loadAnimations, 300);
 });
+</script>
+<script>
+(function syncMobileAuth() {
+  function applyState() {
+    var navLoginBtn     = document.getElementById('navLoginBtn');
+    var mowoNavUser     = document.getElementById('mowoNavUser');
+    var mobileLoginBtn  = document.getElementById('mobileLoginBtn');
+    var mobileAvatar    = document.getElementById('mobileMenuAvatar');
+    var mobileAvatarBtn = document.getElementById('mobileMenuAvatarBtn');
+    var mobileAvatarName= document.getElementById('mobileMenuAvatarName');
+    if (!mobileLoginBtn) return;
+    var loggedIn = (navLoginBtn && navLoginBtn.style.display === 'none')
+                || (mowoNavUser && mowoNavUser.classList.contains('show'));
+    if (loggedIn) {
+      mobileLoginBtn.style.display = 'none';
+      if (mobileAvatar) mobileAvatar.style.display = 'flex';
+      var uname   = document.getElementById('mowoNavUname');
+      var initial = document.getElementById('mowoNavAvatarInitial');
+      if (mobileAvatarBtn) mobileAvatarBtn.textContent = (initial && initial.textContent) || '?';
+      if (mobileAvatarName) mobileAvatarName.textContent = (uname && uname.textContent) || '我的账户';
+      if (mobileAvatarBtn) mobileAvatarBtn.onclick = function() {
+        document.getElementById('mowoNavAvatarBtn')?.click();
+        closeMenu();
+      };
+    } else {
+      mobileLoginBtn.style.display = '';
+      if (mobileAvatar) mobileAvatar.style.display = 'none';
+      mobileLoginBtn.onclick = function() { closeMenu(); window.openAuthModal && window.openAuthModal(); };
+    }
+  }
+  function startObserving() {
+    var navLoginBtn = document.getElementById('navLoginBtn');
+    var mowoNavUser = document.getElementById('mowoNavUser');
+    if (navLoginBtn) new MutationObserver(applyState).observe(navLoginBtn, { attributes:true, attributeFilter:['style'] });
+    if (mowoNavUser) new MutationObserver(applyState).observe(mowoNavUser, { attributes:true, attributeFilter:['class'] });
+    applyState();
+  }
+  if (document.readyState === 'complete') { startObserving(); }
+  else { window.addEventListener('load', startObserving); }
+  setTimeout(applyState, 800);
+})();
 </script>
 </body>
 </html>

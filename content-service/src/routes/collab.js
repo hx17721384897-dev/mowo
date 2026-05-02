@@ -83,7 +83,7 @@ export default async function collabRoutes(fastify) {
     const result = works.map(w => ({
       ...w,
       supportedSkus: safeJson(w.supportedSkus),
-      coverUrl: presignOrNull(w.coverUrl, fastify, 3600),
+      coverUrl: presignOrPassthrough(w.coverUrl, fastify, 3600),   // data URI 直接透传，OSS key 才签名
       hoverGifUrl: presignOrNull(w.hoverGifUrl, fastify, 3600),
       creator: profileMap[w.creatorId] ?? { userId: w.creatorId, nickname: '创作者', avatarUrl: null },
       likeCount: likeCountMap[w.id] ?? 0,
@@ -144,8 +144,8 @@ export default async function collabRoutes(fastify) {
     // hover GIF 预签名 URL（如已生成）
     const hoverGifUrl = presignOrNull(work.hoverGifUrl, fastify, 3600)
 
-    // 封面图预签名
-    const coverUrl = presignOrNull(work.coverUrl, fastify, 3600)
+    // 封面图：data URI 直接透传，OSS key 才签名
+    const coverUrl = presignOrPassthrough(work.coverUrl, fastify, 3600)
 
     // 点赞数 + 当前用户是否已点赞
     const likeCount = await prisma.like.count({ where: { targetType: 'collab_work', targetId: work.id } })

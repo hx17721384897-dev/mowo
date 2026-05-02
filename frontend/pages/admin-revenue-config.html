@@ -89,11 +89,25 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
 /* ══ Toast ══ */
 .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--black);color:var(--white);font-weight:800;font-size:13px;padding:12px 24px;border-radius:999px;opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;z-index:9999;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ── 移动端侧边栏开关 ── */
+.menu-btn{width:36px;height:36px;border-radius:10px;background:var(--gray1);border:none;cursor:pointer;display:none;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;margin-right:4px;}
+.menu-btn:hover{background:var(--gray2);}
+.sidebar-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:190;display:none;}
+.sidebar-backdrop.show{display:block;}
+@media(max-width:1023px){
+  .sidebar{transform:translateX(-100%);z-index:200;}
+  .sidebar.open{transform:none;}
+  .main{margin-left:0!important;}
+  .topbar{padding:0 16px;}
+  .menu-btn{display:flex;}
+}
 </style>
 </head>
 <body>
 
 <!-- 侧边栏 -->
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-logo">
     <div class="sidebar-logo-icon">🐄</div>
@@ -137,6 +151,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
 <!-- 主区 -->
 <div class="main" id="mainArea">
   <div class="topbar">
+    <button class="menu-btn" id="menuBtn" onclick="openSidebar()">&#9776;</button>
     <span class="topbar-title">📐 分红规则配置</span>
     <div class="topbar-right">
       <button class="btn btn-ghost btn-sm" onclick="loadConfigs()">↻ 刷新</button>
@@ -276,6 +291,18 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
 
 <div class="toast" id="toast"></div>
 
+<script>
+function openSidebar() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('sidebarBackdrop').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarBackdrop').classList.remove('show');
+  document.body.style.overflow = '';
+}
+</script>
 <script src="../js/auth.js"></script>
 <script>
 const API = location.hostname === '127.0.0.1' ? 'http://127.0.0.1:3001' : 'http://localhost:3001'

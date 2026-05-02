@@ -9,8 +9,15 @@
     {
       key: 'production', label: '生产', icon: '📦',
       items: [
-        { href: 'admin-orders.html', icon: '🧾', label: '定制订单' },
-        { href: 'admin-import.html',  icon: '📥', label: '定制导入' }
+        { href: 'admin-orders.html?view=all',        icon: '📋', label: '全部订单' },
+        { href: 'admin-orders.html?view=paid',       icon: '📬', label: '待处理' },
+        { href: 'admin-orders.html?view=locked',     icon: '⏳', label: '处理中' },
+        { href: 'admin-orders.html?view=processing', icon: '🔧', label: '待生产' },
+        { href: 'admin-orders.html?view=producing',  icon: '⚙️', label: '生产中' },
+        { href: 'admin-orders.html?view=shipped',    icon: '🚚', label: '已发货' },
+        { href: 'admin-orders.html?view=received',   icon: '✅', label: '已收货' },
+        { href: 'admin-orders.html?view=aftersale',  icon: '🔴', label: '售后' },
+        { href: 'admin-import.html',                 icon: '📥', label: '定制导入' }
       ]
     },
     {
@@ -52,8 +59,7 @@
     {
       key: 'system', label: '系统', icon: '⚙️',
       items: [
-        { href: 'admin-logs.html', icon: '📋', label: '审计日志' },
-        { href: 'index.html',      icon: '🌐', label: '返回前台' }
+        { href: 'admin-logs.html', icon: '📋', label: '审计日志' }
       ]
     }
   ];
@@ -88,6 +94,9 @@
 .sidebar .nav-sub-item.active{color:var(--accent-y,#F5E642) !important;background:rgba(245,230,66,.12) !important;font-weight:800;}
 .sidebar .nav-sub-item.active::before{content:'' !important;position:absolute !important;left:0 !important;top:0 !important;bottom:0 !important;width:3px !important;height:auto !important;transform:none !important;background:var(--accent-y,#F5E642) !important;border-radius:0 2px 2px 0 !important;}
 .nav-sub-item .nav-icon{font-size:13px;width:16px;}
+.sidebar-back{display:flex;align-items:center;gap:10px;padding:12px 20px;border-top:1px solid rgba(255,255,255,.08);color:var(--gray3,#787874);font-weight:800;font-size:13px;text-decoration:none;white-space:nowrap;overflow:hidden;transition:background .15s,color .15s;flex-shrink:0;}
+.sidebar-back:hover{background:rgba(255,255,255,.06);color:var(--white,#fff);}
+.sidebar.collapsed .sidebar-back .nav-label{opacity:0;}
 .sidebar-footer{padding:16px 20px;border-top:1px solid rgba(255,255,255,.08);white-space:nowrap;overflow:hidden;}
 .sidebar-user{display:flex;align-items:center;gap:10px;}
 .sidebar-user-avatar{width:32px;height:32px;border-radius:50%;background:var(--accent-y,#F5E642);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:var(--black,#111110);flex-shrink:0;}
@@ -98,8 +107,25 @@
 
   function currentFile() {
     const p = location.pathname.split('/').pop() || '';
-    return p.toLowerCase();
+    const q = location.search;
+    let combined = (p + q).toLowerCase();
+    // 裸访问 admin-orders.html（无 view 参数）等同于 ?view=all
+    if (combined === 'admin-orders.html') combined = 'admin-orders.html?view=all';
+    return combined;
   }
+
+  // 供页面调用：切换视图后更新侧边栏高亮，避免整页刷新
+  window.__adminSidebarSetActive = function(href) {
+    const target = href.toLowerCase();
+    document.querySelectorAll('.nav-sub-item').forEach(el => {
+      el.classList.toggle('active', (el.getAttribute('href') || '').toLowerCase() === target);
+    });
+    // 同步父组标题高亮
+    document.querySelectorAll('.nav-group').forEach(g => {
+      const hasActive = g.querySelector('.nav-sub-item.active');
+      g.querySelector('.nav-group-header')?.classList.toggle('active-group', !!hasActive);
+    });
+  };
 
   const OPEN_KEY = 'mowo_admin_sidebar_open';
   function getOpenSet() {
@@ -174,6 +200,7 @@
 </div>
 <button class="sidebar-toggle" id="sidebarToggle" title="折叠菜单">◀</button>
 <nav class="sidebar-nav">${nav}</nav>
+<a class="sidebar-back" href="index.html"><span class="nav-icon">🌐</span><span class="nav-label">返回前台</span></a>
 <div class="sidebar-footer">
   <div class="sidebar-user">
     <div class="sidebar-user-avatar" id="sidebarAvatar">管</div>

@@ -55,6 +55,18 @@ button{font-family:var(--font);cursor:pointer;border:none;}
 .mobile-menu.open{opacity:1;pointer-events:all;}
 .mobile-menu a{font-weight:900;font-size:clamp(28px,8vw,48px);color:var(--white);transition:color .2s;}
 .mobile-menu a:hover{color:var(--accent-y);}
+.nav-right{display:flex;align-items:center;gap:8px;}
+@media(max-width:1023px){.nav-login-text{display:none;}}
+@media(min-width:1024px){.nav-login-text{display:flex;}}
+.nav-avatar{width:36px;height:36px;border-radius:50%;background:var(--accent-y);color:var(--black);font-weight:900;font-size:14px;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;transition:opacity .2s;flex-shrink:0;}
+.nav-avatar:hover{opacity:.8;}
+.mobile-menu-footer{position:absolute;bottom:48px;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:12px;}
+.mobile-login-btn{font-family:var(--font);font-weight:900;font-size:16px;letter-spacing:.05em;padding:14px 48px;background:var(--accent-y);color:var(--black);border-radius:999px;border:none;cursor:pointer;transition:opacity .2s;min-height:52px;}
+.mobile-login-btn:hover{opacity:.85;}
+.mobile-menu-avatar{display:flex;flex-direction:column;align-items:center;gap:8px;}
+.mobile-menu-avatar-btn{width:56px;height:56px;border-radius:50%;background:var(--accent-y);color:var(--black);font-weight:900;font-size:22px;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;transition:opacity .2s;}
+.mobile-menu-avatar-btn:hover{opacity:.8;}
+.mobile-menu-avatar-name{font-weight:700;font-size:13px;color:rgba(255,255,255,.5);letter-spacing:.05em;}
 
 /* ══════════════════
    SECTION 1 — HERO
@@ -472,6 +484,13 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
   <a href="showcase.html" onclick="closeMenu()">画师联名</a>
   <a href="customize-start.html" onclick="closeMenu()">创作中心</a>
   <a href="contact.html" onclick="closeMenu()">联络我们</a>
+  <div class="mobile-menu-footer">
+    <button class="mobile-login-btn" id="mobileLoginBtn" onclick="closeMenu()">登录 / 注册</button>
+    <div class="mobile-menu-avatar" id="mobileMenuAvatar" style="display:none">
+      <button class="mobile-menu-avatar-btn" id="mobileMenuAvatarBtn" onclick="closeMenu()"></button>
+      <span class="mobile-menu-avatar-name" id="mobileMenuAvatarName"></span>
+    </div>
+  </div>
 </div>
 
 <nav class="nav">
@@ -487,7 +506,7 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
     <li><a href="contact.html">联络我们</a></li>
   </ul>
   <div class="nav-right">
-    <button class="nav-login nav-login-btn" id="navLoginBtn">登录</button>
+    <button class="nav-login nav-login-btn nav-login-text" id="navLoginBtn">登录</button>
     <div class="burger" id="burger" onclick="toggleMenu()">
       <span></span><span></span><span></span>
     </div>

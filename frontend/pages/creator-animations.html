@@ -124,6 +124,11 @@ input,select,textarea{font-family:var(--font);}
 .anim-btn.danger{color:#CC2222;border-color:#FFCCCC;}
 .anim-btn.danger:hover{background:#FFF0F0;}
 
+.anim-name-row{display:flex;align-items:center;gap:6px;margin-bottom:6px;}
+.anim-name-row .anim-name{margin-bottom:0;flex:1;min-width:0;}
+.rename-btn{font-size:13px;color:var(--gray2);padding:2px 5px;border-radius:6px;line-height:1;flex-shrink:0;transition:color .2s,background .2s;}
+.rename-btn:hover{color:var(--black);background:var(--gray1);}
+
 /* ── 空状态 ── */
 .empty{padding:64px 20px;text-align:center;background:var(--white);border-radius:24px;border:1.5px dashed var(--gray2);}
 .empty-icon{font-size:52px;margin-bottom:14px;}
@@ -403,6 +408,23 @@ input,select,textarea{font-family:var(--font);}
 </div>
 
 <!-- ══════════════════════════════════════
+     重命名 模态框
+══════════════════════════════════════ -->
+<div class="modal-overlay" id="renameModal" onclick="handleRenameModalBg(event)">
+  <div class="confirm-modal" id="renameModalBox" style="max-width:360px;">
+    <p class="confirm-title" style="margin-bottom:16px;">重命名动画</p>
+    <input id="renameInput" type="text" maxlength="40" placeholder="输入动画名称"
+      style="width:100%;height:42px;border:1.5px solid var(--gray1);border-radius:12px;padding:0 14px;font-family:var(--font);font-weight:700;font-size:13px;color:var(--black);background:var(--white);outline:none;transition:border-color .2s;margin-bottom:20px;display:block;"
+      onfocus="this.style.borderColor='var(--black)'" onblur="this.style.borderColor='var(--gray1)'"
+      onkeydown="handleRenameKey(event)">
+    <div class="confirm-actions">
+      <button class="btn btn-ghost" onclick="closeRenameModal()">取消</button>
+      <button class="btn btn-black" id="btnConfirmRename" onclick="confirmRename()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
      删除确认 模态框
 ══════════════════════════════════════ -->
 <div class="modal-overlay" id="deleteModal" onclick="handleDeleteModalBg(event)">
@@ -434,6 +456,7 @@ let hasMore      = false
 let isLoading    = false
 let allItems     = []
 let deleteTarget = null
+let renameTarget = null
 let chosenOption = null          // 'png' | 'gif'
 let pendingFiles = []            // 已选文件列表 {file, dataUrl}
 
@@ -569,7 +592,7 @@ function renderCard(item, highlight = false) {
     badgeHtml += `<span class="badge badge-expire">工程 ${daysLeft}d</span>`
   }
 
-  const name = escHtml(item.configJson ? (safeParseJson(item.configJson)?.animName || '') : '') || `动画 ${fmtDate(item.createdAt)}`
+  const name = escHtml(item.configJson ? (safeParseJson(item.configJson)?.animName || '') : '') || `动画 ${fmtDatetimeMin(item.createdAt)}`
 
   return `
   <div class="anim-card${highlight ? ' highlight' : ''}" id="card-${item.id}" data-id="${item.id}">
@@ -578,16 +601,19 @@ function renderCard(item, highlight = false) {
       <div class="anim-preview-badge">${badgeHtml}</div>
     </div>
     <div class="anim-body">
-      <p class="anim-name" title="${name}">${name}</p>
+      <div class="anim-name-row">
+        <p class="anim-name" title="${name}">${name}</p>
+        <button class="rename-btn" onclick="openRename('${item.id}')" title="重命名">✎</button>
+      </div>
       <div class="anim-meta">
         <span class="anim-meta-item">🎞 <strong>${cnt}</strong> 帧</span>
         ${daysLeft !== null ? `<span class="anim-meta-item">🗂 工程 <strong>${daysLeft > 0 ? daysLeft + '天' : '已过期'}</strong></span>` : ''}
         <span class="anim-meta-item">📅 ${fmtDate(item.createdAt)}</span>
       </div>
       <div class="anim-actions">
-        <button class="anim-btn" onclick="editAnim('${item.id}')">✏️ 编辑帧</button>
-        <button class="anim-btn primary" onclick="submitCollab('${item.id}')">🚀 提交联名</button>
-        <button class="anim-btn danger" onclick="askDelete('${item.id}','${escHtml(name)}')">🗑️ 删除</button>
+        <button class="anim-btn" onclick="editAnim('${item.id}')">编辑帧</button>
+        <button class="anim-btn primary" onclick="submitCollab('${item.id}')">提交联名</button>
+        <button class="anim-btn danger" onclick="askDelete('${item.id}','${escHtml(name)}')">删除</button>
       </div>
     </div>
   </div>`
@@ -645,6 +671,60 @@ async function confirmDelete() {
     showToast('删除失败：' + e.message)
   } finally {
     btn.disabled = false; btn.textContent = '确认删除'
+  }
+}
+
+/* ─────────────────────────────────────────
+   重命名
+───────────────────────────────────────── */
+function openRename(id) {
+  renameTarget = id
+  const item = allItems.find(i => i.id === id)
+  const cfg = safeParseJson(item?.configJson) || {}
+  document.getElementById('renameInput').value = cfg.animName || ''
+  document.getElementById('renameModal').classList.add('open')
+  setTimeout(() => { const inp = document.getElementById('renameInput'); inp.focus(); inp.select() }, 80)
+}
+
+function closeRenameModal() {
+  document.getElementById('renameModal').classList.remove('open')
+  renameTarget = null
+}
+
+function handleRenameModalBg(e) {
+  if (e.target === document.getElementById('renameModal')) closeRenameModal()
+}
+
+function handleRenameKey(e) {
+  if (e.key === 'Enter') confirmRename()
+  if (e.key === 'Escape') closeRenameModal()
+}
+
+async function confirmRename() {
+  if (!renameTarget) return
+  const newName = document.getElementById('renameInput').value.trim()
+  if (!newName) { showToast('请输入名称'); return }
+  const btn = document.getElementById('btnConfirmRename')
+  btn.disabled = true; btn.textContent = '保存中…'
+  try {
+    const item = allItems.find(i => i.id === renameTarget)
+    const existing = safeParseJson(item?.configJson) || {}
+    const updated = { ...existing, animName: newName }
+    const res = await fetch(`${CAPI}/api/custom-products/${renameTarget}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+      body: JSON.stringify({ configJson: JSON.stringify(updated) })
+    })
+    const json = await res.json()
+    if (!json.success) throw new Error(json.message)
+    if (item) item.configJson = JSON.stringify(updated)
+    closeRenameModal()
+    renderGrid()
+    showToast('已重命名')
+  } catch(e) {
+    showToast('重命名失败：' + e.message)
+  } finally {
+    btn.disabled = false; btn.textContent = '保存'
   }
 }
 
@@ -863,6 +943,12 @@ function fmtDate(iso) {
   if (!iso) return ''
   const d = new Date(iso)
   return `${d.getMonth()+1}/${d.getDate()}`
+}
+
+function fmtDatetimeMin(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
 }
 
 /* ─────────────────────────────────────────

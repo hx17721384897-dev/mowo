@@ -20,15 +20,36 @@ button{font-family:var(--font);cursor:pointer;border:none;background:none;}
 a{text-decoration:none;}
 
 /* ── NAV ── */
-.nav{position:fixed;top:0;left:0;right:0;z-index:600;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:var(--nav-h);background:rgba(245,243,239,.96);backdrop-filter:blur(20px);border-bottom:1.5px solid var(--gray1);}
+.nav{position:fixed;top:0;left:0;right:0;z-index:900;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:var(--nav-h);background:rgba(245,243,239,.96);backdrop-filter:blur(20px);border-bottom:1.5px solid var(--gray1);}
 @media(min-width:1024px){.nav{padding:0 48px;}}
 .nav-logo{line-height:1;}
 .nav-logo-cn{font-weight:900;font-size:22px;color:var(--black);display:block;}
 .nav-logo-en{font-weight:700;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--gray3);display:block;margin-top:1px;}
 .nav-links{display:none;list-style:none;gap:32px;}
 @media(min-width:1024px){.nav-links{display:flex;}}
-.nav-links a{font-weight:800;font-size:14px;color:var(--gray3);transition:color .2s;}
+.nav-links a{font-weight:800;font-size:14px;color:var(--gray3);transition:color .2s;position:relative;padding-bottom:3px;}
+.nav-links a::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--accent-y);border-radius:2px;transform:scaleX(0);transition:transform .25s var(--ease);}
 .nav-links a:hover{color:var(--black);}
+.nav-links a:hover::after{transform:scaleX(1);}
+@media(max-width:1023px){.nav-login-text{display:none;}}
+@media(min-width:1024px){.nav-login-text{display:flex;}}
+.burger{display:flex;flex-direction:column;gap:5px;cursor:pointer;padding:8px;min-width:44px;min-height:44px;justify-content:center;align-items:center;flex-shrink:0;}
+@media(min-width:1024px){.burger{display:none;}}
+.burger span{display:block;width:22px;height:2px;background:var(--black);border-radius:2px;transition:transform .3s,opacity .3s;}
+.burger.open span:nth-child(1){transform:translateY(7px) rotate(45deg);}
+.burger.open span:nth-child(2){opacity:0;}
+.burger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg);}
+.mobile-menu{position:fixed;inset:0;background:var(--black);z-index:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:36px;opacity:0;pointer-events:none;transition:opacity .35s var(--ease);}
+.mobile-menu.open{opacity:1;pointer-events:all;}
+.mobile-menu a{font-weight:900;font-size:clamp(28px,8vw,48px);color:var(--white);letter-spacing:-.01em;transition:color .2s;}
+.mobile-menu a:hover{color:var(--accent-y);}
+.mobile-menu-footer{position:absolute;bottom:48px;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:12px;}
+.mobile-login-btn{font-family:var(--font);font-weight:900;font-size:16px;letter-spacing:.05em;padding:14px 48px;background:var(--accent-y);color:var(--black);border-radius:999px;border:none;cursor:pointer;transition:opacity .2s;min-height:52px;}
+.mobile-login-btn:hover{opacity:.85;}
+.mobile-menu-avatar{display:flex;flex-direction:column;align-items:center;gap:8px;}
+.mobile-menu-avatar-btn{width:56px;height:56px;border-radius:50%;background:var(--accent-y);color:var(--black);font-weight:900;font-size:22px;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;transition:opacity .2s;}
+.mobile-menu-avatar-btn:hover{opacity:.8;}
+.mobile-menu-avatar-name{font-weight:700;font-size:13px;color:rgba(255,255,255,.5);letter-spacing:.05em;}
 .nav-right{display:flex;align-items:center;}
 .nav-user{position:relative;}
 .nav-avatar-btn{display:flex;align-items:center;gap:8px;padding:5px 12px 5px 5px;border-radius:999px;border:2px solid transparent;transition:border-color .2s,background .2s;min-height:44px;}
@@ -208,6 +229,22 @@ a{text-decoration:none;}
 </head>
 <body>
 
+<!-- Mobile overlay menu -->
+<div class="mobile-menu" id="mobileMenu">
+  <a href="about.html" onclick="closeMenu()">关于我们</a>
+  <a href="products.html" onclick="closeMenu()">产品介绍</a>
+  <a href="showcase.html" onclick="closeMenu()">画师联名</a>
+  <a href="customize-start.html" onclick="closeMenu()">创作中心</a>
+  <a href="contact.html" onclick="closeMenu()">联络我们</a>
+  <div class="mobile-menu-footer">
+    <button class="mobile-login-btn" id="mobileLoginBtn" onclick="closeMenu()">登录 / 注册</button>
+    <div class="mobile-menu-avatar" id="mobileMenuAvatar" style="display:none">
+      <button class="mobile-menu-avatar-btn" id="mobileMenuAvatarBtn" onclick="closeMenu()"></button>
+      <span class="mobile-menu-avatar-name" id="mobileMenuAvatarName"></span>
+    </div>
+  </div>
+</div>
+
 <!-- NAV -->
 <nav class="nav">
   <a href="index.html" class="nav-logo">
@@ -215,12 +252,14 @@ a{text-decoration:none;}
     <span class="nav-logo-en">MOWO</span>
   </a>
   <ul class="nav-links">
-    <li><a href="about.html">关于我们</a></li><li><a href="products.html">产品介绍</a></li>
-    <li><a href="community.html">社区分享</a></li><li><a href="customize-start.html">创作中心</a></li>
+    <li><a href="about.html">关于我们</a></li>
+    <li><a href="products.html">产品介绍</a></li>
+    <li><a href="showcase.html">画师联名</a></li>
+    <li><a href="customize-start.html">创作中心</a></li>
     <li><a href="contact.html">联络我们</a></li>
   </ul>
   <div class="nav-right">
-    <button class="nav-login nav-login-btn" id="navLoginBtn">登录</button>
+    <button class="nav-login nav-login-btn nav-login-text" id="navLoginBtn">登录</button>
     <div class="burger" id="burger" onclick="toggleMenu()">
       <span></span><span></span><span></span>
     </div>
@@ -251,6 +290,20 @@ a{text-decoration:none;}
 <div class="toast" id="toast"></div>
 
 <script>
+/* Mobile menu */
+function toggleMenu() {
+  const m = document.getElementById('mobileMenu');
+  const b = document.getElementById('burger');
+  const open = m.classList.toggle('open');
+  b.classList.toggle('open', open);
+  document.body.style.overflow = open ? 'hidden' : '';
+}
+function closeMenu() {
+  document.getElementById('mobileMenu').classList.remove('open');
+  document.getElementById('burger').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
 const CAPI = 'http://localhost:3001'
 
 const STATUS_STEPS = ['待付款','制作中','运输中','已完成']
@@ -578,5 +631,46 @@ function addCursorListeners(els) {
 loadOrders('active')
 </script>
 <script src="../js/auth.js"></script>
+<script>
+(function syncMobileAuth() {
+  function applyState() {
+    var navLoginBtn     = document.getElementById('navLoginBtn');
+    var mowoNavUser     = document.getElementById('mowoNavUser');
+    var mobileLoginBtn  = document.getElementById('mobileLoginBtn');
+    var mobileAvatar    = document.getElementById('mobileMenuAvatar');
+    var mobileAvatarBtn = document.getElementById('mobileMenuAvatarBtn');
+    var mobileAvatarName= document.getElementById('mobileMenuAvatarName');
+    if (!mobileLoginBtn) return;
+    var loggedIn = (navLoginBtn && navLoginBtn.style.display === 'none')
+                || (mowoNavUser && mowoNavUser.classList.contains('show'));
+    if (loggedIn) {
+      mobileLoginBtn.style.display = 'none';
+      if (mobileAvatar) mobileAvatar.style.display = 'flex';
+      var uname   = document.getElementById('mowoNavUname');
+      var initial = document.getElementById('mowoNavAvatarInitial');
+      if (mobileAvatarBtn) mobileAvatarBtn.textContent = (initial && initial.textContent) || '?';
+      if (mobileAvatarName) mobileAvatarName.textContent = (uname && uname.textContent) || '我的账户';
+      if (mobileAvatarBtn) mobileAvatarBtn.onclick = function() {
+        document.getElementById('mowoNavAvatarBtn')?.click();
+        closeMenu();
+      };
+    } else {
+      mobileLoginBtn.style.display = '';
+      if (mobileAvatar) mobileAvatar.style.display = 'none';
+      mobileLoginBtn.onclick = function() { closeMenu(); window.openAuthModal && window.openAuthModal(); };
+    }
+  }
+  function startObserving() {
+    var navLoginBtn = document.getElementById('navLoginBtn');
+    var mowoNavUser = document.getElementById('mowoNavUser');
+    if (navLoginBtn) new MutationObserver(applyState).observe(navLoginBtn, { attributes:true, attributeFilter:['style'] });
+    if (mowoNavUser) new MutationObserver(applyState).observe(mowoNavUser, { attributes:true, attributeFilter:['class'] });
+    applyState();
+  }
+  if (document.readyState === 'complete') { startObserving(); }
+  else { window.addEventListener('load', startObserving); }
+  setTimeout(applyState, 800);
+})();
+</script>
 </body>
 </html>
