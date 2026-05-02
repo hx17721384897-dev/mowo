@@ -6,19 +6,17 @@
 <title>产品介绍 — 哞屋 MOWO</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Noto+Sans+SC:wght@300;400;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/nav.css">
 <style>
 :root {
   --white:    #FFFFFF;
-  --cream:    #F5F3EF;
-  --black:    #111110;
-  --gray1:    #EBEBEA;
-  --gray2:    #C4C3BF;
-  --gray3:    #787874;
-  --accent-y: #F5E642;
-  --accent-o: #FF6B35;
-  --accent-g: #8FD694;
-  --accent-b: #7EC8E3;
-  --accent-p: #C8A8E8;
+  --cream:    #fef3e2;   /* 暖奶油，nav-bg 50% 淡化版 */
+  --black:    #2c1f14;   /* 品牌深棕黑，与导航栏文字色一致 */
+  --gray1:    #e8d8be;   /* 暖边框/分割线 */
+  --gray2:    #c0aa88;   /* 中性暖灰 */
+  --gray3:    #7a6552;   /* 辅助文字暖棕 */
+  --accent-y: #f0c040;   /* 品牌琥珀黄 */
+  --accent-o: #e8662a;   /* 品牌橙（偏暖深） */
   --font:     'Nunito', 'Noto Sans SC', sans-serif;
   --ease:     cubic-bezier(0.22, 1, 0.36, 1);
   --pad-mob:  24px;
@@ -26,47 +24,11 @@
 }
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
 html{scroll-behavior:smooth;}
-body{font-family:var(--font);background:var(--white);color:var(--black);overflow-x:hidden;-webkit-font-smoothing:antialiased;}
+body{font-family:var(--font);background:var(--cream);color:var(--black);overflow-x:hidden;-webkit-font-smoothing:antialiased;}
 a{text-decoration:none;color:inherit;}
 button{font-family:var(--font);cursor:pointer;border:none;}
 
-/* ── NAV ── */
-.nav{position:fixed;top:0;left:0;right:0;z-index:800;display:flex;align-items:center;justify-content:space-between;padding:14px var(--pad-mob);background:rgba(255,255,255,0.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid rgba(0,0,0,0.06);}
-@media(min-width:1024px){.nav{padding:20px var(--pad-desk);}}
-.nav-logo{line-height:1;}
-.nav-logo-cn{font-weight:900;font-size:22px;letter-spacing:-.01em;color:var(--black);display:block;}
-.nav-logo-en{font-weight:700;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--gray3);display:block;margin-top:1px;}
-.nav-links{display:none;list-style:none;gap:36px;}
-@media(min-width:1024px){.nav-links{display:flex;}}
-.nav-links a{font-weight:800;font-size:14px;color:var(--gray3);transition:color .2s;position:relative;padding-bottom:3px;}
-.nav-links a::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--accent-y);border-radius:2px;transform:scaleX(0);transition:transform .25s var(--ease);}
-.nav-links a:hover{color:var(--black);}
-.nav-links a:hover::after,.nav-links a.active::after{transform:scaleX(1);}
-.nav-links a.active{color:var(--black);}
-.nav-login{font-weight:800;font-size:13px;padding:10px 22px;background:var(--black);color:var(--white);border-radius:999px;min-height:44px;display:flex;align-items:center;transition:opacity .2s;}
-.nav-login:hover{opacity:.8;}
-.burger{display:flex;flex-direction:column;gap:5px;cursor:pointer;padding:8px;min-width:44px;min-height:44px;justify-content:center;align-items:center;}
-@media(min-width:1024px){.burger{display:none;}}
-.burger span{display:block;width:22px;height:2px;background:var(--black);border-radius:2px;transition:transform .3s,opacity .3s;}
-.burger.open span:nth-child(1){transform:translateY(7px) rotate(45deg);}
-.burger.open span:nth-child(2){opacity:0;}
-.burger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg);}
-.mobile-menu{position:fixed;inset:0;background:var(--black);z-index:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:36px;opacity:0;pointer-events:none;transition:opacity .35s var(--ease);}
-.mobile-menu.open{opacity:1;pointer-events:all;}
-.mobile-menu a{font-weight:900;font-size:clamp(28px,8vw,48px);color:var(--white);transition:color .2s;}
-.mobile-menu a:hover{color:var(--accent-y);}
-.nav-right{display:flex;align-items:center;gap:8px;}
-@media(max-width:1023px){.nav-login-text{display:none;}}
-@media(min-width:1024px){.nav-login-text{display:flex;}}
-.nav-avatar{width:36px;height:36px;border-radius:50%;background:var(--accent-y);color:var(--black);font-weight:900;font-size:14px;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;transition:opacity .2s;flex-shrink:0;}
-.nav-avatar:hover{opacity:.8;}
-.mobile-menu-footer{position:absolute;bottom:48px;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:12px;}
-.mobile-login-btn{font-family:var(--font);font-weight:900;font-size:16px;letter-spacing:.05em;padding:14px 48px;background:var(--accent-y);color:var(--black);border-radius:999px;border:none;cursor:pointer;transition:opacity .2s;min-height:52px;}
-.mobile-login-btn:hover{opacity:.85;}
-.mobile-menu-avatar{display:flex;flex-direction:column;align-items:center;gap:8px;}
-.mobile-menu-avatar-btn{width:56px;height:56px;border-radius:50%;background:var(--accent-y);color:var(--black);font-weight:900;font-size:22px;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;transition:opacity .2s;}
-.mobile-menu-avatar-btn:hover{opacity:.8;}
-.mobile-menu-avatar-name{font-weight:700;font-size:13px;color:rgba(255,255,255,.5);letter-spacing:.05em;}
+/* nav 由 nav.css + nav.js 统一处理 */
 
 /* ══════════════════
    SECTION 1 — HERO
@@ -81,7 +43,7 @@ button{font-family:var(--font);cursor:pointer;border:none;}
 /* Full-screen image placeholder */
 .hero-bg{
   position:absolute;inset:0;
-  background: linear-gradient(160deg, #2A2826 0%, #111110 60%);
+  background: linear-gradient(160deg, #2a1f16 0%, #1a100a 60%);
   display:flex;align-items:center;justify-content:center;
 }
 .hero-bg-placeholder{
@@ -98,7 +60,7 @@ button{font-family:var(--font);cursor:pointer;border:none;}
 /* Gradient overlay so text is readable */
 .hero-overlay{
   position:absolute;inset:0;
-  background:linear-gradient(to top, rgba(17,17,16,1) 0%, rgba(17,17,16,.5) 40%, rgba(17,17,16,.1) 100%);
+  background:linear-gradient(to top, rgba(26,16,10,1) 0%, rgba(26,16,10,.5) 40%, rgba(26,16,10,.1) 100%);
 }
 
 /* Text anchored bottom-left */
@@ -179,13 +141,13 @@ button{font-family:var(--font);cursor:pointer;border:none;}
 }
 @media(min-width:768px){.horse-frames{grid-template-columns:repeat(6,1fr);}}
 .horse-frame{
-  aspect-ratio:3/4;background:#1A1A18;border:1px solid #2A2A28;border-radius:8px;
+  aspect-ratio:3/4;background:#1e1208;border:1px solid #2c1f14;border-radius:8px;
   display:flex;align-items:center;justify-content:center;
   font-size:clamp(16px,2.5vw,22px);
   transition:transform .2s;
 }
 .horse-frame:hover{transform:scale(1.08);}
-.horse-frame.active{background:#2A2A26;border-color:#3A3A36;}
+.horse-frame.active{background:#3a2818;border-color:#c8965a;}
 .frame-arrow{
   display:flex;align-items:center;justify-content:center;
   font-weight:900;font-size:18px;color:var(--accent-y);
@@ -263,14 +225,14 @@ button{font-family:var(--font);cursor:pointer;border:none;}
   box-shadow:0 20px 60px rgba(0,0,0,.08);
 }
 .why-answer-img{
-  width:100%;aspect-ratio:16/9;background:#F0EDE4;
+  width:100%;aspect-ratio:16/9;background:#fce8c8;
   display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;
   position:relative;
 }
 .why-answer-tag{
   position:absolute;top:16px;left:16px;
   font-weight:900;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
-  background:var(--accent-y);color:var(--black);
+  background:#fce2b3;color:#2c1f14;border:1.5px solid #c8965a;
   padding:5px 12px;border-radius:999px;
 }
 .why-answer-device{
@@ -288,7 +250,7 @@ button{font-family:var(--font);cursor:pointer;border:none;}
 /* ══════════════════
    SECTION 3 — SCENES
 ══════════════════ */
-#scenes{padding:120px 0;background:var(--white);}
+#scenes{padding:120px 0;background:#fffaf4;}
 .scenes-header{padding:0 var(--pad-mob);margin-bottom:80px;text-align:center;}
 @media(min-width:1024px){.scenes-header{padding:0 var(--pad-desk);}}
 
@@ -313,13 +275,13 @@ button{font-family:var(--font);cursor:pointer;border:none;}
 .scene-img-placeholder{font-size:48px;opacity:.4;}
 .scene-img-label{font-weight:700;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:rgba(0,0,0,.2);}
 
-/* Scene colors */
-.scene-row:nth-child(1) .scene-img{background:#F0EDE4;}
-.scene-row:nth-child(2) .scene-img{background:#E4EDF0;}
-.scene-row:nth-child(3) .scene-img{background:#EDE4F0;}
-.scene-row:nth-child(4) .scene-img{background:#E4F0E6;}
-.scene-row:nth-child(5) .scene-img{background:#F0E8E4;}
-.scene-row:nth-child(6) .scene-img{background:#E8E4F0;}
+/* Scene colors — 全部暖化，彻底移除绿调 */
+.scene-row:nth-child(1) .scene-img{background:#f0ebe2;}
+.scene-row:nth-child(2) .scene-img{background:#e8e0f0;}  /* IP·浅紫，保留品类感 */
+.scene-row:nth-child(3) .scene-img{background:#e0e8f0;}  /* AI·浅蓝，科技感 */
+.scene-row:nth-child(4) .scene-img{background:#f5ead8;}  /* 礼物·暖米 */
+.scene-row:nth-child(5) .scene-img{background:#fce8c8;}  /* 教育·品牌奶油 */
+.scene-row:nth-child(6) .scene-img{background:#1a100a;}  /* 创作者·深棕黑 */
 
 .scene-text{
   padding:48px var(--pad-mob);
@@ -340,12 +302,12 @@ button{font-family:var(--font);cursor:pointer;border:none;}
   padding:5px 14px;border-radius:999px;margin-bottom:20px;
   width:fit-content;
 }
-.scene-row:nth-child(1) .scene-tag{background:#F5E64220;color:#8A8000;}
-.scene-row:nth-child(2) .scene-tag{background:#7EC8E320;color:#2A7A90;}
-.scene-row:nth-child(3) .scene-tag{background:#C8A8E820;color:#6040A0;}
-.scene-row:nth-child(4) .scene-tag{background:#FF6B3520;color:#C04020;}
-.scene-row:nth-child(5) .scene-tag{background:#8FD69420;color:#287030;}
-.scene-row:nth-child(6) .scene-tag{background:#F5E64220;color:#8A8000;}
+.scene-row:nth-child(1) .scene-tag{background:rgba(200,150,90,.18);color:#7a4a1a;}
+.scene-row:nth-child(2) .scene-tag{background:rgba(100,100,200,.14);color:#3a3a90;}
+.scene-row:nth-child(3) .scene-tag{background:rgba(60,100,200,.12);color:#2a5a8a;}
+.scene-row:nth-child(4) .scene-tag{background:rgba(200,100,50,.16);color:#8a3a1a;}
+.scene-row:nth-child(5) .scene-tag{background:rgba(200,150,50,.18);color:#7a4a10;}  /* 绿→暖棕 */
+.scene-row:nth-child(6) .scene-tag{background:rgba(240,192,64,.15);color:var(--accent-y);}
 
 .scene-title{font-weight:900;font-size:clamp(22px,3.5vw,34px);letter-spacing:-.02em;line-height:1.2;color:var(--black);margin-bottom:16px;}
 .scene-desc{font-weight:700;font-size:15px;line-height:1.9;color:var(--gray3);max-width:440px;}
@@ -403,14 +365,14 @@ button{font-family:var(--font);cursor:pointer;border:none;}
   display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;
   position:relative;
 }
-.prod-card:nth-child(1) .prod-img{background:#EDE8E3;}
-.prod-card:nth-child(2) .prod-img{background:#E3EBF0;}
-.prod-card:nth-child(3) .prod-img{background:#EDE3ED;}
-.prod-card:nth-child(4) .prod-img{background:#E3EDE5;}
-.prod-card:nth-child(5) .prod-img{background:#F0EBE3;}
-.prod-card:nth-child(6) .prod-img{background:#E3E8F0;}
-.prod-card:nth-child(7) .prod-img{background:#F0E3E8;}
-.prod-card:nth-child(8) .prod-img{background:#E8F0E3;}
+.prod-card:nth-child(1) .prod-img{background:#ede8e0;}
+.prod-card:nth-child(2) .prod-img{background:#e8e0f0;}  /* 亚克力·浅紫 */
+.prod-card:nth-child(3) .prod-img{background:#ede0f0;}
+.prod-card:nth-child(4) .prod-img{background:#f5ead8;}  /* 原绿改暖米 */
+.prod-card:nth-child(5) .prod-img{background:#f0ebe0;}
+.prod-card:nth-child(6) .prod-img{background:#e0e8f0;}  /* 不锈钢·冷蓝 */
+.prod-card:nth-child(7) .prod-img{background:#f5e8dc;}
+.prod-card:nth-child(8) .prod-img{background:#f0e8d8;}  /* 原绿改暖米 */
 
 .prod-device-mock{
   width:64px;height:88px;background:rgba(255,255,255,.8);
@@ -454,8 +416,8 @@ button{font-family:var(--font);cursor:pointer;border:none;}
 .btn:active{transform:scale(.97);}
 .btn-white{background:var(--white);color:var(--black);box-shadow:0 4px 0 rgba(255,255,255,.25);}
 .btn-white:hover{box-shadow:0 6px 0 rgba(255,255,255,.25);transform:translateY(-2px);}
-.btn-yellow{background:var(--accent-y);color:var(--black);box-shadow:0 4px 0 #C8BB00;}
-.btn-yellow:hover{box-shadow:0 6px 0 #C8BB00;transform:translateY(-2px);}
+.btn-yellow{background:var(--accent-y);color:var(--black);box-shadow:0 4px 0 #b89030;}
+.btn-yellow:hover{box-shadow:0 6px 0 #b89030;transform:translateY(-2px);}
 .btn-ghost{background:transparent;color:rgba(255,255,255,.6);border:2px solid rgba(255,255,255,.15);}
 .btn-ghost:hover{border-color:rgba(255,255,255,.4);color:var(--white);}
 
@@ -478,40 +440,8 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
 </head>
 <body>
 
-<div class="mobile-menu" id="mobileMenu">
-  <a href="about.html" onclick="closeMenu()">关于我们</a>
-  <a href="products.html" class="active" onclick="closeMenu()">产品介绍</a>
-  <a href="showcase.html" onclick="closeMenu()">画师联名</a>
-  <a href="customize-start.html" onclick="closeMenu()">创作中心</a>
-  <a href="contact.html" onclick="closeMenu()">联络我们</a>
-  <div class="mobile-menu-footer">
-    <button class="mobile-login-btn" id="mobileLoginBtn" onclick="closeMenu()">登录 / 注册</button>
-    <div class="mobile-menu-avatar" id="mobileMenuAvatar" style="display:none">
-      <button class="mobile-menu-avatar-btn" id="mobileMenuAvatarBtn" onclick="closeMenu()"></button>
-      <span class="mobile-menu-avatar-name" id="mobileMenuAvatarName"></span>
-    </div>
-  </div>
-</div>
-
-<nav class="nav">
-  <a href="index.html" class="nav-logo">
-    <span class="nav-logo-cn">哞屋</span>
-    <span class="nav-logo-en">MOWO</span>
-  </a>
-  <ul class="nav-links">
-    <li><a href="about.html">关于我们</a></li>
-    <li><a href="products.html" class="active">产品介绍</a></li>
-    <li><a href="showcase.html">画师联名</a></li>
-    <li><a href="customize-start.html">创作中心</a></li>
-    <li><a href="contact.html">联络我们</a></li>
-  </ul>
-  <div class="nav-right">
-    <button class="nav-login nav-login-btn nav-login-text" id="navLoginBtn">登录</button>
-    <div class="burger" id="burger" onclick="toggleMenu()">
-      <span></span><span></span><span></span>
-    </div>
-  </div>
-</nav>
+<!-- 共享导航栏 -->
+<script src="../js/nav.js"></script>
 
 <!-- ══ HERO ══ -->
 <section id="hero">
@@ -710,15 +640,15 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
   </div>
 
   <!-- Scene 6 — Creator -->
-  <div class="scene-row reverse reveal" style="background:var(--black);">
-    <div class="scene-text" style="border-right:1px solid #2A2A28;border-left:none;">
+  <div class="scene-row reverse reveal" style="background:#1a100a;">
+    <div class="scene-text" style="border-right:1px solid #3a2818;border-left:none;">
       <p class="scene-num" style="color:var(--gray3);">06</p>
-      <span class="scene-tag" style="background:rgba(245,230,66,.15);color:var(--accent-y);">✦ 创作者变现</span>
+      <span class="scene-tag" style="background:rgba(240,192,64,.15);color:var(--accent-y);">✦ 创作者变现</span>
       <h3 class="scene-title" style="color:var(--white);">你只需要画好，<br>其余的交给我们</h3>
       <p class="scene-desc" style="color:rgba(255,255,255,.5);">如果你是动画创作者，可以把你的作品上架到哞屋社区——量产、包装、发货、售后全部由我们负责。你的画，开始为你说话。</p>
       <a href="creator-certify.html" class="btn btn-yellow" style="margin-top:28px;width:fit-content;font-size:14px;padding:12px 24px;min-height:48px;">了解创作者计划 →</a>
     </div>
-    <div class="scene-img" style="background:#1A1A18;border-left:1px solid #2A2A28;">
+    <div class="scene-img" style="background:#1a100a;border-left:1px solid #3a2818;">
       <div class="scene-img-placeholder" style="opacity:.3;">🌟</div>
       <div class="scene-img-label" style="color:rgba(255,255,255,.15);">创作者社区场景图占位</div>
     </div>
@@ -831,19 +761,6 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
 </footer>
 
 <script>
-/* Mobile menu */
-function toggleMenu(){
-  const m=document.getElementById('mobileMenu'),b=document.getElementById('burger');
-  const o=m.classList.toggle('open');
-  b.classList.toggle('open',o);
-  document.body.style.overflow=o?'hidden':'';
-}
-function closeMenu(){
-  document.getElementById('mobileMenu').classList.remove('open');
-  document.getElementById('burger').classList.remove('open');
-  document.body.style.overflow='';
-}
-
 /* Product filter */
 function filterProd(type, btn){
   document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
