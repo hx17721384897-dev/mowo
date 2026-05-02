@@ -3,9 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>画师联名 — 哞屋 MOWO</title>
+<title>创意社区 — 哞屋 MOWO</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Noto+Sans+SC:wght@300;400;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/nav.css">
 <style>
 :root {
   --white:    #FFFFFF;
@@ -16,76 +17,92 @@
   --gray3:    #787874;
   --accent-y: #F5E642;
   --accent-o: #FF6B35;
-  --accent-g: #8FD694;
   --font:     'Nunito', 'Noto Sans SC', sans-serif;
   --ease:     cubic-bezier(0.22, 1, 0.36, 1);
-  --pad-mob:  24px;
+  --pad-mob:  20px;
   --pad-desk: 72px;
-  --nav-h:    75px;
 }
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
 html{scroll-behavior:smooth;}
-body{font-family:var(--font);background:var(--cream);color:var(--black);overflow-x:hidden;-webkit-font-smoothing:antialiased;padding-top:var(--nav-h);}
+body{font-family:var(--font);background:var(--cream);color:var(--black);overflow-x:hidden;-webkit-font-smoothing:antialiased;}
 a{text-decoration:none;color:inherit;}
 button{font-family:var(--font);cursor:pointer;border:none;background:none;}
 
-/* ── NAV ── */
-.nav{position:fixed;top:0;left:0;right:0;z-index:900;display:flex;align-items:center;justify-content:space-between;padding:14px var(--pad-mob);background:rgba(255,255,255,0.9);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid rgba(0,0,0,0.06);}
-@media(min-width:1024px){.nav{padding:20px var(--pad-desk);}}
-.nav-logo{line-height:1;}
-.nav-logo-cn{font-weight:900;font-size:22px;letter-spacing:-.01em;color:var(--black);display:block;}
-.nav-logo-en{font-weight:700;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--gray3);display:block;margin-top:1px;}
-.nav-links{display:none;list-style:none;gap:36px;}
-@media(min-width:1024px){.nav-links{display:flex;}}
-.nav-links a{font-weight:800;font-size:14px;color:var(--gray3);transition:color .2s;position:relative;padding-bottom:3px;}
-.nav-links a::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--accent-y);border-radius:2px;transform:scaleX(0);transition:transform .25s var(--ease);}
-.nav-links a:hover{color:var(--black);}
-.nav-links a:hover::after,.nav-links a.active::after{transform:scaleX(1);}
-.nav-links a.active{color:var(--black);}
-.nav-right{display:flex;align-items:center;gap:8px;}
-.nav-login{font-weight:800;font-size:13px;padding:10px 22px;background:var(--black);color:var(--white);border-radius:999px;min-height:44px;display:flex;align-items:center;transition:opacity .2s;border:none;cursor:pointer;}
-.nav-login:hover{opacity:.8;}
-.burger{display:flex;flex-direction:column;gap:5px;cursor:pointer;padding:8px;min-width:44px;min-height:44px;justify-content:center;align-items:center;}
-@media(min-width:1024px){.burger{display:none;}}
-.burger span{display:block;width:22px;height:2px;background:var(--black);border-radius:2px;transition:transform .3s,opacity .3s;}
-.burger.open span:nth-child(1){transform:translateY(7px) rotate(45deg);}
-.burger.open span:nth-child(2){opacity:0;}
-.burger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg);}
-.mobile-menu{position:fixed;inset:0;background:var(--black);z-index:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:36px;opacity:0;pointer-events:none;transition:opacity .35s var(--ease);}
-.mobile-menu.open{opacity:1;pointer-events:all;}
-.mobile-menu a{font-weight:900;font-size:clamp(28px,8vw,48px);color:var(--white);transition:color .2s;}
-.mobile-menu a:hover{color:var(--accent-y);}
-.mobile-menu-footer{position:absolute;bottom:48px;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:12px;}
-.mobile-login-btn{font-family:var(--font);font-weight:900;font-size:16px;padding:14px 48px;background:var(--accent-y);color:var(--black);border-radius:999px;border:none;cursor:pointer;transition:opacity .2s;min-height:52px;}
-.mobile-login-btn:hover{opacity:.85;}
-.mobile-menu-avatar{display:flex;flex-direction:column;align-items:center;gap:8px;}
-.mobile-menu-avatar-btn{width:56px;height:56px;border-radius:50%;background:var(--accent-y);color:var(--black);font-weight:900;font-size:22px;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;transition:opacity .2s;}
-.mobile-menu-avatar-btn:hover{opacity:.8;}
-.mobile-menu-avatar-name{font-weight:700;font-size:13px;color:rgba(255,255,255,.5);letter-spacing:.05em;}
+/* ── PAGE HEADER（标题区，滚动后消失） ── */
+.page-header{
+  background:var(--cream);
+  padding:28px var(--pad-mob) 20px;
+}
+@media(min-width:1024px){.page-header{padding:36px var(--pad-desk) 24px;}}
+.ph-inner{max-width:1600px;margin:0 auto;}
+.ph-title{
+  font-size:clamp(26px,4vw,42px);font-weight:900;letter-spacing:-.02em;
+  margin-bottom:6px;display:flex;align-items:center;gap:10px;
+}
+.ph-spark{color:#c8965a;font-size:.75em;}
+.ph-sub{font-size:14px;font-weight:700;color:var(--gray3);}
 
-/* ── FILTER BAR ── */
-.filter-bar{position:sticky;top:var(--nav-h);z-index:700;background:rgba(245,243,239,.96);backdrop-filter:blur(16px);border-bottom:1px solid var(--gray1);padding:12px var(--pad-mob) 0;}
-@media(min-width:1024px){.filter-bar{padding:14px var(--pad-desk) 0;}}
-.filter-top{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap;}
-.search-wrap{flex:1;min-width:200px;max-width:360px;position:relative;}
-.search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--gray3);pointer-events:none;}
-.search-input{width:100%;height:44px;padding:0 16px 0 40px;font-family:var(--font);font-weight:700;font-size:14px;color:var(--black);background:var(--white);border:2px solid var(--gray1);border-radius:999px;outline:none;transition:border-color .2s,box-shadow .2s;}
+/* ── CONTROL BAR（搜索+标签+排序，sticky） ── */
+.control-bar{
+  position:sticky;top:64px;z-index:700;
+  background:rgba(245,243,239,.97);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--gray1);
+  transition:box-shadow .25s;
+}
+.control-bar.pinned{box-shadow:0 4px 24px rgba(0,0,0,.07);}
+.control-inner{max-width:1600px;margin:0 auto;padding:10px var(--pad-mob) 0;}
+@media(min-width:1024px){.control-inner{padding:12px var(--pad-desk) 0;}}
+
+/* 第一行：搜索框 + 标签横排 */
+.control-top{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.search-wrap{flex-shrink:0;width:240px;position:relative;}
+@media(max-width:640px){.control-top{flex-wrap:wrap;}.search-wrap{width:100%;}}
+.search-svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:15px;height:15px;stroke:var(--gray3);fill:none;stroke-width:2;pointer-events:none;}
+.search-input{
+  width:100%;height:38px;padding:0 14px 0 36px;
+  font-family:var(--font);font-weight:700;font-size:13px;color:var(--black);
+  background:var(--white);border:1.5px solid var(--gray1);border-radius:999px;
+  outline:none;transition:border-color .2s,box-shadow .2s;
+}
 .search-input::placeholder{color:var(--gray2);}
-.search-input:focus{border-color:var(--black);box-shadow:0 0 0 4px rgba(17,17,16,.05);}
-.sort-tabs{display:flex;background:var(--white);border:2px solid var(--gray1);border-radius:999px;padding:3px;gap:2px;flex-shrink:0;}
-.sort-tab{font-weight:800;font-size:13px;padding:8px 18px;border-radius:999px;color:var(--gray3);transition:background .2s,color .2s;min-height:36px;display:flex;align-items:center;}
-.sort-tab.active{background:var(--black);color:var(--white);}
-.sort-tab:hover:not(.active){color:var(--black);}
-.tags-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:12px;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+.search-input:focus{border-color:var(--black);box-shadow:0 0 0 3px rgba(17,17,16,.06);}
+.tags-row{flex:1;display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
 .tags-row::-webkit-scrollbar{display:none;}
-.tag-pill{flex-shrink:0;font-weight:800;font-size:12px;letter-spacing:.04em;padding:7px 16px;border-radius:999px;background:var(--white);color:var(--gray3);border:2px solid var(--gray1);transition:all .2s;min-height:36px;display:flex;align-items:center;white-space:nowrap;}
+.tag-pill{
+  flex-shrink:0;font-weight:800;font-size:12px;letter-spacing:.03em;
+  padding:5px 14px;border-radius:999px;height:32px;
+  background:var(--white);color:var(--gray3);border:1.5px solid var(--gray1);
+  transition:all .18s;display:flex;align-items:center;white-space:nowrap;
+}
 .tag-pill:hover{border-color:var(--gray2);color:var(--black);}
 .tag-pill.active{background:var(--black);color:var(--white);border-color:var(--black);}
 
+/* 第二行：排序 + 激励入口 */
+.control-sort{
+  display:flex;align-items:center;justify-content:space-between;
+  padding-bottom:10px;gap:12px;
+}
+.sort-tabs{display:flex;gap:3px;}
+.sort-tab{
+  font-weight:800;font-size:13px;padding:5px 14px;border-radius:999px;
+  color:var(--gray3);transition:all .18s;height:30px;display:flex;align-items:center;
+}
+.sort-tab.active{background:var(--black);color:var(--white);}
+.sort-tab:hover:not(.active){color:var(--black);background:var(--gray1);}
+.incentive-link{
+  flex-shrink:0;font-weight:800;font-size:12px;color:var(--gray3);
+  display:flex;align-items:center;gap:6px;
+  padding:5px 12px;border-radius:999px;border:1.5px solid var(--gray1);
+  background:var(--white);transition:all .18s;height:30px;white-space:nowrap;
+}
+.incentive-link:hover{border-color:#c8965a;color:#c8965a;}
+@media(max-width:760px){.incentive-link{display:none;}}
+
 /* ── MAIN ── */
-.main{padding:36px var(--pad-mob) 60px;max-width:1600px;margin:0 auto;}
-@media(min-width:1024px){.main{padding:40px var(--pad-desk) 80px;}}
-.result-info{font-weight:800;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--gray3);margin-bottom:20px;}
+.main{padding:28px var(--pad-mob) 60px;max-width:1600px;margin:0 auto;}
+@media(min-width:1024px){.main{padding:32px var(--pad-desk) 80px;}}
+.result-info{font-weight:800;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gray3);margin-bottom:16px;}
 
 /* ── MASONRY ── */
 .masonry{columns:2;column-gap:12px;}
@@ -104,7 +121,6 @@ button{font-family:var(--font);cursor:pointer;border:none;background:none;}
 
 /* ── 帧动画叠层 ── */
 .card-anim-wrap{position:absolute;inset:0;z-index:2;pointer-events:none;}
-/* 叠层帧图不参与 scale 过渡，只用 opacity 切换 */
 .card-anim-wrap img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;will-change:opacity;transition:none !important;transform:none !important;}
 .card-anim-wrap img.af{opacity:1;}
 .card-badges{position:absolute;top:10px;left:10px;display:flex;gap:6px;flex-wrap:wrap;}
@@ -139,7 +155,7 @@ button{font-family:var(--font);cursor:pointer;border:none;background:none;}
 
 /* ── LOAD MORE ── */
 .load-more-wrap{display:flex;justify-content:center;padding:40px 0 20px;}
-.load-more-btn{font-weight:900;font-size:14px;letter-spacing:.04em;padding:16px 40px;border-radius:999px;min-height:52px;background:var(--white);color:var(--black);border:2px solid var(--gray1);transition:all .25s var(--ease);display:flex;align-items:center;gap:10px;}
+.load-more-btn{font-weight:900;font-size:14px;letter-spacing:.04em;padding:14px 40px;border-radius:999px;min-height:48px;background:var(--white);color:var(--black);border:2px solid var(--gray1);transition:all .25s var(--ease);display:flex;align-items:center;gap:10px;}
 .load-more-btn:hover{border-color:var(--black);box-shadow:0 4px 0 var(--gray1);}
 .load-more-btn.loading .load-spinner{animation:spin-slow .8s linear infinite;}
 .load-more-btn:disabled{opacity:.4;cursor:not-allowed;}
@@ -170,62 +186,44 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
 </head>
 <body>
 
-<!-- MOBILE MENU -->
-<div class="mobile-menu" id="mobileMenu">
-  <a href="about.html" onclick="closeMenu()">关于我们</a>
-  <a href="products.html" onclick="closeMenu()">产品介绍</a>
-  <a href="showcase.html" class="active" onclick="closeMenu()">画师联名</a>
-  <a href="customize-start.html" onclick="closeMenu()">创作中心</a>
-  <a href="contact.html" onclick="closeMenu()">联络我们</a>
-  <div class="mobile-menu-footer">
-    <button class="mobile-login-btn" id="mobileLoginBtn">登录 / 注册</button>
-    <div class="mobile-menu-avatar" id="mobileMenuAvatar" style="display:none">
-      <button class="mobile-menu-avatar-btn" id="mobileMenuAvatarBtn"></button>
-      <span class="mobile-menu-avatar-name" id="mobileMenuAvatarName"></span>
+<!-- 共享导航栏 -->
+<script src="../js/nav.js"></script>
+
+<!-- 页面标题区（滚动后消失） -->
+<div class="page-header" id="pageHeader">
+  <div class="ph-inner">
+    <h1 class="ph-title">创意社区 <span class="ph-spark">✦</span></h1>
+    <p class="ph-sub">发现灵感，分享创意，让每一帧画面动起来</p>
+  </div>
+</div>
+
+<!-- 控制栏（sticky，搜索+标签同行） -->
+<div class="control-bar" id="controlBar">
+  <div class="control-inner">
+    <!-- 第一行：搜索 + 创作者标签 -->
+    <div class="control-top">
+      <div class="search-wrap">
+        <svg class="search-svg" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input class="search-input" type="text" placeholder="搜索作品或创作者…" id="searchInput" oninput="handleSearch()">
+      </div>
+      <div class="tags-row" id="tagsRow">
+        <button class="tag-pill active" onclick="setCreator('',this)">全部</button>
+      </div>
+    </div>
+    <!-- 第二行：排序 + 激励入口 -->
+    <div class="control-sort">
+      <div class="sort-tabs">
+        <button class="sort-tab active" onclick="setSort('latest',this)">最新</button>
+        <button class="sort-tab" onclick="setSort('popular',this)">热门</button>
+      </div>
+      <a href="customize-start.html" class="incentive-link">
+        📦 上传作品，有机会获官方推荐并销售赚收益 →
+      </a>
     </div>
   </div>
 </div>
 
-<!-- NAV -->
-<nav class="nav">
-  <a href="index.html" class="nav-logo">
-    <span class="nav-logo-cn">哞屋</span>
-    <span class="nav-logo-en">MOWO</span>
-  </a>
-  <ul class="nav-links">
-    <li><a href="about.html">关于我们</a></li>
-    <li><a href="products.html">产品介绍</a></li>
-    <li><a href="showcase.html" class="active">画师联名</a></li>
-    <li><a href="customize-start.html">创作中心</a></li>
-    <li><a href="contact.html">联络我们</a></li>
-  </ul>
-  <div class="nav-right">
-    <button class="nav-login nav-login-btn" id="navLoginBtn">登录</button>
-    <div class="burger" id="burger" onclick="toggleMenu()">
-      <span></span><span></span><span></span>
-    </div>
-  </div>
-</nav>
-
-<!-- FILTER BAR -->
-<div class="filter-bar">
-  <div class="filter-top">
-    <div class="search-wrap">
-      <span class="search-icon">🔍</span>
-      <input class="search-input" type="text" placeholder="搜索作品或创作者…" id="searchInput" oninput="handleSearch()">
-    </div>
-    <div class="sort-tabs">
-      <button class="sort-tab active" onclick="setSort('latest',this)">最新</button>
-      <button class="sort-tab" onclick="setSort('popular',this)">热门</button>
-    </div>
-  </div>
-  <div class="tags-row" id="tagsRow">
-    <button class="tag-pill active" onclick="setCreator('',this)"># 全部</button>
-    <!-- 创作者筛选动态插入 -->
-  </div>
-</div>
-
-<!-- MAIN -->
+<!-- 主内容区 -->
 <main class="main">
   <p class="result-info" id="resultInfo">加载中…</p>
   <div class="masonry" id="masonryGrid"></div>
@@ -268,18 +266,14 @@ let searchQuery = ''
 let displayCount = 12
 const PAGE_SIZE = 12
 
-/* ── Mobile menu ── */
-function toggleMenu() {
-  const m = document.getElementById('mobileMenu'), b = document.getElementById('burger')
-  const o = m.classList.toggle('open')
-  b.classList.toggle('open', o)
-  document.body.style.overflow = o ? 'hidden' : ''
-}
-function closeMenu() {
-  document.getElementById('mobileMenu').classList.remove('open')
-  document.getElementById('burger').classList.remove('open')
-  document.body.style.overflow = ''
-}
+/* ── 滚动 sticky 增强（标题离屏后 control-bar 加阴影） ── */
+const _cbObs = new IntersectionObserver(([e]) => {
+  document.getElementById('controlBar').classList.toggle('pinned', !e.isIntersecting)
+}, { threshold: 0, rootMargin: '-1px 0px 0px 0px' })
+document.addEventListener('DOMContentLoaded', () => {
+  const ph = document.getElementById('pageHeader')
+  if (ph) _cbObs.observe(ph)
+})
 
 /* ── 骨架屏 ── */
 function renderSkeletons(n = 8) {
@@ -341,9 +335,7 @@ function buildCreatorTags() {
 /* ── 筛选 + 排序 ── */
 function applyFilters() {
   let list = allWorks
-
   if (currentCreatorId) list = list.filter(w => w.creatorId === currentCreatorId)
-
   if (searchQuery) {
     const q = searchQuery.toLowerCase()
     list = list.filter(w =>
@@ -351,11 +343,9 @@ function applyFilters() {
       (w.creator?.nickname || '').toLowerCase().includes(q)
     )
   }
-
   if (currentSort === 'popular') {
     list = [...list].sort((a, b) => (b.likeCount || 0) - (a.likeCount || 0))
   }
-
   filteredWorks = list
   displayCount = PAGE_SIZE
   renderWorks(true)
@@ -410,7 +400,6 @@ function buildCard(w) {
   const likeIcon = w.isLiked ? '♥' : '♡'
   const likeCount = fmtCount(w.likeCount || 0)
 
-  // 图片 HTML：静态封面 + 叠层帧动画（hover 时叠加 .card-anim-wrap）
   const mediaCover = cover
     ? `<img class="card-cover-img" src="${esc(cover)}" alt="${esc(w.title || '')}">`
     : `<div class="card-media-placeholder">🎨</div>`
@@ -442,7 +431,6 @@ function buildCard(w) {
 async function toggleLike(btn, workId) {
   const token = localStorage.getItem('mowo_token')
   if (!token) { if (typeof openAuthModal === 'function') openAuthModal(); return }
-
   const liked = btn.classList.toggle('liked')
   const icon = btn.querySelector('.like-icon')
   const countEl = btn.querySelector('.like-count')
@@ -450,7 +438,6 @@ async function toggleLike(btn, workId) {
   let n = parseCount(countEl.textContent)
   n = liked ? n + 1 : Math.max(0, n - 1)
   countEl.textContent = fmtCount(n)
-
   try {
     await fetch(`${API}/api/collab/works/${workId}/like`, {
       method: 'POST',
@@ -466,46 +453,24 @@ function parseCount(s) {
   if (!s) return 0
   return s.includes('k') ? parseFloat(s) * 1000 : parseInt(s) || 0
 }
-
 function fmtCount(n) {
   if (!n) return '0'
   return n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : String(n)
 }
 
-/* ─────────────────────────────────────────────────────────────────
-   卡片 Hover 帧动画 ── DOM 叠层方案（行业标准）
-   ─────────────────────────────────────────────────────────────────
-   原理：
-     · 静态封面用 <img class="card-cover-img">，始终可见
-     · 首次 hover 时从 API 拿到帧图 URL，创建 .card-anim-wrap
-       在里面叠放所有 <img>（src=OSS presigned URL，普通 img 加载无 CORS）
-     · 动画期间只切换 img.classList（opacity 0→1），零网络请求，丝滑 60fps
-     · wrap 在 mouseleave 时 remove()，下次 hover 重新 append（已缓存，瞬间）
-   ─────────────────────────────────────────────────────────────────*/
-
-const _animState   = new Map()   // workId → { wrap, imgs, timer } | 'loading'
-let   _curHoverId  = null        // 当前正在 hover 的 workId（异步安全守卫）
-const FPS          = 8
-const FRAME_DELAY  = Math.round(1000 / FPS)
+/* ── 帧动画叠层 ── */
+const _animState = new Map()
+let _curHoverId  = null
+const FPS        = 8
+const FRAME_DELAY = Math.round(1000 / FPS)
 
 async function cardHoverStart(mediaDiv) {
   const workId = mediaDiv.dataset.workId
   if (!workId) return
   _curHoverId = workId
-
   const state = _animState.get(workId)
-
-  // ── ① 已有缓存：直接挂上 wrap 开始循环 ──
-  if (state && state !== 'loading') {
-    mediaDiv.appendChild(state.wrap)
-    _startCycle(state)
-    return
-  }
-
-  // ── ② 正在 fetch 中：等它完成后若还在 hover 则启动 ──
+  if (state && state !== 'loading') { mediaDiv.appendChild(state.wrap); _startCycle(state); return }
   if (state === 'loading') return
-
-  // ── ③ 首次：拉帧图 URL 列表（请求自家 API，无 CORS 问题）──
   _animState.set(workId, 'loading')
   try {
     const token   = localStorage.getItem('mowo_token') || ''
@@ -514,39 +479,26 @@ async function cardHoverStart(mediaDiv) {
     const json    = await res.json()
     const urls    = (json.data?.animationFrames || []).filter(Boolean)
     if (!urls.length) { _animState.delete(workId); return }
-
-    // 创建叠层容器 + 每帧一个 <img>
     const wrap = document.createElement('div')
     wrap.className = 'card-anim-wrap'
-
     const imgs = urls.map((url, i) => {
       const img = document.createElement('img')
-      img.src = url                          // <img> 加载不需要 CORS
-      img.decoding = 'async'
-      if (i === 0) img.className = 'af'     // af = active frame（opacity:1）
+      img.src = url; img.decoding = 'async'
+      if (i === 0) img.className = 'af'
       wrap.appendChild(img)
       return img
     })
-
     const newState = { wrap, imgs, timer: null, idx: 0 }
     _animState.set(workId, newState)
-
-    // 等第一帧就绪即可开始（其余帧异步继续加载，不影响流畅度）
     await new Promise(resolve => {
       if (imgs[0].complete && imgs[0].naturalWidth) return resolve()
       imgs[0].onload = imgs[0].onerror = resolve
-      setTimeout(resolve, 1500)             // 最长等 1.5s 防卡住
+      setTimeout(resolve, 1500)
     })
-
-    // 异步等待期间鼠标可能已离开 → 不插入，仅缓存供下次用
     if (_curHoverId !== workId) return
-
     mediaDiv.appendChild(wrap)
     _startCycle(newState)
-
-  } catch (e) {
-    _animState.delete(workId)              // 失败了下次可以重试
-  }
+  } catch { _animState.delete(workId) }
 }
 
 function cardHoverEnd(mediaDiv) {
@@ -555,14 +507,13 @@ function cardHoverEnd(mediaDiv) {
   const state  = _animState.get(workId)
   if (!state || state === 'loading') return
   _stopCycle(state)
-  state.wrap.remove()                      // 移除叠层，露出静态封面
-  state.idx = 0                            // 重置帧索引
+  state.wrap.remove()
+  state.idx = 0
 }
 
 function _startCycle(state) {
   _stopCycle(state)
   const { imgs } = state
-  // 重置所有帧，显示第 0 帧
   imgs.forEach((img, i) => img.className = i === 0 ? 'af' : '')
   state.idx = 0
   state.timer = setInterval(() => {
@@ -571,7 +522,6 @@ function _startCycle(state) {
     imgs[state.idx].className = 'af'
   }, FRAME_DELAY)
 }
-
 function _stopCycle(state) {
   if (state.timer) { clearInterval(state.timer); state.timer = null }
 }
@@ -592,19 +542,16 @@ function setSort(sort, btn) {
   btn.classList.add('active')
   applyFilters()
 }
-
 function setCreator(creatorId, btn) {
   currentCreatorId = creatorId
   document.querySelectorAll('.tag-pill').forEach(p => p.classList.remove('active'))
   btn.classList.add('active')
   applyFilters()
 }
-
 function handleSearch() {
   searchQuery = document.getElementById('searchInput').value.toLowerCase().trim()
   applyFilters()
 }
-
 function loadMore() {
   const btn = document.getElementById('loadMoreBtn')
   btn.classList.add('loading')
@@ -614,7 +561,6 @@ function loadMore() {
   btn.classList.remove('loading')
   btn.querySelector('span:last-child').textContent = '加载更多'
 }
-
 function esc(s) {
   if (!s) return ''
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')
@@ -623,55 +569,18 @@ function esc(s) {
 /* ── Init ── */
 loadWorks()
 
-/* ── Desktop custom cursor ── */
+/* ── 桌面自定义光标 ── */
 if (window.matchMedia('(pointer:fine)').matches) {
   const c = document.createElement('div'), r = document.createElement('div')
   const cs = 'position:fixed;border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%)'
   c.style.cssText = cs + ';width:8px;height:8px;background:#111'
-  r.style.cssText = cs + ';width:32px;height:32px;border:1.5px solid rgba(17,17,16,.3);transition:width .3s,height .3s,opacity .3s'
+  r.style.cssText = cs + ';width:32px;height:32px;border:1.5px solid rgba(17,17,16,.3)'
   document.body.append(c, r)
   document.body.style.cursor = 'none'
   let mx = 0, my = 0, rx = 0, ry = 0
   document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; c.style.left = mx + 'px'; c.style.top = my + 'px' })
   ;(function tick() { rx += (mx - rx) * .12; ry += (my - ry) * .12; r.style.left = rx + 'px'; r.style.top = ry + 'px'; requestAnimationFrame(tick) })()
 }
-</script>
-<script>
-/* ── Mobile auth sync ── */
-(function syncMobileAuth() {
-  function applyState() {
-    const navLoginBtn = document.getElementById('navLoginBtn')
-    const mowoNavUser = document.getElementById('mowoNavUser')
-    const mobileLoginBtn = document.getElementById('mobileLoginBtn')
-    const mobileAvatar = document.getElementById('mobileMenuAvatar')
-    const mobileAvatarBtn = document.getElementById('mobileMenuAvatarBtn')
-    const mobileAvatarName = document.getElementById('mobileMenuAvatarName')
-    if (!mobileLoginBtn) return
-    const loggedIn = (navLoginBtn && navLoginBtn.style.display === 'none') || (mowoNavUser && mowoNavUser.classList.contains('show'))
-    if (loggedIn) {
-      mobileLoginBtn.style.display = 'none'
-      if (mobileAvatar) mobileAvatar.style.display = 'flex'
-      const uname = document.getElementById('mowoNavUname')
-      const initial = document.getElementById('mowoNavAvatarInitial')
-      if (mobileAvatarBtn) mobileAvatarBtn.textContent = (initial && initial.textContent) || '?'
-      if (mobileAvatarName) mobileAvatarName.textContent = (uname && uname.textContent) || '我的账户'
-      if (mobileAvatarBtn) mobileAvatarBtn.onclick = () => { document.getElementById('mowoNavAvatarBtn')?.click(); closeMenu() }
-    } else {
-      mobileLoginBtn.style.display = ''
-      if (mobileAvatar) mobileAvatar.style.display = 'none'
-      mobileLoginBtn.onclick = () => { closeMenu(); window.openAuthModal && window.openAuthModal() }
-    }
-  }
-  function startObserving() {
-    const navLoginBtn = document.getElementById('navLoginBtn')
-    const mowoNavUser = document.getElementById('mowoNavUser')
-    if (navLoginBtn) new MutationObserver(applyState).observe(navLoginBtn, { attributes: true, attributeFilter: ['style'] })
-    if (mowoNavUser) new MutationObserver(applyState).observe(mowoNavUser, { attributes: true, attributeFilter: ['class'] })
-    applyState()
-  }
-  document.readyState === 'complete' ? startObserving() : window.addEventListener('load', startObserving)
-  setTimeout(applyState, 800)
-})()
 </script>
 </body>
 </html>
