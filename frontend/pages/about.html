@@ -10,15 +10,13 @@
 <style>
 :root {
   --white:    #FFFFFF;
-  --cream:    #F5F3EF;
-  --black:    #111110;
-  --gray1:    #EBEBEA;
-  --gray2:    #C4C3BF;
-  --gray3:    #787874;
-  --accent-y: #F5E642;
-  --accent-o: #FF6B35;
-  --accent-g: #8FD694;
-  --accent-b: #7EC8E3;
+  --cream:    #fef3e2;   /* 暖奶油，导航栏 #fce2b3 的 50% 淡化版 */
+  --black:    #2c1f14;   /* 品牌深棕黑，与导航栏文字色一致 */
+  --gray1:    #e8d8be;   /* 暖边框/分割线 */
+  --gray2:    #c0aa88;   /* 中性暖灰 */
+  --gray3:    #7a6552;   /* 辅助文字暖棕 */
+  --accent-y: #f0c040;   /* 品牌琥珀黄，比荧光黄更沉稳 */
+  --accent-o: #e8662a;   /* 品牌橙（偏暖深） */
   --font:     'Nunito', 'Noto Sans SC', sans-serif;
   --ease:     cubic-bezier(0.22, 1, 0.36, 1);
   --pad-mob:  24px;
@@ -26,7 +24,7 @@
 }
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
 html{scroll-behavior:smooth;}
-body{font-family:var(--font);background:var(--white);color:var(--black);overflow-x:hidden;-webkit-font-smoothing:antialiased;}
+body{font-family:var(--font);background:var(--cream);color:var(--black);overflow-x:hidden;-webkit-font-smoothing:antialiased;}
 a{text-decoration:none;color:inherit;}
 button{font-family:var(--font);cursor:pointer;border:none;}
 
@@ -59,7 +57,7 @@ button{font-family:var(--font);cursor:pointer;border:none;}
 }
 .hero-blob-2{
   width:min(300px,70vw);height:min(300px,70vw);
-  background:var(--accent-g);opacity:.14;
+  background:#c8965a;opacity:.12;
   bottom:5%;left:-5%;
   animation:blob-float 10s ease-in-out 2s infinite reverse;
 }
@@ -104,7 +102,7 @@ button{font-family:var(--font);cursor:pointer;border:none;}
 .hero-statement .hl::after{
   content:'';
   position:absolute;bottom:4px;left:-4px;right:-4px;
-  height:14px;background:var(--accent-y);
+  height:14px;background:#fce2b3;  /* 直接取导航栏背景色，高饱和度延续品牌 */
   border-radius:4px;z-index:-1;
 }
 .hero-desc{
@@ -121,7 +119,7 @@ button{font-family:var(--font);cursor:pointer;border:none;}
 ══════════════════════ */
 #story{
   padding:120px var(--pad-mob);
-  background:var(--white);
+  background:#fffaf4;  /* 极浅暖白，与 cream 形成轻微区分 */
 }
 @media(min-width:1024px){#story{padding:140px var(--pad-desk);}}
 
@@ -172,9 +170,9 @@ button{font-family:var(--font);cursor:pointer;border:none;}
   transition:transform .3s var(--ease);
 }
 .tl-item:hover .tl-dot{transform:scale(1.15);}
-.tl-item:nth-child(1) .tl-dot{background:#F5F3EF;border-color:var(--gray2);}
-.tl-item:nth-child(2) .tl-dot{background:var(--accent-y);border-color:var(--accent-y);}
-.tl-item:nth-child(3) .tl-dot{background:#2A1E18;border-color:#3A2E28;}
+.tl-item:nth-child(1) .tl-dot{background:var(--cream);border-color:var(--gray2);}
+.tl-item:nth-child(2) .tl-dot{background:#fce2b3;border-color:#c8965a;}
+.tl-item:nth-child(3) .tl-dot{background:#2c1f14;border-color:#3A2E28;}
 .tl-item:nth-child(4) .tl-dot{background:var(--black);border-color:var(--black);}
 
 .tl-body{padding-top:8px;}
@@ -198,9 +196,9 @@ button{font-family:var(--font);cursor:pointer;border:none;}
 .tl-quote{
   margin-top:20px;
   padding:20px 24px;
-  background:var(--white);
+  background:#fff8ed;
   border-radius:16px;
-  border-left:4px solid var(--accent-y);
+  border-left:4px solid #c8965a;
   max-width:520px;
 }
 .tl-quote p{
@@ -259,17 +257,17 @@ button{font-family:var(--font);cursor:pointer;border:none;}
   transform:translateY(-6px);
   box-shadow:0 20px 48px rgba(0,0,0,.1);
 }
-.belief-card:nth-child(1){ background:#FFFBE6; border-color:#F0DC30; }
-.belief-card:nth-child(2){ background:#FFF2EC; border-color:#FFB899; }
-.belief-card:nth-child(3){ background:#EDFBEE; border-color:#A8E6AC; }
+.belief-card:nth-child(1){ background:#fff8ed; border-color:#e8c87a; }
+.belief-card:nth-child(2){ background:#fff3ec; border-color:#e8a880; }
+.belief-card:nth-child(3){ background:#fef5e4; border-color:#d4a843; }
 
 .belief-num{
   font-weight:900;font-size:52px;letter-spacing:-.04em;
   line-height:1;margin-bottom:20px;
 }
-.belief-card:nth-child(1) .belief-num{ color:rgba(180,150,0,.2); }
-.belief-card:nth-child(2) .belief-num{ color:rgba(200,90,30,.15); }
-.belief-card:nth-child(3) .belief-num{ color:rgba(40,140,60,.15); }
+.belief-card:nth-child(1) .belief-num{ color:rgba(180,130,20,.2); }
+.belief-card:nth-child(2) .belief-num{ color:rgba(180,90,40,.18); }
+.belief-card:nth-child(3) .belief-num{ color:rgba(180,140,20,.18); }
 
 .belief-title{
   font-weight:900;font-size:clamp(17px,2.5vw,21px);
@@ -290,16 +288,16 @@ button{font-family:var(--font);cursor:pointer;border:none;}
   border-radius:0 0 4px 4px;
 }
 .belief-card:hover::after{transform:scaleX(1);}
-.belief-card:nth-child(1)::after{background:var(--accent-y);}
-.belief-card:nth-child(2)::after{background:var(--accent-o);}
-.belief-card:nth-child(3)::after{background:var(--accent-g);}
+.belief-card:nth-child(1)::after{background:#e8c87a;}
+.belief-card:nth-child(2)::after{background:#e8a060;}
+.belief-card:nth-child(3)::after{background:#d4a843;}
 
 /* ══════════════════════
    NOW — 现在的哞屋
 ══════════════════════ */
 #now{
   padding:120px var(--pad-mob);
-  background:var(--cream);
+  background:#fffaf4;  /* 与 #story 一致，形成 cream→warm-white→cream→warm-white 交替 */
 }
 @media(min-width:1024px){#now{padding:140px var(--pad-desk);}}
 
@@ -320,11 +318,12 @@ button{font-family:var(--font);cursor:pointer;border:none;}
 
 .now-highlight{
   display:inline-block;
-  background:var(--accent-y);
-  color:var(--black);
+  background:#fce2b3;
+  color:#2c1f14;
   font-weight:900;font-size:13px;
   letter-spacing:.04em;
   padding:4px 12px;border-radius:6px;
+  border:1px solid #c8965a;
 }
 
 /* Status cards */
@@ -332,17 +331,17 @@ button{font-family:var(--font);cursor:pointer;border:none;}
   display:flex;flex-direction:column;gap:16px;
 }
 .now-card{
-  background:var(--white);
+  background:#fff8ed;
   border-radius:20px;border:2px solid var(--gray1);
   padding:24px 28px;
   display:flex;align-items:flex-start;gap:16px;
   transition:transform .3s var(--ease),box-shadow .3s;
 }
-.now-card:hover{transform:translateY(-4px);box-shadow:0 12px 36px rgba(0,0,0,.07);}
+.now-card:hover{transform:translateY(-4px);box-shadow:0 12px 36px rgba(44,31,20,.08);}
 .now-card-icon{
   font-size:28px;flex-shrink:0;
   width:48px;height:48px;
-  background:var(--white);border-radius:12px;border:1px solid var(--gray1);
+  background:#fce2b3;border-radius:12px;border:1px solid #e8c87a;
   display:flex;align-items:center;justify-content:center;
 }
 .now-card-body{}
@@ -353,7 +352,7 @@ button{font-family:var(--font);cursor:pointer;border:none;}
    CTA FINAL
 ══════════════════════ */
 #cta-final{
-  background:var(--white);
+  background:var(--cream);
   padding:120px var(--pad-mob);
   text-align:center;
   border-top:1px solid var(--gray1);
@@ -368,8 +367,8 @@ button{font-family:var(--font);cursor:pointer;border:none;}
 .btn:active{transform:scale(.97);}
 .btn-black{background:var(--black);color:var(--white);box-shadow:0 4px 0 rgba(0,0,0,.2);}
 .btn-black:hover{box-shadow:0 6px 0 rgba(0,0,0,.2);transform:translateY(-2px);}
-.btn-yellow{background:var(--accent-y);color:var(--black);box-shadow:0 4px 0 #C8BB00;}
-.btn-yellow:hover{box-shadow:0 6px 0 #C8BB00;transform:translateY(-2px);}
+.btn-yellow{background:#fce2b3;color:var(--black);box-shadow:0 4px 0 #c8965a;}
+.btn-yellow:hover{box-shadow:0 6px 0 #c8965a;transform:translateY(-2px);background:#f5d08a;}
 .btn-ghost{background:transparent;color:var(--gray3);border:2px solid var(--gray1);}
 .btn-ghost:hover{border-color:var(--gray2);color:var(--black);}
 
