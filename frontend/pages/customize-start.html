@@ -6,6 +6,7 @@
 <title>选择款式 — 哞屋 MOWO</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Noto+Sans+SC:wght@300;400;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/nav.css">
 <style>
 :root {
   --white:#FFFFFF; --cream:#F5F3EF; --black:#111110;
@@ -14,62 +15,12 @@
   --font:'Nunito','Noto Sans SC',sans-serif;
   --ease:cubic-bezier(0.22,1,0.36,1);
   --pad-mobile:24px; --pad-desk:72px;
-  --nav-h: 55px;
   --prog-h: 44px;
 }
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
 html{scroll-behavior:smooth;scrollbar-gutter:stable;}
 body{font-family:var(--font);background:var(--white);color:var(--black);overflow-x:hidden;-webkit-font-smoothing:antialiased;}
 a{text-decoration:none;color:inherit;}
-
-/* NAV */
-.nav{position:fixed;top:0;left:0;right:0;z-index:900;display:flex;align-items:center;justify-content:space-between;padding:8px var(--pad-mobile);background:rgba(252,226,179,0.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid rgba(44,31,20,.12);}
-@media(min-width:1024px){.nav{padding:8px var(--pad-desk);}}
-.nav-logo{line-height:1;}
-.nav-logo-cn{font-weight:900;font-size:22px;letter-spacing:-.01em;color:#2c1f14;}
-.nav-logo-en{font-weight:700;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:rgba(44,31,20,.55);display:block;margin-top:1px;}
-.nav-links{display:none;list-style:none;gap:36px;}
-@media(min-width:1024px){.nav-links{display:flex;}}
-.nav-links a{font-weight:800;font-size:14px;letter-spacing:.03em;color:rgba(44,31,20,.65);transition:color .2s;position:relative;padding-bottom:3px;}
-.nav-links a::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:#c8965a;border-radius:2px;transform:scaleX(0);transition:transform .25s var(--ease);}
-.nav-links a:hover{color:#2c1f14;}
-.nav-links a:hover::after{transform:scaleX(1);}
-.burger{display:flex;flex-direction:column;gap:5px;cursor:pointer;padding:8px;min-width:44px;min-height:44px;justify-content:center;align-items:center;}
-@media(min-width:1024px){.burger{display:none;}}
-.burger span{display:block;width:22px;height:2px;background:#2c1f14;border-radius:2px;transition:transform .3s,opacity .3s;}
-.burger.open span:nth-child(1){transform:translateY(7px) rotate(45deg);}
-.burger.open span:nth-child(2){opacity:0;}
-.burger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg);}
-.mobile-menu{position:fixed;inset:0;background:#2c1f14;z-index:800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:36px;opacity:0;pointer-events:none;transition:opacity .35s var(--ease);}
-.mobile-menu.open{opacity:1;pointer-events:all;}
-.mobile-menu a{font-weight:900;font-size:clamp(28px,8vw,48px);color:var(--white);letter-spacing:-.01em;transition:color .2s;}
-.mobile-menu a:hover{color:var(--accent-y);}
-/* Mobile menu 底部登录区 */
-.mobile-menu-footer {
-  position:absolute; bottom:48px; left:0; right:0;
-  display:flex; flex-direction:column; align-items:center; gap:12px;
-}
-.mobile-login-btn {
-  font-family:var(--font); font-weight:900; font-size:16px; letter-spacing:.05em;
-  padding:14px 48px; background:var(--accent-y); color:#2c1f14;
-  border-radius:999px; border:none; cursor:pointer;
-  transition:opacity .2s; min-height:52px;
-}
-.mobile-login-btn:hover { opacity:.85; }
-.mobile-menu-avatar {
-  display:flex; flex-direction:column; align-items:center; gap:8px;
-}
-.mobile-menu-avatar-btn {
-  width:56px; height:56px; border-radius:50%;
-  background:var(--accent-y); color:#2c1f14;
-  font-weight:900; font-size:22px;
-  display:flex; align-items:center; justify-content:center;
-  border:none; cursor:pointer; transition:opacity .2s;
-}
-.mobile-menu-avatar-btn:hover { opacity:.8; }
-.mobile-menu-avatar-name {
-  font-weight:700; font-size:13px; color:rgba(255,255,255,.5); letter-spacing:.05em;
-}
 
 /* BUTTONS */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--font);font-weight:800;font-size:15px;letter-spacing:.02em;padding:14px 28px;border-radius:999px;min-height:52px;transition:transform .2s,box-shadow .2s;cursor:pointer;border:none;-webkit-tap-highlight-color:transparent;}
@@ -88,11 +39,11 @@ a{text-decoration:none;color:inherit;}
 .d1{transition-delay:.1s}.d2{transition-delay:.2s}
 
 /* 进度条 */
-.progress-bar{position:fixed;top:55px;left:0;right:0;z-index:800;background:rgba(44,31,20,.12);height:3px;}
-@media(min-width:1024px){.progress-bar{top:55px;}}
+.progress-bar{position:fixed;top:var(--nav-h);left:0;right:0;z-index:800;background:rgba(44,31,20,.12);height:3px;}
+@media(min-width:1024px){.progress-bar{top:var(--nav-h);}}
 .progress-fill{height:100%;width:25%;background:#c8965a;border-radius:0 2px 2px 0;transition:width .6s var(--ease);}
-.progress-steps{position:fixed;top:58px;left:0;right:0;z-index:799;background:rgba(252,226,179,0.92);backdrop-filter:blur(12px);border-bottom:1.5px solid rgba(44,31,20,.1);padding:10px var(--pad-mobile);display:flex;align-items:center;justify-content:center;gap:0;height:var(--prog-h);}
-@media(min-width:1024px){.progress-steps{padding:10px var(--pad-desk);top:58px;}}
+.progress-steps{position:fixed;top:calc(var(--nav-h) + 3px);left:0;right:0;z-index:799;background:rgba(252,226,179,0.92);backdrop-filter:blur(12px);border-bottom:1.5px solid rgba(44,31,20,.1);padding:10px var(--pad-mobile);display:flex;align-items:center;justify-content:center;gap:0;height:var(--prog-h);}
+@media(min-width:1024px){.progress-steps{padding:10px var(--pad-desk);top:calc(var(--nav-h) + 3px);}}
 .step-item{display:flex;align-items:center;gap:8px;font-weight:800;font-size:12px;letter-spacing:.04em;color:var(--gray2);white-space:nowrap;}
 .step-item.active{color:var(--black);}
 .step-item.done{color:var(--black);}
@@ -103,8 +54,8 @@ a{text-decoration:none;color:inherit;}
 @media(max-width:480px){.step-label{display:none;}.step-item{gap:0;}.step-num{width:26px;height:26px;font-size:12px;}.step-divider{width:16px;}}
 
 /* 主体 */
-.page-wrap{padding-top:108px;min-height:100vh;}
-@media(min-width:1024px){.page-wrap{padding-top:108px;}}
+.page-wrap{padding-top:calc(var(--nav-h) + 3px + var(--prog-h));min-height:100vh;}
+@media(min-width:1024px){.page-wrap{padding-top:calc(var(--nav-h) + 3px + var(--prog-h));}}
 .page-header{padding:10px var(--pad-mobile) 8px;}
 @media(min-width:1024px){.page-header{padding:10px var(--pad-desk) 8px;}}
 .page-header-row{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
@@ -313,65 +264,10 @@ footer{background:var(--black);color:rgba(255,255,255,.45);padding:80px var(--pa
 @media(min-width:640px){.foot-bottom{flex-direction:row;justify-content:space-between;align-items:center;}}
 .foot-bottom p{font-weight:700;font-size:12px;color:rgba(255,255,255,.18);}
 
-.nav-right {
-  display:flex; align-items:center; gap:8px;
-}
-.nav-login {
-  font-weight:800; font-size:13px; letter-spacing:.03em;
-  padding:10px 22px; background:var(--black); color:var(--white);
-  border-radius:999px; min-height:44px; display:flex; align-items:center;
-  transition:opacity .2s; border:none; cursor:pointer; font-family:var(--font);
-}
-.nav-login:hover { opacity:.8; }
-.nav-avatar {
-  width:36px; height:36px; border-radius:50%;
-  background:var(--accent-y); color:#2c1f14;
-  font-weight:900; font-size:14px;
-  display:flex; align-items:center; justify-content:center;
-  border:none; cursor:pointer; transition:opacity .2s;
-  flex-shrink:0;
-}
-.nav-avatar:hover { opacity:.8; }
-@media (max-width:1023px) { .nav-login-text { display:none; } }
-@media (min-width:1024px) { .nav-login-text { display:flex; } }
 </style>
 </head>
 <body>
-
-<div class="mobile-menu" id="mobileMenu">
-  <a href="about.html" onclick="closeMenu()">关于我们</a>
-  <a href="products.html" onclick="closeMenu()">产品介绍</a>
-  <a href="showcase.html" onclick="closeMenu()">画师联名</a>
-  <a href="customize-start.html" onclick="closeMenu()">创作中心</a>
-  <a href="contact.html" onclick="closeMenu()">联络我们</a>
-  <div class="mobile-menu-footer">
-    <button class="mobile-login-btn" id="mobileLoginBtn">登录 / 注册</button>
-    <div class="mobile-menu-avatar" id="mobileMenuAvatar" style="display:none">
-      <button class="mobile-menu-avatar-btn" id="mobileMenuAvatarBtn"></button>
-      <span class="mobile-menu-avatar-name" id="mobileMenuAvatarName"></span>
-    </div>
-  </div>
-</div>
-
-<nav class="nav">
-  <a href="index.html" class="nav-logo">
-    <span class="nav-logo-cn">哞屋</span>
-    <span class="nav-logo-en">MOWO</span>
-  </a>
-  <ul class="nav-links">
-    <li><a href="about.html">关于我们</a></li>
-    <li><a href="products.html">产品介绍</a></li>
-    <li><a href="showcase.html">画师联名</a></li>
-    <li><a href="customize-start.html">创作中心</a></li>
-    <li><a href="contact.html">联络我们</a></li>
-  </ul>
-  <div class="nav-right">
-    <button class="nav-login nav-login-btn nav-login-text" id="navLoginBtn">登录</button>
-    <div class="burger" id="burger" onclick="toggleMenu()">
-      <span></span><span></span><span></span>
-    </div>
-  </div>
-</nav>
+<script src="../js/nav.js"></script>
 
 <div class="progress-bar"><div class="progress-fill"></div></div>
 
@@ -978,19 +874,6 @@ async function loadSkuImgs(skus) {
 function openHelp()  { document.getElementById('helpOverlay').classList.add('open');    document.body.style.overflow='hidden' }
 function closeHelp() { document.getElementById('helpOverlay').classList.remove('open'); document.body.style.overflow='' }
 
-// ══ 汉堡菜单 ══
-function toggleMenu() {
-  const m = document.getElementById('mobileMenu'), b = document.getElementById('burger')
-  const open = m.classList.toggle('open')
-  b.classList.toggle('open', open)
-  document.body.style.overflow = open ? 'hidden' : ''
-}
-function closeMenu() {
-  document.getElementById('mobileMenu').classList.remove('open')
-  document.getElementById('burger').classList.remove('open')
-  document.body.style.overflow = ''
-}
-
 function showErr(msg) {
   document.getElementById('carouselTrack').innerHTML =
     `<div style="padding:60px 20px;text-align:center;font-weight:700;font-size:14px;color:var(--gray3);flex:0 0 100%;">${msg}</div>`
@@ -1001,61 +884,5 @@ function esc(str) {
 }
 </script>
 <script src="../js/auth.js"></script>
-<script>
-(function syncMobileAuth() {
-  function applyState() {
-    var navLoginBtn     = document.getElementById('navLoginBtn');
-    var mowoNavUser     = document.getElementById('mowoNavUser');
-    var mobileLoginBtn  = document.getElementById('mobileLoginBtn');
-    var mobileAvatar    = document.getElementById('mobileMenuAvatar');
-    var mobileAvatarBtn = document.getElementById('mobileMenuAvatarBtn');
-    var mobileAvatarName= document.getElementById('mobileMenuAvatarName');
-    if (!mobileLoginBtn) return;
-
-    var loggedIn = (navLoginBtn && navLoginBtn.style.display === 'none')
-                || (mowoNavUser && mowoNavUser.classList.contains('show'));
-
-    if (loggedIn) {
-      mobileLoginBtn.style.display = 'none';
-      if (mobileAvatar) mobileAvatar.style.display = 'flex';
-      var uname   = document.getElementById('mowoNavUname');
-      var initial = document.getElementById('mowoNavAvatarInitial');
-      if (mobileAvatarBtn) mobileAvatarBtn.textContent = (initial && initial.textContent) || '?';
-      if (mobileAvatarName) mobileAvatarName.textContent = (uname && uname.textContent) || '我的账户';
-      if (mobileAvatarBtn) mobileAvatarBtn.onclick = function() {
-        document.getElementById('mowoNavAvatarBtn')?.click();
-        closeMenu();
-      };
-    } else {
-      mobileLoginBtn.style.display = '';
-      if (mobileAvatar) mobileAvatar.style.display = 'none';
-      mobileLoginBtn.onclick = function() { closeMenu(); window.openAuthModal && window.openAuthModal(); };
-    }
-  }
-
-  function startObserving() {
-    var navLoginBtn = document.getElementById('navLoginBtn');
-    var mowoNavUser = document.getElementById('mowoNavUser');
-    if (navLoginBtn) {
-      new MutationObserver(applyState).observe(navLoginBtn, {
-        attributes: true, attributeFilter: ['style']
-      });
-    }
-    if (mowoNavUser) {
-      new MutationObserver(applyState).observe(mowoNavUser, {
-        attributes: true, attributeFilter: ['class']
-      });
-    }
-    applyState();
-  }
-
-  if (document.readyState === 'complete') {
-    startObserving();
-  } else {
-    window.addEventListener('load', startObserving);
-  }
-  setTimeout(applyState, 800);
-})();
-</script>
 </body>
 </html>
