@@ -129,7 +129,7 @@ a { text-decoration:none; color:inherit; }
   display:none; flex-direction:column;
   height:100vh;
   padding-top:calc(var(--nav-h) + 3px + var(--prog-h));
-  overflow:hidden;
+  overflow-x:hidden; /* 仅裁剪水平溢出，垂直方向由子元素自行控制 */
 }
 #stateEditor.active { display:flex; }
 
@@ -195,7 +195,7 @@ a { text-decoration:none; color:inherit; }
 .tool-apply:hover { opacity:.8; }
 
 /* 下半：缩略图 */
-.thumb-panel { flex:1; min-height:0; display:flex; flex-direction:column; background:var(--white); }
+.thumb-panel { flex:1; min-height:0; overflow:hidden; display:flex; flex-direction:column; background:var(--white); }
 .thumb-bar { flex:0 0 auto; padding:8px 14px; border-bottom:1px solid var(--gray1); display:flex; align-items:center; justify-content:space-between; gap:10px; }
 .thumb-bar-left { display:flex; align-items:center; gap:10px; }
 .thumb-count-txt { font-weight:900; font-size:13px; color:var(--black); }
@@ -227,7 +227,7 @@ a { text-decoration:none; color:inherit; }
 .thumb-item:not(.is-off) .thumb-tick { opacity:1; }
 
 /* 底部操作栏 */
-.editor-bar { flex:0 0 auto; background:rgba(255,255,255,.96); backdrop-filter:blur(20px); border-top:1px solid var(--gray1); padding:12px 16px calc(12px + env(safe-area-inset-bottom)); display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.editor-bar { flex:0 0 auto; flex-shrink:0; background:rgba(255,255,255,.96); backdrop-filter:blur(20px); border-top:1px solid var(--gray1); padding:12px 16px calc(12px + env(safe-area-inset-bottom)); display:flex; align-items:center; justify-content:space-between; gap:12px; }
 @media (min-width:1024px) { .editor-bar { padding:14px var(--pad-desk); } }
 .ebar-l { display:flex; align-items:center; gap:14px; }
 .ebar-stat { display:flex; flex-direction:column; }
