@@ -120,32 +120,47 @@ a { text-decoration:none; color:inherit; }
 .loading-tip p { font-weight:700; font-size:13px; color:var(--gray3); line-height:1.6; }
 
 /* ══════════════════════════════
-   状态三：编辑器（全屏布局）
+   状态三：编辑器（左右分栏布局）
 ══════════════════════════════ */
 #stateEditor {
-  display:none; flex-direction:column;
+  display:none; flex-direction:row;
   height:calc(100vh - var(--nav-h));
   padding-top:var(--prog-h);
-  overflow-x:hidden;
+  overflow:hidden;
 }
 #stateEditor.active { display:flex; }
 
-/* 上半 */
-.editor-top { display:flex; flex:0 0 auto; height:clamp(240px,38vh,400px); border-bottom:2px solid var(--gray1); overflow:hidden; }
+/* 左栏：预览 + 控制 */
+.editor-left {
+  width:380px; flex-shrink:0;
+  display:flex; flex-direction:column;
+  border-right:2px solid var(--gray1);
+  overflow-y:auto;
+  background:var(--white);
+}
+@media (min-width:1280px) { .editor-left { width:420px; } }
 
-/* 左：预览 */
-.preview-panel { flex:1; min-width:0; background:var(--cream); display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; border-right:1px solid var(--gray1); }
-.preview-canvas-wrap { flex:1; width:100%; display:flex; align-items:center; justify-content:center; padding:12px 16px 4px; min-height:0; }
+/* 右栏：缩略图 + 底部栏 */
+.editor-right {
+  flex:1; min-width:0;
+  display:flex; flex-direction:column;
+  overflow:hidden;
+}
+
+/* 预览面板（左栏顶部） */
+.preview-panel { flex:0 0 auto; background:var(--cream); display:flex; flex-direction:column; gap:8px; padding:14px 14px 10px; border-bottom:1px solid var(--gray1); }
+.preview-header { display:flex; align-items:baseline; gap:8px; }
+.preview-title { font-weight:900; font-size:15px; color:var(--black); }
+.preview-sub { font-weight:700; font-size:12px; color:var(--gray3); }
+.preview-canvas-wrap { width:100%; aspect-ratio:4/3; display:flex; align-items:center; justify-content:center; background:var(--white); border-radius:12px; overflow:hidden; min-height:140px; position:relative; }
 .preview-img { max-width:100%; max-height:100%; object-fit:contain; border-radius:8px; display:block; image-rendering:pixelated; }
 .preview-empty { display:flex; flex-direction:column; align-items:center; gap:10px; opacity:.3; }
 .preview-empty-icon { font-size:40px; }
 .preview-empty-text { font-weight:700; font-size:13px; color:var(--gray3); }
-.preview-counter { flex:0 0 auto; padding:4px 0 8px; font-weight:800; font-size:11px; color:var(--gray3); white-space:nowrap; letter-spacing:.04em; text-align:center; }
-.preview-counter .cnt-hi { color:var(--black); }
+.preview-counter { display:none; } /* 由 preview-sub 替代 */
 
-/* 右：控制 */
-.control-panel { flex:1; min-width:0; background:var(--cream); display:flex; flex-direction:column; padding:14px 12px; gap:10px; overflow-y:auto; }
-@media (min-width:1280px) { .control-panel { padding:16px; } }
+/* 控制面板（左栏底部，可滚动） */
+.control-panel { flex:1; min-height:0; background:var(--white); display:flex; flex-direction:column; padding:12px; gap:10px; overflow-y:auto; }
 
 /* 速度滑块（右侧面板内） */
 .speed-row { display:flex; align-items:center; gap:8px; }
@@ -191,7 +206,7 @@ a { text-decoration:none; color:inherit; }
 .tool-apply { width:100%; min-height:30px; border-radius:8px; font-family:var(--font); font-weight:800; font-size:11px; background:var(--black); color:var(--white); border:none; cursor:pointer; transition:opacity .2s; }
 .tool-apply:hover { opacity:.8; }
 
-/* 下半：缩略图 */
+/* 右栏：缩略图区（flex:1，填满右栏剩余空间） */
 .thumb-panel { flex:1; min-height:0; display:flex; flex-direction:column; background:var(--white); overflow:hidden; }
 .thumb-bar { flex:0 0 auto; padding:8px 14px; border-bottom:1px solid var(--gray1); display:flex; align-items:center; justify-content:space-between; gap:10px; }
 .thumb-bar-left { display:flex; align-items:center; gap:10px; }
@@ -209,7 +224,7 @@ a { text-decoration:none; color:inherit; }
 .thumb-scroll::-webkit-scrollbar { width:4px; }
 .thumb-scroll::-webkit-scrollbar-thumb { background:var(--gray2); border-radius:2px; }
 .thumb-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(68px,1fr)); gap:7px; }
-@media (min-width:768px) { .thumb-grid { grid-template-columns:repeat(auto-fill, minmax(76px,1fr)); gap:8px; } }
+@media (min-width:768px) { .thumb-grid { grid-template-columns:repeat(5,1fr); gap:8px; } }
 
 .thumb-item { position:relative; border-radius:9px; border:2px solid var(--gray1); overflow:hidden; cursor:pointer; transition:border-color .15s, opacity .2s; aspect-ratio:1; background:var(--cream); user-select:none; }
 .thumb-item:hover { border-color:var(--gray3); }
@@ -223,9 +238,8 @@ a { text-decoration:none; color:inherit; }
 .thumb-tick { color:var(--white); font-size:9px; font-weight:900; opacity:0; transition:opacity .15s; }
 .thumb-item:not(.is-off) .thumb-tick { opacity:1; }
 
-/* 底部操作栏 */
-.editor-bar { flex:0 0 auto; flex-shrink:0; background:rgba(255,255,255,.96); backdrop-filter:blur(20px); border-top:1px solid var(--gray1); padding:12px 16px calc(12px + env(safe-area-inset-bottom)); display:flex; align-items:center; justify-content:space-between; gap:12px; }
-@media (min-width:1024px) { .editor-bar { padding:14px var(--pad-desk); } }
+/* 底部操作栏（移入 .editor-right 内） */
+.editor-bar { flex:0 0 auto; flex-shrink:0; background:rgba(255,255,255,.96); backdrop-filter:blur(20px); border-top:1px solid var(--gray1); padding:12px 20px calc(12px + env(safe-area-inset-bottom)); display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .ebar-l { display:flex; align-items:center; gap:14px; }
 .ebar-stat { display:flex; flex-direction:column; }
 .ebar-stat-lbl { font-weight:700; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--gray3); }
@@ -507,8 +521,17 @@ a { text-decoration:none; color:inherit; }
   .thumb-check { opacity:1 !important; pointer-events:auto !important; }
 }
 
-/* 手机端：手机栏显示，桌面栏隐藏 */
+/* 手机端：上下布局，手机栏显示，桌面栏隐藏 */
 @media(max-width:767px) {
+  #stateEditor { flex-direction:column; }
+  .editor-left {
+    width:100%; flex-shrink:0;
+    max-height:52vh;
+    border-right:none;
+    border-bottom:2px solid var(--gray1);
+    overflow-y:auto;
+  }
+  .editor-right { flex:1; min-height:0; }
   .thumb-bar-desktop { display:none !important; }
   .thumb-bar-mobile  { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 
@@ -676,13 +699,17 @@ a { text-decoration:none; color:inherit; }
 <!-- ══ 状态三：编辑器 ══ -->
 <div id="stateEditor">
 
-  <!-- 上半 -->
-  <div class="editor-top">
+  <!-- 左栏：预览 + 控制 -->
+  <div class="editor-left">
 
-    <!-- 左：预览 -->
+    <!-- 预览面板 -->
     <div class="preview-panel">
+      <div class="preview-header">
+        <span class="preview-title">动画预览</span>
+        <span class="preview-sub" id="previewSub">—</span>
+      </div>
       <div class="preview-canvas-wrap">
-        <canvas id="previewCanvas" style="display:none;max-width:calc(100% - 32px);max-height:calc(100% - 8px);object-fit:contain;border-radius:8px;-webkit-user-select:none;user-select:none;pointer-events:none;">
+        <canvas id="previewCanvas" style="display:none;max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;-webkit-user-select:none;user-select:none;pointer-events:none;"></canvas>
         <div class="preview-empty" id="previewEmpty">
           <span class="preview-empty-icon">🎞</span>
           <span class="preview-empty-text">暂无勾选帧</span>
@@ -693,7 +720,7 @@ a { text-decoration:none; color:inherit; }
       </div>
     </div>
 
-    <!-- 右：控制 -->
+    <!-- 控制面板 -->
     <div class="control-panel">
 
       <div class="ctrl-section">
@@ -754,65 +781,71 @@ a { text-decoration:none; color:inherit; }
       </div>
 
     </div>
-  </div>
+  </div><!-- /editor-left -->
 
-  <!-- 下半：缩略图 -->
-  <div class="thumb-panel" id="thumbPanel">
-    <div class="thumb-bar">
-      <div class="thumb-bar-left">
-        <span class="thumb-count-txt">已选 <strong id="selCount">0</strong> 帧 <span>/ 共 <span id="totCount">0</span> 帧</span></span>
+  <!-- 右栏：缩略图 + 底部操作栏 -->
+  <div class="editor-right">
 
-        <!-- 桌面端按钮组 -->
-        <div class="thumb-bar-desktop">
-          <button class="mini-btn" id="btnSelAll">全选</button>
-          <button class="mini-btn" id="btnDeselAll">全不选</button>
-          <button class="mini-btn-filter" id="btnFilterSel">仅看已选</button>
+    <!-- 缩略图面板 -->
+    <div class="thumb-panel" id="thumbPanel">
+      <div class="thumb-bar">
+        <div class="thumb-bar-left">
+          <span class="thumb-count-txt">已选 <strong id="selCount">0</strong> 帧 <span>/ 共 <span id="totCount">0</span> 帧</span></span>
+
+          <!-- 桌面端按钮组 -->
+          <div class="thumb-bar-desktop">
+            <button class="mini-btn" id="btnSelAll">全选</button>
+            <button class="mini-btn" id="btnDeselAll">全不选</button>
+            <button class="mini-btn-filter" id="btnFilterSel">仅看已选</button>
+          </div>
+
+          <!-- 手机端：默认模式（浏览模式） -->
+          <div class="thumb-bar-mobile" id="mobileBarBrowse">
+            <button class="btn-select-mode" id="btnEnterSelect">☑ 勾选</button>
+            <button class="mini-btn-filter" id="btnFilterSelM">仅看已选</button>
+          </div>
+
+          <!-- 手机端：勾选模式（默认隐藏） -->
+          <div class="thumb-bar-mobile" id="mobileBarSelect" style="display:none;">
+            <button class="mini-btn" id="btnSelAllM">全选</button>
+            <button class="mini-btn" id="btnDeselAllM">全不选</button>
+            <button class="mini-btn-filter" id="btnFilterSelM2">仅看已选</button>
+            <button class="btn-select-done" id="btnDoneSelect">完成 ✓</button>
+          </div>
         </div>
 
-        <!-- 手机端：默认模式（浏览模式） -->
-        <div class="thumb-bar-mobile" id="mobileBarBrowse">
-          <button class="btn-select-mode" id="btnEnterSelect">☑ 勾选</button>
-          <button class="mini-btn-filter" id="btnFilterSelM">仅看已选</button>
-        </div>
-
-        <!-- 手机端：勾选模式（默认隐藏） -->
-        <div class="thumb-bar-mobile" id="mobileBarSelect" style="display:none;">
-          <button class="mini-btn" id="btnSelAllM">全选</button>
-          <button class="mini-btn" id="btnDeselAllM">全不选</button>
-          <button class="mini-btn-filter" id="btnFilterSelM2">仅看已选</button>
-          <button class="btn-select-done" id="btnDoneSelect">完成 ✓</button>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="frame-badge badge-warn" id="frameBadge">0 帧</span>
+          <span class="frame-hint">目标：<span id="targetTxt">—</span></span>
+          <button class="mini-btn" id="btnSort" style="display:none;">↕ 排序</button>
         </div>
       </div>
+      <div class="thumb-scroll">
+        <div class="thumb-grid" id="thumbGrid"></div>
+      </div>
+    </div>
 
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span class="frame-badge badge-warn" id="frameBadge">0 帧</span>
-        <span class="frame-hint">目标：<span id="targetTxt">—</span></span>
+    <!-- 底部操作栏 -->
+    <div class="editor-bar">
+      <div class="ebar-l">
+        <div class="ebar-stat">
+          <span class="ebar-stat-lbl">当前已选</span>
+          <span class="ebar-stat-val" id="ebarSel">0 帧</span>
+        </div>
+        <div class="ebar-sep"></div>
+        <div>
+          <div class="ebar-stat-lbl" style="margin-bottom:5px;">可用款式帧数</div>
+          <div class="ebar-targets" id="ebarTargets"></div>
+        </div>
+      </div>
+      <div class="ebar-r">
+        <button class="ebar-back-btn" onclick="goReupload()">← 重新上传</button>
+        <button class="btn btn-yellow btn-sm" id="btnNextStep" disabled
+          data-buyer-label="下一步 →" data-creator-label="确认 →">下一步 →</button>
       </div>
     </div>
-    <div class="thumb-scroll">
-      <div class="thumb-grid" id="thumbGrid"></div>
-    </div>
-  </div>
 
-  <!-- 底部操作栏 -->
-  <div class="editor-bar">
-    <div class="ebar-l">
-      <div class="ebar-stat">
-        <span class="ebar-stat-lbl">当前已选</span>
-        <span class="ebar-stat-val" id="ebarSel">0 帧</span>
-      </div>
-      <div class="ebar-sep"></div>
-      <div>
-        <div class="ebar-stat-lbl" style="margin-bottom:5px;">可用款式帧数</div>
-        <div class="ebar-targets" id="ebarTargets"></div>
-      </div>
-    </div>
-    <div class="ebar-r">
-      <button class="ebar-back-btn" onclick="goReupload()">← 重新上传</button>
-      <button class="btn btn-yellow btn-sm" id="btnNextStep" disabled
-        data-buyer-label="下一步 →" data-creator-label="确认 →">下一步 →</button>
-    </div>
-  </div>
+  </div><!-- /editor-right -->
 
 </div><!-- /stateEditor -->
 
@@ -1618,6 +1651,8 @@ function updatePreview() {
     if (emp) emp.style.display = '';
     document.getElementById('cntCur').textContent = '0';
     document.getElementById('cntTot').textContent = '0';
+    const ps0 = document.getElementById('previewSub');
+    if (ps0) ps0.textContent = '—';
     document.querySelectorAll('.thumb-item.is-active').forEach(e => e.classList.remove('is-active'));
     return;
   }
@@ -1627,6 +1662,8 @@ function updatePreview() {
   if (emp) emp.style.display = 'none';
   document.getElementById('cntCur').textContent = playIdx + 1;
   document.getElementById('cntTot').textContent = cl.length;
+  const ps = document.getElementById('previewSub');
+  if (ps) ps.textContent = `第 ${playIdx + 1} 帧 / 共 ${cl.length} 帧`;
   document.querySelectorAll('.thumb-item.is-active').forEach(e => e.classList.remove('is-active'));
   const th = document.getElementById(`th${ri}`);
   if (th) { th.classList.add('is-active'); th.scrollIntoView({block:'nearest',behavior:'smooth'}); }
