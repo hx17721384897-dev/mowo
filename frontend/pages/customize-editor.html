@@ -29,12 +29,9 @@ html { scroll-behavior:smooth; scrollbar-gutter:stable; }
 body { font-family:var(--font); background:var(--white); color:var(--black); overflow-x:hidden; -webkit-font-smoothing:antialiased; }
 a { text-decoration:none; color:inherit; }
 
-/* ── 进度条 ── */
-.progress-bar { position:fixed; top:var(--nav-h); left:0; right:0; z-index:800; background:rgba(44,31,20,.12); height:3px; }
-@media (min-width:1024px) { .progress-bar { top:var(--nav-h); } }
-.progress-fill { height:100%; width:50%; background:#c8965a; border-radius:0 2px 2px 0; }
-.progress-steps { position:fixed; top:calc(var(--nav-h) + 3px); left:0; right:0; z-index:799; background:rgba(252,226,179,0.92); backdrop-filter:blur(12px); border-bottom:1.5px solid rgba(44,31,20,.1); padding:10px var(--pad-mobile); display:flex; align-items:center; justify-content:center; gap:0; height:var(--prog-h); }
-@media (min-width:1024px) { .progress-steps { padding:10px var(--pad-desk); top:calc(var(--nav-h) + 3px); } }
+/* ── 进度步骤条 ── */
+.progress-steps { position:fixed; top:var(--nav-h); left:0; right:0; z-index:799; background:rgba(252,226,179,0.92); backdrop-filter:blur(12px); border-bottom:1.5px solid rgba(44,31,20,.1); padding:10px var(--pad-mobile); display:flex; align-items:center; justify-content:center; gap:0; height:var(--prog-h); }
+@media (min-width:1024px) { .progress-steps { padding:10px var(--pad-desk); } }
 .step-item { display:flex; align-items:center; gap:8px; font-weight:800; font-size:12px; letter-spacing:.04em; color:var(--gray2); white-space:nowrap; }
 .step-item.active { color:var(--black); }
 .step-item.done { color:var(--black); }
@@ -61,7 +58,7 @@ a { text-decoration:none; color:inherit; }
 ══════════════════════════════ */
 #stateUpload {
   min-height:100vh;
-  padding-top:calc(var(--nav-h) + 3px + var(--prog-h) + 60px);
+  padding-top:calc(var(--prog-h) + 60px);
   padding-bottom:80px;
   padding-left:var(--pad-mobile); padding-right:var(--pad-mobile);
   display:flex; flex-direction:column; align-items:center;
@@ -127,9 +124,9 @@ a { text-decoration:none; color:inherit; }
 ══════════════════════════════ */
 #stateEditor {
   display:none; flex-direction:column;
-  height:100vh;
-  padding-top:calc(var(--nav-h) + 3px + var(--prog-h));
-  overflow-x:hidden; /* 仅裁剪水平溢出，垂直方向由子元素自行控制 */
+  height:calc(100vh - var(--nav-h));
+  padding-top:var(--prog-h);
+  overflow-x:hidden;
 }
 #stateEditor.active { display:flex; }
 
@@ -195,7 +192,7 @@ a { text-decoration:none; color:inherit; }
 .tool-apply:hover { opacity:.8; }
 
 /* 下半：缩略图 */
-.thumb-panel { flex:1; min-height:0; overflow:hidden; display:flex; flex-direction:column; background:var(--white); }
+.thumb-panel { flex:1; min-height:0; display:flex; flex-direction:column; background:var(--white); overflow:hidden; }
 .thumb-bar { flex:0 0 auto; padding:8px 14px; border-bottom:1px solid var(--gray1); display:flex; align-items:center; justify-content:space-between; gap:10px; }
 .thumb-bar-left { display:flex; align-items:center; gap:10px; }
 .thumb-count-txt { font-weight:900; font-size:13px; color:var(--black); }
@@ -248,7 +245,7 @@ a { text-decoration:none; color:inherit; }
   display:none;
   flex-direction:column;
   align-items:center;
-  padding: calc(var(--nav-h) + 3px + var(--prog-h) + 32px) var(--pad-mobile) 120px;
+  padding: calc(var(--prog-h) + 32px) var(--pad-mobile) 120px;
   min-height:100vh;
   gap:24px;
 }
@@ -545,9 +542,8 @@ a { text-decoration:none; color:inherit; }
 </style>
 </head>
 <body>
-<script src="../js/nav.js"></script>
 
-<div class="progress-bar"><div class="progress-fill"></div></div>
+<script src="../js/nav.js"></script>
 <div class="progress-steps">
   <div class="step-item done"><div class="step-num">1</div><span class="step-label">选型号</span></div>
   <div class="step-divider"></div>
@@ -2138,6 +2134,7 @@ function showToast(msg) {
     t.style.transform = 'translateX(-50%) translateY(12px)';
   }, 2800);
 }
+
 
 /* ══════════════
    自定义光标
