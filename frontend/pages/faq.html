@@ -40,29 +40,38 @@ button { font-family: var(--font); cursor: pointer; border: none; background: no
    HERO BANNER
 ══════════════════════════ */
 .faq-hero {
-  background: linear-gradient(135deg, #fce8c8 0%, #fef3e2 60%, #fde8c0 100%);
   position: relative;
   overflow: hidden;
-  min-height: 280px;
+  height: 300px;
   display: flex;
   align-items: center;
 }
-@media(min-width: 768px) { .faq-hero { min-height: 320px; } }
+@media(min-width: 768px)  { .faq-hero { height: 340px; } }
+@media(min-width: 1024px) { .faq-hero { height: 380px; } }
 
-/* Decorative floating elements */
-.hero-deco {
+/* 全宽铺底图 */
+.hero-bg {
   position: absolute;
-  pointer-events: none;
-  font-weight: 900;
-  color: rgba(200,150,90,.12);
-  font-size: 80px;
-  line-height: 1;
-  user-select: none;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  display: block;
 }
-.deco-q1  { top: 10%;  right: 42%; font-size: 60px; }
-.deco-q2  { top: 55%;  right: 35%; font-size: 40px; transform: rotate(15deg); }
-.deco-box { top: 15%;  right: 10%; font-size: 28px; opacity: .5; }
-.deco-tri { bottom: 10%; right: 28%; font-size: 24px; opacity: .4; transform: rotate(-20deg); }
+
+/* 左侧渐变遮罩，确保文字可读 */
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to right,
+    rgba(254,243,226,0.95) 0%,
+    rgba(254,243,226,0.82) 45%,
+    rgba(254,243,226,0.25) 75%,
+    transparent 100%
+  );
+}
 
 .hero-inner {
   position: relative;
@@ -71,21 +80,17 @@ button { font-family: var(--font); cursor: pointer; border: none; background: no
   max-width: 1200px;
   margin: 0 auto;
   padding: 40px var(--pad-mob);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
 }
 @media(min-width: 1024px) { .hero-inner { padding: 48px var(--pad-desk); } }
 
-.hero-text { flex: 1; min-width: 0; }
+.hero-text { max-width: 520px; }
 
 .hero-title {
   font-weight: 900;
-  font-size: clamp(30px, 5vw, 52px);
+  font-size: clamp(32px, 5.5vw, 56px);
   letter-spacing: -.03em;
   color: var(--black);
-  line-height: 1.1;
+  line-height: 1.05;
   margin-bottom: 10px;
 }
 .hero-sub {
@@ -150,23 +155,6 @@ button { font-family: var(--font); cursor: pointer; border: none; background: no
 }
 .search-clear.show { display: flex; }
 
-/* Hero image */
-.hero-img-wrap {
-  flex-shrink: 0;
-  width: 300px;
-  display: none;
-  position: relative;
-}
-@media(min-width: 768px)  { .hero-img-wrap { display: block; width: 240px; } }
-@media(min-width: 1024px) { .hero-img-wrap { width: 320px; } }
-
-.hero-img {
-  width: 100%;
-  height: auto;
-  display: block;
-  object-fit: contain;
-  filter: drop-shadow(0 16px 40px rgba(44,31,20,.15));
-}
 
 /* ══════════════════════════
    BREADCRUMB
@@ -693,12 +681,12 @@ footer {
 
 <!-- ══ HERO ══ -->
 <section class="faq-hero">
-  <!-- Decorative elements -->
-  <span class="hero-deco deco-q1">?</span>
-  <span class="hero-deco deco-q2">?</span>
-  <span class="hero-deco deco-box">◻</span>
-  <span class="hero-deco deco-tri">◆</span>
+  <!-- 全宽铺底图 -->
+  <img class="hero-bg" src="../assets/images/faq-hero.png" alt="" aria-hidden="true" draggable="false">
+  <!-- 左侧渐变遮罩 -->
+  <div class="hero-overlay"></div>
 
+  <!-- 浮于图片之上的文字 -->
   <div class="hero-inner">
     <div class="hero-text">
       <h1 class="hero-title">常见问题</h1>
@@ -715,9 +703,6 @@ footer {
         <button class="search-clear" id="searchClear" onclick="clearSearch()" aria-label="清除搜索">✕</button>
         <span class="search-icon">🔍</span>
       </div>
-    </div>
-    <div class="hero-img-wrap">
-      <img class="hero-img" src="../assets/images/faq-hero.png" alt="哞屋动画机" draggable="false">
     </div>
   </div>
 </section>
