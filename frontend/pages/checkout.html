@@ -6,13 +6,14 @@
 <title>确认订单 — 哞屋 MOWO</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/nav.css">
 <style>
 :root{
   --white:#FFFFFF;--cream:#F5F3EF;--black:#111110;
   --gray1:#EBEBEA;--gray2:#C4C3BF;--gray3:#787874;
   --accent-y:#F5E642;--accent-o:#FF6B35;--accent-g:#8FD694;
   --red:#E03030;--font:'Nunito','Noto Sans SC',sans-serif;
-  --ease:cubic-bezier(0.22,1,0.36,1);--nav-h:65px;
+  --ease:cubic-bezier(0.22,1,0.36,1);
 }
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:var(--font);background:var(--cream);color:var(--black);-webkit-font-smoothing:antialiased;}
@@ -20,24 +21,9 @@ button{font-family:var(--font);cursor:pointer;border:none;background:none;}
 a{text-decoration:none;}
 input,select{font-family:var(--font);}
 
-/* NAV */
-.nav{position:fixed;top:0;left:0;right:0;z-index:600;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:var(--nav-h);background:rgba(245,243,239,.96);backdrop-filter:blur(20px);border-bottom:1.5px solid var(--gray1);}
-@media(min-width:1024px){.nav{padding:0 48px;}}
-.nav-logo-cn{font-weight:900;font-size:22px;color:var(--black);}
-.nav-logo-en{font-weight:700;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--gray3);display:block;}
-.nav-right{display:flex;align-items:center;gap:8px;}
-.nav-login-btn{font-weight:900;font-size:14px;padding:9px 20px;border-radius:999px;background:var(--accent-y);color:var(--black);}
-.nav-avatar{width:34px;height:34px;border-radius:50%;background:var(--accent-y);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:var(--black);}
-.nav-user{position:relative;}
-.nav-avatar-btn{display:flex;align-items:center;gap:8px;padding:5px 12px 5px 5px;border-radius:999px;border:2px solid transparent;}
-.user-dropdown{position:absolute;top:calc(100% + 10px);right:0;width:232px;background:var(--white);border-radius:20px;border:1.5px solid var(--gray1);box-shadow:0 8px 40px rgba(0,0,0,.12);padding:8px;opacity:0;pointer-events:none;transform:translateY(-8px) scale(.97);transform-origin:top right;transition:opacity .25s var(--ease),transform .25s var(--ease);z-index:100;}
-.user-dropdown.open{opacity:1;pointer-events:all;transform:none;}
-.di{display:flex;align-items:center;gap:11px;padding:10px 14px;border-radius:12px;font-weight:800;font-size:13px;color:var(--black);transition:background .15s;width:100%;text-align:left;}
-.di:hover{background:var(--cream);}
-
 /* LAYOUT */
-.main{max-width:780px;margin:0 auto;padding:calc(var(--nav-h) + 28px) 20px 40px;}
-@media(min-width:1024px){.main{padding:calc(var(--nav-h) + 40px) 24px 60px;}}
+.main{max-width:780px;margin:0 auto;padding:28px 20px 40px;}
+@media(min-width:1024px){.main{padding:40px 24px 60px;}}
 
 .page-title{font-weight:900;font-size:24px;margin-bottom:24px;display:flex;align-items:center;gap:10px;}
 .back-link{color:var(--gray3);font-size:13px;font-weight:800;display:flex;align-items:center;gap:4px;margin-bottom:16px;}
@@ -137,18 +123,7 @@ input,select{font-family:var(--font);}
 </head>
 <body>
 
-<!-- NAV -->
-<nav class="nav">
-  <a href="../index.html" class="nav-logo">
-    <span class="nav-logo-cn">哞屋</span>
-    <span class="nav-logo-en">MOWOBOX</span>
-  </a>
-  <div class="nav-right">
-    <div class="nav-user" id="navUserArea">
-      <button class="nav-login nav-login-btn" id="navLoginBtn">登录</button>
-    </div>
-  </div>
-</nav>
+<script src="../js/nav.js"></script>
 
 <main class="main">
   <a href="./cart.html" class="back-link">← 返回购物车</a>
