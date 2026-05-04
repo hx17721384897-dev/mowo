@@ -40,12 +40,61 @@ input, textarea, select { font-family:var(--font); }
    HERO
 ══════════════════════════ */
 .page-hero {
-  padding: 60px var(--pad-mob) 36px;
+  min-height: calc(100vh - var(--nav-h));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px var(--pad-mob) 48px;
   text-align: center;
   position: relative;
   overflow: hidden;
 }
-@media(min-width:1024px){ .page-hero{ padding:60px var(--pad-desk) 44px; } }
+@media(min-width:1024px){ .page-hero{ padding:60px var(--pad-desk) 48px; } }
+
+.hero-ctas {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 32px;
+  opacity: 0;
+  animation: fup .8s var(--ease) .8s forwards;
+}
+.btn-hero-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 32px;
+  border-radius: 999px;
+  background: var(--black);
+  color: var(--white);
+  font-family: var(--font);
+  font-weight: 900;
+  font-size: 15px;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity .2s, transform .1s;
+}
+.btn-hero-primary:hover { opacity: .85; }
+.btn-hero-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 32px;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--black);
+  font-family: var(--font);
+  font-weight: 900;
+  font-size: 15px;
+  border: 2px solid var(--gray1);
+  cursor: pointer;
+  text-decoration: none;
+  transition: border-color .2s, background .2s;
+}
+.btn-hero-ghost:hover { border-color: var(--gray2); background: rgba(44,31,20,.04); }
 
 /* Decorative floating dots */
 .hero-dot {
@@ -113,17 +162,20 @@ input, textarea, select { font-family:var(--font); }
   background: var(--white);
   border: 2px solid var(--gray1);
   border-radius: 24px;
-  padding: 24px 24px 22px;
+  padding: 18px 20px 16px;
   cursor: pointer;
   position: relative;
   overflow: hidden;
   transition: transform .3s var(--ease), box-shadow .3s, border-color .3s;
-  min-height: 180px;
+  min-height: auto;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   -webkit-tap-highlight-color: transparent;
 }
+/* 描述和标签只在 modal 中展示，卡面隐藏 */
+.card-desc { display: none; }
+.card-wide-badges { display: none; }
 .contact-card:hover {
   transform: translateY(-6px);
   box-shadow: 0 24px 64px rgba(44,31,20,.1);
@@ -437,6 +489,109 @@ footer {
 }
 .success-close:hover { opacity:.8; }
 
+/* ══════════════════════════
+   MODAL DESC（描述段落，移自卡面）
+══════════════════════════ */
+.modal-desc {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--gray3);
+  line-height: 1.8;
+  padding: 14px 18px;
+  background: #fffaf4;
+  border-radius: 12px;
+  border-left: 3px solid var(--gray1);
+  margin-bottom: 22px;
+}
+
+/* ══════════════════════════
+   FAQ SECTION
+══════════════════════════ */
+.faq-section {
+  padding: 80px var(--pad-mob);
+  background: var(--cream);
+}
+@media(min-width:1024px){ .faq-section{ padding: 80px var(--pad-desk); } }
+
+.faq-inner { max-width: 1200px; margin: 0 auto; }
+
+.faq-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 32px;
+}
+.faq-title {
+  font-weight: 900;
+  font-size: clamp(22px, 3.5vw, 32px);
+  letter-spacing: -.02em;
+  color: var(--black);
+}
+.faq-see-all {
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--gray3);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  transition: color .2s;
+  flex-shrink: 0;
+}
+.faq-see-all:hover { color: var(--black); }
+
+.faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.faq-item {
+  background: var(--white);
+  border: 2px solid var(--gray1);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: border-color .25s;
+}
+.faq-item.open { border-color: var(--gray2); }
+.faq-q {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 22px;
+  font-family: var(--font);
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--black);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background .2s;
+}
+.faq-q:hover { background: rgba(44,31,20,.03); }
+.faq-arrow {
+  font-size: 16px;
+  flex-shrink: 0;
+  color: var(--gray2);
+  transition: transform .35s var(--ease), color .2s;
+}
+.faq-item.open .faq-arrow { transform: rotate(180deg); color: var(--black); }
+.faq-a {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height .4s var(--ease);
+}
+.faq-item.open .faq-a { max-height: 300px; }
+.faq-a-inner {
+  padding: 0 22px 20px;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--gray3);
+  line-height: 1.85;
+}
+
 /* ── REVEAL ── */
 .reveal { opacity:0; transform:translateY(24px); transition:opacity .7s var(--ease), transform .7s var(--ease); }
 .reveal.on { opacity:1; transform:none; }
@@ -454,10 +609,14 @@ footer {
   <p class="hero-eyebrow">联络我们 · CONTACT</p>
   <h1 class="hero-title">我们很想<br><em>认识你</em></h1>
   <p class="hero-sub">无论你是想合作的伙伴、想加入的同路人，还是有话想说的用户——这里都有你的位置。</p>
+  <div class="hero-ctas">
+    <a href="#cards" class="btn-hero-primary">联络我们 →</a>
+    <a href="#faq" class="btn-hero-ghost">常见问题</a>
+  </div>
 </section>
 
 <!-- ══ CARDS ══ -->
-<section class="cards-section">
+<section class="cards-section" id="cards">
   <div class="cards-grid">
 
     <!-- Row 1: Artist, Media, Feedback -->
@@ -557,6 +716,70 @@ footer {
   </div>
 </section>
 
+<!-- ══ FAQ ══ -->
+<section class="faq-section" id="faq">
+  <div class="faq-inner">
+    <div class="faq-header">
+      <h2 class="faq-title reveal">常见问题</h2>
+      <a href="faq.html" class="faq-see-all">查看全部 →</a>
+    </div>
+    <!-- TODO: 后期从 GET /api/faq 接口动态加载，运营后台维护 -->
+    <div class="faq-list reveal d1">
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          <span>合作申请提交后多久会收到回复？</span>
+          <span class="faq-arrow">↓</span>
+        </button>
+        <div class="faq-a">
+          <div class="faq-a-inner">大部分合作意向我们会在 3 个工作日内回复；加入哞屋和厂家合作类申请可能需要 5 个工作日。如果你的方向和我们高度契合，我们会主动联系你。</div>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          <span>提交联络信息需要登录账号吗？</span>
+          <span class="faq-arrow">↓</span>
+        </button>
+        <div class="faq-a">
+          <div class="faq-a-inner">是的，提交表单需要登录哞屋账号。这样我们能准确跟进你的需求，也方便后续双向沟通，不会因信息丢失而错过彼此。</div>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          <span>我可以同时提交多种合作申请吗？</span>
+          <span class="faq-arrow">↓</span>
+        </button>
+        <div class="faq-a">
+          <div class="faq-a-inner">完全可以。每种合作类型都是独立的沟通渠道，欢迎按需分别提交，我们会分类整理并单独跟进。</div>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          <span>我提交的信息会被如何使用？</span>
+          <span class="faq-arrow">↓</span>
+        </button>
+        <div class="faq-a">
+          <div class="faq-a-inner">你提交的所有信息仅用于评估合作可能性及后续沟通，不会用于其他用途，也不会在未经同意的情况下分享给第三方。</div>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          <span>哞屋目前主要做什么产品？</span>
+          <span class="faq-arrow">↓</span>
+        </button>
+        <div class="faq-a">
+          <div class="faq-a-inner">哞屋专注于动画机（Flipbook Machine）的定制与生产，同时与创作者开展联名合作，把逐帧动画做成可触摸的实体收藏品——让每帧热爱都能被触摸。</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
 <!-- ══ PROMISE ══ -->
 <section class="promise-section">
   <div class="promise-inner reveal">
@@ -609,6 +832,7 @@ footer {
       <p class="modal-subtitle">告诉我们你的创作方向和合作想法，我们会在 3 个工作日内回复你。</p>
     </div>
     <div class="modal-body" id="form-artist">
+      <p class="modal-desc">如果你有成熟的原创IP或一定的粉丝基础，我们希望和你一起做官方联名款动画机——品牌背书、联合推广、专属设计，让你的作品走进更多人的手心。</p>
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">你的名字 / 工作室名<span class="form-required">*</span></label>
@@ -670,6 +894,7 @@ footer {
       <p class="modal-subtitle">告诉我们你的门店信息，我们会评估合作可行性并尽快回复。</p>
     </div>
     <div class="modal-body" id="form-channel">
+      <p class="modal-desc">潮玩店、精品店、商场买手店……如果你想在线下销售哞屋动画机，我们期待和你聊聊入驻和代理的可能性。</p>
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">联系人姓名<span class="form-required">*</span></label>
@@ -728,6 +953,7 @@ footer {
       <p class="modal-subtitle">告诉我们你的频道和合作方向，一起把哞屋的故事讲出去。</p>
     </div>
     <div class="modal-body" id="form-media">
+      <p class="modal-desc">如果你是博主、媒体或内容创作者，有兴趣报道、测评或与哞屋共创内容，欢迎来聊。</p>
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">你的名字 / 媒体名<span class="form-required">*</span></label>
@@ -788,6 +1014,7 @@ footer {
       <p class="modal-subtitle">如果你也想做有意思的事，把简历发过来，我们很想认识你。</p>
     </div>
     <div class="modal-body" id="form-join">
+      <p class="modal-desc">我们在寻找热爱动画、热爱产品的同路人。如果你想成为哞屋的一份子，把简历发过来吧。</p>
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">你的名字<span class="form-required">*</span></label>
@@ -864,6 +1091,7 @@ footer {
       <p class="modal-subtitle">你的每一条反馈和点子，都可能成为哞屋下一个产品的起点。</p>
     </div>
     <div class="modal-body" id="form-feedback">
+      <p class="modal-desc">收到产品了？遇到问题？还是脑子里突然蹦出个绝妙点子？我们都想听——你的灵感有可能真的变成现实。</p>
       <div class="form-group">
         <label class="form-label">类型<span class="form-required">*</span></label>
         <select class="form-select" id="feedback-type">
@@ -913,6 +1141,7 @@ footer {
       <p class="modal-subtitle">告诉我们你的生产能力，我们会认真评估合作可行性。</p>
     </div>
     <div class="modal-body" id="form-factory">
+      <p class="modal-desc">如果你有木制工艺、精密加工或相关生产能力，欢迎与我们洽谈代工合作，一起把高品质动画机带给更多人。</p>
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">联系人姓名<span class="form-required">*</span></label>
@@ -1287,6 +1516,15 @@ async function submitForm(id) {
     setSubmitLoading(id, false)
     showFormError(id, '网络错误，请检查连接后重试')
   }
+}
+
+/* ── FAQ 折叠 ── */
+function toggleFaq(btn) {
+  const item = btn.closest('.faq-item');
+  const isOpen = item.classList.contains('open');
+  // 关闭其他已展开项
+  document.querySelectorAll('.faq-item.open').forEach(el => el.classList.remove('open'));
+  if (!isOpen) item.classList.add('open');
 }
 
 /* ── ESC to close ── */
