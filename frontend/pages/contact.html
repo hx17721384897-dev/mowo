@@ -52,12 +52,20 @@ input, textarea, select { font-family:var(--font); }
 }
 @media(min-width:1024px){ .page-hero{ padding:60px var(--pad-desk) 48px; } }
 
+.hero-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 560px;
+  width: 100%;
+}
 .hero-ctas {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
   justify-content: center;
   margin-top: 32px;
+  width: 100%;
   opacity: 0;
   animation: fup .8s var(--ease) .8s forwards;
 }
@@ -131,7 +139,8 @@ input, textarea, select { font-family:var(--font); }
 }
 .hero-sub {
   font-weight:700; font-size:clamp(13px,1.6vw,15px);
-  color:var(--gray3); line-height:1.75; max-width:440px; margin:0 auto;
+  color:var(--gray3); line-height:1.75; max-width:440px;
+  text-align:center;
   opacity:0; animation:fup .8s var(--ease) .6s forwards;
 }
 
@@ -606,12 +615,14 @@ footer {
   <div class="hero-dot dot1"></div>
   <div class="hero-dot dot2"></div>
   <div class="hero-dot dot3"></div>
-  <p class="hero-eyebrow">联络我们 · CONTACT</p>
-  <h1 class="hero-title">我们很想<br><em>认识你</em></h1>
-  <p class="hero-sub">无论你是想合作的伙伴、想加入的同路人，还是有话想说的用户——这里都有你的位置。</p>
-  <div class="hero-ctas">
-    <a href="#cards" class="btn-hero-primary">联络我们 →</a>
-    <a href="#faq" class="btn-hero-ghost">常见问题</a>
+  <div class="hero-content">
+    <p class="hero-eyebrow">联络我们 · CONTACT</p>
+    <h1 class="hero-title">我们很想<br><em>认识你</em></h1>
+    <p class="hero-sub">无论你是想合作的伙伴、想加入的同路人，还是有话想说的用户——这里都有你的位置。</p>
+    <div class="hero-ctas">
+      <a href="#cards" class="btn-hero-primary">联络我们 →</a>
+      <a href="#faq" class="btn-hero-ghost">常见问题</a>
+    </div>
   </div>
 </section>
 
