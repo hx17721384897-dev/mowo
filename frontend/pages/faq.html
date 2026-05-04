@@ -1,0 +1,1285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>常见问题 — 哞屋 MOWO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/nav.css">
+<style>
+:root {
+  --white:    #FFFFFF;
+  --cream:    #fef3e2;
+  --black:    #2c1f14;
+  --gray1:    #e8d8be;
+  --gray2:    #c0aa88;
+  --gray3:    #7a6552;
+  --accent-y: #f0c040;
+  --accent-o: #e8662a;
+  --font:     'Nunito', 'Noto Sans SC', sans-serif;
+  --ease:     cubic-bezier(0.22, 1, 0.36, 1);
+  --pad-mob:  20px;
+  --pad-desk: 72px;
+  --sidebar-w: 220px;
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font);
+  background: var(--cream);
+  color: var(--black);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+a { text-decoration: none; color: inherit; }
+button { font-family: var(--font); cursor: pointer; border: none; background: none; }
+
+/* ══════════════════════════
+   HERO BANNER
+══════════════════════════ */
+.faq-hero {
+  background: linear-gradient(135deg, #fce8c8 0%, #fef3e2 60%, #fde8c0 100%);
+  position: relative;
+  overflow: hidden;
+  min-height: 280px;
+  display: flex;
+  align-items: center;
+}
+@media(min-width: 768px) { .faq-hero { min-height: 320px; } }
+
+/* Decorative floating elements */
+.hero-deco {
+  position: absolute;
+  pointer-events: none;
+  font-weight: 900;
+  color: rgba(200,150,90,.12);
+  font-size: 80px;
+  line-height: 1;
+  user-select: none;
+}
+.deco-q1  { top: 10%;  right: 42%; font-size: 60px; }
+.deco-q2  { top: 55%;  right: 35%; font-size: 40px; transform: rotate(15deg); }
+.deco-box { top: 15%;  right: 10%; font-size: 28px; opacity: .5; }
+.deco-tri { bottom: 10%; right: 28%; font-size: 24px; opacity: .4; transform: rotate(-20deg); }
+
+.hero-inner {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px var(--pad-mob);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+@media(min-width: 1024px) { .hero-inner { padding: 48px var(--pad-desk); } }
+
+.hero-text { flex: 1; min-width: 0; }
+
+.hero-title {
+  font-weight: 900;
+  font-size: clamp(30px, 5vw, 52px);
+  letter-spacing: -.03em;
+  color: var(--black);
+  line-height: 1.1;
+  margin-bottom: 10px;
+}
+.hero-sub {
+  font-weight: 700;
+  font-size: clamp(13px, 1.8vw, 16px);
+  color: var(--gray3);
+  margin-bottom: 28px;
+}
+
+/* Search bar */
+.search-wrap {
+  position: relative;
+  max-width: 480px;
+}
+.search-input {
+  width: 100%;
+  padding: 14px 50px 14px 20px;
+  border-radius: 999px;
+  border: 2px solid var(--gray1);
+  background: var(--white);
+  font-family: var(--font);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--black);
+  outline: none;
+  transition: border-color .2s, box-shadow .2s;
+  box-shadow: 0 4px 20px rgba(44,31,20,.06);
+}
+.search-input::placeholder { color: var(--gray2); }
+.search-input:focus {
+  border-color: var(--black);
+  box-shadow: 0 4px 24px rgba(44,31,20,.1);
+}
+.search-icon {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--gray2);
+  font-size: 18px;
+  pointer-events: none;
+  transition: color .2s;
+}
+.search-input:focus ~ .search-icon { color: var(--black); }
+.search-clear {
+  position: absolute;
+  right: 44px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--gray2);
+  color: var(--white);
+  font-size: 11px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  font-family: var(--font);
+}
+.search-clear.show { display: flex; }
+
+/* Hero image */
+.hero-img-wrap {
+  flex-shrink: 0;
+  width: 300px;
+  display: none;
+  position: relative;
+}
+@media(min-width: 768px)  { .hero-img-wrap { display: block; width: 240px; } }
+@media(min-width: 1024px) { .hero-img-wrap { width: 320px; } }
+
+.hero-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+  filter: drop-shadow(0 16px 40px rgba(44,31,20,.15));
+}
+
+/* ══════════════════════════
+   BREADCRUMB
+══════════════════════════ */
+.breadcrumb {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 14px var(--pad-mob);
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--gray3);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+@media(min-width: 1024px) { .breadcrumb { padding: 14px var(--pad-desk); } }
+.breadcrumb a { color: var(--gray3); transition: color .2s; }
+.breadcrumb a:hover { color: var(--black); }
+.breadcrumb-sep { color: var(--gray2); }
+.breadcrumb-cur { color: var(--black); font-weight: 800; }
+
+/* ══════════════════════════
+   MAIN LAYOUT
+══════════════════════════ */
+.faq-layout {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--pad-mob) 80px;
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+@media(min-width: 1024px) { .faq-layout { padding: 0 var(--pad-desk) 100px; gap: 32px; } }
+
+/* ══════════════════════════
+   SIDEBAR
+══════════════════════════ */
+.faq-sidebar {
+  flex-shrink: 0;
+  width: 100%;
+  display: none;
+}
+@media(min-width: 768px) {
+  .faq-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: var(--sidebar-w);
+    position: sticky;
+    top: calc(var(--nav-h) + 20px);
+  }
+}
+
+.cat-nav {
+  background: var(--white);
+  border-radius: 20px;
+  padding: 8px;
+  border: 1.5px solid var(--gray1);
+}
+.cat-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--gray3);
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: var(--font);
+  text-align: left;
+  transition: background .18s, color .18s;
+  position: relative;
+}
+.cat-item:hover { background: var(--cream); color: var(--black); }
+.cat-item.active {
+  background: rgba(232,102,42,.08);
+  color: var(--accent-o);
+  font-weight: 900;
+}
+.cat-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 20%; bottom: 20%;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: var(--accent-o);
+}
+.cat-icon { font-size: 16px; flex-shrink: 0; }
+
+/* Sidebar contact card */
+.sidebar-contact {
+  background: var(--white);
+  border-radius: 20px;
+  border: 1.5px solid var(--gray1);
+  padding: 20px 16px 0;
+  overflow: hidden;
+}
+.sc-title {
+  font-weight: 900;
+  font-size: 15px;
+  color: var(--black);
+  margin-bottom: 6px;
+}
+.sc-sub {
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--gray3);
+  line-height: 1.6;
+  margin-bottom: 14px;
+}
+.sc-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border-radius: 999px;
+  background: var(--black);
+  color: var(--white);
+  font-weight: 900;
+  font-size: 13px;
+  text-decoration: none;
+  transition: opacity .2s;
+  margin-bottom: 16px;
+  width: fit-content;
+}
+.sc-btn:hover { opacity: .8; }
+
+/* Bear illustration (CSS) */
+.bear-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 0 0 4px;
+}
+.bear-svg {
+  width: 80px;
+  height: 80px;
+  opacity: .35;
+}
+
+/* ══════════════════════════
+   CONTENT AREA
+══════════════════════════ */
+.faq-content { flex: 1; min-width: 0; }
+
+/* Mobile category tabs */
+.cat-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+  margin-bottom: 16px;
+}
+.cat-tabs::-webkit-scrollbar { display: none; }
+@media(min-width: 768px) { .cat-tabs { display: none; } }
+.cat-tab {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1.5px solid var(--gray1);
+  background: var(--white);
+  font-family: var(--font);
+  font-weight: 800;
+  font-size: 12px;
+  color: var(--gray3);
+  cursor: pointer;
+  transition: all .18s;
+}
+.cat-tab.active {
+  background: var(--black);
+  color: var(--white);
+  border-color: var(--black);
+}
+
+.content-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.content-title {
+  font-weight: 900;
+  font-size: 16px;
+  color: var(--black);
+}
+.content-count {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--gray3);
+}
+.content-sort {
+  margin-left: auto;
+  font-weight: 800;
+  font-size: 12px;
+  color: var(--gray3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1.5px solid var(--gray1);
+  background: var(--white);
+  transition: border-color .2s;
+}
+.content-sort:hover { border-color: var(--gray2); }
+
+/* Search result hint */
+.search-hint {
+  display: none;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--gray3);
+  padding: 8px 0 14px;
+  border-bottom: 1px dashed var(--gray1);
+  margin-bottom: 14px;
+}
+.search-hint.show { display: block; }
+.search-hint em { font-style: normal; color: var(--accent-o); font-weight: 900; }
+
+/* FAQ list */
+.faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.faq-item {
+  background: var(--white);
+  border: 1.5px solid var(--gray1);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: border-color .25s, box-shadow .25s;
+}
+.faq-item:hover { border-color: var(--gray2); }
+.faq-item.open {
+  border-color: var(--gray2);
+  box-shadow: 0 4px 20px rgba(44,31,20,.06);
+}
+
+.faq-q {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font);
+  transition: background .18s;
+}
+.faq-q:hover { background: rgba(44,31,20,.02); }
+
+.faq-q-icon {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(232,102,42,.1);
+  color: var(--accent-o);
+  font-weight: 900;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-style: normal;
+}
+.faq-q-text {
+  flex: 1;
+  font-weight: 800;
+  font-size: 14px;
+  color: var(--black);
+  line-height: 1.5;
+}
+.faq-q-arrow {
+  flex-shrink: 0;
+  color: var(--gray2);
+  font-size: 14px;
+  transition: transform .35s var(--ease), color .2s;
+}
+.faq-item.open .faq-q-arrow {
+  transform: rotate(180deg);
+  color: var(--black);
+}
+
+.faq-a {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height .4s var(--ease);
+}
+.faq-item.open .faq-a { max-height: 400px; }
+.faq-a-inner {
+  padding: 2px 18px 18px 56px;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--gray3);
+  line-height: 1.85;
+}
+
+/* Highlighted match text */
+.hl { background: rgba(240,192,64,.35); border-radius: 3px; padding: 0 2px; }
+
+/* No results */
+.no-results {
+  display: none;
+  text-align: center;
+  padding: 60px 20px;
+}
+.no-results.show { display: block; }
+.nr-icon { font-size: 48px; margin-bottom: 14px; opacity: .4; }
+.nr-title {
+  font-weight: 900;
+  font-size: 18px;
+  margin-bottom: 8px;
+  color: var(--black);
+}
+.nr-sub {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--gray3);
+  line-height: 1.7;
+}
+
+/* Bottom contact CTA */
+.content-cta {
+  margin-top: 32px;
+  background: var(--white);
+  border: 1.5px solid var(--gray1);
+  border-radius: 20px;
+  padding: 24px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.cta-left {}
+.cta-title {
+  font-weight: 900;
+  font-size: 16px;
+  color: var(--black);
+  margin-bottom: 4px;
+}
+.cta-sub {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--gray3);
+}
+.cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 999px;
+  background: var(--accent-o);
+  color: var(--white);
+  font-weight: 900;
+  font-size: 14px;
+  text-decoration: none;
+  flex-shrink: 0;
+  transition: opacity .2s;
+}
+.cta-btn:hover { opacity: .85; }
+
+/* ══════════════════════════
+   TRUST BADGES
+══════════════════════════ */
+.trust-section {
+  background: var(--white);
+  border-top: 1.5px solid var(--gray1);
+  border-bottom: 1.5px solid var(--gray1);
+  padding: 32px var(--pad-mob);
+}
+@media(min-width: 1024px) { .trust-section { padding: 32px var(--pad-desk); } }
+.trust-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+@media(min-width: 640px)  { .trust-inner { grid-template-columns: repeat(4, 1fr); } }
+.trust-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.trust-icon { font-size: 28px; flex-shrink: 0; }
+.trust-label { font-weight: 900; font-size: 13px; color: var(--black); }
+.trust-desc  { font-weight: 700; font-size: 11px; color: var(--gray3); margin-top: 2px; }
+
+/* ══════════════════════════
+   FOOTER
+══════════════════════════ */
+footer {
+  background: var(--black);
+  color: rgba(255,255,255,.85);
+  padding: 56px var(--pad-mob) 36px;
+}
+@media(min-width: 1024px) { footer { padding: 56px var(--pad-desk) 36px; } }
+
+.foot-grid {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 40px;
+  margin-bottom: 48px;
+}
+@media(min-width: 640px) { .foot-grid { grid-template-columns: 1fr 1fr; } }
+@media(min-width: 1024px) { .foot-grid { grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: 32px; } }
+
+.foot-brand {}
+.foot-logo {
+  font-weight: 900;
+  font-size: 20px;
+  color: var(--white);
+  letter-spacing: -.01em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.foot-logo-icon {
+  width: 32px;
+  height: 32px;
+  background: var(--accent-o);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+.foot-desc {
+  font-weight: 700;
+  font-size: 13px;
+  color: rgba(255,255,255,.35);
+  line-height: 1.8;
+  max-width: 240px;
+  margin-bottom: 20px;
+}
+.foot-socials {
+  display: flex;
+  gap: 10px;
+}
+.foot-social-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: rgba(255,255,255,.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: rgba(255,255,255,.5);
+  transition: background .2s, color .2s;
+  text-decoration: none;
+}
+.foot-social-btn:hover { background: rgba(255,255,255,.15); color: var(--white); }
+
+.foot-col {}
+.foot-col-title {
+  font-weight: 900;
+  font-size: 13px;
+  color: var(--white);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+.foot-col-links {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.foot-col-links a {
+  font-weight: 700;
+  font-size: 13px;
+  color: rgba(255,255,255,.4);
+  text-decoration: none;
+  transition: color .2s;
+}
+.foot-col-links a:hover { color: rgba(255,255,255,.85); }
+
+.foot-bottom {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255,255,255,.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.foot-copy {
+  font-weight: 700;
+  font-size: 12px;
+  color: rgba(255,255,255,.2);
+}
+.foot-bottom-links {
+  display: flex;
+  gap: 20px;
+}
+.foot-bottom-links a {
+  font-weight: 700;
+  font-size: 12px;
+  color: rgba(255,255,255,.25);
+  text-decoration: none;
+  transition: color .2s;
+}
+.foot-bottom-links a:hover { color: rgba(255,255,255,.6); }
+</style>
+</head>
+<body>
+<script src="../js/nav.js"></script>
+
+<!-- ══ HERO ══ -->
+<section class="faq-hero">
+  <!-- Decorative elements -->
+  <span class="hero-deco deco-q1">?</span>
+  <span class="hero-deco deco-q2">?</span>
+  <span class="hero-deco deco-box">◻</span>
+  <span class="hero-deco deco-tri">◆</span>
+
+  <div class="hero-inner">
+    <div class="hero-text">
+      <h1 class="hero-title">常见问题</h1>
+      <p class="hero-sub">你想了解的，这里都有答案</p>
+      <div class="search-wrap">
+        <input
+          class="search-input"
+          id="searchInput"
+          type="text"
+          placeholder="请输入你想了解的问题"
+          autocomplete="off"
+          oninput="handleSearch(this.value)"
+        >
+        <button class="search-clear" id="searchClear" onclick="clearSearch()" aria-label="清除搜索">✕</button>
+        <span class="search-icon">🔍</span>
+      </div>
+    </div>
+    <div class="hero-img-wrap">
+      <img class="hero-img" src="../assets/images/faq-hero.png" alt="哞屋动画机" draggable="false">
+    </div>
+  </div>
+</section>
+
+<!-- ══ BREADCRUMB ══ -->
+<div class="breadcrumb">
+  <a href="index.html">首页</a>
+  <span class="breadcrumb-sep">›</span>
+  <a href="contact.html">联络我们</a>
+  <span class="breadcrumb-sep">›</span>
+  <span class="breadcrumb-cur">常见问题</span>
+</div>
+
+<!-- ══ MAIN ══ -->
+<div class="faq-layout">
+
+  <!-- Sidebar（桌面端） -->
+  <aside class="faq-sidebar">
+    <nav class="cat-nav" id="catNavDesktop">
+      <!-- JS 渲染 -->
+    </nav>
+
+    <div class="sidebar-contact">
+      <p class="sc-title">还没解决问题？</p>
+      <p class="sc-sub">联系我们的客服团队<br>我们很乐意为你提供帮助</p>
+      <a href="contact.html" class="sc-btn">联系我们 ↗</a>
+      <!-- Bear illustration -->
+      <div class="bear-wrap">
+        <svg class="bear-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="50" cy="55" r="28" fill="#c0aa88"/>
+          <circle cx="28" cy="32" r="13" fill="#c0aa88"/>
+          <circle cx="72" cy="32" r="13" fill="#c0aa88"/>
+          <circle cx="28" cy="30" r="8" fill="#e8d8be"/>
+          <circle cx="72" cy="30" r="8" fill="#e8d8be"/>
+          <ellipse cx="50" cy="60" rx="18" ry="14" fill="#e8d8be"/>
+          <circle cx="41" cy="50" r="4" fill="#2c1f14"/>
+          <circle cx="59" cy="50" r="4" fill="#2c1f14"/>
+          <circle cx="42.5" cy="48.5" r="1.5" fill="#fff"/>
+          <circle cx="60.5" cy="48.5" r="1.5" fill="#fff"/>
+          <ellipse cx="50" cy="60" rx="7" ry="4" fill="#c0aa88"/>
+          <circle cx="50" cy="59" r="3" fill="#2c1f14"/>
+          <!-- Question mark bubble -->
+          <circle cx="75" cy="25" r="14" fill="#fff" stroke="#e8d8be" stroke-width="2"/>
+          <text x="75" y="31" text-anchor="middle" fill="#c0aa88" font-size="16" font-weight="900" font-family="sans-serif">?</text>
+        </svg>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Content -->
+  <main class="faq-content">
+
+    <!-- Mobile category tabs -->
+    <div class="cat-tabs" id="catTabsMobile">
+      <!-- JS 渲染 -->
+    </div>
+
+    <!-- Header -->
+    <div class="content-header">
+      <span class="content-title" id="contentTitle">全部问题</span>
+      <span class="content-count" id="contentCount"></span>
+      <button class="content-sort" id="sortBtn" onclick="toggleSort()">
+        <span id="sortLabel">最新排序</span> ↕
+      </button>
+    </div>
+
+    <!-- Search hint -->
+    <div class="search-hint" id="searchHint"></div>
+
+    <!-- FAQ accordion list -->
+    <div class="faq-list" id="faqList"></div>
+
+    <!-- No results -->
+    <div class="no-results" id="noResults">
+      <div class="nr-icon">🔍</div>
+      <p class="nr-title">没有找到相关问题</p>
+      <p class="nr-sub">试试换个关键词，或者直接<a href="contact.html" style="color:var(--accent-o);font-weight:900;">联系我们</a></p>
+    </div>
+
+    <!-- Bottom CTA -->
+    <div class="content-cta">
+      <div class="cta-left">
+        <p class="cta-title">没有找到你的问题？</p>
+        <p class="cta-sub">尝试使用不同的关键词搜索，或直接联系我们的客服团队</p>
+      </div>
+      <a href="contact.html" class="cta-btn">联系我们 ↗</a>
+    </div>
+
+  </main>
+</div>
+
+<!-- ══ TRUST ══ -->
+<div class="trust-section">
+  <div class="trust-inner">
+    <div class="trust-item">
+      <span class="trust-icon">🚚</span>
+      <div>
+        <p class="trust-label">全球配送</p>
+        <p class="trust-desc">快速安全送达</p>
+      </div>
+    </div>
+    <div class="trust-item">
+      <span class="trust-icon">🛡️</span>
+      <div>
+        <p class="trust-label">安心购物</p>
+        <p class="trust-desc">7 天无理由退换</p>
+      </div>
+    </div>
+    <div class="trust-item">
+      <span class="trust-icon">🎧</span>
+      <div>
+        <p class="trust-label">优质客服</p>
+        <p class="trust-desc">随时为你服务</p>
+      </div>
+    </div>
+    <div class="trust-item">
+      <span class="trust-icon">🌿</span>
+      <div>
+        <p class="trust-label">环保木材</p>
+        <p class="trust-desc">可持续发展理念</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ FOOTER ══ -->
+<footer>
+  <div class="foot-grid">
+    <div class="foot-brand">
+      <div class="foot-logo">
+        <span class="foot-logo-icon">🐄</span>
+        哞屋 MOWO
+      </div>
+      <p class="foot-desc">让每帧热爱，都能被触摸。专注动画机定制与创作者联名合作。</p>
+      <div class="foot-socials">
+        <a class="foot-social-btn" href="#" title="微博">微</a>
+        <a class="foot-social-btn" href="#" title="B站">B</a>
+        <a class="foot-social-btn" href="#" title="小红书">红</a>
+        <a class="foot-social-btn" href="#" title="抖音">抖</a>
+      </div>
+    </div>
+    <div class="foot-col">
+      <p class="foot-col-title">关于我们</p>
+      <div class="foot-col-links">
+        <a href="about.html">品牌故事</a>
+        <a href="about.html">团队介绍</a>
+        <a href="#">新闻动态</a>
+      </div>
+    </div>
+    <div class="foot-col">
+      <p class="foot-col-title">产品系列</p>
+      <div class="foot-col-links">
+        <a href="products.html">经典款</a>
+        <a href="products.html">复古放映机款</a>
+        <a href="products.html">DIY 套件</a>
+      </div>
+    </div>
+    <div class="foot-col">
+      <p class="foot-col-title">创意社区</p>
+      <div class="foot-col-links">
+        <a href="showcase.html">画师联名</a>
+        <a href="showcase.html">热门作品</a>
+        <a href="customize-start.html">创作中心</a>
+      </div>
+    </div>
+    <div class="foot-col">
+      <p class="foot-col-title">帮助中心</p>
+      <div class="foot-col-links">
+        <a href="faq.html">常见问题</a>
+        <a href="#">使用教程</a>
+        <a href="contact.html">联络我们</a>
+        <a href="#">售后服务</a>
+      </div>
+    </div>
+  </div>
+  <div class="foot-bottom">
+    <p class="foot-copy">© 2025 哞屋 MOWO. All rights reserved.</p>
+    <div class="foot-bottom-links">
+      <a href="#">隐私政策</a>
+      <a href="#">用户协议</a>
+    </div>
+  </div>
+</footer>
+
+<!-- Fuse.js — 轻量级客户端模糊搜索（MIT，无服务器依赖） -->
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0/dist/fuse.min.js"></script>
+<script src="../js/auth.js"></script>
+<script>
+/* ══════════════════════════════════════════════════════
+   FAQ DATA
+   TODO: 后期从 GET /api/faq 动态加载，运营后台维护
+   结构与此一致：{ id, category, categoryLabel, question, answer, sort }
+══════════════════════════════════════════════════════ */
+const FAQ_DATA = [
+  // 动盒产品
+  {
+    id: 1, category: 'product', categoryLabel: '动盒产品',
+    question: '动盒产品如何使用？',
+    answer: '将专用纸张放入纸槽，在纸张上逐帧绘制动画图案，然后转动手柄即可流畅播放动画。每台动盒可装入约 30–50 张纸张，越多帧数动画越流畅。',
+    sort: 1
+  },
+  {
+    id: 2, category: 'product', categoryLabel: '动盒产品',
+    question: '需要自己准备纸张和画笔吗？',
+    answer: '购买哞屋动盒后，我们会随产品附赠专用纸张一套（约 50 张）和专用画笔一支。纸张用完后，可在官方商城单独购买补充装，也支持使用同规格的第三方纸张。',
+    sort: 2
+  },
+  {
+    id: 3, category: 'product', categoryLabel: '动盒产品',
+    question: '动盒支持什么尺寸的纸张？',
+    answer: '标准款动盒支持 5×5 cm 专用纸张，大尺寸款支持 8×8 cm。建议使用哞屋官方配套纸张以获得最佳播放效果，厚度约 80g/㎡。',
+    sort: 3
+  },
+  {
+    id: 4, category: 'product', categoryLabel: '动盒产品',
+    question: '可以定制自己的动画吗？',
+    answer: '完全可以！哞屋提供在线定制工具，你可以上传自己的逐帧动画文件，我们会为你生产专属定制动画机。详情请访问「创作中心」页面，支持 GIF / 视频逐帧导入。',
+    sort: 4
+  },
+  {
+    id: 5, category: 'product', categoryLabel: '动盒产品',
+    question: '动盒适合什么年龄段的人使用？',
+    answer: '动盒适合 6 岁以上用户使用。6–12 岁小朋友建议在家长陪同下使用，注意不要将小配件放入口中。成人和创作者同样非常适合，是极好的桌面玩具和创作工具。',
+    sort: 5
+  },
+  // 订单与支付
+  {
+    id: 6, category: 'order', categoryLabel: '订单与支付',
+    question: '订单多久可以发货？',
+    answer: '现货产品通常在下单后 48 小时内发货；定制产品需要 5–10 个工作日制作完成后发货。下单后你可以在「我的订单」中实时查看订单状态和制作进度。',
+    sort: 6
+  },
+  {
+    id: 7, category: 'order', categoryLabel: '订单与支付',
+    question: '如何查询我的订单状态？',
+    answer: '登录账号后，点击右上角头像，在下拉菜单中选择「我的订单」即可查看所有订单的状态、物流信息和预计到达时间。也可直接访问「我的订单」页面。',
+    sort: 7
+  },
+  {
+    id: 8, category: 'order', categoryLabel: '订单与支付',
+    question: '支持哪些支付方式？',
+    answer: '目前支持微信支付、支付宝两种主流支付方式。下单后请在 30 分钟内完成支付，超时订单将自动取消。如需其他支付方式，请联系客服。',
+    sort: 8
+  },
+  // 配送与物流
+  {
+    id: 9, category: 'shipping', categoryLabel: '配送与物流',
+    question: '配送范围包括哪些地区？',
+    answer: '目前主要配送中国大陆全境，部分偏远地区运费和时效可能有所不同。港澳台及海外地区如有配送需求，请联系客服确认可达性及运费。',
+    sort: 9
+  },
+  {
+    id: 10, category: 'shipping', categoryLabel: '配送与物流',
+    question: '运费是如何计算的？',
+    answer: '中国大陆地区订单满 199 元包邮；未满 199 元运费按重量计算，一般为 8–15 元。港澳台及海外运费以下单时实际显示为准。',
+    sort: 10
+  },
+  {
+    id: 11, category: 'shipping', categoryLabel: '配送与物流',
+    question: '发货后多久能收到？',
+    answer: '中国大陆主要城市一般 2–4 个工作日送达，偏远地区可能需要 5–7 个工作日。发货后你会收到快递单号通知，可自行在快递公司官网查询进度。',
+    sort: 11
+  },
+  // 售后与退款
+  {
+    id: 12, category: 'aftersale', categoryLabel: '售后与退款',
+    question: '产品质量有问题怎么办？',
+    answer: '哞屋产品享有一年质量保修服务。如收到产品有损坏或质量问题，请在「我的订单」中申请售后并上传照片，或联系客服，我们会在 24 小时内为你处理。',
+    sort: 12
+  },
+  {
+    id: 13, category: 'aftersale', categoryLabel: '售后与退款',
+    question: '支持退换货吗？退款流程是怎样的？',
+    answer: '支持 7 天无理由退换货（定制产品除外，质量问题不限）。申请退货后请保持产品完好，联系客服获取退货地址并寄回，我们收货验货后 3 个工作日内退款至原支付渠道。',
+    sort: 13
+  },
+  // 创作与使用
+  {
+    id: 14, category: 'creation', categoryLabel: '创作与使用',
+    question: '如何成为创作者？',
+    answer: '在「账号设置」页面提交创作者认证申请，填写你的创作经历、作品集链接等信息。团队审核通过后即可开通创作者权限，享受联名分红、创作工具等专属功能。',
+    sort: 14
+  },
+  {
+    id: 15, category: 'creation', categoryLabel: '创作与使用',
+    question: '如何在创意社区发布作品？',
+    answer: '创作者认证通过后，可在「创作中心」上传逐帧动画素材，填写作品信息并提交审核。经哞屋审核通过后，作品将在创意社区展示，并可参与联名商品售卖获得收益分红。',
+    sort: 15
+  },
+  {
+    id: 16, category: 'creation', categoryLabel: '创作与使用',
+    question: '定制动画对帧数有什么要求？',
+    answer: '定制动画建议帧数在 15–50 帧之间，帧率 8–12fps 效果最佳。支持上传 GIF 动图或 MP4 视频，系统会自动提取帧图。每款机型对应的帧数上限请以选款页面为准。',
+    sort: 16
+  },
+  // 账号与会员
+  {
+    id: 17, category: 'account', categoryLabel: '账号与会员',
+    question: '会员有什么权益？如何升级会员？',
+    answer: '哞屋会员体系正在完善中，敬请期待！目前注册账号即可享受：订单跟踪、收藏作品、定制存档等基础功能。后续会员权益（积分、专属折扣等）上线后会第一时间通知你。',
+    sort: 17
+  },
+  {
+    id: 18, category: 'account', categoryLabel: '账号与会员',
+    question: '如何修改账号信息？',
+    answer: '登录后进入「账号设置」页面，可修改昵称、头像、手机号等基本信息。如需修改手机号，需通过短信验证码验证原手机号后方可操作。',
+    sort: 18
+  },
+  // 商务合作
+  {
+    id: 19, category: 'business', categoryLabel: '商务合作',
+    question: '商务合作需要联系谁？',
+    answer: '所有商务合作请通过「联络我们」页面对应分类（画师联名 / 媒体博主 / 线下渠道 / 厂家合作等）提交意向表单，商务团队会在 3 个工作日内回复你。',
+    sort: 19
+  },
+  {
+    id: 20, category: 'business', categoryLabel: '商务合作',
+    question: '如何申请画师 / IP 联名？',
+    answer: '如果你有成熟的原创 IP 或一定的粉丝基础，欢迎在「联络我们」→「画师 / IP 联名」提交申请。填写 IP 介绍、主要平台及粉丝量，我们会评估后优先联系有合作潜力的创作者。',
+    sort: 20
+  }
+]
+
+/* ══════════════════════════════════════════════════════
+   CATEGORIES
+══════════════════════════════════════════════════════ */
+const CATEGORIES = [
+  { id: 'all',       label: '全部问题', icon: '❓' },
+  { id: 'product',   label: '动盒产品', icon: '📦' },
+  { id: 'order',     label: '订单与支付', icon: '🧾' },
+  { id: 'shipping',  label: '配送与物流', icon: '🚚' },
+  { id: 'aftersale', label: '售后与退款', icon: '🔄' },
+  { id: 'creation',  label: '创作与使用', icon: '🎨' },
+  { id: 'account',   label: '账号与会员', icon: '👤' },
+  { id: 'business',  label: '商务合作',   icon: '🤝' },
+]
+
+/* ══════════════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════════════ */
+let currentCat   = 'all'
+let searchQuery  = ''
+let sortNewest   = true
+let searchTimer  = null
+
+/* ══════════════════════════════════════════════════════
+   FUSE.JS — 模糊搜索配置
+   threshold 0.45: 允许一定程度拼写误差和语义模糊
+   ignoreLocation: 不限制匹配位置，中文尤其重要
+   字段权重: 问题标题 > 答案 > 分类
+══════════════════════════════════════════════════════ */
+const fuse = new Fuse(FAQ_DATA, {
+  keys: [
+    { name: 'question', weight: 3   },
+    { name: 'answer',   weight: 1.5 },
+    { name: 'categoryLabel', weight: 0.5 }
+  ],
+  threshold:      0.45,
+  distance:       200,
+  minMatchCharLength: 1,
+  includeScore:   true,
+  includeMatches: true,
+  ignoreLocation: true,
+  findAllMatches: true,
+})
+
+/* ══════════════════════════════════════════════════════
+   RENDER CATEGORIES
+══════════════════════════════════════════════════════ */
+function renderCategories() {
+  const desktopNav = document.getElementById('catNavDesktop')
+  const mobileTabs = document.getElementById('catTabsMobile')
+
+  desktopNav.innerHTML = CATEGORIES.map(c => `
+    <button class="cat-item${c.id === currentCat ? ' active' : ''}"
+      data-cat="${c.id}" onclick="setCategory('${c.id}')">
+      <span class="cat-icon">${c.icon}</span>${c.label}
+    </button>
+  `).join('')
+
+  mobileTabs.innerHTML = CATEGORIES.map(c => `
+    <button class="cat-tab${c.id === currentCat ? ' active' : ''}"
+      data-cat="${c.id}" onclick="setCategory('${c.id}')">
+      ${c.label}
+    </button>
+  `).join('')
+}
+
+/* ══════════════════════════════════════════════════════
+   GET FILTERED & SORTED ITEMS
+══════════════════════════════════════════════════════ */
+function getItems() {
+  let items
+
+  if (searchQuery.trim()) {
+    // 模糊搜索模式：Fuse.js 返回带 score 和 matches 的结果
+    const results = fuse.search(searchQuery.trim())
+    items = results.map(r => ({ ...r.item, _matches: r.matches, _score: r.score }))
+    // 搜索时在分类内进一步过滤
+    if (currentCat !== 'all') {
+      items = items.filter(i => i.category === currentCat)
+    }
+  } else {
+    // 普通浏览模式
+    items = currentCat === 'all'
+      ? [...FAQ_DATA]
+      : FAQ_DATA.filter(i => i.category === currentCat)
+    // 排序
+    items.sort((a, b) => sortNewest ? b.sort - a.sort : a.sort - b.sort)
+  }
+
+  return items
+}
+
+/* ══════════════════════════════════════════════════════
+   HIGHLIGHT MATCHED TEXT
+══════════════════════════════════════════════════════ */
+function highlightText(text, matches, key) {
+  if (!matches) return escapeHtml(text)
+  const match = matches.find(m => m.key === key)
+  if (!match || !match.indices) return escapeHtml(text)
+
+  let result = ''
+  let last = 0
+  const sorted = [...match.indices].sort((a, b) => a[0] - b[0])
+  for (const [start, end] of sorted) {
+    result += escapeHtml(text.slice(last, start))
+    result += `<mark class="hl">${escapeHtml(text.slice(start, end + 1))}</mark>`
+    last = end + 1
+  }
+  result += escapeHtml(text.slice(last))
+  return result
+}
+
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
+
+/* ══════════════════════════════════════════════════════
+   RENDER FAQ LIST
+══════════════════════════════════════════════════════ */
+function renderList() {
+  const items    = getItems()
+  const listEl   = document.getElementById('faqList')
+  const noRes    = document.getElementById('noResults')
+  const countEl  = document.getElementById('contentCount')
+  const hintEl   = document.getElementById('searchHint')
+  const titleEl  = document.getElementById('contentTitle')
+
+  // Title
+  const cat = CATEGORIES.find(c => c.id === currentCat)
+  titleEl.textContent = cat ? cat.label : '全部问题'
+
+  // Count
+  countEl.textContent = `共 ${items.length} 个问题`
+
+  // Search hint
+  if (searchQuery.trim()) {
+    hintEl.innerHTML = `找到与「<em>${escapeHtml(searchQuery.trim())}</em>」相关的 <em>${items.length}</em> 个问题`
+    hintEl.classList.add('show')
+  } else {
+    hintEl.classList.remove('show')
+  }
+
+  // Empty state
+  if (items.length === 0) {
+    listEl.innerHTML = ''
+    noRes.classList.add('show')
+    return
+  }
+  noRes.classList.remove('show')
+
+  // Render items
+  listEl.innerHTML = items.map((item, idx) => {
+    const qText = highlightText(item.question, item._matches, 'question')
+    const aText = highlightText(item.answer,   item._matches, 'answer')
+    return `
+      <div class="faq-item" id="faq-item-${item.id}">
+        <button class="faq-q" onclick="toggleFaq(${item.id})" aria-expanded="false">
+          <span class="faq-q-icon">Q</span>
+          <span class="faq-q-text">${qText}</span>
+          <span class="faq-q-arrow">↓</span>
+        </button>
+        <div class="faq-a" id="faq-a-${item.id}">
+          <div class="faq-a-inner">${aText}</div>
+        </div>
+      </div>
+    `
+  }).join('')
+}
+
+/* ══════════════════════════════════════════════════════
+   TOGGLE FAQ ITEM
+══════════════════════════════════════════════════════ */
+function toggleFaq(id) {
+  const item = document.getElementById(`faq-item-${id}`)
+  if (!item) return
+  const isOpen = item.classList.contains('open')
+  // 关闭所有
+  document.querySelectorAll('.faq-item.open').forEach(el => {
+    el.classList.remove('open')
+    el.querySelector('.faq-q')?.setAttribute('aria-expanded', 'false')
+  })
+  // 如果之前没开，打开当前
+  if (!isOpen) {
+    item.classList.add('open')
+    item.querySelector('.faq-q')?.setAttribute('aria-expanded', 'true')
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   CATEGORY SWITCH
+══════════════════════════════════════════════════════ */
+function setCategory(catId) {
+  currentCat = catId
+  renderCategories()
+  renderList()
+}
+
+/* ══════════════════════════════════════════════════════
+   SEARCH（防抖 200ms）
+══════════════════════════════════════════════════════ */
+function handleSearch(val) {
+  searchQuery = val
+  // 清除按钮显示
+  const clearBtn = document.getElementById('searchClear')
+  clearBtn.classList.toggle('show', val.length > 0)
+  // 防抖
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(renderList, 200)
+}
+
+function clearSearch() {
+  const input = document.getElementById('searchInput')
+  input.value = ''
+  input.focus()
+  handleSearch('')
+}
+
+/* ══════════════════════════════════════════════════════
+   SORT TOGGLE
+══════════════════════════════════════════════════════ */
+function toggleSort() {
+  sortNewest = !sortNewest
+  document.getElementById('sortLabel').textContent = sortNewest ? '最新排序' : '最早排序'
+  renderList()
+}
+
+/* ══════════════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════════════ */
+renderCategories()
+renderList()
+
+// 从 URL hash 跳转时自动展开对应问题（如 faq.html#q5）
+if (location.hash) {
+  const id = parseInt(location.hash.replace('#q', ''))
+  if (id) setTimeout(() => toggleFaq(id), 400)
+}
+</script>
+</body>
+</html>
