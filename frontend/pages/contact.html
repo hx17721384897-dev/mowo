@@ -150,6 +150,13 @@ input, textarea, select { font-family:var(--font); }
 }
 
 /* ══════════════════════════
+   ANCHOR SCROLL OFFSET（补偿 sticky 导航栏高度）
+══════════════════════════ */
+#cards, #faq {
+  scroll-margin-top: calc(var(--nav-h) + 16px);
+}
+
+/* ══════════════════════════
    IDENTITY CARDS
 ══════════════════════════ */
 .cards-section {
