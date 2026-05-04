@@ -23,7 +23,7 @@
   --pad-mobile: 24px;
   --pad-desk:   72px;
   --prog-h: 44px;
-  --top-offset: calc(var(--nav-h) + 3px + var(--prog-h));
+  --top-offset: calc(var(--prog-h));
 }
 
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
@@ -35,10 +35,8 @@ button { font-family:var(--font); }
 /* ══════════════════════════════
    进度条 & 步骤
 ══════════════════════════════ */
-.progress-bar { position:fixed; top:var(--nav-h); left:0; right:0; z-index:800; background:rgba(44,31,20,.12); height:3px; }
-.progress-fill { height:100%; width:75%; background:#c8965a; border-radius:0 2px 2px 0; }
 .progress-steps {
-  position:fixed; top:calc(var(--nav-h) + 3px); left:0; right:0; z-index:799;
+  position:fixed; top:var(--nav-h); left:0; right:0; z-index:799;
   background:rgba(252,226,179,0.92); backdrop-filter:blur(12px);
   border-bottom:1.5px solid rgba(44,31,20,.1);
   padding:10px var(--pad-mobile); display:flex; align-items:center; justify-content:center; gap:0;
@@ -517,8 +515,7 @@ button { font-family:var(--font); }
 <body>
 <script src="../js/nav.js"></script>
 
-<!-- 进度条 -->
-<div class="progress-bar"><div class="progress-fill"></div></div>
+
 
 <!-- 步骤指示 -->
 <div class="progress-steps">
