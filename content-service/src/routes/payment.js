@@ -101,7 +101,7 @@ export default async function paymentRoutes(fastify) {
         })
 
         // MARKET 类型：创建 CollabOrder（创作者分成流程）
-        if (item.itemType === 'MARKET' && newOrder) {
+        if (fastify.config.features.creatorFinance && item.itemType === 'MARKET' && newOrder) {
           await tx.collabOrder.create({
             data: {
               orderId:       newOrder.id,

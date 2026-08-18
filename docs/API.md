@@ -5,6 +5,8 @@
 > 本地地址：`http://localhost:3001`
 > 生产地址：`https://api.mowo.com`（待部署）
 
+> **阅读提示（2026-08-13）：本文不是从当前路由自动生成的完整契约。** 路径、请求字段、权限和状态仍可能遗漏或漂移；社区、线上收益/牛量/提现、模拟认证和创作者自助联名已由服务端开关默认关闭。支付仍只有未验签的 Mock/回调骨架。实现或调用前先对照 `modules/*`、`DOC_CODE_DIFFERENCES.md` 和 `RELEASE_SCOPE.md`。
+
 ---
 
 ## 通用约定
@@ -26,19 +28,29 @@ Authorization: Bearer <accessToken>   // 需要登录的接口必须携带
 { "success": false, "message": "错误描述" }
 ```
 
-### 角色权限
+关闭功能统一返回 HTTP 404：
+
+```json
+{ "success": false, "message": "该功能在当前测试阶段暂未开放", "code": "FEATURE_NOT_AVAILABLE" }
+```
+
+基础响应包含 `X-Content-Type-Options: nosniff`、`X-Frame-Options: DENY`、Referrer/Permissions Policy 和缓存控制；生产环境额外发送 HSTS。静态页面的 CSP 和响应头仍由正式 Web 服务器负责。
+
+### 用户角色与员工岗位
 
 | role 值 | 角色 | 说明 |
 |---------|------|------|
 | 0 | User | 普通用户 |
-| 1 | Production | 生产端（查看订单/下载图纸/库存入库） |
-| 2 | Admin | 管理员（全部后台） |
-| 3 | SuperAdmin | 超级管理员（含审计日志/角色管理） |
+| 1 | Production | 历史兼容值；迁移后员工账号统一用 role 2/3 表示后台兼容等级 |
+| 2 | Staff | 后台员工；具体区域由 `staffRole` 决定 |
+| 3 | Owner | 负责人兼容等级 |
+
+`staffRole` 固定岗位：`OWNER`、`CUSTOMER_SERVICE`、`PRODUCTION`、`COLLAB_OPS`。详细允许区域见 `modules/staff-permissions-audit.md`。客户端隐藏菜单不构成授权，服务器会对每次后台请求检查岗位。
 
 ### JWT Payload
 
 ```json
-{ "userId": "uuid", "phone": "138****", "certifyStatus": 2, "role": 0 }
+{ "userId": "uuid", "phone": "138****", "certifyStatus": 2, "role": 2, "staffRole": "CUSTOMER_SERVICE", "sid": "uuid" }
 ```
 
 ---
@@ -55,7 +67,7 @@ Authorization: Bearer <accessToken>   // 需要登录的接口必须携带
 | `/api/products` | 商品 | `routes/products.js` |
 | `/api/machine-models` | 机型款式与SKU | `routes/machine-models.js` |
 | `/api/customize-orders` | 定制订单 | `routes/customize-orders.js` |
-| `/api/upload` | OSS预签名上传 | `routes/upload.js` |
+| `/api/upload` | 私有文件登记、上传确认与短期读取 | `routes/upload.js` |
 | `/api/cart` | 购物车 | `routes/cart.js` |
 | `/api/addresses` | 收货地址簿 | `routes/addresses.js` |
 | `/api/custom-products` | DIY定制草稿 | `routes/custom-products.js` |
@@ -67,12 +79,14 @@ Authorization: Bearer <accessToken>   // 需要登录的接口必须携带
 | `/api/admin/import` | 多平台订单导入 | `routes/import.js` |
 | `/api/admin/sku-mapping` | 平台SKU映射管理 | `routes/platform-sku.js` |
 | `/api/creator` | 创作者端 | `routes/creator.js` |
+| `/api/config/features` | 公开读取当前发布功能开关 | `index.js` + `lib/features.js` |
+| `/api/contact` | 六类联络提交 | `routes/contact.js` |
 
 ---
 
 ## 账户安全 v1（推荐路径）
 
-### POST `/api/v1/auth/send-code`
+### POST `/api/v1/auth/sms/send`
 发送短信验证码。
 
 **Body：**
@@ -81,16 +95,24 @@ Authorization: Bearer <accessToken>   // 需要登录的接口必须携带
 ```
 purpose 枚举：`LOGIN / REGISTER / RESET_PASSWORD / BIND_PHONE / DEACTIVATE / STEP_UP_WITHDRAW / STEP_UP_CHANGE_PAYOUT / STEP_UP_CHANGE_PASSWORD`
 
-**限速**：单号每分钟1条，每天10条；全局每小时500条。
+`LOGIN` 只向已有账号发送验证码；手机号不存在时返回 `ACCOUNT_NOT_FOUND`，提示前往注册。`REGISTER` 只向未注册手机号发送；已有账号返回 `ACCOUNT_ALREADY_EXISTS`，提示直接登录。登录入口不会自动创建账号。
+
+**限速**：单号每分钟 1 条、每天 10 条；同一 IP 每小时 30 条且最多尝试 10 个不同手机号；旧全局计数器每小时 500 条继续保留。返回 429 时附 `Retry-After` 和 `retryAfterSeconds`。
 
 ---
 
-### POST `/api/v1/auth/login`
-短信验证码登录，返回 accessToken + 设置 refreshToken HttpOnly Cookie。
+### POST `/api/v1/auth/sms/verify`
+短信验证码登录或注册，必须通过 `mode` 明确用途。登录码与注册码不能混用；登录不会自动注册，注册必须明确同意协议。
+
+同一 IP 在 15 分钟内累计 10 次验证码失败后暂停验证 15 分钟。注册成功会分别写入 `USER_AGREEMENT` 和 `PRIVACY_POLICY` 同意记录，版本来自环境配置。
 
 **Body：**
 ```json
-{ "phone": "13800138000", "code": "123456" }
+// 登录已有账号
+{ "phone": "13800138000", "code": "123456", "mode": "LOGIN" }
+
+// 注册新账号
+{ "phone": "13800138000", "code": "123456", "mode": "REGISTER", "agreedToPrivacy": true }
 ```
 
 **Response：**
@@ -112,17 +134,45 @@ purpose 枚举：`LOGIN / REGISTER / RESET_PASSWORD / BIND_PHONE / DEACTIVATE / 
 ---
 
 ### POST `/api/v1/auth/logout`
-注销当前会话，撤销 refreshToken，记录审计日志。需携带 Authorization。
+只退出当前设备，撤销该设备会话并清除 refreshToken Cookie。需携带 Authorization。
 
 ---
 
-### POST `/api/v1/user/deactivate`
-申请注销账号（PIPL软删除）。需登录 + 短信验证。
+### POST `/api/v1/auth/logout-all`
+退出账号下全部设备。所有设备都需要重新登录。需携带 Authorization。
 
-**Body：**
-```json
-{ "code": "123456", "reason": "不想用了" }
-```
+---
+
+### POST `/api/v1/auth/password/login`
+新版密码登录入口。首发默认关闭，返回 `PASSWORD_LOGIN_DISABLED`；未来恢复时仍使用独立设备会话。旧 `/api/auth/register`、`/api/auth/login` 已永久停用。
+
+---
+
+### 账号注销 `/api/v1/account/deactivate/*`
+
+账号注销采用 10 分钟防误操作保护期，申请前和最终执行前都会检查订单、售后、联名、资金、合同和争议。申请成功后退出全部设备；用户点击撤销时需使用原账号短信重新验证，登录成功后自动继续撤销。这个过程不会注册新账号，也不要求重复同意注册协议。保护期结束后系统自动清理，申请后不能新增订单、上传、合作或修改资料。负责人暂停任务不自动剥夺撤销权：只要 `processingStartedAt` 仍为空，`REQUESTED` 和 `PAUSED` 均可撤销；一旦清理开始则不能自行撤销。
+
+| 方法 | 路径 | 作用 |
+|---|---|---|
+| GET | `/api/v1/account/deactivate/check` | 一次返回全部阻止事项 |
+| POST | `/api/v1/account/deactivate/send-otp` | 向当前绑定手机号发送注销验证码 |
+| POST | `/api/v1/account/deactivate/apply` | 验证 OTP 并提交注销申请，Body：`{ "otp": "123456", "reason": "可选" }` |
+| POST | `/api/v1/account/deactivate/cancel` | 资料清理开始前撤销申请 |
+
+旧 `POST /api/v1/user/account/deactivate` 已停用并返回 HTTP 410。
+
+### 后台注销任务 `/api/admin/account-deletions`
+
+| 方法 | 路径 | 权限与作用 |
+|---|---|---|
+| GET | `/api/admin/account-deletions` | 负责人、运营客服；返回脱敏账号、任务状态、失败原因和时效等级 |
+| POST | `/api/admin/account-deletions/:id/retry` | 仅负责人；重新安排失败或待人工关注任务 |
+| POST | `/api/admin/account-deletions/:id/pause` | 仅负责人；Body 必须分别包含内部原因 `reason` 和用户说明 `userMessage`，可暂停待执行、失败或待人工关注任务 |
+| POST | `/api/admin/account-deletions/:id/resume` | 仅负责人；恢复暂停任务 |
+
+失败任务 15 分钟后自动重试；连续失败 3 次或持续 1 小时转 `MANUAL_REVIEW`。24 小时为紧急提示，48 小时为异常处理目标，不是正常等待时间。
+
+`GET /api/v1/account/me` 在注销处理中返回 `deletionRequest.cleanupStarted`、`canCancel` 和 `pauseUserMessage`。内部 `pauseReason` 永远不通过用户接口返回。当前本地首发阶段只在重新登录后的账号设置页展示暂停说明，尚未接入真实暂停/恢复短信。
 
 ---
 
@@ -604,7 +654,7 @@ type 可选：`pending_info` / `pending_sku` / 不传=全部异常
 
 ## 平台SKU映射管理
 
-所有接口需 role≥2。
+所有后台接口先验证有效设备会话，再按固定员工岗位检查区域权限。旧路由中的 `role≥2` 只承担兼容作用。
 
 ### GET `/api/admin/sku-mapping`
 列表（支持 platform/q 过滤，补充 skuDetails + collabWork 信息）。
@@ -668,13 +718,19 @@ type 可选：`pending_info` / `pending_sku` / 不传=全部异常
 录入快递信息（company + trackingNo，status → processing）。
 
 ### GET `/api/admin/users`
-用户列表（分页，支持按 role/status 过滤）。需 role≥2。
+用户列表（分页，支持按 `role`/`staffRole` 过滤），手机号默认脱敏。运营客服和负责人可读。
 
 ### PUT `/api/admin/users/:id/role`
-修改用户角色。需 role≥3（SuperAdmin）。
+设置固定员工岗位，请求体为 `{ "staffRole": "OWNER|CUSTOMER_SERVICE|PRODUCTION|COLLAB_OPS|null" }`。仅负责人可操作；不能修改自己或移除最后一位负责人；成功后目标员工全部设备退出。
+
+### PUT `/api/admin/users/:id/ban`
+封禁或解封普通用户。运营客服可处理普通用户，只有负责人能处理其他员工；任何人不能封禁自己，负责人不能通过此接口封禁。
 
 ### GET `/api/admin/logs`
-审计日志（分页，支持按 action/userId 过滤）。需 role≥3。
+安全记录（分页，支持 `method` 和 `outcome=SUCCESS|FAILED|DENIED`）。仅负责人可查看；详情已脱敏，包含结果、状态码、设备会话和浏览器信息。
+
+### GET/PUT `/api/admin/aftersales`
+售后列表与处理接口。已补员工登录和岗位权限保护，未登录返回 401。
 
 ---
 
@@ -733,10 +789,17 @@ Authorization: Bearer <token>
 ```
 仅在 `hostname === 'localhost'` 或 `127.0.0.1` 时可用，生产环境返回403。
 
-### 库存预签名上传
+### 私有批量上传
 ```
 POST /api/upload/presign-batch
-Body: { folder, orderNo, files: [{ fileName, fileType }] }
-Response: [{ uploadUrl, objectKey }]
+Body: { purpose, files: [{ fileName, fileType, fileSize }] }
+Response: [{ fileId, uploadUrl, objectKey, completeUrl }]
 ```
-获取批量预签名URL后，前端直接 `PUT` 上传至OSS，避免后端中转大文件。
+每个文件先写入 `private_files`；浏览器 `PUT` 后调用 `completeUrl` 确认。服务器核对用途、所有者、大小和文件内容类型。本地开发写入私有目录，正式环境使用私有 OSS。当前用途和权限矩阵见 `docs/modules/private-file-security.md`。
+
+### 采用已上传头像
+```
+POST /api/upload/files/:id/use-as-avatar
+Authorization: Bearer <access-token>
+```
+只接受当前账号所有、用途为 `AVATAR`、状态为 `READY` 的文件。成功后服务器同时更新用户资料和文件业务绑定。`PUT /api/v1/account/profile` 不再接受客户端直接填写 `avatarUrl`。

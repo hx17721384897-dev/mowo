@@ -11,6 +11,20 @@ import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
+const demoSeedEnabled = process.env.ALLOW_DEMO_SEED === 'true'
+const demoPassword = process.env.DEMO_SEED_PASSWORD || ''
+
+function assertDemoSeedIsSafe() {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('Demo seed data is disabled in production')
+  }
+  if (!demoSeedEnabled) {
+    throw new Error('Set ALLOW_DEMO_SEED=true before writing demo seed data')
+  }
+  if (demoPassword.length < 12 || demoPassword === '123456') {
+    throw new Error('DEMO_SEED_PASSWORD must contain at least 12 characters and cannot use the old default')
+  }
+}
 
 // ── 密码加密（与 src/lib/auth.js 保持一致）──
 async function hashPassword(password) {
@@ -18,6 +32,7 @@ async function hashPassword(password) {
 }
 
 async function main() {
+  assertDemoSeedIsSafe()
   console.log('🌱 开始写入种子数据...')
 
   // ══════════════════════════════════════════
@@ -26,41 +41,46 @@ async function main() {
   const accounts = [
     {
       phone:         '13800138000',
-      password:      '123456',
+      password:      demoPassword,
       nickname:      '超管测试',
       role:          3,              // SuperAdmin
+      staffRole:     'OWNER',
       certifyStatus: 2,             // 已认证创作者
       isCreator:     true,
     },
     {
       phone:         '13800138001',
-      password:      '123456',
+      password:      demoPassword,
       nickname:      '管理员测试',
       role:          2,              // Admin
+      staffRole:     'CUSTOMER_SERVICE',
       certifyStatus: 0,
       isCreator:     false,
     },
     {
       phone:         '13800138002',
-      password:      '123456',
+      password:      demoPassword,
       nickname:      '创作者小明',
       role:          0,
+      staffRole:     null,
       certifyStatus: 2,             // 已认证创作者
       isCreator:     true,
     },
     {
       phone:         '13800138003',
-      password:      '123456',
+      password:      demoPassword,
       nickname:      '普通用户小红',
       role:          0,
+      staffRole:     null,
       certifyStatus: 0,
       isCreator:     false,
     },
     {
       phone:         '13800138004',
-      password:      '123456',
+      password:      demoPassword,
       nickname:      '生产端账号',
-      role:          1,              // Production
+      role:          2,              // 后台兼容等级，具体权限由岗位决定
+      staffRole:     'PRODUCTION',
       certifyStatus: 0,
       isCreator:     false,
     },
@@ -86,6 +106,7 @@ async function main() {
           passwordHash,
           certifyStatus: acc.certifyStatus,
           role:          acc.role,
+          staffRole:     acc.staffRole,
         }
       })
 
@@ -303,16 +324,8 @@ async function main() {
   console.log('')
   console.log('🎉 种子数据写入完成！')
   console.log('')
-  console.log('  测试账号一览：')
-  console.log('  ┌─────────────────┬──────────┬──────────────┬──────┐')
-  console.log('  │ 手机号          │ 密码     │ 昵称         │ 角色 │')
-  console.log('  ├─────────────────┼──────────┼──────────────┼──────┤')
-  console.log('  │ 13800138000     │ 123456   │ 超管测试     │ 超管 │')
-  console.log('  │ 13800138001     │ 123456   │ 管理员测试   │ 管理 │')
-  console.log('  │ 13800138002     │ 123456   │ 创作者小明   │ 创作 │')
-  console.log('  │ 13800138003     │ 123456   │ 普通用户小红 │ 用户 │')
-  console.log('  │ 13800138004     │ 123456   │ 生产端账号   │ 生产 │')
-  console.log('  └─────────────────┴──────────┴──────────────┴──────┘')
+  console.log('  测试账号：13800138000 至 13800138004')
+  console.log('  密码来自 DEMO_SEED_PASSWORD，出于安全不会输出。')
 }
 
 main()

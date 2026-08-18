@@ -8,12 +8,19 @@
 
 ## 快速了解项目
 
+> 新加入的开发者或 AI 请先阅读 [`docs/PROJECT_INDEX.md`](docs/PROJECT_INDEX.md)。该索引区分当前代码事实、历史规划、文档差异与待确认问题。
+>
+> **当前产品口径以 `docs/OPEN_QUESTIONS.md` 的阶段性决策为准。** `PRODUCTION.md`、`REVENUE.md` 和 `docs/ARCHITECTURE.md` 保留早期完整规划，不代表首发范围或当前代码已经闭环。首发采用精简自建订单体系；社区、线上分红/牛量/提现默认关闭，生产与库存细节在实际改造前再确认。
+
 | 文档 | 内容 |
 |------|------|
 | [CLAUDE.md](./CLAUDE.md) | AI 工作守则、技术栈约束、开发规范、当前进度 |
-| [PRODUCTION.md](./PRODUCTION.md) | 生产管理系统：导出地址/录入快递/帧图压缩包/扫码发货设计 |
-| [REVENUE.md](./REVENUE.md) | 联名分红体系：牛能等级、分红公式、结算设计 |
-| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | 系统架构、数据流、服务器配置 |
+| [docs/RELEASE_SCOPE.md](./docs/RELEASE_SCOPE.md) | 当前发布阶段、首发功能边界和延后讨论事项 |
+| [docs/REMEDIATION_ROADMAP.md](./docs/REMEDIATION_ROADMAP.md) | 按功能区划分的代码整改顺序、边界和完成标准 |
+| [docs/LAUNCH_READINESS.md](./docs/LAUNCH_READINESS.md) | 邀请测试、真实交易和公开上线所需的工程与运营门槛 |
+| [PRODUCTION.md](./PRODUCTION.md) | 生产管理系统早期完整规划；结合当前代码调查和待确认事项阅读 |
+| [REVENUE.md](./REVENUE.md) | 未来联名分红/牛量体系规划；首发不启用线上收益功能 |
+| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | 早期目标架构；CRMEB 等内容已被阶段性决策替代 |
 | [docs/FRONTEND.md](./docs/FRONTEND.md) | 前端页面清单、跳转关系、API对接状态 |
 | [docs/DATABASE.md](./docs/DATABASE.md) | 数据库表设计说明 |
 | [docs/API.md](./docs/API.md) | 接口定义文档 |
@@ -35,7 +42,7 @@ mowo/
 │       └── auth.js      # 公共登录状态管理
 ├── content-service/     # Node.js + Fastify 内容后端
 │   └── src/templates/   # 对照清单/条形码清单 docx 模板
-└── crmeb/               # CRMEB 单商户版（只读）
+└── crmeb/               # 仅有占位文件；首发决定不接入 CRMEB
 ```
 
 ---
@@ -45,6 +52,9 @@ mowo/
 ```bash
 # 启动后端
 cd content-service
+npm install
+# 首次使用：按 .env.example 创建本机 .env，并填写真实的本地配置
+npm run check
 npm run dev
 # → http://localhost:3001
 

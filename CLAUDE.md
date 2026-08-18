@@ -5,6 +5,24 @@
 
 ---
 
+## 用户场景思考规范（必须遵守）
+
+**每次和用户讨论新功能或修改现有功能时，必须主动构思完整的用户使用场景，找出可能遗漏的需求并和用户确认。**
+
+### 操作流程
+1. 理解用户的功能需求后，主动列出所有相关的使用场景（正常流程 + 边界情况 + 异常情况）
+2. 标注哪些场景目前的设计可以覆盖，哪些可能遗漏
+3. 向用户提问确认，不要自行假设
+4. 确认后将场景记录到 `docs/USER_SCENARIOS.md` 对应功能章节
+
+### 用户场景记录原则
+- 每个功能模块对应一个章节
+- 每个场景描述：触发条件 → 用户需求 → 系统应该如何响应
+- 实现功能时必须先查阅 `docs/USER_SCENARIOS.md`，确认所有场景都被满足
+- 场景文档是功能验收的依据，不是参考资料
+
+---
+
 ## Git 提交规范（必须遵守）
 
 **每完成一个功能模块或修复一个 Bug，必须立即执行一次 commit + push。**
@@ -196,12 +214,12 @@ npm run dev
 
 ### 环境变量（.env）
 ```
-DATABASE_URL=postgresql://postgres:Xiang1357999@localhost:5432/mowo_db
-JWT_SECRET=mowo_jwt_secret_2026_change_this
+DATABASE_URL=postgresql://postgres:<本地数据库密码>@localhost:5432/mowo_db
+JWT_SECRET=<至少32位的本地随机字符串>
 OSS_REGION=oss-cn-shanghai
 OSS_BUCKET=mowo-uploads
-OSS_ACCESS_KEY_ID=（已配置）
-OSS_ACCESS_KEY_SECRET=（已配置）
+OSS_ACCESS_KEY_ID=<仅保存在.env中>
+OSS_ACCESS_KEY_SECRET=<仅保存在.env中>
 ```
 
 ### 前端预览
@@ -330,18 +348,20 @@ mowo_sku_colors       — 款式管理自定义颜色选项
 /api/shop/*              — 转发至 CRMEB（待配置）
 ```
 
-### JWT Payload
+### JWT Payload（2026-08-13 现行）
 ```json
-{ "userId": "...", "phone": "...", "certifyStatus": 2, "role": 3 }
+{ "userId": "...", "phone": "...", "certifyStatus": 2, "role": 2, "staffRole": "CUSTOMER_SERVICE", "sid": "..." }
 ```
 
-### 角色权限
+### 用户角色与员工岗位
 ```
 0 = User        普通用户
-1 = Production  生产端（查看订单/下载图纸包/库存入库）
-2 = Admin       管理员（全部后台）
-3 = SuperAdmin  超级管理员（含审计日志/角色管理）
+1 = Production  历史兼容值
+2 = Staff       后台员工兼容等级
+3 = Owner       负责人兼容等级
 ```
+
+后台真实权限按固定 `staffRole` 判断：`OWNER`（负责人）、`CUSTOMER_SERVICE`（运营客服）、`PRODUCTION`（生产人员）、`COLLAB_OPS`（合作运营）。数字 `role` 不再表示“等级越高即可访问全部功能”；详细权限和安全记录规则见 `docs/modules/staff-permissions-audit.md`。
 
 ### 响应格式
 ```json
@@ -465,17 +485,17 @@ customize-confirm.html 四步选配（帧数→尺寸→材质→颜色，基于
 
 | 页面 | 功能 | 权限 | 状态 |
 |------|------|------|------|
-| admin-orders.html | 定制订单四视图（待处理/处理中/待生产/全部） | role≥2 | ✅ 已重构 |
-| admin-collab-works.html | 联名作品管理（上下架/库存/帧图预览） | role≥2 | ✅ 新增 |
-| admin-collab.html | 联名作品审核 | role≥2 | ✅ |
-| admin-collab-activities.html | 活动管理 | role≥2 | ✅ |
-| admin-users.html | 用户列表/角色/封禁 | role≥2 | ✅ |
-| admin-logs.html | 审计日志 | role=3 | ✅ |
-| admin-models.html | 款式增删改/SKU管理/图片/价格/库存/款式排序/SKU排序 | role≥2 | ✅ 已更新 |
-| admin-inventory.html | 库存管理/入库/预警设置 | role≥2 | ✅ |
-| admin-revenue-config.html | 分红规则配置（新手期/牛量系数/独家加成/上限） | role=3 写，role≥2 只读 | ✅ 新增 |
+| admin-orders.html | 定制订单四视图（待处理/处理中/待生产/全部） | 运营客服/负责人 | ✅ 已重构 |
+| admin-collab-works.html | 联名作品管理（上下架/库存/帧图预览） | 合作运营/负责人 | ✅ 新增 |
+| admin-collab.html | 联名作品审核 | 合作运营/负责人 | ✅ |
+| admin-collab-activities.html | 活动管理 | 合作运营/负责人 | ✅ |
+| admin-users.html | 用户列表/员工岗位/封禁 | 运营客服只处理普通用户；负责人管理岗位 | ✅ |
+| admin-logs.html | 安全记录 | 仅负责人 | ✅ |
+| admin-models.html | 款式增删改/SKU管理/图片/价格/库存/款式排序/SKU排序 | 运营客服/负责人 | ✅ 已更新 |
+| admin-inventory.html | 库存管理/入库/预警设置 | 生产人员/负责人 | ✅ |
+| admin-revenue-config.html | 分红规则配置（新手期/牛量系数/独家加成/上限） | 合作运营读取；负责人修改 | ✅ 保留 |
 
-## 生产端页面清单（独立于管理后台，role≥1）
+## 生产端页面清单（独立于管理后台，`staffRole=PRODUCTION` 或负责人）
 
 | 页面 | 功能 | 状态 |
 |------|------|------|

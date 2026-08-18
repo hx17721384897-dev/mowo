@@ -1261,76 +1261,45 @@ function handleFileArtist(input){
 
 /* ── Submit — 真实API调用 ── */
 const API_BASE = (location.hostname==='127.0.0.1'?'http://127.0.0.1:3001':'http://localhost:3001')
-
-// 登录提示弹窗样式
-const LOGIN_PROMPT_STYLE = `
-<style>
-#loginPromptModal {
-  display:none; position:fixed; inset:0; z-index:2000;
-  background:rgba(44,31,20,.5); backdrop-filter:blur(8px);
-  align-items:center; justify-content:center; padding:20px;
+const CONTACT_UPLOAD_SESSION_KEY = 'mowo_contact_upload_session'
+function contactUploadSession() {
+  let value = sessionStorage.getItem(CONTACT_UPLOAD_SESSION_KEY)
+  if (!value) {
+    value = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}_${Math.random().toString(36).slice(2)}`
+    sessionStorage.setItem(CONTACT_UPLOAD_SESSION_KEY, value)
+  }
+  return value
 }
-#loginPromptModal.open { display:flex; }
-.login-prompt-box {
-  background:#fff; border-radius:24px; padding:36px 32px;
-  max-width:380px; width:100%; text-align:center;
-  transform:translateY(20px) scale(.97);
-  animation:lpPop .3s cubic-bezier(0.22,1,0.36,1) forwards;
+function contactAuthHeaders(extra = {}) {
+  const token = localStorage.getItem('mowo_token') || ''
+  return {
+    ...extra,
+    'X-Upload-Session': contactUploadSession(),
+    ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+  }
 }
-@keyframes lpPop { to { transform:none; } }
-.login-prompt-icon  { font-size:48px; margin-bottom:16px; }
-.login-prompt-title { font-weight:900; font-size:22px; letter-spacing:-.02em; margin-bottom:8px; color:#2c1f14; }
-.login-prompt-sub   { font-weight:700; font-size:14px; color:#7a6552; line-height:1.7; margin-bottom:24px; }
-.login-prompt-btns  { display:flex; gap:10px; }
-.login-prompt-btns button {
-  flex:1; padding:14px; font-family:inherit; font-weight:900; font-size:14px;
-  border-radius:12px; border:none; cursor:pointer; transition:opacity .2s;
-}
-.login-prompt-btns button:hover { opacity:.8; }
-.lp-confirm { background:#2c1f14; color:#fff; }
-.lp-cancel  { background:#e8d8be; color:#2c1f14; }
-</style>
-<div id="loginPromptModal" onclick="if(event.target===this)closeLoginPrompt()">
-  <div class="login-prompt-box">
-    <div class="login-prompt-icon">🔒</div>
-    <div class="login-prompt-title">请先登录</div>
-    <div class="login-prompt-sub">提交联络信息需要登录账号，这样我们能更好地跟进你的需求。</div>
-    <div class="login-prompt-btns">
-      <button class="lp-cancel" onclick="closeLoginPrompt()">取消</button>
-      <button class="lp-confirm" onclick="goLogin()">去登录</button>
-    </div>
-  </div>
-</div>
-`
-document.body.insertAdjacentHTML('beforeend', LOGIN_PROMPT_STYLE)
-
-function isLoggedIn() {
-  return !!localStorage.getItem('mowo_token')
-}
-function getCurrentUserId() {
-  try {
-    const user = JSON.parse(localStorage.getItem('mowo_user') || '{}')
-    return user.userId || user.id || null
-  } catch { return null }
-}
-function showLoginPrompt() {
-  document.getElementById('loginPromptModal').classList.add('open')
-  document.body.style.overflow = 'hidden'
-}
-function closeLoginPrompt() {
-  document.getElementById('loginPromptModal').classList.remove('open')
-  document.body.style.overflow = ''
-}
-function goLogin() {
-  closeLoginPrompt()
-  window.openAuthModal && window.openAuthModal()
-}
-
-// 拦截 openModal，未登录先弹提示
-const _origOpenModal = window.openModal
-window.openModal = function(id) {
-  if (!isLoggedIn()) { showLoginPrompt(); return }
-  _origOpenModal(id)
+async function uploadContactFile(file, purpose) {
+  const fileType = file.type
+  if (!fileType) throw new Error(`${file.name} 的文件类型无法识别`)
+  const presignRes = await fetch(`${API_BASE}/api/upload/presign`, {
+    method: 'POST',
+    headers: contactAuthHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ fileName: file.name, fileType, fileSize: file.size, purpose })
+  })
+  const presignData = await presignRes.json()
+  if (!presignData.success) throw new Error(presignData.message || `${file.name} 无法上传`)
+  const uploadRes = await fetch(presignData.data.uploadUrl, {
+    method: 'PUT', headers: { 'Content-Type': fileType }, body: file
+  })
+  if (!uploadRes.ok) throw new Error(`${file.name} 上传失败`)
+  if (presignData.data.completeUrl) {
+    const completeRes = await fetch(presignData.data.completeUrl, {
+      method: 'POST', headers: contactAuthHeaders()
+    })
+    const completeData = await completeRes.json()
+    if (!completeData.success) throw new Error(completeData.message || `${file.name} 校验失败`)
+  }
+  return presignData.data.objectKey
 }
 
 function val(id)  { return (document.getElementById(id)?.value || '').trim() }
@@ -1366,27 +1335,11 @@ async function uploadArtistFiles() {
   const input = document.getElementById('artist-portfolio-file')
   if (!input || !input.files.length) return []
   const objectKeys = []
-  const token = localStorage.getItem('mowo_token') || ''
   for (const file of input.files) {
     try {
-      const presignRes = await fetch(`${API_BASE}/api/upload/presign`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token
-        },
-        body: JSON.stringify({ fileName: file.name, fileType: file.type || 'application/octet-stream', folder: 'contact-portfolio' })
-      })
-      const presignData = await presignRes.json()
-      if (!presignData.success) continue
-      await fetch(presignData.data.url, {
-        method: 'PUT',
-        headers: { 'Content-Type': file.type || 'application/octet-stream' },
-        body: file
-      })
-      objectKeys.push(presignData.data.key)
+      objectKeys.push(await uploadContactFile(file, 'CONTACT_PORTFOLIO'))
     } catch(e) {
-      console.warn('文件上传失败：', file.name, e)
+      throw new Error(e.message || `${file.name} 上传失败`)
     }
   }
   return objectKeys
@@ -1404,7 +1357,9 @@ async function submitForm(id) {
     if (!contact) { showFormError(id, '请填写联系邮箱'); return }
     if (!message) { showFormError(id, '请填写IP / 作品介绍'); return }
     setSubmitLoading(id, true)
-    const attachments = await uploadArtistFiles()
+    let attachments
+    try { attachments = await uploadArtistFiles() }
+    catch (e) { setSubmitLoading(id, false); showFormError(id, e.message || '作品集上传失败'); return }
     body = {
       type: 'artist', name, contact, message,
       extra: { platform: val('artist-platform'), fanbase: val('artist-fanbase'), portfolioUrl: val('artist-portfolio') },
@@ -1457,21 +1412,8 @@ async function submitForm(id) {
     let resumeKey = ''
     try {
       const file = resumeInput.files[0]
-      const token = localStorage.getItem('mowo_token') || ''
-      const presignRes = await fetch(`${API_BASE}/api/upload/presign`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token
-        },
-        body: JSON.stringify({ fileName: file.name, fileType: file.type || 'application/octet-stream', folder: 'contact-resumes' })
-      })
-      const presignData = await presignRes.json()
-      if (presignData.success) {
-        await fetch(presignData.data.url, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file })
-        resumeKey = presignData.data.key
-      }
-    } catch(e) { console.warn('简历上传失败', e) }
+      resumeKey = await uploadContactFile(file, 'CONTACT_RESUME')
+    } catch(e) { setSubmitLoading(id, false); showFormError(id, e.message || '简历上传失败'); return }
     body = {
       type: 'join', name, contact,
       message: val('join-message') || '（无自我介绍）',
@@ -1519,8 +1461,8 @@ async function submitForm(id) {
   try {
     const res = await fetch(`${API_BASE}/api/contact`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...body, submitterUserId: getCurrentUserId() })
+      headers: contactAuthHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(body)
     })
     const data = await res.json()
     setSubmitLoading(id, false)

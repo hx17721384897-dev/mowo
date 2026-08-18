@@ -253,7 +253,7 @@ a{text-decoration:none;}
   </a>
   <ul class="nav-links">
     <li><a href="about.html">关于我们</a></li><li><a href="products.html">产品介绍</a></li>
-    <li><a href="community.html">社区分享</a></li><li><a href="customize-start.html">创作中心</a></li>
+    <li><a href="showcase.html">联名作品</a></li><li><a href="customize-start.html">创作中心</a></li>
     <li><a href="contact.html">联络我们</a></li>
   </ul>
   <div class="nav-right">
@@ -726,14 +726,20 @@ async function handleImgFiles(input) {
       const presignRes  = await fetch(`${CAPI}/api/upload/presign`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ fileName: file.name, fileType: file.type, folder: 'aftersale' })
+        body: JSON.stringify({ fileName: file.name, fileType: file.type, fileSize: file.size, purpose: 'AFTERSALE_EVIDENCE' })
       })
       const presignJson = await presignRes.json()
       if (!presignJson.success) throw new Error(presignJson.message)
-      const { uploadUrl, objectKey } = presignJson.data
+      const { uploadUrl, objectKey, completeUrl } = presignJson.data
 
       // 直传 OSS
-      await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file })
+      const uploadRes = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file })
+      if (!uploadRes.ok) throw new Error('文件上传失败')
+      if (completeUrl) {
+        const completeRes = await fetch(completeUrl, { method: 'POST', headers: { Authorization: `Bearer ${token}` } })
+        const completeJson = await completeRes.json()
+        if (!completeJson.success) throw new Error(completeJson.message || '文件校验失败')
+      }
 
       uploadedOssKeys.push(objectKey)
       // 替换 loading 占位为缩略图

@@ -1,5 +1,7 @@
 # FRONTEND.md — 前端页面清单与规范
 
+> **文档状态（2026-08-13）：历史页面规划，需与代码调查和阶段决策对照。** 当前实际页面、API 和链接已与本文多处漂移。首发通过服务端开关关闭社区互动、线上创作者财务、牛量、模拟认证和自助联名；联名作品展示与购物保留。准确事实见 `modules/web-frontend.md`，当前产品口径见 `RELEASE_SCOPE.md`。
+
 ---
 
 ## 重要说明
@@ -15,9 +17,9 @@
 
 初期网页端只展示以下功能，不涉及在线支付和社交互动：
 - 产品介绍（静态页）
-- 案例展示（showcase.html，联名作品展示，无评论无购买）
+- 联名作品展示（showcase.html，无社区互动；购物入口保留，网页不直接付款）
 - 定制流程（工具属性，不直接收费）
-- 联络我们（需登录才能提交）
+- 联络我们（六类均可匿名提交，附件按用途和上传身份绑定）
 - 管理后台（内部工具）
 
 ---
@@ -42,23 +44,37 @@
 | `customize-editor.html` | 上传与筛帧 | ✅ 已对接 |
 | `customize-confirm.html` | 选配+提交 | ✅ 已对接 |
 
+定制编辑器中的帧图只在浏览器内用于即时预览。登录用户进入确认页前，`js/private-upload.js` 会逐帧完成私有文件登记、上传和校验；草稿与购物车只保存服务器返回的私有 key。确认页会核对本地 key 所属账号，避免切换账号后复用上一位用户的文件。
+
 ### 管理后台（内部使用）
 
 | 文件名 | 页面 | 权限 | 状态 |
 |--------|------|------|------|
-| `admin-orders.html` | 定制订单四视图 | role≥2 | ✅ |
-| `admin-collab-works.html` | 联名作品管理 | role≥2 | ✅ |
-| `admin-collab.html` | 联名作品审核 | role≥2 | ✅ |
-| `admin-collab-activities.html` | 活动管理 | role≥2 | ✅ |
-| `admin-users.html` | 用户管理（支持?highlight=userId高亮定位） | role≥2 | ✅ |
-| `admin-logs.html` | 审计日志 | role=3 | ✅ |
-| `admin-models.html` | 款式管理 | role≥2 | ✅ |
-| `admin-inventory.html` | 库存管理 | role≥2 | ✅ |
-| `admin-contact.html` | 联络留言管理 | role≥2 | ✅ |
-| `admin-settlement.html` | 分红结算（待打款/历史记录/确认打款） | role≥2 | ✅ 新增 |
-| `admin-bull.html` | 牛量管理（创作者列表/参数配置） | role≥2 | ✅ 新增 |
-| `admin-links.html` | 引流链接审核（外部视频审核/声量系数） | role≥2 | ✅ 新增 |
-| `admin-contract.html` | 商务合同（大IP合同管理/打款记录） | role≥2 | ✅ 新增 |
+| `admin-orders.html` | 定制订单四视图 | 运营客服/负责人 | ✅ |
+| `admin-collab-works.html` | 联名作品管理 | 合作运营/负责人 | ✅ |
+| `admin-collab.html` | 联名作品审核 | 合作运营/负责人 | ✅ |
+| `admin-collab-activities.html` | 活动管理 | 合作运营/负责人 | ✅ |
+| `admin-users.html` | 用户与员工岗位管理 | 运营客服只读普通用户并可封禁；负责人管理岗位 | ✅ 已更新 |
+| `admin-account-deletions.html` | 注销任务监控 | 运营客服只读脱敏状态；负责人可重试、暂停和恢复；暂停时分开填写内部原因和用户说明 | ✅ 已更新 |
+| `admin-logs.html` | 安全记录 | 仅负责人 | ✅ 已更新 |
+| `admin-models.html` | 款式管理 | 运营客服/负责人 | ✅ |
+| `admin-inventory.html` | 库存管理 | 生产人员/负责人 | ✅ |
+| `admin-contact.html` | 联络留言管理 | 运营客服/负责人 | ✅ |
+| `admin-settlement.html` | 分红结算（待打款/历史记录/确认打款） | 合作运营/负责人 | ✅ 保留 |
+| `admin-bull.html` | 牛量管理（创作者列表/参数配置） | 合作运营/负责人 | ✅ 保留 |
+| `admin-links.html` | 引流链接审核（外部视频审核/声量系数） | 合作运营/负责人 | ✅ 保留 |
+| `admin-contract.html` | 商务合同（大IP合同管理/打款记录） | 合作运营/负责人 | ✅ 保留 |
+
+后台侧边栏由 `admin-sidebar.js` 根据服务器返回的最新 `staffRole` 显示入口；直接输入隐藏页面地址仍会被服务器岗位权限拒绝。完整岗位表见 `modules/staff-permissions-audit.md`。
+
+### 账号设置与设备退出
+
+- `settings.html#account` 提供“退出当前设备”和“退出全部设备”。
+- 头像菜单“退出登录”与前者相同，只退出当前浏览器。
+- `auth.js` 在退出时停止自动刷新并统一清理登录状态，防止并发续期重新登录。
+- `router.js` 通过 `window.Router` 供普通脚本使用；退出按钮在其他数据加载前完成事件绑定。
+- 头像裁剪后先上传私有文件，再调用专用“采用头像”接口；页面会显示服务器返回的具体失败原因，资料接口不能直接写入任意图片 URL。
+- 注销任务暂停时，设置页只显示后台填写的用户说明，不显示内部原因。清理尚未开始时保留“撤销注销”按钮；已经开始清理时隐藏按钮并提示联系工作人员。
 
 ### 创作者中心
 
@@ -97,12 +113,12 @@
   feedback：反馈类型、描述内容
   factory： 联系人、联系方式、公司名、城市、生产品类、年产能
 
-文件上传（走OSS预签名，需登录）：
-  artist：作品集文件（PDF/图片/ZIP，可多选，最大20MB）
+文件上传（先登记并校验；联络表单允许匿名临时上传）：
+  artist：作品集文件（PDF/图片，可多选，单文件最大20MB）
   join：  简历（PDF/Word，最大10MB）
 
-提交时自动带入：
-  submitterUserId（从localStorage mowo_user 读取）
+提交时：
+  登录用户由后端从真实会话绑定账号；匿名用户用当前标签页的临时上传身份绑定附件，前端不再提交可伪造的 submitterUserId。
 
 成功后显示对应成功弹窗，表单关闭时自动重置
 ```
@@ -210,7 +226,7 @@ Tab2 参数配置：13项阈值全部展示为可编辑输入框，保存后次�
   状态选择器（可改回任意状态，杜绝误触无法撤销）
   ⭐ 加星标按钮（独立，随时切换）
   完整字段展示（各角色不同字段全部显示）
-  附件下载（简历/作品集，OSS预签名URL，1小时有效）
+  附件下载（仅当前留言已绑定的简历/作品集，私有签名URL，5分钟有效并记录员工查看）
   内部备注（独立保存）
   系统信息：提交账号（点击跳转admin-users.html?highlight=userId）+ 提交IP
 
@@ -243,10 +259,11 @@ admin-users.html 支持：
   └── 商务合同 → admin-contract.html      ✅ 新增
 
 用户管理
-  └── 用户列表 → admin-users.html
+├── 用户列表 → admin-users.html（含账号状态）
+└── 注销任务 → admin-account-deletions.html
 
 系统
-  ├── 审计日志 → admin-logs.html
+  ├── 安全记录 → admin-logs.html（仅负责人）
   └── 返回前台 → index.html
 ```
 

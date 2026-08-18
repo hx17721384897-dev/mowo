@@ -20,7 +20,7 @@ export default async function collabRoutes(fastify) {
     const { page = 1, limit = 12, creatorId } = req.query
     const skip = (Number(page) - 1) * Number(limit)
 
-    const where = { status: 'approved' }
+    const where = { status: 'approved', shelfStatus: 'on_sale' }
     if (creatorId) where.creatorId = creatorId
 
     const [works, total] = await Promise.all([
@@ -56,17 +56,19 @@ export default async function collabRoutes(fastify) {
 
     // 批量查询点赞数
     const workIds = works.map(w => w.id)
-    const likeCounts = await prisma.like.groupBy({
-      by: ['targetId'],
-      where: { targetType: 'collab_work', targetId: { in: workIds } },
-      _count: { id: true },
-    })
+    const likeCounts = fastify.config.features.community && workIds.length
+      ? await prisma.like.groupBy({
+          by: ['targetId'],
+          where: { targetType: 'collab_work', targetId: { in: workIds } },
+          _count: { id: true },
+        })
+      : []
     const likeCountMap = Object.fromEntries(likeCounts.map(l => [l.targetId, l._count.id]))
 
     // 若已登录，批量查询当前用户点赞状态
     let myLikedSet = new Set()
     const token = req.headers.authorization?.replace('Bearer ', '') || ''
-    if (token) {
+    if (fastify.config.features.community && token) {
       try {
         const user = fastify.jwt.decode(token)
         fastify.jwt.verify(token)
@@ -148,10 +150,12 @@ export default async function collabRoutes(fastify) {
     const coverUrl = presignOrPassthrough(work.coverUrl, fastify, 3600)
 
     // 点赞数 + 当前用户是否已点赞
-    const likeCount = await prisma.like.count({ where: { targetType: 'collab_work', targetId: work.id } })
+    const likeCount = fastify.config.features.community
+      ? await prisma.like.count({ where: { targetType: 'collab_work', targetId: work.id } })
+      : 0
     let isLiked = false
     const token = req.headers.authorization?.replace('Bearer ', '') || ''
-    if (token) {
+    if (fastify.config.features.community && token) {
       try {
         const user = fastify.jwt.decode(token)
         fastify.jwt.verify(token)
@@ -413,32 +417,15 @@ export default async function collabRoutes(fastify) {
   // 辅助函数
   // ─────────────────────────────────────────────
 
-  function requireAuth(req, reply, done) {
-    try {
-      const token = req.headers.authorization?.replace('Bearer ', '') || ''
-      const user = fastify.jwt.decode(token)
-      fastify.jwt.verify(token)
-      if (!user) return reply.code(401).send({ success: false, message: '未登录' })
-      req.user = user
-      done()
-    } catch {
-      reply.code(401).send({ success: false, message: '未登录或token已过期' })
-    }
+  async function requireAuth(req, reply) {
+    return fastify.authenticate(req, reply)
   }
 
-  function requireCertified(req, reply, done) {
-    try {
-      const token = req.headers.authorization?.replace('Bearer ', '') || ''
-      const user = fastify.jwt.decode(token)
-      fastify.jwt.verify(token)
-      if (!user) return reply.code(401).send({ success: false, message: '未登录' })
-      if (user.certifyStatus !== 2) {
-        return reply.code(403).send({ success: false, message: '需要创作者身份' })
-      }
-      req.user = user
-      done()
-    } catch {
-      reply.code(401).send({ success: false, message: '未登录或token已过期' })
+  async function requireCertified(req, reply) {
+    const active = await fastify.authenticate(req, reply)
+    if (!active) return
+    if (req.user.certifyStatus !== 2) {
+      return reply.code(403).send({ success: false, message: '需要创作者身份' })
     }
   }
 }

@@ -4,10 +4,46 @@
 
 import crypto from 'crypto'
 import { hashPassword, verifyPassword } from '../lib/auth.js'
-import { sendSmsCode, verifySmsCode } from '../lib/sms.js'
+import { assertSmsCooldownAllowed, sendSmsCode, verifySmsCode } from '../lib/sms.js'
 import { revokeAllSessions } from '../lib/security.js'
+import { getAccountDeletionBlockers } from '../lib/account-deletion.js'
+import {
+  assertSmsVerificationAllowed,
+  enforceSmsSendLimits,
+  recordSmsVerificationFailure
+} from '../lib/rate-limit.js'
 
 export default async function accountRoutes(fastify) {
+
+  async function verifyProtected(req, phone, code, purpose) {
+    await assertSmsVerificationAllowed(fastify, req)
+    try {
+      await verifySmsCode(fastify.prisma, phone, code, purpose)
+    } catch (error) {
+      await recordSmsVerificationFailure(fastify, req)
+      throw error
+    }
+  }
+
+  function sendVerificationError(reply, error, messages = {}) {
+    if (error.code === 'VERIFY_TEMPORARILY_LOCKED') {
+      reply.header('Retry-After', String(error.retryAfterSeconds))
+      return reply.code(429).send({
+        success: false, message: error.message, code: error.code,
+        retryAfterSeconds: error.retryAfterSeconds
+      })
+    }
+    const defaults = {
+      CODE_NOT_FOUND: '验证码不存在或已过期',
+      CODE_TOO_MANY_ATTEMPTS: '验证码尝试次数过多，请重新获取',
+      CODE_INVALID: '验证码不正确'
+    }
+    return reply.code(400).send({
+      success: false,
+      message: messages[error.code] || defaults[error.code] || '验证失败',
+      code: error.code
+    })
+  }
 
   // ─────────────────────────────────────────────────────────
   // GET /api/v1/account/me — 获取自己的完整 profile
@@ -22,6 +58,7 @@ export default async function accountRoutes(fastify) {
         phone: true,
         certifyStatus: true,
         role: true,
+        staffRole: true,
         status: true,
         deletedAt: true,
         createdAt: true,
@@ -48,12 +85,24 @@ export default async function accountRoutes(fastify) {
     // 脱敏手机号
     const maskedPhone = user.phone ? user.phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') : null
 
-    // 冷静期剩余天数
-    let deactivateDaysLeft = null
-    if (user.status === 'PENDING_DELETE' && user.deletedAt) {
-      const msLeft = user.deletedAt.getTime() - Date.now()
-      deactivateDaysLeft = Math.max(0, Math.ceil(msLeft / 86400000))
-    }
+    const deletionRequest = user.status === 'PENDING_DELETE'
+      ? await fastify.prisma.accountDeletionRequest.findUnique({
+          where: { userId },
+          select: {
+            status: true, requestedAt: true, scheduledAt: true, processingStartedAt: true,
+            firstFailedAt: true, manualReviewAt: true, pauseUserMessage: true
+          }
+        })
+      : null
+    const cleanupStarted = Boolean(deletionRequest?.processingStartedAt)
+    const canCancel = Boolean(
+      deletionRequest &&
+      ['REQUESTED', 'PAUSED'].includes(deletionRequest.status) &&
+      !cleanupStarted
+    )
+    const protectionMinutesLeft = deletionRequest?.status === 'REQUESTED' && !cleanupStarted
+      ? Math.max(0, Math.ceil((deletionRequest.scheduledAt.getTime() - Date.now()) / 60000))
+      : null
 
     return reply.send({
       success: true,
@@ -62,8 +111,14 @@ export default async function accountRoutes(fastify) {
         maskedPhone,
         certifyStatus: user.certifyStatus,
         role: user.role,
+        staffRole: user.staffRole,
         status: user.status,
-        deactivateDaysLeft,
+        deletionRequest: deletionRequest ? {
+          ...deletionRequest,
+          protectionMinutesLeft,
+          cleanupStarted,
+          canCancel
+        } : null,
         createdAt: user.createdAt,
         profile: user.profile
       }
@@ -145,7 +200,12 @@ export default async function accountRoutes(fastify) {
 
     if (bio !== undefined)       updateData.bio = bio
     if (gender !== undefined)    updateData.gender = gender
-    if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl
+    if (avatarUrl !== undefined) {
+      return reply.code(400).send({
+        success: false,
+        message: '请通过头像上传流程更新头像，不能直接填写图片地址'
+      })
+    }
 
     if (birthday !== undefined) {
       if (birthday === null || birthday === '') {
@@ -194,7 +254,13 @@ export default async function accountRoutes(fastify) {
       where: { id: userId },
       select: { passwordHash: true }
     })
-    return reply.send({ success: true, data: { hasPassword: !!user?.passwordHash } })
+    return reply.send({
+      success: true,
+      data: {
+        hasPassword: !!user?.passwordHash,
+        passwordLoginEnabled: fastify.config.passwordLoginEnabled
+      }
+    })
   })
 
   // ─────────────────────────────────────────────────────────
@@ -242,21 +308,39 @@ export default async function accountRoutes(fastify) {
     }
 
     const newHash = await hashPassword(newPassword)
-    await fastify.prisma.user.update({
-      where: { id: userId },
-      data: { passwordHash: newHash }
-    })
+    const currentSessionId = req.user.sid
+    await fastify.prisma.$transaction([
+      fastify.prisma.user.update({
+        where: { id: userId },
+        data: { passwordHash: newHash }
+      }),
+      fastify.prisma.refreshToken.updateMany({
+        where: {
+          userId,
+          revokedAt: null,
+          OR: [
+            { sessionId: null },
+            { sessionId: { not: currentSessionId } }
+          ]
+        },
+        data: { revokedAt: new Date() }
+      }),
+      fastify.prisma.auditLog.create({
+        data: {
+          userId,
+          action: user.passwordHash ? 'PASSWORD_CHANGED' : 'PASSWORD_SET',
+          detail: { otherDevicesLoggedOut: true },
+          ip: req.ip
+        }
+      })
+    ], { timeout: 5000 })
 
-    await fastify.prisma.auditLog.create({
-      data: {
-        userId,
-        action: user.passwordHash ? 'PASSWORD_CHANGED' : 'PASSWORD_SET',
-        detail: {},
-        ip: req.ip
-      }
+    return reply.send({
+      success: true,
+      message: user.passwordHash
+        ? '密码修改成功，其他设备已退出登录'
+        : '密码设置成功，其他设备已退出登录'
     })
-
-    return reply.send({ success: true, message: user.passwordHash ? '密码修改成功' : '密码设置成功' })
   })
 
   // ─────────────────────────────────────────────────────────
@@ -273,6 +357,8 @@ export default async function accountRoutes(fastify) {
     }
 
     try {
+      await assertSmsCooldownAllowed(fastify.prisma, user.phone, 'BIND_PHONE')
+      if (!await enforceSmsSendLimits(fastify, req, reply, user.phone)) return
       const result = await sendSmsCode(fastify.prisma, user.phone, 'BIND_PHONE')
       const resp = { success: true, message: '验证码已发送至当前手机号' }
       if (result.mock) resp._devCode = result.code
@@ -312,18 +398,9 @@ export default async function accountRoutes(fastify) {
     }
 
     try {
-      await verifySmsCode(fastify.prisma, user.phone, code, 'BIND_PHONE')
+      await verifyProtected(req, user.phone, code, 'BIND_PHONE')
     } catch (err) {
-      const msgMap = {
-        CODE_NOT_FOUND:         '验证码不存在或已过期',
-        CODE_TOO_MANY_ATTEMPTS: '验证码尝试次数过多，请重新获取',
-        CODE_INVALID:           '验证码不正确'
-      }
-      return reply.code(400).send({
-        success: false,
-        message: msgMap[err.code] || '验证失败',
-        code: err.code
-      })
+      return sendVerificationError(reply, err)
     }
 
     // 生成 5 分钟有效的 actionToken
@@ -385,17 +462,12 @@ export default async function accountRoutes(fastify) {
 
     // 验证新手机号 OTP
     try {
-      await verifySmsCode(fastify.prisma, newPhone, newOtp, 'BIND_PHONE')
+      await verifyProtected(req, newPhone, newOtp, 'BIND_PHONE')
     } catch (err) {
-      const msgMap = {
+      return sendVerificationError(reply, err, {
         CODE_NOT_FOUND:         '新手机验证码不存在或已过期',
         CODE_TOO_MANY_ATTEMPTS: '验证码尝试次数过多，请重新获取',
         CODE_INVALID:           '新手机验证码不正确'
-      }
-      return reply.code(400).send({
-        success: false,
-        message: msgMap[err.code] || '新手机验证失败',
-        code: err.code
       })
     }
 
@@ -422,7 +494,8 @@ export default async function accountRoutes(fastify) {
       data: { userId, action: 'PHONE_CHANGED', detail: { newPhone: newPhone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') }, ip: req.ip }
     })
 
-    return reply.send({ success: true, message: '手机号换绑成功，其他设备已退出登录' })
+    reply.clearCookie('refresh_token', { path: '/' })
+    return reply.send({ success: true, message: '手机号换绑成功，请使用新手机号重新登录' })
   })
 
   // ─────────────────────────────────────────────────────────
@@ -455,6 +528,8 @@ export default async function accountRoutes(fastify) {
     }
 
     try {
+      await assertSmsCooldownAllowed(fastify.prisma, newPhone, 'BIND_PHONE')
+      if (!await enforceSmsSendLimits(fastify, req, reply, newPhone)) return
       const result = await sendSmsCode(fastify.prisma, newPhone, 'BIND_PHONE')
       const resp = { success: true, message: '验证码已发送至新手机号' }
       if (result.mock) resp._devCode = result.code
@@ -578,33 +653,20 @@ export default async function accountRoutes(fastify) {
   fastify.get('/deactivate/check', { preHandler: fastify.authenticate }, async (req, reply) => {
     const userId = req.user.userId
 
-    const user = await fastify.prisma.user.findUnique({
-      where: { id: userId },
-      select: { status: true }
-    })
+    const user = await fastify.prisma.user.findUnique({ where: { id: userId }, select: { status: true } })
 
     if (user.status === 'PENDING_DELETE') {
-      return reply.code(400).send({ success: false, message: '账号已在注销冷静期中', code: 'ALREADY_PENDING' })
+      return reply.code(400).send({ success: false, message: '账号已在注销处理中', code: 'ALREADY_PENDING' })
     }
 
-    const issues = []
-
-    // 检查待处理订单
-    const pendingOrders = await fastify.prisma.customizeOrder.count({
-      where: {
-        userId,
-        status: { in: ['pending', 'paid', 'locked', 'processing', 'producing'] }
-      }
-    })
-    if (pendingOrders > 0) {
-      issues.push(`您有 ${pendingOrders} 个进行中的订单，请处理完毕后再注销`)
-    }
+    const blockers = await getAccountDeletionBlockers(fastify.prisma, userId)
 
     return reply.send({
       success: true,
       data: {
-        canProceed: issues.length === 0,
-        issues
+        canProceed: blockers.length === 0,
+        issues: blockers.map(item => item.message),
+        blockers
       }
     })
   })
@@ -620,14 +682,18 @@ export default async function accountRoutes(fastify) {
     })
 
     if (user.status === 'PENDING_DELETE') {
-      return reply.code(400).send({ success: false, message: '账号已在注销冷静期中' })
+      return reply.code(400).send({ success: false, message: '账号已在注销处理中' })
     }
+    const blockers = await getAccountDeletionBlockers(fastify.prisma, userId)
+    if (blockers.length) return reply.code(409).send({ success: false, message: blockers[0].message, code: 'DELETION_BLOCKED', data: { blockers } })
 
     if (!user?.phone) {
       return reply.code(400).send({ success: false, message: '当前账号未绑定手机号' })
     }
 
     try {
+      await assertSmsCooldownAllowed(fastify.prisma, user.phone, 'DEACTIVATE')
+      if (!await enforceSmsSendLimits(fastify, req, reply, user.phone)) return
       const result = await sendSmsCode(fastify.prisma, user.phone, 'DEACTIVATE')
       const resp = { success: true, message: '验证码已发送' }
       if (result.mock) resp._devCode = result.code
@@ -643,7 +709,7 @@ export default async function accountRoutes(fastify) {
   })
 
   // ─────────────────────────────────────────────────────────
-  // POST /api/v1/account/deactivate/apply — 申请注销（启动7天冷静期）
+  // POST /api/v1/account/deactivate/apply — 申请注销（10分钟防误操作保护期）
   // ─────────────────────────────────────────────────────────
   fastify.post('/deactivate/apply', {
     preHandler: fastify.authenticate,
@@ -667,51 +733,80 @@ export default async function accountRoutes(fastify) {
     })
 
     if (user.status === 'PENDING_DELETE') {
-      return reply.code(400).send({ success: false, message: '账号已在注销冷静期中' })
+      return reply.code(400).send({ success: false, message: '账号已在注销处理中' })
+    }
+
+    const initialBlockers = await getAccountDeletionBlockers(fastify.prisma, userId)
+    if (initialBlockers.length) {
+      return reply.code(409).send({
+        success: false,
+        message: '账号仍有未处理事项，暂时不能注销',
+        code: 'DELETION_BLOCKED',
+        data: { blockers: initialBlockers }
+      })
     }
 
     // 验证 OTP
     try {
-      await verifySmsCode(fastify.prisma, user.phone, otp, 'DEACTIVATE')
+      await verifyProtected(req, user.phone, otp, 'DEACTIVATE')
     } catch (err) {
-      const msgMap = {
-        CODE_NOT_FOUND:         '验证码不存在或已过期',
-        CODE_TOO_MANY_ATTEMPTS: '验证码尝试次数过多，请重新获取',
-        CODE_INVALID:           '验证码不正确'
-      }
-      return reply.code(400).send({
+      return sendVerificationError(reply, err)
+    }
+
+    const blockers = await getAccountDeletionBlockers(fastify.prisma, userId)
+    if (blockers.length) {
+      return reply.code(409).send({
         success: false,
-        message: msgMap[err.code] || '验证失败',
-        code: err.code
+        message: '账号仍有未处理事项，暂时不能注销',
+        code: 'DELETION_BLOCKED',
+        data: { blockers }
       })
     }
 
-    // 设置7天冷静期
-    const deleteAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    const requestedAt = new Date()
+    const deleteAt = new Date(requestedAt.getTime() + fastify.config.accountDeletion.graceMinutes * 60 * 1000)
 
     await fastify.prisma.$transaction(async (tx) => {
       await tx.user.update({
         where: { id: userId },
         data: {
           status:       'PENDING_DELETE',
-          deletedAt:    deleteAt,
+          deletedAt:    null,
           deleteReason: reason || null
         }
+      })
+      await tx.accountDeletionRequest.upsert({
+        where: { userId },
+        create: { userId, status: 'REQUESTED', requestedAt, scheduledAt: deleteAt },
+        update: {
+          status: 'REQUESTED', requestedAt, scheduledAt: deleteAt,
+          processingStartedAt: null, completedAt: null, cancelledAt: null, blockers: [],
+          attemptCount: 0, nextRetryAt: null, firstFailedAt: null, manualReviewAt: null,
+          pausedAt: null, pausedBy: null, pauseReason: null, pauseUserMessage: null, resumedAt: null,
+          lastManualActionAt: null, lastManualActionBy: null, lastError: null
+        }
+      })
+      await tx.privateFile.updateMany({
+        where: { ownerUserId: userId, status: 'PENDING' },
+        data: { status: 'REJECTED', uploadTokenHash: null, uploadExpiresAt: null }
       })
       await tx.auditLog.create({
         data: {
           userId,
           action: 'DEACTIVATE_APPLIED',
-          detail: { deleteAt: deleteAt.toISOString(), reason: reason || null },
+          detail: { scheduledAt: deleteAt.toISOString(), graceMinutes: fastify.config.accountDeletion.graceMinutes },
           ip: req.ip
         }
       })
     })
 
+    await revokeAllSessions(userId, fastify.prisma, 'account_deletion_requested')
+    reply.clearCookie('refresh_token', { path: '/' })
+
     return reply.send({
       success: true,
-      message: '注销申请已提交，账号将在7天后正式注销',
-      data: { deleteAt }
+      message: `注销申请已提交，${fastify.config.accountDeletion.graceMinutes}分钟内可以撤销，之后系统将自动清理资料`,
+      data: { scheduledAt: deleteAt, graceMinutes: fastify.config.accountDeletion.graceMinutes }
     })
   })
 
@@ -729,20 +824,45 @@ export default async function accountRoutes(fastify) {
       return reply.code(400).send({ success: false, message: '当前账号没有待处理的注销申请' })
     }
 
-    await fastify.prisma.$transaction(async (tx) => {
-      await tx.user.update({
-        where: { id: userId },
-        data: { status: 'ACTIVE', deletedAt: null, deleteReason: null }
-      })
-      await tx.auditLog.create({
-        data: {
-          userId,
-          action: 'DEACTIVATE_CANCELLED',
-          detail: {},
-          ip: req.ip
+    const deletionRequest = await fastify.prisma.accountDeletionRequest.findUnique({ where: { userId } })
+    if (!deletionRequest || !['REQUESTED', 'PAUSED'].includes(deletionRequest.status) || deletionRequest.processingStartedAt) {
+      return reply.code(409).send({ success: false, message: '资料清理已经开始，不能撤销注销' })
+    }
+
+    try {
+      await fastify.prisma.$transaction(async (tx) => {
+        const cancelled = await tx.accountDeletionRequest.updateMany({
+          where: {
+            id: deletionRequest.id,
+            status: { in: ['REQUESTED', 'PAUSED'] },
+            processingStartedAt: null
+          },
+          data: { status: 'CANCELLED', cancelledAt: new Date(), nextRetryAt: null, lastError: null }
+        })
+        if (cancelled.count !== 1) {
+          const error = new Error('资料清理已经开始，不能撤销注销')
+          error.code = 'DELETION_ALREADY_STARTED'
+          throw error
         }
+        await tx.user.update({
+          where: { id: userId },
+          data: { status: 'ACTIVE', deletedAt: null, deleteReason: null }
+        })
+        await tx.auditLog.create({
+          data: {
+            userId,
+            action: 'DEACTIVATE_CANCELLED',
+            detail: { previousTaskStatus: deletionRequest.status },
+            ip: req.ip
+          }
+        })
       })
-    })
+    } catch (error) {
+      if (error.code === 'DELETION_ALREADY_STARTED') {
+        return reply.code(409).send({ success: false, message: error.message, code: error.code })
+      }
+      throw error
+    }
 
     return reply.send({ success: true, message: '已撤销注销申请，账号恢复正常' })
   })

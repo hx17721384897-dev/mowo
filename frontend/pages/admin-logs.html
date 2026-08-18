@@ -159,6 +159,12 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
         <option value="DELETE">DELETE — 删除</option>
         <option value="GET">GET — 查询</option>
       </select>
+      <select class="filter-select" id="outcomeFilter" onchange="loadLogs(1)">
+        <option value="">全部结果</option>
+        <option value="SUCCESS">成功</option>
+        <option value="FAILED">失败</option>
+        <option value="DENIED">已拒绝</option>
+      </select>
       <input class="search-input" type="text" id="searchInput" placeholder="搜索操作内容…" oninput="onSearch()">
       <span style="font-weight:700;font-size:12px;color:var(--gray3);" id="logCount">—</span>
     </div>
@@ -178,7 +184,8 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
 
 <script>
 const API = (location.hostname==='127.0.0.1'?'http://127.0.0.1:3001':'http://localhost:3001');
-const ROLE_LABEL = { 0:'普通用户', 1:'生产端', 2:'管理员', 3:'超级管理员' };
+const STAFF_LABEL = { OWNER:'负责人', CUSTOMER_SERVICE:'运营客服', PRODUCTION:'生产人员', COLLAB_OPS:'合作运营' };
+const OUTCOME_LABEL = { SUCCESS:'成功', FAILED:'失败', DENIED:'已拒绝' };
 
 let _token    = '';
 window.addEventListener('mowoTokenRefreshed', () => { _token = localStorage.getItem('mowo_token') || ''; });
@@ -190,15 +197,13 @@ window.addEventListener('DOMContentLoaded', async () => {
   _token = localStorage.getItem('mowo_token') || '';
   if (!_token) { location.href = 'index.html'; return; }
   try {
-    const p = JSON.parse(atob(_token.split('.')[1]));
-    if ((p.role ?? 0) < 3) {
-      alert('审计日志仅超级管理员可查看');
+    const user = await window.fetchCurrentUser();
+    if (!user || user.staffRole !== 'OWNER') {
+      alert('安全记录仅负责人可查看');
       location.href = 'admin-orders.html';
       return;
     }
-    document.getElementById('sidebarName').textContent   = p.phone || '管理员';
-    document.getElementById('sidebarRole').textContent   = '超级管理员';
-    document.getElementById('sidebarAvatar').textContent = (p.phone || '管')[0];
+    document.getElementById('sidebarRole').textContent = '负责人';
   } catch(e) { location.href = 'index.html'; return; }
   await loadLogs();
 });
@@ -207,7 +212,9 @@ async function loadLogs(page = 1) {
   _curPage = page;
   const params = new URLSearchParams({ page, limit: 50 });
   const method = document.getElementById('methodFilter').value;
+  const outcome = document.getElementById('outcomeFilter').value;
   if (method) params.set('method', method);
+  if (outcome) params.set('outcome', outcome);
 
   try {
     const res  = await fetch(`${API}/api/admin/logs?${params}`, {
@@ -240,31 +247,35 @@ function renderLogs(logs) {
     const detailHtml = hasDetail ? `
       <div class="log-detail" id="detail-${idx}">
         <pre>${[
-          log.before ? `修改前：${log.before}` : '',
-          log.after  ? `修改后：${log.after}`  : ''
+          log.before ? `修改前：${escapeHtml(log.before)}` : '',
+          log.after  ? `修改后：${escapeHtml(log.after)}`  : ''
         ].filter(Boolean).join('\n')}</pre>
       </div>` : '';
+    const actorName = log.actor?.name || (log.userId === 'system' ? '系统' : '未知员工');
+    const staffLabel = STAFF_LABEL[log.actor?.staffRole] || '系统';
+    const outcomeLabel = OUTCOME_LABEL[log.outcome] || log.outcome || '成功';
 
     return `
       <div class="log-item">
         <div class="log-time">
           <div class="log-time-date">${date}</div>
           <div>${time}</div>
-          ${log.ip ? `<div style="margin-top:2px;font-size:10px;">${log.ip}</div>` : ''}
+          ${log.ip ? `<div style="margin-top:2px;font-size:10px;">${escapeHtml(log.ip)}</div>` : ''}
         </div>
         <div class="log-content">
-          <div class="log-action">${log.action || log.path}</div>
+          <div class="log-action">${escapeHtml(log.action || log.path)}</div>
           <div class="log-meta">
             <span class="method-badge method-${log.method}">${log.method}</span>
-            <span class="role-chip role-chip-${log.userRole}">${ROLE_LABEL[log.userRole] || '未知'}</span>
-            <span class="log-path">${log.path}</span>
-            ${log.targetId ? `<span class="log-ip">对象：${log.targetId.slice(0,20)}${log.targetId.length > 20 ? '…' : ''}</span>` : ''}
+            <span class="role-chip role-chip-${log.userRole}">${escapeHtml(staffLabel)}</span>
+            <span class="log-path">${escapeHtml(log.path)}</span>
+            <span class="log-ip">结果：${escapeHtml(outcomeLabel)}${log.statusCode ? ` (${log.statusCode})` : ''}</span>
+            ${log.targetId ? `<span class="log-ip">对象：${escapeHtml(log.targetId.slice(0,20))}${log.targetId.length > 20 ? '…' : ''}</span>` : ''}
           </div>
           ${hasDetail ? `<button class="log-toggle" onclick="toggleDetail(${idx})">展开详情 ▾</button>` : ''}
           ${detailHtml}
         </div>
         <div style="font-size:11px;font-weight:700;color:var(--gray3);text-align:right;white-space:nowrap;">
-          ${log.userId ? log.userId.slice(-8) : '—'}
+          ${escapeHtml(actorName)}<br>${escapeHtml(log.actor?.maskedPhone || '')}
         </div>
       </div>`;
   }).join('');
@@ -306,6 +317,10 @@ function onSearch() {
   }, 300);
 }
 
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>'"]/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' })[char]);
+}
+
 ;
 
 let _toastTimer;
@@ -330,6 +345,6 @@ function closeSidebar() {
 }
 </script>
 <script src="../js/auth.js"></script>
-<script src="../js/admin-sidebar.js"></script>
+<script src="../js/admin-sidebar.js?v=20260813-shell-init"></script>
 </body>
 </html>

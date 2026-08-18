@@ -578,10 +578,14 @@ function renderCard(item, highlight = false) {
   let previewHtml = ''
   if (item.previewUrl) {
     previewHtml = `<img src="${escHtml(item.previewUrl)}" alt="预览" loading="lazy">`
+  } else if (item.previewFrameUrl) {
+    previewHtml = `<img src="${escHtml(item.previewFrameUrl)}" alt="第一帧" loading="lazy" style="width:100%;height:100%;object-fit:cover;">`
   } else if (frames.length > 0 && typeof frames[0] === 'string') {
-    // 直接用第一帧（base64 data URL 或 OSS URL）作为缩略图
+    // 历史 data URL / 公开 URL 兼容；新私有 objectKey 只使用服务器返回的 previewFrameUrl。
     const firstFrame = frames[0]
-    previewHtml = `<img src="${firstFrame.startsWith('data:') ? firstFrame : escHtml(firstFrame)}" alt="第一帧" loading="lazy" style="width:100%;height:100%;object-fit:cover;">`
+    previewHtml = firstFrame.startsWith('data:') || firstFrame.startsWith('http')
+      ? `<img src="${escHtml(firstFrame)}" alt="第一帧" loading="lazy" style="width:100%;height:100%;object-fit:cover;">`
+      : `<span class="anim-preview-ph">🎬</span>`
   } else {
     previewHtml = `<span class="anim-preview-ph">🎬</span>`
   }
@@ -862,19 +866,27 @@ async function doUpload() {
       const presignRes = await fetch(`${CAPI}/api/upload/presign`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-        body: JSON.stringify({ fileName: file.name, fileType: file.type, folder: 'creator-frames' })
+        body: JSON.stringify({ fileName: file.name, fileType: file.type, fileSize: file.size, purpose: 'CREATOR_FRAME' })
       })
       const presignData = await presignRes.json()
       if (!presignData.success) throw new Error('获取上传地址失败')
 
       // 2. PUT 上传到 OSS
-      await fetch(presignData.data.uploadUrl, {
+      const uploadRes = await fetch(presignData.data.uploadUrl, {
         method: 'PUT',
         headers: { 'Content-Type': file.type },
         body: file
       })
+      if (!uploadRes.ok) throw new Error('文件上传失败')
+      if (presignData.data.completeUrl) {
+        const completeRes = await fetch(presignData.data.completeUrl, {
+          method: 'POST', headers: { Authorization: `Bearer ${getToken()}` }
+        })
+        const completeData = await completeRes.json()
+        if (!completeData.success) throw new Error(completeData.message || '文件校验失败')
+      }
 
-      uploadedUrls.push(presignData.data.accessUrl)
+      uploadedUrls.push(presignData.data.objectKey)
 
       // 更新进度
       const pct = Math.round(((i + 1) / total) * 90)
@@ -994,5 +1006,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 })
 </script>
+<script src="../js/feature-flags.js"></script>
 </body>
 </html>

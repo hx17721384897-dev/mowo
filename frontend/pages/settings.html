@@ -509,10 +509,10 @@ input,textarea,select{font-family:var(--font);}
 
   <!-- Deactivate Banner (shown when PENDING_DELETE) -->
   <div class="deactivate-banner" id="deactivateBanner" style="display:none;">
-    <div class="deactivate-banner-text">
-      您的账号正在注销中，将在 <span id="deactivateDaysLeft">7</span> 天后正式注销
+    <div class="deactivate-banner-text" id="deactivateBannerText">
+      注销申请已提交，约 <span id="deactivateMinutesLeft">10</span> 分钟内可撤销，之后系统将自动清理资料
     </div>
-    <button class="btn-cancel-deactivate" onclick="cancelDeactivate()">撤销注销</button>
+    <button class="btn-cancel-deactivate" id="cancelDeactivateBtn" onclick="cancelDeactivate()">撤销注销</button>
   </div>
 
   <div class="settings-layout">
@@ -613,7 +613,7 @@ input,textarea,select{font-family:var(--font);}
         <div class="s-card">
           <div class="s-card-title">账号安全</div>
 
-          <div class="security-row">
+          <div class="security-row" id="passwordSecurityRow">
             <div class="security-row-info">
               <div class="security-row-label">登录手机号</div>
               <div class="security-row-value" id="securityPhone">加载中...</div>
@@ -827,9 +827,12 @@ input,textarea,select{font-family:var(--font);}
 
         <!-- Logout -->
         <div class="s-card">
-          <div class="s-card-title">退出登录</div>
-          <p style="font-size:14px;font-weight:700;color:var(--gray3);margin-bottom:20px;">退出后需重新登录才能使用账号功能</p>
-          <button class="btn-danger" onclick="confirmLogout()">退出登录</button>
+          <div class="s-card-title">登录设备</div>
+          <p style="font-size:14px;font-weight:700;color:var(--gray3);margin-bottom:20px;">退出当前设备不会影响手机或其他浏览器；发现账号异常时可退出全部设备。</p>
+          <div style="display:flex;flex-wrap:wrap;gap:12px;">
+            <button class="btn-danger" id="logoutCurrentBtn" type="button">退出当前设备</button>
+            <button class="btn-action" id="logoutAllBtn" type="button">退出全部设备</button>
+          </div>
         </div>
 
         <!-- Deactivation -->
@@ -837,15 +840,18 @@ input,textarea,select{font-family:var(--font);}
           <div class="s-card-title">注销账号</div>
 
           <!-- Normal state: show apply button -->
-          <div id="deactivateNormal">
+            <div id="deactivateNormal">
             <ul class="deactivate-notice-list">
               <li><span class="notice-icon">⚠️</span>注销后，您的账号将无法恢复，请确认已备份所需数据</li>
               <li><span class="notice-icon">💰</span>账户余额、优惠券、积分将在注销后清零且不可找回</li>
               <li><span class="notice-icon">📄</span>您发布的内容将匿名化处理，不会对外展示您的账号信息</li>
-              <li><span class="notice-icon">⏰</span>注销申请提交后有 7 天冷静期，期间可撤销申请</li>
+            <li><span class="notice-icon">⏰</span>申请通过检查后有 10 分钟防误操作保护期，保护期内可以撤销</li>
             </ul>
-            <button class="btn-danger" onclick="startDeactivate()">申请注销账号</button>
-          </div>
+              <button class="btn-danger" onclick="startDeactivate()">申请注销账号</button>
+            </div>
+            <div id="staffDeactivateNotice" style="display:none;font-size:13px;font-weight:700;line-height:1.7;color:var(--gray3);">
+              工作人员账号不能自行注销。请先由负责人完成权限和工作交接，再将账号调整为普通用户。
+            </div>
 
           <!-- Deactivation flow steps -->
           <div id="deactivateFlow" style="display:none;">
@@ -856,7 +862,7 @@ input,textarea,select{font-family:var(--font);}
                 <li><span class="notice-icon">⚠️</span>注销后，您的账号将无法恢复，请确认已备份所需数据</li>
                 <li><span class="notice-icon">💰</span>账户余额、优惠券、积分将在注销后清零且不可找回</li>
                 <li><span class="notice-icon">📄</span>您发布的内容将在注销完成后匿名化处理，不会对外展示您的账号信息</li>
-                <li><span class="notice-icon">🔄</span>若您在注销后 7 天内改变主意，可重新登录撤销申请</li>
+                <li><span class="notice-icon">🔄</span>提交后全部设备将退出；资料清理开始前可重新登录撤销申请</li>
               </ul>
               <div class="agree-checkbox-row">
                 <input type="checkbox" id="agreeDeactivate">
@@ -886,16 +892,16 @@ input,textarea,select{font-family:var(--font);}
               </div>
             </div>
 
-            <!-- Step 3: 冷静期提示 -->
+            <!-- Step 3: 注销处理期提示 -->
             <div class="deactivate-step" id="deactivateStep3">
               <div class="cold-period-box">
                 <div class="cold-period-title">⏳ 注销申请已提交</div>
                 <div class="cold-period-desc">
-                  您的账号已进入 <strong>7天冷静期</strong>。冷静期内账号功能受限（不可发布内容、不可消费），但可以随时撤销注销申请。<br><br>
-                  7天冷静期结束后，账号数据将匿名化处理，此操作不可逆。
+                  您的账号已进入最长 <strong>48 小时注销处理期</strong>。全部设备将退出，处理期间不能发布内容、上传文件、加入购物车或产生新订单。<br><br>
+                  资料清理开始前可重新登录撤销；清理开始后不可撤销。
                 </div>
               </div>
-              <button class="btn-ghost" onclick="cancelDeactivateFlow()">我知道了</button>
+              <button class="btn-ghost" onclick="finishDeactivate()">退出并返回首页</button>
             </div>
           </div>
         </div>
@@ -983,8 +989,8 @@ import { smartParseAddress, initCascadeSelects, fillAddressForm } from '../js/ad
 window._addrUtils = { smartParseAddress, initCascadeSelects, fillAddressForm }
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
-<script src="../js/auth.js"></script>
-<script src="../js/router.js"></script>
-<script src="../js/settings.js"></script>
+<script src="../js/auth.js?v=20260813-admin-link"></script>
+<script src="../js/router.js?v=20260813-auth-route"></script>
+  <script src="../js/settings.js?v=20260813-account-cancel-fix"></script>
 </body>
 </html>

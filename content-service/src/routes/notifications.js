@@ -5,18 +5,11 @@
 export default async function notificationsRoutes(fastify) {
   const { prisma } = fastify
 
-  function requireCreator(req, reply, done) {
-    try {
-      const token = req.headers.authorization?.replace('Bearer ', '') || ''
-      fastify.jwt.verify(token)
-      const user = fastify.jwt.decode(token)
-      if (!user || user.role < 1) {
-        return reply.code(403).send({ success: false, message: '权限不足，需要创作者身份' })
-      }
-      req.user = user
-      done()
-    } catch {
-      reply.code(401).send({ success: false, message: '未登录或token已过期' })
+  async function requireCreator(req, reply) {
+    const active = await fastify.authenticate(req, reply)
+    if (!active) return
+    if (req.user.role < 1 || req.user.certifyStatus !== 2) {
+      return reply.code(403).send({ success: false, message: '权限不足，需要创作者身份' })
     }
   }
 

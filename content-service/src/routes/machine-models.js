@@ -118,6 +118,18 @@ export default async function machineModelRoutes(fastify) {
     return reply.send({ success: true, data: { previewUrl } })
   })
 
+  fastify.get('/skus/:skuId/example-media-url', { preHandler: requireAdmin }, async (req, reply) => {
+    const { skuId } = req.params
+    const { key } = req.query
+    const sku = await fastify.prisma.machineModelSku.findUnique({ where: { id: skuId } })
+    if (!sku) return reply.code(404).send({ success: false, message: 'SKU不存在' })
+    const allowedKeys = safeJson(sku.exampleMedia, [])
+    if (!key || !allowedKeys.includes(key)) {
+      return reply.code(403).send({ success: false, message: '该图片不属于当前SKU' })
+    }
+    return reply.send({ success: true, data: { url: fastify.ossPresignGet(key, 300), expiresIn: 300 } })
+  })
+
   // GET /api/machine-models/:id/sku-sales — 获取该款式各SKU销量（热门排序用）
   fastify.get('/:id/sku-sales', async (req, reply) => {
     const { id } = req.params

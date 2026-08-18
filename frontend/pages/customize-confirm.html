@@ -705,6 +705,7 @@ button { font-family:var(--font); }
 </div>
 
 
+<script src="../js/private-upload.js"></script>
 <script>
 const MOWO_API = (location.hostname==='127.0.0.1'?'http://127.0.0.1:3001':'http://localhost:3001');
 
@@ -1166,7 +1167,30 @@ function dismissReorderBanner() {
 // 设计：无论用户购物车中选了多少种 SKU 帧数（12/24 等），统一共用一个 customProduct，
 // frameCount 存储用户实际上传的帧数（SEL.frameCount），后端按 sku.frameCount % cp.frameCount
 // 判断是否兼容（循环补帧），不再按 SKU 帧数创建多条记录。
-async function _createCustomProducts(token, frameDataUrls) {
+async function _ensurePrivateFrameKeys(token, frameSources, forceUpload = false) {
+  const currentUserId = window.MowoPrivateUpload.tokenUserId(token) || '';
+  const storedOwner = localStorage.getItem('mowo_customize_frame_owner') || '';
+  let storedKeys = [];
+  try { storedKeys = JSON.parse(localStorage.getItem('mowo_customize_frame_keys') || '[]'); } catch(e) {}
+
+  if (!forceUpload && storedOwner === currentUserId && storedKeys.length === SEL.frameCount && storedKeys.every(key => typeof key === 'string' && key.startsWith('private/'))) {
+    return storedKeys;
+  }
+  if (!Array.isArray(frameSources) || frameSources.length === 0) {
+    throw new Error('没有找到可上传的动画帧，请返回上一步重新选择');
+  }
+
+  const keys = await window.MowoPrivateUpload.uploadSources({
+    sources: frameSources,
+    token,
+    purpose: 'CUSTOMIZATION_FRAME'
+  });
+  localStorage.setItem('mowo_customize_frame_keys', JSON.stringify(keys));
+  localStorage.setItem('mowo_customize_frame_owner', currentUserId);
+  return keys;
+}
+
+async function _createCustomProducts(token, frameSources) {
   // 同一流程内已保存过的 product map（重试/返回重选时复用，避免重复创建）
   let existingMap = {};
   try { existingMap = JSON.parse(localStorage.getItem('mowo_customize_product_map') || '{}'); } catch(e) {}
@@ -1182,14 +1206,19 @@ async function _createCustomProducts(token, frameDataUrls) {
       });
       const j = await r.json();
       if (j.success && j.data?.animationFrames) {
-        reuseAnimationFrames = j.data.animationFrames;  // 已是 JSON 字符串
+        const previousFrames = JSON.parse(j.data.animationFrames);
+        const previousArePrivate = Array.isArray(previousFrames) && previousFrames.every(frame => typeof frame === 'string' && frame.startsWith('private/'));
+        reuseAnimationFrames = previousArePrivate
+          ? j.data.animationFrames
+          : JSON.stringify(await _ensurePrivateFrameKeys(token, previousFrames, true));
       }
     } catch(e) {}
   }
 
   // 用户实际上传的帧数（而非 SKU 目标帧数），作为 customProduct.frameCount
   const userFrameCount = SEL.frameCount;
-  const animFramesPayload = reuseAnimationFrames ?? JSON.stringify(frameDataUrls);
+  const privateFrameKeys = reuseAnimationFrames ? null : await _ensurePrivateFrameKeys(token, frameSources);
+  const animFramesPayload = reuseAnimationFrames ?? JSON.stringify(privateFrameKeys);
   const body = JSON.stringify({
     animationFrames: animFramesPayload,
     draftData: JSON.stringify({
@@ -1207,17 +1236,11 @@ async function _createCustomProducts(token, frameDataUrls) {
 
   // 查找已有的会话级 product ID（兼容旧格式：'_session' 键或任意数值键）
   let cpRes;
-  const existingId = existingMap['_session'] || Object.values(existingMap)[0] || null;
+  // 本次编辑器刚保存的草稿优先，避免复用浏览器中上一笔定制留下的旧编号。
+  const existingId = draftId || existingMap['_session'] || Object.values(existingMap)[0] || null;
   if (existingId) {
     // 已有记录：直接更新，不新建
     cpRes = await fetch(`${MOWO_API}/api/custom-products/${encodeURIComponent(existingId)}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body,
-    });
-  } else if (draftId) {
-    // 第二步草稿：更新它作为本次会话的唯一记录
-    cpRes = await fetch(`${MOWO_API}/api/custom-products/${encodeURIComponent(draftId)}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body,
@@ -1233,8 +1256,13 @@ async function _createCustomProducts(token, frameDataUrls) {
 
   // ── 兜底：若 PUT 目标已是 ordered/removed，清除旧 map 并 POST 新草稿 ──
   // 正常情况下阶段一（start.html + checkout.html 的清理）已避免此路径，这里只是保险
-  if (!cpJson.success && (cpJson.message?.includes('已提交') || cpJson.message?.includes('不可再编辑'))) {
+  if (!cpJson.success && (
+    cpRes.status === 403 || cpRes.status === 404 ||
+    cpJson.message?.includes('已提交') || cpJson.message?.includes('不可再编辑')
+  )) {
     existingMap = {};
+    localStorage.removeItem('mowo_customize_product_map');
+    localStorage.removeItem('mowo_customize_draft_id');
     cpRes = await fetch(`${MOWO_API}/api/custom-products`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },

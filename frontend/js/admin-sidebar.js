@@ -33,15 +33,16 @@
         { href: 'admin-collab-works.html',      icon: '🎨', label: '联名作品' },
         { href: 'admin-collab.html',            icon: '✅', label: '联名审核' },
         { href: 'admin-collab-activities.html', icon: '🎪', label: '活动管理' },
-        { href: 'admin-contract.html',          icon: '📑', label: '商务合同' }
+        { href: 'admin-contract.html',          icon: '📑', label: '商务合同' },
+        { href: 'admin-collab-policy.html',     icon: '📜', label: '违约政策' }
       ]
     },
     {
       key: 'creator', label: '创作者', icon: '🐄',
       items: [
-        { href: 'admin-settlement.html', icon: '💰', label: '结算管理' },
-        { href: 'admin-bull.html',       icon: '📈', label: '牛量管理' },
-        { href: 'admin-links.html',      icon: '🔗', label: '引流链接' }
+        { href: 'admin-settlement.html', icon: '💰', label: '结算管理', feature: 'creatorFinance' },
+        { href: 'admin-bull.html',       icon: '📈', label: '牛量管理', feature: 'bullSystem' },
+        { href: 'admin-links.html',      icon: '🔗', label: '引流链接', feature: 'bullSystem' }
       ]
     },
     {
@@ -53,7 +54,8 @@
     {
       key: 'users', label: '用户', icon: '👥',
       items: [
-        { href: 'admin-users.html', icon: '👤', label: '用户列表' }
+        { href: 'admin-users.html', icon: '👤', label: '用户列表' },
+        { href: 'admin-account-deletions.html', icon: '⚠', label: '注销任务' }
       ]
     },
     {
@@ -63,6 +65,19 @@
       ]
     }
   ];
+
+  const STAFF_GROUPS = {
+    OWNER: ['production', 'product', 'collab', 'creator', 'ops', 'users', 'system'],
+    CUSTOMER_SERVICE: ['production', 'product', 'ops', 'users'],
+    PRODUCTION: ['production', 'product'],
+    COLLAB_OPS: ['collab', 'creator']
+  };
+
+  const STAFF_HIDDEN_ITEMS = {
+    CUSTOMER_SERVICE: new Set(['admin-import.html', 'admin-inventory.html']),
+    PRODUCTION: new Set(['admin-models.html']),
+    COLLAB_OPS: new Set(['admin-collab-policy.html'])
+  };
 
   const CSS = `
 .sidebar{width:var(--sidebar-w,220px);min-height:100vh;background:var(--black,#111110);display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;z-index:100;transition:width .3s cubic-bezier(0.22,1,0.36,1);overflow:hidden;}
@@ -128,6 +143,37 @@
   };
 
   const OPEN_KEY = 'mowo_admin_sidebar_open';
+
+  // 页面自己的 DOMContentLoaded 处理可能早于异步菜单渲染。
+  // 先同步放入稳定的菜单骨架，避免旧页面找不到用户信息元素后误判为无权限。
+  function ensureSidebarShell() {
+    const root = document.getElementById('sidebar');
+    if (!root) return;
+    if (!document.getElementById('admin-sidebar-css')) {
+      const s = document.createElement('style');
+      s.id = 'admin-sidebar-css';
+      s.textContent = CSS;
+      document.head.appendChild(s);
+    }
+    if (document.getElementById('sidebarName')) return;
+    root.innerHTML = `
+<div class="sidebar-logo">
+  <div class="sidebar-logo-icon">🐄</div>
+  <div><div class="sidebar-logo-text">哞屋后台</div><span class="sidebar-logo-sub">MOWO Admin</span></div>
+</div>
+<nav class="sidebar-nav"></nav>
+<a class="sidebar-back" href="index.html"><span class="nav-icon">🌐</span><span class="nav-label">返回前台</span></a>
+<div class="sidebar-footer">
+  <div class="sidebar-user">
+    <div class="sidebar-user-avatar" id="sidebarAvatar">管</div>
+    <div class="sidebar-user-info">
+      <div class="sidebar-user-name" id="sidebarName">加载中…</div>
+      <div class="sidebar-user-role" id="sidebarRole">—</div>
+    </div>
+  </div>
+</div>`;
+  }
+
   function getOpenSet() {
     try {
       const raw = localStorage.getItem(OPEN_KEY);
@@ -139,7 +185,7 @@
     try { localStorage.setItem(OPEN_KEY, JSON.stringify([...set])); } catch(_){}
   }
 
-  function render() {
+  async function render() {
     const root = document.getElementById('sidebar');
     if (!root) return;
 
@@ -151,25 +197,50 @@
       document.head.appendChild(s);
     }
 
+    let currentUser = null;
+    try {
+      currentUser = typeof window.fetchCurrentUser === 'function'
+        ? await window.fetchCurrentUser()
+        : JSON.parse(localStorage.getItem('mowo_user') || 'null');
+    } catch (_) {}
+    const staffRole = currentUser?.staffRole || null;
+    let features = {};
+    try {
+      features = typeof window.getMowoFeatureFlags === 'function'
+        ? await window.getMowoFeatureFlags()
+        : await fetch(`${location.hostname === '127.0.0.1' ? 'http://127.0.0.1:3001' : 'http://localhost:3001'}/api/config/features`)
+            .then(res => res.json()).then(json => json.data || {});
+    } catch (_) {}
+    const allowedGroups = new Set(STAFF_GROUPS[staffRole] || []);
+    const hiddenItems = STAFF_HIDDEN_ITEMS[staffRole] || new Set();
+    const visibleMenu = MENU
+      .filter(group => allowedGroups.has(group.key))
+      .map(group => ({
+        ...group,
+        items: group.items.filter(item =>
+          !hiddenItems.has(item.href.split('?')[0]) && (!item.feature || features[item.feature])
+        )
+      }))
+      .filter(group => group.items.length > 0);
     const curFile = currentFile();
     let openSet = getOpenSet();
     // 首次访问：默认展开当前页所在组
     if (!openSet) {
       openSet = new Set();
-      MENU.forEach(g => {
+      visibleMenu.forEach(g => {
         if (g.items.some(it => it.href.toLowerCase() === curFile)) openSet.add(g.key);
       });
       saveOpenSet(openSet);
     } else {
       // 保证当前页所在组始终展开（否则用户看不到高亮的子项）
-      MENU.forEach(g => {
+      visibleMenu.forEach(g => {
         if (g.items.some(it => it.href.toLowerCase() === curFile)) openSet.add(g.key);
       });
     }
 
     // 构建 HTML
     let nav = '';
-    MENU.forEach(group => {
+    visibleMenu.forEach(group => {
       const activeInGroup = group.items.some(it => it.href.toLowerCase() === curFile);
       const isOpen = openSet.has(group.key);
       const openCls = (isOpen ? ' open' : '') + (activeInGroup ? ' active-group' : '');
@@ -231,22 +302,20 @@
     } catch(_){}
 
     // 填充用户信息
-    fillUser();
+    fillUser(currentUser);
   }
 
-  function fillUser() {
+  function fillUser(currentUser) {
     try {
-      const raw = localStorage.getItem('mowo_user');
-      if (!raw) return;
-      const u = JSON.parse(raw);
-      const name = u.nickname || u.phone || '管理员';
-      const role = u.role;
-      const roleMap = { 3: '超级管理员', 2: '管理员', 1: '生产端', 0: '用户' };
+      const u = currentUser || JSON.parse(localStorage.getItem('mowo_user') || 'null');
+      if (!u) return;
+      const name = u.profile?.nickname || u.nickname || u.maskedPhone || '员工';
+      const roleMap = { OWNER:'负责人', CUSTOMER_SERVICE:'运营客服', PRODUCTION:'生产人员', COLLAB_OPS:'合作运营' };
       const nameEl = document.getElementById('sidebarName');
       const roleEl = document.getElementById('sidebarRole');
       const avaEl  = document.getElementById('sidebarAvatar');
       if (nameEl) nameEl.textContent = name;
-      if (roleEl) roleEl.textContent = roleMap[role] ?? '—';
+      if (roleEl) roleEl.textContent = roleMap[u.staffRole] ?? '—';
       if (avaEl)  avaEl.textContent  = (name[0] || '管').toUpperCase();
     } catch(_){}
   }
@@ -266,6 +335,7 @@
     saveOpenSet(set);
   };
 
+  ensureSidebarShell();
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', render);
   } else {

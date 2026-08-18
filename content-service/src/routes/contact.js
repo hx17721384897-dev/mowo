@@ -2,18 +2,14 @@
 // 联络表单提交接口（公开，无需登录）
 // 防护：IP频率限制 + 内容过滤 + 恶意IP自动封禁
 
-// ── 内存频率限制（重启清零，生产环境可换Redis） ──
-// key: ip, value: { count, date }
-const ipRateMap = new Map()
+import { FILE_PURPOSE, anonymousOwnerHash, findOwnedReadyFiles, linkFiles } from '../lib/private-files.js'
+import { enforceRateLimit } from '../lib/rate-limit.js'
 
 // key: ip, value: spamCount（24h内被标记垃圾次数）
 const ipSpamMap = new Map()
 
 // 已封禁IP集合（重启后从DB重载）
 const blockedIPs = new Set()
-
-// 各类型每天最大提交次数
-const DAILY_LIMIT = 5
 
 // 垃圾触发自动封禁阈值
 const SPAM_BAN_THRESHOLD = 3
@@ -30,10 +26,6 @@ const MAX_LENGTHS = {
   contact: 200,
   message: 2000,
   extra:   1000,
-}
-
-function getTodayKey() {
-  return new Date().toISOString().slice(0, 10) // "2026-04-06"
 }
 
 function containsSpam(text) {
@@ -64,31 +56,24 @@ export default async function contactRoutes(fastify) {
   // ══════════════════════════════════════════
   // POST /api/contact — 提交联络表单
   // ══════════════════════════════════════════
-  fastify.post('/', async (request, reply) => {
+  fastify.post('/', { preHandler: [fastify.optionalAuthenticate] }, async (request, reply) => {
     const ip = request.ip || 'unknown'
+    const today = new Date().toISOString().slice(0, 10)
 
     // ── 1. 封禁IP检查 ──
     if (blockedIPs.has(ip)) {
       return reply.code(403).send({ success: false, message: '提交失败，请联系客服' })
     }
 
-    // ── 2. 频率限制：同一IP每天最多DAILY_LIMIT次 ──
-    const today = getTodayKey()
-    const rateEntry = ipRateMap.get(ip)
-    if (rateEntry && rateEntry.date === today) {
-      if (rateEntry.count >= DAILY_LIMIT) {
-        return reply.code(429).send({
-          success: false,
-          message: `今天提交次数已达上限（${DAILY_LIMIT}次），请明天再试`
-        })
-      }
-      rateEntry.count++
-    } else {
-      ipRateMap.set(ip, { count: 1, date: today })
-    }
+    // ── 2. 频率限制：数据库计数，重启或多实例不能绕过 ──
+    if (!await enforceRateLimit(fastify, request, reply, {
+      scope: 'CONTACT_IP_HOURLY', subject: ip, windowMs: 60 * 60 * 1000,
+      limit: fastify.config.rateLimits.contactIpHourly,
+      message: '当前网络提交过于频繁，请一小时后再试'
+    })) return
 
     // ── 3. 参数解析与校验 ──
-    const { type, name, contact, message, extra, attachments, submitterUserId } = request.body
+    const { type, name, contact, message, extra, attachments } = request.body
 
     const validTypes = ['artist', 'channel', 'media', 'join', 'feedback', 'factory']
     if (!type || !validTypes.includes(type)) {
@@ -108,6 +93,25 @@ export default async function contactRoutes(fastify) {
     if (!checkLength(name,    MAX_LENGTHS.name))    return reply.code(400).send({ success: false, message: '姓名过长' })
     if (!checkLength(contact, MAX_LENGTHS.contact)) return reply.code(400).send({ success: false, message: '联系方式过长' })
     if (!checkLength(message, MAX_LENGTHS.message)) return reply.code(400).send({ success: false, message: `内容不能超过 ${MAX_LENGTHS.message} 字` })
+
+    const attachmentKeys = Array.isArray(attachments) ? attachments : []
+    const allowedPurposes = type === 'artist'
+      ? [FILE_PURPOSE.CONTACT_PORTFOLIO]
+      : type === 'join' ? [FILE_PURPOSE.CONTACT_RESUME] : []
+    if (attachmentKeys.length > (type === 'artist' ? 6 : type === 'join' ? 1 : 0)) {
+      return reply.code(400).send({ success: false, message: '附件数量超过该表单允许范围' })
+    }
+    const ownerUserId = request.user?.userId || null
+    const anonymousHash = ownerUserId ? null : anonymousOwnerHash(
+      fastify.config.storage.signingSecret,
+      request.headers['x-upload-session']
+    )
+    let ownedFiles = []
+    try {
+      ownedFiles = await findOwnedReadyFiles(fastify.prisma, attachmentKeys, ownerUserId, allowedPurposes, anonymousHash)
+    } catch (error) {
+      return reply.code(400).send({ success: false, message: error.message })
+    }
 
     // ── 4. 垃圾内容检测（只检测核心文本字段，不检测链接字段）──
     let spamScore = 0
@@ -148,21 +152,22 @@ export default async function contactRoutes(fastify) {
       }
 
       // 垃圾内容：仍然写入DB（方便管理员审查），但状态直接标spam
-      await fastify.prisma.contactSubmission.create({
-        data: {
+      await fastify.prisma.$transaction(async tx => {
+        const submission = await tx.contactSubmission.create({ data: {
           type,
           name:            name.trim(),
           contact:         contact.trim(),
           message:         message.trim(),
           extra:           extra ? JSON.stringify(extra) : null,
           attachments:     attachments ? JSON.stringify(attachments) : null,
-          submitterUserId: submitterUserId || null,
+          submitterUserId: ownerUserId,
           ip,
           userAgent:   request.headers['user-agent'] || null,
           status:      'spam',
           spamScore,
           isBlocked:   blockedIPs.has(ip)
-        }
+        } })
+        await linkFiles(tx, ownedFiles, 'CONTACT_SUBMISSION', submission.id)
       })
 
       // 对用户假装成功（不暴露被识别）
@@ -170,20 +175,22 @@ export default async function contactRoutes(fastify) {
     }
 
     // ── 6. 正常写入 ──
-    const submission = await fastify.prisma.contactSubmission.create({
-      data: {
+    const submission = await fastify.prisma.$transaction(async tx => {
+      const created = await tx.contactSubmission.create({ data: {
         type,
         name:            name.trim(),
         contact:         contact.trim(),
         message:         message.trim(),
         extra:           extra ? JSON.stringify(extra) : null,
         attachments:     attachments ? JSON.stringify(attachments) : null,
-        submitterUserId: submitterUserId || null,
+        submitterUserId: ownerUserId,
         ip,
         userAgent:   request.headers['user-agent'] || null,
         status:      'pending',
         spamScore
-      }
+      } })
+      await linkFiles(tx, ownedFiles, 'CONTACT_SUBMISSION', created.id)
+      return created
     })
 
     return reply.send({

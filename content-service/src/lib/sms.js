@@ -15,6 +15,18 @@ const SMS_CODE_EXPIRE_MS = 5 * 60 * 1000 // 5分钟
 // 全局每小时上限
 const SMS_HOURLY_LIMIT = 500
 
+export async function assertSmsCooldownAllowed(prisma, phone, purpose) {
+  const cooldownAgo = new Date(Date.now() - SMS_COOLDOWN_MS)
+  const recentCode = await prisma.smsCode.findFirst({
+    where: { phone, purpose, createdAt: { gte: cooldownAgo } },
+    orderBy: { createdAt: 'desc' },
+    select: { id: true }
+  })
+  if (recentCode) {
+    throw Object.assign(new Error('发送太频繁，请稍后重试'), { code: 'SMS_TOO_FREQUENT' })
+  }
+}
+
 /** 生成6位数字验证码 */
 function generateCode() {
   return String(Math.floor(100000 + Math.random() * 900000))
@@ -105,6 +117,9 @@ async function callAliyunSms(phone, code, purpose) {
  * @returns {{ mock: boolean, code?: string }} mock模式时返回code
  */
 export async function sendSmsCode(prisma, phone, purpose) {
+  // 冷却检查必须早于所有额度计数，避免未实际发送的重复点击消耗额度。
+  await assertSmsCooldownAllowed(prisma, phone, purpose)
+
   // 1. 全局每小时计数器检查（防短信轰炸）
   const hourKey = new Date().toISOString().slice(0, 13) // "2025-01-01T12"
   const counter = await prisma.smsGlobalCounter.upsert({
@@ -117,32 +132,22 @@ export async function sendSmsCode(prisma, phone, purpose) {
     throw Object.assign(new Error('短信发送已达今日上限，请稍后再试'), { code: 'SMS_QUOTA_EXCEEDED' })
   }
 
-  // 2. 单手机号冷却检查（防单号轰炸）
-  const cooldownAgo = new Date(Date.now() - SMS_COOLDOWN_MS)
-  const recentCode = await prisma.smsCode.findFirst({
-    where: { phone, purpose, createdAt: { gte: cooldownAgo } },
-    orderBy: { createdAt: 'desc' }
-  })
-  if (recentCode) {
-    throw Object.assign(new Error('发送太频繁，请稍后重试'), { code: 'SMS_TOO_FREQUENT' })
-  }
-
-  // 3. 作废该手机号该用途的旧验证码
+  // 2. 作废该手机号该用途的旧验证码
   await prisma.smsCode.updateMany({
     where: { phone, purpose, usedAt: null },
     data: { usedAt: new Date() }
   })
 
-  // 4. 生成验证码（mock模式固定123456）
+  // 3. 生成验证码（mock模式固定123456）
   const code = SMS_MOCK ? '123456' : generateCode()
   const expiresAt = new Date(Date.now() + SMS_CODE_EXPIRE_MS)
 
-  // 5. 入库
+  // 4. 入库
   await prisma.smsCode.create({
     data: { phone, code, purpose, expiresAt }
   })
 
-  // 6. 发送
+  // 5. 发送
   if (SMS_MOCK) {
     console.log(`[SMS MOCK] Phone: ${phone}, Code: ${code}, Purpose: ${purpose}`)
     return { mock: true, code } // 开发模式：返回code（仅供测试，生产不暴露）

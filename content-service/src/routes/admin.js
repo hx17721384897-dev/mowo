@@ -10,12 +10,42 @@ import { Document, Packer, Paragraph, Table, TableRow, TableCell,
          ImageRun, AlignmentType, WidthType, BorderStyle,
          VerticalAlign, TextRun, ShadingType } from 'docx'
 import { startWipFrame, makeIdempotencyKey } from '../lib/inventory.js'
+import { revokeAllSessions } from '../lib/security.js'
+import { effectiveStaffRole, roleNumberForStaffRole, PERMISSION, STAFF_ROLE, staffRoleLabel } from '../lib/permissions.js'
 
 export default async function adminRoutes(fastify) {
+
+  function accountDeletionView(item, now = new Date()) {
+    const elapsedHours = Math.max(0, (now.getTime() - item.requestedAt.getTime()) / 3600000)
+    const protectionMinutesLeft = item.status === 'REQUESTED'
+      ? Math.max(0, Math.ceil((item.scheduledAt.getTime() - now.getTime()) / 60000))
+      : 0
+    const active = ['REQUESTED', 'PROCESSING', 'FAILED', 'MANUAL_REVIEW', 'PAUSED'].includes(item.status)
+    let alertLevel = 'NORMAL'
+    if (active && elapsedHours >= fastify.config.accountDeletion.resolutionTargetHours) alertLevel = 'OVERDUE'
+    else if (active && elapsedHours >= fastify.config.accountDeletion.urgentAfterHours) alertLevel = 'URGENT'
+    else if (['MANUAL_REVIEW', 'PAUSED'].includes(item.status)) alertLevel = 'ATTENTION'
+
+    return {
+      ...item,
+      user: item.user ? {
+        id: item.user.id,
+        phone: item.user.phone ? item.user.phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') : null,
+        status: item.user.status,
+        nickname: item.user.profile?.nickname || null
+      } : null,
+      elapsedHours: Math.round(elapsedHours * 10) / 10,
+      protectionMinutesLeft,
+      cleanupStarted: Boolean(item.processingStartedAt),
+      canUserCancel: ['REQUESTED', 'PAUSED'].includes(item.status) && !item.processingStartedAt,
+      alertLevel
+    }
+  }
 
   // ── 辅助函数：订单确认收货时处理联名分红 ──
   // 在 adminRoutes 函数内部定义，供状态更新接口调用
   async function handleReceivedOrder(tx, order) {
+    if (!fastify.config.features.creatorFinance) return
     // 只处理联名订单
     if (order.sourceType !== 'collab' || !order.collabWorkId) return
 
@@ -446,9 +476,9 @@ export default async function adminRoutes(fastify) {
         data: {
           userId: request.user.userId, userRole: request.user.role ?? 0,
           method: 'PUT', path: request.url,
-          action: `录入订单 ${orderNo} 快递信息：${trackingCompany} ${trackingNo}`,
+          action: `录入订单 ${orderNo} 快递信息`,
           targetId: orderNo,
-          after: JSON.stringify({ trackingNo, trackingCompany }),
+          after: JSON.stringify({ trackingCompany }),
           ip: request.ip || null
         }
       })
@@ -457,20 +487,191 @@ export default async function adminRoutes(fastify) {
     return reply.send({ success: true, message: '快递信息已录入，订单状态已更新为待生产', data: updated })
   })
 
+  // GET /api/admin/account-deletions — 注销任务列表（客服只读、负责人可处置异常）
+  fastify.get('/account-deletions', {
+    preHandler: [fastify.requirePermission(PERMISSION.ACCOUNT_DELETIONS_READ)]
+  }, async (request, reply) => {
+    const page = Math.max(1, parseInt(request.query.page || 1))
+    const limit = Math.min(100, Math.max(1, parseInt(request.query.limit || 20)))
+    const status = String(request.query.status || '').trim()
+    const search = String(request.query.search || '').trim()
+    const validStatuses = new Set([
+      'REQUESTED', 'PROCESSING', 'FAILED', 'MANUAL_REVIEW', 'PAUSED',
+      'BLOCKED', 'CANCELLED', 'COMPLETED'
+    ])
+    if (status && !validStatuses.has(status)) {
+      return reply.code(400).send({ success: false, message: '无效的注销任务状态' })
+    }
+
+    const where = {
+      ...(status ? { status } : {}),
+      ...(search ? {
+        OR: [
+          { id: search },
+          { userId: search },
+          { user: { phone: { contains: search } } },
+          { user: { profile: { nickname: { contains: search, mode: 'insensitive' } } } }
+        ]
+      } : {})
+    }
+    const now = new Date()
+    const [items, total, grouped, protectionCount] = await Promise.all([
+      fastify.prisma.accountDeletionRequest.findMany({
+        where,
+        orderBy: [{ requestedAt: 'desc' }],
+        skip: (page - 1) * limit,
+        take: limit,
+        include: {
+          user: { select: { id: true, phone: true, status: true, profile: { select: { nickname: true } } } }
+        }
+      }),
+      fastify.prisma.accountDeletionRequest.count({ where }),
+      fastify.prisma.accountDeletionRequest.groupBy({ by: ['status'], _count: { _all: true } }),
+      fastify.prisma.accountDeletionRequest.count({
+        where: { status: 'REQUESTED', processingStartedAt: null, scheduledAt: { gt: now } }
+      })
+    ])
+
+    return reply.send({
+      success: true,
+      data: {
+        items: items.map(item => accountDeletionView(item, now)),
+        summary: {
+          ...Object.fromEntries(grouped.map(item => [item.status, item._count._all])),
+          PROTECTION: protectionCount
+        },
+        canManage: request.user.staffRole === STAFF_ROLE.OWNER,
+        thresholds: {
+          graceMinutes: fastify.config.accountDeletion.graceMinutes,
+          retryMinutes: fastify.config.accountDeletion.retryMinutes,
+          manualAfterAttempts: fastify.config.accountDeletion.manualAfterAttempts,
+          manualAfterMinutes: fastify.config.accountDeletion.manualAfterMinutes,
+          urgentAfterHours: fastify.config.accountDeletion.urgentAfterHours,
+          resolutionTargetHours: fastify.config.accountDeletion.resolutionTargetHours
+        },
+        pagination: { page, limit, total }
+      }
+    })
+  })
+
+  // POST /api/admin/account-deletions/:id/retry — 负责人重新执行异常任务
+  fastify.post('/account-deletions/:id/retry', {
+    preHandler: [fastify.requirePermission(PERMISSION.ACCOUNT_DELETIONS_MANAGE)]
+  }, async (request, reply) => {
+    const now = new Date()
+    const task = await fastify.prisma.accountDeletionRequest.findUnique({ where: { id: request.params.id } })
+    if (!task) return reply.code(404).send({ success: false, message: '注销任务不存在' })
+    if (!['FAILED', 'MANUAL_REVIEW'].includes(task.status)) {
+      return reply.code(409).send({ success: false, message: '只有失败或待人工关注的任务可以重试' })
+    }
+    const updated = await fastify.prisma.accountDeletionRequest.updateMany({
+      where: { id: task.id, status: task.status },
+      data: {
+        status: 'FAILED', nextRetryAt: now,
+        lastManualActionAt: now, lastManualActionBy: request.user.userId
+      }
+    })
+    if (updated.count !== 1) return reply.code(409).send({ success: false, message: '任务状态刚刚发生变化，请刷新后再试' })
+    await fastify.prisma.auditLog.create({
+      data: {
+        userId: task.userId,
+        action: 'ACCOUNT_DELETION_MANUAL_RETRY',
+        detail: { requestId: task.id, operatorUserId: request.user.userId },
+        ip: request.ip
+      }
+    })
+    return reply.send({ success: true, message: '已安排立即重试，通常会在1分钟内开始' })
+  })
+
+  // POST /api/admin/account-deletions/:id/pause — 负责人因争议或保全需要暂停
+  fastify.post('/account-deletions/:id/pause', {
+    preHandler: [fastify.requirePermission(PERMISSION.ACCOUNT_DELETIONS_MANAGE)],
+    schema: {
+      body: {
+        type: 'object', required: ['reason', 'userMessage'], additionalProperties: false,
+        properties: {
+          reason: { type: 'string', minLength: 5, maxLength: 500 },
+          userMessage: { type: 'string', minLength: 5, maxLength: 300 }
+        }
+      }
+    }
+  }, async (request, reply) => {
+    const reason = request.body.reason.trim()
+    const userMessage = request.body.userMessage.trim()
+    const now = new Date()
+    const task = await fastify.prisma.accountDeletionRequest.findUnique({ where: { id: request.params.id } })
+    if (!task) return reply.code(404).send({ success: false, message: '注销任务不存在' })
+    if (!['REQUESTED', 'FAILED', 'MANUAL_REVIEW'].includes(task.status)) {
+      return reply.code(409).send({ success: false, message: '当前任务状态不能暂停' })
+    }
+    const updated = await fastify.prisma.accountDeletionRequest.updateMany({
+      where: { id: task.id, status: task.status },
+      data: {
+        status: 'PAUSED', pausedAt: now, pausedBy: request.user.userId, pauseReason: reason,
+        pauseUserMessage: userMessage,
+        nextRetryAt: null, lastManualActionAt: now, lastManualActionBy: request.user.userId
+      }
+    })
+    if (updated.count !== 1) return reply.code(409).send({ success: false, message: '任务状态刚刚发生变化，请刷新后再试' })
+    await fastify.prisma.auditLog.create({
+      data: {
+        userId: task.userId,
+        action: 'ACCOUNT_DELETION_PAUSED',
+        detail: { requestId: task.id, operatorUserId: request.user.userId, reason, userMessage },
+        ip: request.ip
+      }
+    })
+    return reply.send({ success: true, message: '注销任务已暂停' })
+  })
+
+  // POST /api/admin/account-deletions/:id/resume — 负责人恢复暂停的任务
+  fastify.post('/account-deletions/:id/resume', {
+    preHandler: [fastify.requirePermission(PERMISSION.ACCOUNT_DELETIONS_MANAGE)]
+  }, async (request, reply) => {
+    const now = new Date()
+    const task = await fastify.prisma.accountDeletionRequest.findUnique({ where: { id: request.params.id } })
+    if (!task) return reply.code(404).send({ success: false, message: '注销任务不存在' })
+    if (task.status !== 'PAUSED') {
+      return reply.code(409).send({ success: false, message: '只有已暂停的任务可以恢复' })
+    }
+    const scheduledAt = task.scheduledAt > now ? task.scheduledAt : now
+    const updated = await fastify.prisma.accountDeletionRequest.updateMany({
+      where: { id: task.id, status: 'PAUSED' },
+      data: {
+        status: 'REQUESTED', scheduledAt, nextRetryAt: null, resumedAt: now,
+        lastManualActionAt: now, lastManualActionBy: request.user.userId
+      }
+    })
+    if (updated.count !== 1) return reply.code(409).send({ success: false, message: '任务状态刚刚发生变化，请刷新后再试' })
+    await fastify.prisma.auditLog.create({
+      data: {
+        userId: task.userId,
+        action: 'ACCOUNT_DELETION_RESUMED',
+        detail: { requestId: task.id, operatorUserId: request.user.userId },
+        ip: request.ip
+      }
+    })
+    return reply.send({ success: true, message: '注销任务已恢复，通常会在1分钟内开始' })
+  })
+
   // GET /api/admin/users — 用户列表
   fastify.get('/users', {
     preHandler: [fastify.requireRole(2)]
   }, async (request, reply) => {
-    const { page = 1, limit = 20, role } = request.query
+    const { page = 1, limit = 20, role, staffRole } = request.query
     const skip  = (parseInt(page) - 1) * parseInt(limit)
-    const where = role !== undefined ? { role: parseInt(role) } : {}
+    const isOwner = request.user.staffRole === STAFF_ROLE.OWNER
+    const where = isOwner ? {
+      ...(role !== undefined ? { role: parseInt(role) } : {}),
+      ...(staffRole ? { staffRole } : {})
+    } : { role: 0, staffRole: null }
 
     const [users, total] = await Promise.all([
       fastify.prisma.user.findMany({
         where, orderBy: { createdAt: 'desc' }, skip, take: parseInt(limit),
         select: {
-          id: true, phone: true, role: true,
-          certifyStatus: true, isBanned: true,
+          id: true, phone: true, role: true, staffRole: true,
+          certifyStatus: true, isBanned: true, status: true,
           createdAt: true, lastLoginAt: true,
           profile: { select: { nickname: true, avatarUrl: true } }
         }
@@ -478,9 +679,15 @@ export default async function adminRoutes(fastify) {
       fastify.prisma.user.count({ where })
     ])
 
+    const safeUsers = users.map(user => ({
+      ...user,
+      phone: user.phone ? user.phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') : null,
+      staffRole: effectiveStaffRole(user)
+    }))
+
     return reply.send({
       success: true,
-      data: { users, pagination: { page: parseInt(page), limit: parseInt(limit), total } }
+      data: { users: safeUsers, pagination: { page: parseInt(page), limit: parseInt(limit), total } }
     })
   })
 
@@ -489,16 +696,42 @@ export default async function adminRoutes(fastify) {
     preHandler: [fastify.requireRole(3)]
   }, async (request, reply) => {
     const { id }   = request.params
-    const { role } = request.body
-    const roleLabel = { 0:'普通用户', 1:'生产端', 2:'管理员', 3:'超级管理员' }
+    const { staffRole = null } = request.body || {}
+    const validStaffRoles = Object.values(STAFF_ROLE)
+    if (staffRole !== null && !validStaffRoles.includes(staffRole)) {
+      return reply.code(400).send({ success: false, message: '无效的员工岗位' })
+    }
+    if (id === request.user.userId) {
+      return reply.code(400).send({ success: false, message: '不能修改自己的员工岗位，请由另一位负责人操作' })
+    }
 
-    if (![0, 1, 2, 3].includes(role))
-      return reply.code(400).send({ success: false, message: '无效的角色值' })
+    const user = await fastify.prisma.user.findUnique({
+      where: { id },
+      select: { role: true, staffRole: true, phone: true }
+    })
+    if (!user) return reply.code(404).send({ success: false, message: '用户不存在' })
 
-    const user    = await fastify.prisma.user.findUnique({ where: { id }, select: { role: true, phone: true } })
-    const updated = await fastify.prisma.user.update({
-      where: { id }, data: { role },
-      select: { id: true, phone: true, role: true }
+    const oldStaffRole = effectiveStaffRole(user)
+    if (oldStaffRole === STAFF_ROLE.OWNER && staffRole !== STAFF_ROLE.OWNER) {
+      const ownerCount = await fastify.prisma.user.count({
+        where: { OR: [{ staffRole: STAFF_ROLE.OWNER }, { role: 3, staffRole: null }] }
+      })
+      if (ownerCount <= 1) {
+        return reply.code(409).send({ success: false, message: '必须至少保留一位负责人' })
+      }
+    }
+
+    const role = roleNumberForStaffRole(staffRole)
+    const updated = await fastify.prisma.$transaction(async tx => {
+      const changed = await tx.user.update({
+        where: { id }, data: { role, staffRole },
+        select: { id: true, phone: true, role: true, staffRole: true }
+      })
+      await tx.refreshToken.updateMany({
+        where: { userId: id, revokedAt: null },
+        data: { revokedAt: new Date() }
+      })
+      return changed
     })
 
     try {
@@ -506,16 +739,16 @@ export default async function adminRoutes(fastify) {
         data: {
           userId: request.user.userId, userRole: request.user.role ?? 0,
           method: 'PUT', path: request.url,
-          action: `将用户 ${user?.phone} 角色从「${roleLabel[user?.role]}」修改为「${roleLabel[role]}」`,
+          action: `员工岗位从「${staffRoleLabel(oldStaffRole)}」修改为「${staffRoleLabel(staffRole)}」`,
           targetId: id,
-          before: JSON.stringify({ role: user?.role }),
-          after:  JSON.stringify({ role }),
+          before: JSON.stringify({ staffRole: oldStaffRole }),
+          after:  JSON.stringify({ staffRole }),
           ip: request.ip || null
         }
       })
     } catch(e) {}
 
-    return reply.send({ success: true, message: '角色已更新', data: updated })
+    return reply.send({ success: true, message: '员工岗位已更新，该账号需要重新登录', data: updated })
   })
 
   // PUT /api/admin/users/:id/ban — 封禁/解封用户
@@ -525,17 +758,38 @@ export default async function adminRoutes(fastify) {
     const { id }       = request.params
     const { isBanned } = request.body
 
+    if (id === request.user.userId) {
+      return reply.code(400).send({ success: false, message: '不能封禁自己的账号' })
+    }
+    const target = await fastify.prisma.user.findUnique({
+      where: { id },
+      select: { role: true, staffRole: true, phone: true }
+    })
+    if (!target) return reply.code(404).send({ success: false, message: '用户不存在' })
+
+    const targetStaffRole = effectiveStaffRole(target)
+    if (targetStaffRole === STAFF_ROLE.OWNER) {
+      return reply.code(403).send({ success: false, message: '负责人账号不能通过封禁操作停用' })
+    }
+    if (targetStaffRole && request.user.staffRole !== STAFF_ROLE.OWNER) {
+      return reply.code(403).send({ success: false, message: '只有负责人可以停用其他员工账号' })
+    }
+
     const updated = await fastify.prisma.user.update({
       where: { id }, data: { isBanned: !!isBanned },
       select: { id: true, phone: true, isBanned: true }
     })
+
+    if (isBanned) {
+      await revokeAllSessions(id, fastify.prisma, 'account_banned')
+    }
 
     try {
       await fastify.prisma.operationLog.create({
         data: {
           userId: request.user.userId, userRole: request.user.role ?? 0,
           method: 'PUT', path: request.url,
-          action: `${isBanned ? '封禁' : '解封'}用户 ${updated.phone}`,
+          action: `${isBanned ? '封禁' : '解封'}账号`,
           targetId: id, ip: request.ip || null
         }
       })
@@ -548,22 +802,41 @@ export default async function adminRoutes(fastify) {
   fastify.get('/logs', {
     preHandler: [fastify.requireRole(3)]
     }, async (request, reply) => {
-    const { page = 1, limit = 50, method } = request.query
-    const skip  = (parseInt(page) - 1) * parseInt(limit)
-    const where = method ? { method } : {}
+    const { page = 1, limit = 50, method, outcome } = request.query
+    const safePage = Math.max(1, parseInt(page) || 1)
+    const safeLimit = Math.min(100, Math.max(1, parseInt(limit) || 50))
+    const skip  = (safePage - 1) * safeLimit
+    const where = {
+      ...(method ? { method } : {}),
+      ...(outcome ? { outcome } : {})
+    }
 
     const [logs, total] = await Promise.all([
         fastify.prisma.operationLog.findMany({
         where,
         orderBy: { createdAt: 'desc' },
-        skip, take: parseInt(limit)
+        skip, take: safeLimit
         }),
         fastify.prisma.operationLog.count({ where })
     ])
 
+    const actorIds = [...new Set(logs.map(log => log.userId).filter(id => id && id !== 'system'))]
+    const actors = actorIds.length ? await fastify.prisma.user.findMany({
+      where: { id: { in: actorIds } },
+      select: { id: true, phone: true, staffRole: true, role: true, profile: { select: { nickname: true } } }
+    }) : []
+    const actorMap = new Map(actors.map(actor => [actor.id, {
+      name: actor.profile?.nickname || '未设置姓名',
+      maskedPhone: actor.phone ? actor.phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') : null,
+      staffRole: effectiveStaffRole(actor)
+    }]))
+
     return reply.send({
         success: true,
-        data: { logs, pagination: { page: parseInt(page), limit: parseInt(limit), total } }
+        data: {
+          logs: logs.map(log => ({ ...log, actor: actorMap.get(log.userId) || null })),
+          pagination: { page: safePage, limit: safeLimit, total }
+        }
     })
     })
 
@@ -1704,8 +1977,7 @@ export default async function adminRoutes(fastify) {
         data: {
           userId: req.user.userId, userRole: req.user.role ?? 0,
           method: 'POST', path: req.url,
-          action: `快递单 ${trackingNo} 确认发货，共 ${orders.length} 个订单变为已发货`,
-          targetId: trackingNo,
+          action: `确认发货，共 ${orders.length} 个订单变为已发货`,
           ip: req.ip || null
         }
       })
@@ -1881,7 +2153,7 @@ export default async function adminRoutes(fastify) {
   // GET /api/admin/aftersales
   // 售后申请列表，支持 status / page / limit 过滤
   // ──────────────────────────────────────────────
-  fastify.get('/aftersales', async (req, reply) => {
+  fastify.get('/aftersales', { preHandler: [fastify.requireRole(2)] }, async (req, reply) => {
     const { status = 'pending', page = 1, limit = 20 } = req.query
     const where = status === 'all' ? {} : { status }
     const skip  = (Number(page) - 1) * Number(limit)
@@ -1936,7 +2208,7 @@ export default async function adminRoutes(fastify) {
   // PUT /api/admin/aftersales/:id
   // 处理售后申请：approved（同意）/ rejected（拒绝）/ completed（已完成退款/换货）
   // ──────────────────────────────────────────────
-  fastify.put('/aftersales/:id', async (req, reply) => {
+  fastify.put('/aftersales/:id', { preHandler: [fastify.requireRole(2)] }, async (req, reply) => {
     const adminId = req.user.userId
     const { id }  = req.params
     const { status, adminNote } = req.body

@@ -854,6 +854,7 @@ a { text-decoration:none; color:inherit; }
   👆 点图片预览 · 长按或点「勾选」进入选择模式
 </div>
 
+<script src="../js/private-upload.js"></script>
 <script>
 'use strict';
 
@@ -2077,27 +2078,38 @@ document.getElementById('btnNextStep').addEventListener('click', async ()=>{
     document.getElementById('btnNextStep').textContent = '保存中…';
 
     try {
+      const uploadedKeys = await window.MowoPrivateUpload.uploadSources({
+        sources: selectedUrls,
+        token,
+        purpose: 'CREATOR_FRAME',
+        onProgress: (done, total) => {
+          document.getElementById('btnNextStep').textContent = `上传 ${done}/${total}`;
+        }
+      });
       if (editId) {
         // 更新已有动画
-        await fetch(`${CAPI}/api/custom-products/${encodeURIComponent(editId)}`, {
+        const res = await fetch(`${CAPI}/api/custom-products/${encodeURIComponent(editId)}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ animationFrames: JSON.stringify(selectedUrls), frameCount: cnt }),
+          body: JSON.stringify({ animationFrames: JSON.stringify(uploadedKeys), frameCount: cnt }),
         });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.message || '动画保存失败');
         location.href = returnTo;
       } else {
         // 新建动画
         const res  = await fetch(`${CAPI}/api/custom-products`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ animationFrames: JSON.stringify(selectedUrls), frameCount: cnt }),
+          body: JSON.stringify({ animationFrames: JSON.stringify(uploadedKeys), frameCount: cnt }),
         });
         const json = await res.json();
+        if (!json.success) throw new Error(json.message || '动画保存失败');
         const savedId = json.data?.id || '';
         location.href = `${returnTo}${returnTo.includes('?') ? '&' : '?'}savedProductId=${savedId}`;
       }
     } catch(e) {
-      alert('保存失败，请重试');
+      alert('保存失败：' + (e.message || '请重试'));
       document.getElementById('btnNextStep').disabled = false;
       document.getElementById('btnNextStep').textContent = '确认 →';
     }
@@ -2114,21 +2126,39 @@ document.getElementById('btnNextStep').addEventListener('click', async ()=>{
     localStorage.setItem('mowo_customize_meta', JSON.stringify(meta));
   } catch(e) { console.warn('存储可能超出限制，帧数据较大', e); }
 
-  /* 登录状态下立即保存草稿到「我的动画」 */
+  /* 登录状态下先安全上传帧图，再保存草稿到「我的动画」 */
   const token = localStorage.getItem('mowo_token');
   if (token) {
     const CAPI = location.hostname === '127.0.0.1' ? 'http://127.0.0.1:3001' : 'http://localhost:3001';
     try {
+      document.getElementById('btnNextStep').disabled = true;
+      const uploadedKeys = await window.MowoPrivateUpload.uploadSources({
+        sources: urls,
+        token,
+        purpose: 'CUSTOMIZATION_FRAME',
+        onProgress: (done, total) => {
+          document.getElementById('btnNextStep').textContent = `上传 ${done}/${total}`;
+        }
+      });
+      localStorage.setItem('mowo_customize_frame_keys', JSON.stringify(uploadedKeys));
+      localStorage.setItem('mowo_customize_frame_owner', window.MowoPrivateUpload.tokenUserId(token) || '');
       const res  = await fetch(`${CAPI}/api/custom-products`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ animationFrames: JSON.stringify(urls), frameCount: cnt }),
+        body: JSON.stringify({ animationFrames: JSON.stringify(uploadedKeys), frameCount: cnt }),
       });
       const json = await res.json();
       if (json.success && json.data?.id) {
         localStorage.setItem('mowo_customize_draft_id', json.data.id);
+      } else {
+        throw new Error(json.message || '草稿保存失败');
       }
-    } catch(e) { /* 草稿保存失败不阻断流程 */ }
+    } catch(e) {
+      alert('上传失败：' + (e.message || '请重试'));
+      document.getElementById('btnNextStep').disabled = false;
+      document.getElementById('btnNextStep').textContent = '确认 →';
+      return;
+    }
   }
 
   location.href = `customize-confirm.html?type=${machineType}&frames=${cnt}&targets=${validTargets.join(',')}`;

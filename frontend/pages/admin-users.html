@@ -106,6 +106,10 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
 
 /* 封禁标记 */
 .banned-tag{background:#FFE8E3;color:#C0320A;font-weight:800;font-size:10px;padding:2px 6px;border-radius:4px;margin-left:6px;}
+.account-status-tag{font-weight:800;font-size:10px;padding:2px 6px;border-radius:4px;margin-left:6px;background:#EBEBEA;color:#787874;}
+.account-status-tag.pending{background:#FFF3CD;color:#7A5900;}
+.account-status-tag.deleted{background:#E2E3E5;color:#454545;}
+.account-status-tag.restricted{background:#FFE8E3;color:#C0320A;}
 
 /* 分页 */
 .pagination{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-top:1.5px solid var(--gray1);background:var(--cream);}
@@ -179,11 +183,12 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
 
     <!-- 角色筛选 -->
     <div class="filter-tabs">
-      <button class="filter-tab active" data-role="" onclick="setRoleFilter(this,'')">全部用户</button>
-      <button class="filter-tab" data-role="0" onclick="setRoleFilter(this,'0')">普通用户</button>
-      <button class="filter-tab" data-role="1" onclick="setRoleFilter(this,'1')">🏭 生产端</button>
-      <button class="filter-tab" data-role="2" onclick="setRoleFilter(this,'2')">🛡 管理员</button>
-      <button class="filter-tab" data-role="3" onclick="setRoleFilter(this,'3')">⭐ 超级管理员</button>
+      <button class="filter-tab active" onclick="setStaffFilter(this,'')">全部账号</button>
+      <button class="filter-tab" onclick="setStaffFilter(this,'USER')">普通用户</button>
+      <button class="filter-tab" onclick="setStaffFilter(this,'CUSTOMER_SERVICE')">运营客服</button>
+      <button class="filter-tab" onclick="setStaffFilter(this,'PRODUCTION')">生产人员</button>
+      <button class="filter-tab" onclick="setStaffFilter(this,'COLLAB_OPS')">合作运营</button>
+      <button class="filter-tab" onclick="setStaffFilter(this,'OWNER')">负责人</button>
     </div>
 
     <!-- 搜索 -->
@@ -211,15 +216,16 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
 <!-- 修改角色Modal -->
 <div class="modal-overlay" id="roleModal">
   <div class="modal">
-    <p class="modal-title">修改用户角色</p>
+    <p class="modal-title">设置员工岗位</p>
     <p class="modal-sub" id="roleModalSub">—</p>
     <div class="form-field">
-      <label class="form-label">新角色</label>
-      <select class="form-select" id="newRole">
-        <option value="0">0 — 普通用户</option>
-        <option value="1">1 — 生产端</option>
-        <option value="2">2 — 管理员</option>
-        <option value="3">3 — 超级管理员</option>
+      <label class="form-label">岗位模板</label>
+      <select class="form-select" id="newStaffRole">
+        <option value="">普通用户（移除员工权限）</option>
+        <option value="CUSTOMER_SERVICE">运营客服</option>
+        <option value="PRODUCTION">生产人员</option>
+        <option value="COLLAB_OPS">合作运营</option>
+        <option value="OWNER">负责人</option>
       </select>
     </div>
     <div class="modal-actions">
@@ -245,8 +251,9 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
 
 <script>
 const API = (location.hostname==='127.0.0.1'?'http://127.0.0.1:3001':'http://localhost:3001');
-const ROLE_LABEL    = { 0:'普通用户', 1:'生产端', 2:'管理员', 3:'超级管理员' };
-const ROLE_CLASS    = { 0:'role-0', 1:'role-1', 2:'role-2', 3:'role-3' };
+const STAFF_LABEL = { OWNER:'负责人', CUSTOMER_SERVICE:'运营客服', PRODUCTION:'生产人员', COLLAB_OPS:'合作运营' };
+const ACCOUNT_STATUS_LABEL = { ACTIVE:'正常', LIMITED:'受限', SUSPENDED:'停用', PENDING_DELETE:'注销处理中', DELETED:'已注销' };
+const STAFF_CLASS = { OWNER:'role-3', CUSTOMER_SERVICE:'role-2', PRODUCTION:'role-1', COLLAB_OPS:'role-2' };
 const CERTIFY_LABEL = { 0:'未认证', 1:'审核中', 2:'已认证', 3:'已拒绝' };
 const CERTIFY_CLASS = { 0:'certify-0', 1:'certify-1', 2:'certify-2', 3:'certify-3' };
 
@@ -254,23 +261,24 @@ let _token      = '';
 window.addEventListener('mowoTokenRefreshed', () => { _token = localStorage.getItem('mowo_token') || ''; });
 let _users      = [];
 let _curPage    = 1;
-let _roleFilter = '';
+let _staffFilter = '';
 let _curUserId  = '';
 let _curIsBanned = false;
 let _myRole     = 0;
+let _myStaffRole = '';
+let _myUserId = '';
 let _searchTimer = null;
 
 window.addEventListener('DOMContentLoaded', async () => {
   _token = localStorage.getItem('mowo_token') || '';
   if (!_token) { location.href = 'index.html'; return; }
   try {
-    const p = JSON.parse(atob(_token.split('.')[1]));
-    if ((p.role ?? 0) < 2) { alert('权限不足'); location.href = 'index.html'; return; }
-    _myRole = p.role ?? 0;
-    const roleMap = { 2:'管理员', 3:'超级管理员' };
-    document.getElementById('sidebarName').textContent   = p.phone || '管理员';
-    document.getElementById('sidebarRole').textContent   = roleMap[p.role] || '管理员';
-    document.getElementById('sidebarAvatar').textContent = (p.phone || '管')[0];
+    const res = await fetch(`${API}/api/v1/account/me`, { headers: { Authorization: `Bearer ${_token}` } });
+    const json = await res.json();
+    if (!json.success || !json.data.staffRole) { alert('权限不足'); location.href = 'index.html'; return; }
+    _myRole = json.data.role ?? 0;
+    _myStaffRole = json.data.staffRole;
+    _myUserId = json.data.id;
   } catch(e) { location.href = 'index.html'; return; }
 
   // 如果 URL 有 highlight 参数，先搜索该用户所在页
@@ -308,7 +316,8 @@ async function loadUserAndHighlight(userId) {
 async function loadUsers(page = 1) {
   _curPage = page;
   const params = new URLSearchParams({ page, limit: 20 });
-  if (_roleFilter !== '') params.set('role', _roleFilter);
+  if (_staffFilter === 'USER') params.set('role', '0');
+  else if (_staffFilter) params.set('staffRole', _staffFilter);
 
   try {
     const res  = await fetch(`${API}/api/admin/users?${params}`, {
@@ -334,32 +343,36 @@ function renderTable(users) {
 
   body.innerHTML = users.map(u => {
     const name    = u.profile?.nickname || '未设置昵称';
-    const initial = name[0] || u.phone[0];
-    const avatar  = u.profile?.avatarUrl
-      ? `<img src="${u.profile.avatarUrl}" alt="">`
-      : initial;
+    const initial = name[0] || u.phone?.[0] || '用';
+    const safeName = escapeHtml(name);
+    const safePhone = escapeHtml(u.phone || '未绑定手机号');
+    const avatarUrl = safeHttpUrl(u.profile?.avatarUrl);
+    const avatar  = avatarUrl ? `<img src="${escapeHtml(avatarUrl)}" alt="">` : escapeHtml(initial);
     const regDate = new Date(u.createdAt).toLocaleDateString('zh-CN', { month:'2-digit', day:'2-digit', year:'2-digit' });
-    const canEditRole = _myRole >= 3;
+    const staffRole = u.staffRole || '';
+    const staffLabel = STAFF_LABEL[staffRole] || '普通用户';
+    const canEditRole = _myStaffRole === 'OWNER' && u.id !== _myUserId;
+    const canBan = u.id !== _myUserId && staffRole !== 'OWNER' && (_myStaffRole === 'OWNER' || !staffRole);
     return `
       <div class="user-row" id="user-row-${u.id}">
         <div class="user-avatar">${avatar}</div>
         <div class="user-info">
-          <div class="user-name">${name}${u.isBanned ? '<span class="banned-tag">已封禁</span>' : ''}</div>
-          <div class="user-phone">${u.phone}</div>
+          <div class="user-name">${safeName}${u.isBanned ? '<span class="banned-tag">已封禁</span>' : ''}${u.status !== 'ACTIVE' ? `<span class="account-status-tag ${u.status === 'PENDING_DELETE' ? 'pending' : u.status === 'DELETED' ? 'deleted' : 'restricted'}">${ACCOUNT_STATUS_LABEL[u.status] || u.status}</span>` : ''}</div>
+          <div class="user-phone">${safePhone}</div>
         </div>
         <div class="col-role">
-          <span class="role-badge ${ROLE_CLASS[u.role]}">${ROLE_LABEL[u.role]}</span>
+          <span class="role-badge ${STAFF_CLASS[staffRole] || 'role-0'}">${staffLabel}</span>
         </div>
         <div class="col-certify">
           <span class="certify-badge ${CERTIFY_CLASS[u.certifyStatus]}">${CERTIFY_LABEL[u.certifyStatus]}</span>
         </div>
         <div class="col-time" style="font-size:11px;font-weight:700;color:var(--gray3);">${regDate}</div>
         <div style="display:flex;gap:6px;align-items:center;">
-          ${canEditRole ? `<button class="btn btn-ghost btn-sm" onclick="openRoleModal('${u.id}','${name}',${u.role})">改角色</button>` : ''}
-          <button class="btn ${u.isBanned ? 'btn-ghost' : 'btn-red'} btn-sm"
-            onclick="openBanModal('${u.id}','${name}',${u.isBanned})">
+          ${canEditRole ? `<button class="btn btn-ghost btn-sm" onclick="openRoleModal('${u.id}','${staffRole}')">设岗位</button>` : ''}
+          ${canBan ? `<button class="btn ${u.isBanned ? 'btn-ghost' : 'btn-red'} btn-sm"
+            onclick="openBanModal('${u.id}',${u.isBanned})">
             ${u.isBanned ? '解封' : '封禁'}
-          </button>
+          </button>` : ''}
         </div>
       </div>`;
   }).join('');
@@ -391,10 +404,10 @@ function renderPagination(pg) {
 }
 
 // 角色筛选
-function setRoleFilter(btn, role) {
+function setStaffFilter(btn, staffRole) {
   document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  _roleFilter = role;
+  _staffFilter = staffRole;
   loadUsers(1);
 }
 
@@ -405,7 +418,7 @@ function onSearch() {
     const q = document.getElementById('searchInput').value.trim().toLowerCase();
     if (!q) { renderTable(_users); return; }
     const filtered = _users.filter(u =>
-      u.phone.includes(q) ||
+      (u.phone || '').includes(q) ||
       (u.profile?.nickname || '').toLowerCase().includes(q)
     );
     renderTable(filtered);
@@ -413,25 +426,26 @@ function onSearch() {
 }
 
 // 修改角色Modal
-function openRoleModal(userId, name, currentRole) {
+function openRoleModal(userId, currentStaffRole) {
   _curUserId = userId;
-  document.getElementById('roleModalSub').textContent = `用户：${name}\n当前角色：${ROLE_LABEL[currentRole]}`;
-  document.getElementById('newRole').value = currentRole;
+  const user = _users.find(item => item.id === userId);
+  document.getElementById('roleModalSub').textContent = `账号：${user?.profile?.nickname || user?.phone || '未知'}\n当前岗位：${STAFF_LABEL[currentStaffRole] || '普通用户'}`;
+  document.getElementById('newStaffRole').value = currentStaffRole;
   document.getElementById('roleModal').classList.add('show');
 }
 function closeRoleModal() { document.getElementById('roleModal').classList.remove('show'); }
 
 async function submitRole() {
-  const role = parseInt(document.getElementById('newRole').value);
+  const staffRole = document.getElementById('newStaffRole').value || null;
   try {
     const res  = await fetch(`${API}/api/admin/users/${_curUserId}/role`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${_token}` },
-      body: JSON.stringify({ role })
+      body: JSON.stringify({ staffRole })
     });
     const json = await res.json();
     if (json.success) {
-      showToast(`✓ 角色已修改为「${ROLE_LABEL[role]}」`);
+      showToast(`岗位已修改为「${STAFF_LABEL[staffRole] || '普通用户'}」`);
       closeRoleModal();
       await loadUsers(_curPage);
     } else {
@@ -441,15 +455,28 @@ async function submitRole() {
 }
 
 // 封禁/解封Modal
-function openBanModal(userId, name, isBanned) {
+function openBanModal(userId, isBanned) {
   _curUserId   = userId;
   _curIsBanned = isBanned;
   const action = isBanned ? '解封' : '封禁';
+  const user = _users.find(item => item.id === userId);
+  const name = user?.profile?.nickname || user?.phone || '该账号';
   document.getElementById('banModalTitle').textContent = `确认${action}用户`;
   document.getElementById('banModalSub').textContent   = `确定要${action}用户「${name}」吗？${!isBanned ? '封禁后该用户将无法登录。' : ''}`;
   document.getElementById('banConfirmBtn').textContent = `确认${action}`;
   document.getElementById('banConfirmBtn').className   = `btn ${isBanned ? 'btn-black' : 'btn-red'}`;
   document.getElementById('banModal').classList.add('show');
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>'"]/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' })[char]);
+}
+
+function safeHttpUrl(value) {
+  try {
+    const url = new URL(value, location.origin);
+    return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+  } catch (_) { return ''; }
 }
 function closeBanModal() { document.getElementById('banModal').classList.remove('show'); }
 
@@ -496,6 +523,6 @@ function closeSidebar() {
 }
 </script>
 <script src="../js/auth.js"></script>
-<script src="../js/admin-sidebar.js"></script>
+<script src="../js/admin-sidebar.js?v=20260813-shell-init"></script>
 </body>
 </html>

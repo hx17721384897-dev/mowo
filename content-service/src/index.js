@@ -2,6 +2,7 @@ import 'dotenv/config'
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import fastifyCookie from '@fastify/cookie'
+import { loadConfig } from './config/env.js'
 
 import prismaPlugin from './plugins/prisma.js'
 import jwtPlugin from './plugins/jwt.js'
@@ -44,19 +45,21 @@ import framePacksRoutes  from './routes/frame-packs.js'
 import accountRoutes     from './routes/account.js'
 import { startScheduler }     from './lib/scheduler.js'
 import { startBullScheduler } from './lib/bull-scheduler.js'
+import { hasPermission, requiredPermissionForRequest } from './lib/permissions.js'
+import { auditOutcome, serializeSafeAuditBody } from './lib/audit.js'
+import { publicFeatureFlags, requiredFeatureForRequest } from './lib/features.js'
 
+const config = loadConfig()
 const fastify = Fastify({ logger: true, bodyLimit: 10 * 1024 * 1024 })
+fastify.decorate('config', config)
 
 async function start() {
   try {
     // CORS：允许凭证（HttpOnly Cookie 需要），开发环境放行本地前端地址
-    const corsOrigins = process.env.CORS_ORIGIN
-      ? process.env.CORS_ORIGIN.split(',').map(s => s.trim())
-      : ['http://127.0.0.1:5500', 'http://localhost:5500', 'http://localhost:3000']
     await fastify.register(cors, {
       origin: (origin, cb) => {
         if (!origin) { cb(null, true); return } // 服务端直接调用/curl
-        if (corsOrigins.includes(origin) || process.env.NODE_ENV !== 'production') { cb(null, true); return }
+        if (config.corsOrigins.includes(origin) || !config.isProduction) { cb(null, true); return }
         cb(new Error('不允许的跨域来源'), false)
       },
       credentials: true,
@@ -65,7 +68,7 @@ async function start() {
 
     // Cookie 插件（HttpOnly Refresh Token）
     await fastify.register(fastifyCookie, {
-      secret: process.env.COOKIE_SECRET || 'mowo_cookie_secret_change_in_production'
+      secret: config.cookieSecret
     })
 
     await fastify.register(prismaPlugin)
@@ -73,21 +76,79 @@ async function start() {
     await fastify.register(ossPlugin)
     await fastify.register(multipart, { limits: { fileSize: 5 * 1024 * 1024 } })
 
+    fastify.addHook('onSend', async (request, reply, payload) => {
+      const resourcePath = request.url.split('?')[0]
+      const isBrowserImageResource = request.method === 'GET' && (
+        resourcePath.startsWith('/api/upload/public/') ||
+        resourcePath === '/api/storage/local'
+      )
+      reply.header('X-Content-Type-Options', 'nosniff')
+      reply.header('X-Frame-Options', 'DENY')
+      reply.header('Referrer-Policy', 'strict-origin-when-cross-origin')
+      reply.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+      // Static pages and the local API use different ports during development.
+      // Only public avatars and signed storage reads need cross-origin embedding.
+      reply.header('Cross-Origin-Resource-Policy', isBrowserImageResource ? 'cross-origin' : 'same-site')
+      reply.header('Cache-Control', request.url.startsWith('/api/v1/auth') ? 'no-store' : 'no-cache')
+      if (config.isProduction) reply.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+      return payload
+    })
+
+    // 首发未开放能力必须在服务端拒绝；隐藏页面入口只是用户体验，不能代替安全边界。
+    fastify.addHook('preHandler', async (request, reply) => {
+      const feature = requiredFeatureForRequest(request.url)
+      if (!feature || config.features[feature]) return
+      return reply.code(404).send({
+        success: false,
+        message: '该功能在当前测试阶段暂未开放',
+        code: 'FEATURE_NOT_AVAILABLE'
+      })
+    })
+
+    fastify.get('/api/config/features', async () => ({
+      success: true,
+      data: publicFeatureFlags(config)
+    }))
+
+    // 所有员工后台请求统一检查岗位权限，避免单个路由遗漏鉴权。
+    fastify.addHook('preHandler', async (request, reply) => {
+      const permission = requiredPermissionForRequest(request.method, request.url)
+      if (!permission) return
+
+      request.staffPermission = permission
+      await fastify.authenticate(request, reply)
+      if (reply.sent) return
+
+      if (!hasPermission(request.user, permission)) {
+        return reply.code(403).send({
+          success: false,
+          message: '当前员工岗位无权访问此功能',
+          code: 'STAFF_PERMISSION_DENIED'
+        })
+      }
+    })
+
     // ── 审计日志 Hook ──
     fastify.addHook('onResponse', async (request, reply) => {
       const method = request.method
-      if (!['POST', 'PUT', 'DELETE'].includes(method)) return
-      if (!request.user) return
+      const isMutation = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)
+      const isDenied = [401, 403].includes(reply.statusCode)
+      if (!isMutation && !(request.staffPermission && isDenied)) return
+      if (!request.user && !(request.staffPermission && isDenied)) return
 
       try {
         await fastify.prisma.operationLog.create({
           data: {
-            userId:   request.user.userId,
-            userRole: request.user.role ?? 0,
+            userId:   request.user?.userId || 'anonymous',
+            userRole: request.user?.role ?? 0,
             method,
-            path:     request.url,
+            path:     request.url.split('?')[0],
             ip:       request.ip || null,
-            after:    request.body ? JSON.stringify(request.body).slice(0, 2000) : null
+            after:    serializeSafeAuditBody(request.body),
+            outcome:  auditOutcome(reply.statusCode),
+            statusCode: reply.statusCode,
+            sessionId: request.user?.sid || null,
+            userAgent: String(request.headers['user-agent'] || '').slice(0, 500) || null
           }
         })
       } catch(e) {
@@ -149,9 +210,9 @@ async function start() {
     await fastify.register(materialsRoutes,      { prefix: '/api/materials' })
     await fastify.register(framePacksRoutes,    { prefix: '/api/frame-packs' })
 
-    await fastify.listen({ port: 3001, host: '0.0.0.0' })
+    await fastify.listen({ port: config.port, host: config.host })
     startScheduler(fastify)
-    startBullScheduler(fastify)
+    if (config.features.bullSystem) startBullScheduler(fastify)
 
   } catch (err) {
     fastify.log.error(err)

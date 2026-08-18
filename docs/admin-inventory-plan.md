@@ -1,5 +1,7 @@
 # admin-inventory.html 重设计规划（v2）
 
+> **文档状态（2026-08-12）：库存页面规划输入，不是最终业务规则。** 已确认的高层产品边界是联名款前台不区分预制/现做，后台有成品优先分配、无成品进入生产；具体库存状态、扣减时点、扫码与生产批次关系将在实际改造该模块前，由项目负责人说明完整流程后确认。代码事实见 `modules/commerce-orders-inventory.md` 与 `modules/admin-production.md`。
+
 > 目标：看清库存状态 + 管控库存规则 + 追踪库存变化。
 > 约束：后端只做加法，不改现有 inventory.js / lib/inventory.js 逻辑。
 

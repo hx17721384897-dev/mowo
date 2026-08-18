@@ -115,11 +115,32 @@ export default async function adminContactRoutes(fastify) {
     let attachmentUrls = []
     try {
       const keys = item.attachments ? JSON.parse(item.attachments) : []
-      attachmentUrls = keys.map(key => ({
-        key,
-        url:      fastify.oss.signatureUrl(key, { expires: 3600 }),
-        filename: key.split('/').pop()
+      const files = keys.length ? await fastify.prisma.privateFile.findMany({ where: {
+        objectKey: { in: keys },
+        status: 'READY',
+        linkedResourceType: 'CONTACT_SUBMISSION',
+        linkedResourceId: item.id
+      } }) : []
+      attachmentUrls = files.map(file => ({
+        key: file.objectKey,
+        url: fastify.storagePresignGet(file.objectKey, 300),
+        filename: file.originalName,
+        purpose: file.purpose,
+        expiresIn: 300
       }))
+      await Promise.all(files.map(file => fastify.prisma.operationLog.create({ data: {
+        userId: request.user.userId,
+        userRole: request.user.role ?? 0,
+        method: 'GET',
+        path: '/api/admin/contact/:id',
+        target: 'private_file',
+        targetId: file.id,
+        outcome: 'SUCCESS',
+        statusCode: 200,
+        sessionId: request.user.sid || null,
+        ip: request.ip || null,
+        userAgent: String(request.headers['user-agent'] || '').slice(0, 500) || null
+      } })))
     } catch(e) {}
 
     return reply.send({
@@ -169,7 +190,7 @@ export default async function adminContactRoutes(fastify) {
           userId:   request.user.userId,
           userRole: request.user.role ?? 0,
           method:   'PUT', path: request.url,
-          action:   `将联络留言 [${item.type}] ${item.name} 状态从「${statusLabel[oldStatus]}」改为「${statusLabel[status]}」`,
+          action:   `将联络留言 [${item.type}] 状态从「${statusLabel[oldStatus]}」改为「${statusLabel[status]}」`,
           targetId: id,
           before:   JSON.stringify({ status: oldStatus }),
           after:    JSON.stringify({ status }),
@@ -247,7 +268,7 @@ export default async function adminContactRoutes(fastify) {
           userId:   request.user.userId,
           userRole: request.user.role ?? 0,
           method:   'DELETE', path: request.url,
-          action:   `删除联络留言 [${item.type}] ${item.name}（${item.contact}）`,
+          action:   `删除联络留言 [${item.type}]`,
           targetId: id,
           ip:       request.ip || null
         }

@@ -680,13 +680,21 @@ window.addEventListener('DOMContentLoaded', async () => {
   _token = localStorage.getItem('mowo_token') || '';
   if (!_token) { location.href = 'index.html'; return; }
   try {
-    const p = JSON.parse(atob(_token.split('.')[1]));
-    if ((p.role ?? 0) < 2) { alert('权限不足'); location.href = 'index.html'; return; }
-    const roleMap = { 2:'管理员', 3:'超级管理员' };
-    document.getElementById('sidebarName').textContent   = p.phone || '管理员';
-    document.getElementById('sidebarRole').textContent   = roleMap[p.role] || '管理员';
-    document.getElementById('sidebarAvatar').textContent = (p.phone || '管')[0];
-  } catch(e) { location.href = 'index.html'; return; }
+    const currentUser = await window.fetchCurrentUser();
+    if (!currentUser?.staffRole) { alert('该页面仅工作人员可访问'); location.href = 'index.html'; return; }
+    const roleMap = { OWNER:'负责人', CUSTOMER_SERVICE:'运营客服', PRODUCTION:'生产人员', COLLAB_OPS:'合作运营' };
+    const displayName = currentUser.profile?.nickname || currentUser.maskedPhone || '工作人员';
+    const sidebarName = document.getElementById('sidebarName');
+    const sidebarRole = document.getElementById('sidebarRole');
+    const sidebarAvatar = document.getElementById('sidebarAvatar');
+    if (sidebarName) sidebarName.textContent = displayName;
+    if (sidebarRole) sidebarRole.textContent = roleMap[currentUser.staffRole] || '工作人员';
+    if (sidebarAvatar) sidebarAvatar.textContent = (displayName[0] || '工').toUpperCase();
+  } catch(e) {
+    console.error('后台身份初始化失败', e);
+    alert('后台身份检查暂时失败，请刷新后重试');
+    return;
+  }
 
   updateTime();
   setInterval(updateTime, 1000);
@@ -1533,7 +1541,7 @@ function closeSidebar() {
   document.body.style.overflow = '';
 }
 </script>
-<script src="../js/auth.js"></script>
-<script src="../js/admin-sidebar.js"></script>
+<script src="../js/auth.js?v=20260813-admin-init"></script>
+<script src="../js/admin-sidebar.js?v=20260813-shell-init"></script>
 </body>
 </html>

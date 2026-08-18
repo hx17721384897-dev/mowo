@@ -5,6 +5,8 @@
 > ORM：Prisma 5 — schema 位于 `content-service/prisma/schema.prisma`
 > 连接串：`DATABASE_URL=postgresql://postgres:***@localhost:5432/mowo_db`
 
+> **阅读提示（2026-08-13）：本文是历史设计说明。** 文中“63 张表”与当前 `schema.prisma` 的 75 个模型不一致，历史迁移也不能从空库完整复现当前 Schema。社区、分红、牛量、提现等表存在不代表首发启用对应功能。准确模型、迁移缺口和数据风险见 `modules/database-schema.md`；产品启用范围见 `RELEASE_SCOPE.md`。
+
 ---
 
 ## 概览
@@ -62,7 +64,7 @@
 | 43 | `inventory_snapshots` | 库存与生产 | 每日全量快照（财务审计基准） |
 | 44 | `order_item_bindings` | 库存与生产 | 扫码配对记录 |
 | 45 | `channel_quotas` | 库存与生产 | 渠道配额配置 |
-| 46 | `operation_logs` | 库存与生产 | 管理员操作日志 |
+| 46 | `operation_logs` | 员工安全 | 脱敏后台操作与拒绝访问记录 |
 | 47 | `contact_submissions` | 联络表单 | 联系我们表单提交 |
 | 48 | `creator_reserves` | 结算体系 | 创作者储备金账户（15%扣留） |
 | 49 | `reserve_logs` | 结算体系 | 储备金变动流水（90天到期释放） |
@@ -80,16 +82,24 @@
 | 61 | `pre_orders` | 购物车系统 | 预订单（10分钟库存预锁） |
 | 62 | `user_addresses` | 购物车系统 | 用户收货地址簿（最多20条） |
 | 63 | `content_quotas` | 购物车系统 | 限量内容配额（联名限量款） |
+| 64 | `account_deletion_requests` | 账户安全 | 注销申请、计划时间、执行状态和失败重试 |
+| 65 | `account_deletion_operations` | 账户安全 | 注销执行中各类数据处理步骤和重试结果 |
+| 66 | `private_files` | 文件安全 | 私有文件用途、所有者、真实类型、状态与业务绑定 |
+| 67 | `rate_limit_buckets` | 账户安全 | 哈希标识的跨实例频率计数固定窗口 |
+| 68 | `consent_records` | 账户安全 | 用户协议与隐私政策的版本化同意证据 |
+
+> 本清单仍是历史主表说明，不包含当前全部 75 个模型；缺失项和完整分组以 `modules/database-schema.md` 及 Prisma Schema 为准。
 
 ---
 
 ## 枚举类型
 
 ```
-UserStatus : ACTIVE | LIMITED | SUSPENDED | DELETED
+UserStatus : ACTIVE | LIMITED | SUSPENDED | PENDING_DELETE | DELETED
 SmsPurpose : LOGIN | REGISTER | RESET_PASSWORD | BIND_PHONE | DEACTIVATE
              STEP_UP_WITHDRAW | STEP_UP_CHANGE_PAYOUT | STEP_UP_CHANGE_PASSWORD
 ActionType : WITHDRAW | CHANGE_PAYOUT_ACCOUNT | CHANGE_PASSWORD | CHANGE_PHONE
+StaffRole  : OWNER | CUSTOMER_SERVICE | PRODUCTION | COLLAB_OPS
 ```
 
 ---
@@ -104,6 +114,7 @@ ActionType : WITHDRAW | CHANGE_PAYOUT_ACCOUNT | CHANGE_PASSWORD | CHANGE_PHONE
 | `phone` | String? unique | 手机号（微信only用户可为空） |
 | `password_hash` | String? | SMS注册；注销后匿名化清除 |
 | `role` | Int default 0 | 0=User / 1=Production / 2=Admin / 3=SuperAdmin |
+| `staff_role` | StaffRole? | 固定员工岗位；普通用户为空，`role` 仅保留旧代码兼容 |
 | `certify_status` | Int | 0未申请/1审核中/2通过/3拒绝（兼容旧字段） |
 | `status` | UserStatus | 账号状态（v1新增，优先于is_banned） |
 | `wechat_openid` | String? unique | 微信登录预留 |
@@ -112,7 +123,11 @@ ActionType : WITHDRAW | CHANGE_PAYOUT_ACCOUNT | CHANGE_PASSWORD | CHANGE_PHONE
 | `privacy_agreed_at` | DateTime? | 用户首次同意隐私协议时间 |
 | `privacy_policy_version` | String? | 同意时的协议版本号 |
 
-**PIPL软删除**：注销时 `status=DELETED`、`deleted_at` 写时间戳、手机号和密码哈希匿名化覆盖，数据不物理删除。
+**注销处理**：申请时 `status=PENDING_DELETE`；后台清理完成后才写 `status=DELETED` 和 `deleted_at`，并清除手机号、密码、微信标识和非必要资料。依法或履约需要的订单、合同、售后和审计记录受控保留。
+
+### account_deletion_requests — 注销执行记录
+
+每个用户最多一条记录，保存申请时间、计划执行时间、处理开始/完成/撤销时间、阻断项、失败次数、首次失败时间、下次重试时间、转人工关注时间、暂停/恢复信息和错误摘要。状态为 `REQUESTED / PROCESSING / BLOCKED / FAILED / MANUAL_REVIEW / PAUSED / CANCELLED / COMPLETED`。`pause_reason` 是仅限工作人员查看的内部原因，`pause_user_message` 是最多 300 字、可展示给用户的说明，两者不能混用。`processing_started_at` 是撤销边界：为空时暂停任务仍可由用户撤销，非空说明清理已经开始，不能自行恢复。该表让用户状态与实际资料清理进度分开，避免“账号显示已删除但文件仍未删”的假成功，也能追踪负责人为何暂停或恢复任务。
 
 ---
 
@@ -382,7 +397,7 @@ available = currentStock - reservedStock - wipFrameQty - wipKitQty
 | **平台联合唯一** | `@@unique([platform, externalOrderId])`，SELF+null不触发，防重复导入 |
 | **SKU全局排序** | `model.sortOrder × 1000 + sku.sortOrder`，影响导出地址排序和帧图压缩包结构 |
 | **seqNo** | 导出地址时写入 customize_orders，帧图压缩包按 seqNo 排序，两次导出顺序永远一致 |
-| **PIPL软删除** | 注销只匿名化数据+置DELETED状态，不物理删除 |
+| **注销与留存** | 个人资料和非交易文件删除或匿名化；交易、履约、争议和必要审计记录受控保留 |
 | **草稿保护** | `in_cart` 状态的 custom_products 不被7天清理Cron删除 |
 | **双Token** | accessToken(15min JWT) + refreshToken(7天, HttpOnly Cookie, DB存SHA256哈希) |
 | **PreOrder幂等** | `checkoutIdempotencyKey = sha256(userId + sortedCartItemIds)`，防重复创建预订单 |

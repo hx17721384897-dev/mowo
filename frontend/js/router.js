@@ -54,10 +54,10 @@ const Router = {
   },
 
   toAuth(redirect = null) {
-    // redirect 有值时登录成功后跳回来
+    // 项目使用各页面共用的登录弹窗，没有独立 auth.html。
     const url = redirect
-      ? `/pages/auth.html?redirect=${encodeURIComponent(redirect)}`
-      : '/pages/auth.html'
+      ? `index.html?auth=1&redirect=${encodeURIComponent(redirect)}`
+      : 'index.html?auth=1'
     this.go(url)
   },
 
@@ -216,4 +216,5 @@ const Router = {
   }
 }
 
-export default Router
+// 当前项目通过普通 <script> 标签加载本文件，因此直接挂到网页全局使用。
+window.Router = Router

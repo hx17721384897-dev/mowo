@@ -2,6 +2,8 @@
 // DIY 定制草稿工作区 API
 // 注册前缀：/api/custom-products
 
+import { FILE_PURPOSE, findOwnedReadyFiles, linkFiles } from '../lib/private-files.js'
+
 export default async function customProductRoutes(fastify) {
   const { prisma } = fastify
 
@@ -24,6 +26,20 @@ export default async function customProductRoutes(fastify) {
       return reply.code(400).send({ success: false, message: '帧图数据不能为空' })
     }
 
+    let frameKeys
+    try {
+      frameKeys = typeof animationFrames === 'string' ? JSON.parse(animationFrames) : animationFrames
+      if (!Array.isArray(frameKeys) || frameKeys.length === 0 || frameKeys.length > 50) throw new Error()
+    } catch {
+      return reply.code(400).send({ success: false, message: '帧图数据格式无效' })
+    }
+    let ownedFrames = []
+    try {
+      ownedFrames = await findOwnedReadyFiles(prisma, frameKeys, userId, [FILE_PURPOSE.CREATOR_FRAME, FILE_PURPOSE.CUSTOMIZATION_FRAME])
+    } catch (error) {
+      return reply.code(400).send({ success: false, message: error.message })
+    }
+
     // ── 草稿数量上限（普通用户 3 个，认证创作者 10 个）──
     const certifyStatus = req.user.certifyStatus ?? 0
     const DRAFT_LIMIT = certifyStatus >= 2 ? 10 : 3
@@ -40,10 +56,10 @@ export default async function customProductRoutes(fastify) {
 
     const draftExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
 
-    const cp = await prisma.customProduct.create({
-      data: {
+    const cp = await prisma.$transaction(async tx => {
+      const created = await tx.customProduct.create({ data: {
         userId,
-        animationFrames,
+        animationFrames: JSON.stringify(frameKeys),
         draftData:        draftData || null,
         draftExpiresAt,
         previewUrl:       previewUrl || null,
@@ -52,7 +68,9 @@ export default async function customProductRoutes(fastify) {
         hardwareSkuId:    hardwareSkuId || null,
         frameCount:       frameCount ? parseInt(frameCount) : null,
         status:           'draft'
-      }
+      } })
+      await linkFiles(tx, ownedFrames, 'CUSTOM_PRODUCT', created.id)
+      return created
     })
 
     return reply.send({ success: true, data: cp })
@@ -93,10 +111,29 @@ export default async function customProductRoutes(fastify) {
       prisma.customProduct.count({ where: { userId, status: { not: 'removed' } } }),
     ])
 
+    const itemsWithPreview = await Promise.all(items.map(async item => {
+      let previewFrameUrl = null
+      try {
+        const keys = JSON.parse(item.animationFrames || '[]')
+        const firstKey = Array.isArray(keys) ? keys[0] : null
+        if (typeof firstKey === 'string' && !firstKey.startsWith('data:') && !firstKey.startsWith('http')) {
+          const file = await prisma.privateFile.findFirst({ where: {
+            objectKey: firstKey,
+            ownerUserId: userId,
+            status: 'READY',
+            linkedResourceType: 'CUSTOM_PRODUCT',
+            linkedResourceId: item.id
+          } })
+          if (file) previewFrameUrl = fastify.storagePresignGet(file.objectKey, 300)
+        }
+      } catch {}
+      return { ...item, previewFrameUrl }
+    }))
+
     return reply.send({
       success: true,
       data: {
-        items,
+        items: itemsWithPreview,
         total,
         page,
         hasMore: skip + items.length < total,
@@ -141,13 +178,39 @@ export default async function customProductRoutes(fastify) {
       return reply.code(400).send({ success: false, message: '该草稿已提交，不可再编辑' })
     }
 
+    let nextFrameKeys = null
+    let newlyLinkedFrames = []
+    if (animationFrames !== undefined) {
+      try {
+        nextFrameKeys = typeof animationFrames === 'string' ? JSON.parse(animationFrames) : animationFrames
+        if (!Array.isArray(nextFrameKeys) || nextFrameKeys.length === 0 || nextFrameKeys.length > 50) throw new Error()
+      } catch {
+        return reply.code(400).send({ success: false, message: '帧图数据格式无效' })
+      }
+      const files = await prisma.privateFile.findMany({ where: {
+        objectKey: { in: [...new Set(nextFrameKeys)] },
+        ownerUserId: userId,
+        purpose: { in: [FILE_PURPOSE.CREATOR_FRAME, FILE_PURPOSE.CUSTOMIZATION_FRAME] },
+        status: 'READY',
+        OR: [
+          { linkedResourceId: null },
+          { linkedResourceType: 'CUSTOM_PRODUCT', linkedResourceId: cp.id }
+        ]
+      } })
+      if (files.length !== nextFrameKeys.length) {
+        return reply.code(400).send({ success: false, message: '文件不存在、未完成上传或不属于当前草稿' })
+      }
+      newlyLinkedFrames = files.filter(file => !file.linkedResourceId)
+    }
+
     // 延长 7 天
     const draftExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
 
-    const updated = await prisma.customProduct.update({
-      where: { id },
-      data: {
-        animationFrames:  animationFrames  ?? cp.animationFrames,
+    const updated = await prisma.$transaction(async tx => {
+      const saved = await tx.customProduct.update({
+        where: { id },
+        data: {
+        animationFrames:  nextFrameKeys ? JSON.stringify(nextFrameKeys) : cp.animationFrames,
         draftData:        draftData        !== undefined ? draftData : cp.draftData,
         previewUrl:       previewUrl       !== undefined ? previewUrl : cp.previewUrl,
         staticPreviewUrl: staticPreviewUrl !== undefined ? staticPreviewUrl : cp.staticPreviewUrl,
@@ -155,7 +218,10 @@ export default async function customProductRoutes(fastify) {
         hardwareSkuId:    hardwareSkuId    !== undefined ? hardwareSkuId : cp.hardwareSkuId,
         frameCount:       frameCount       !== undefined ? parseInt(frameCount) : cp.frameCount,
         draftExpiresAt
-      }
+        }
+      })
+      await linkFiles(tx, newlyLinkedFrames, 'CUSTOM_PRODUCT', cp.id)
+      return saved
     })
 
     return reply.send({ success: true, data: updated })

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>创意社区 — 哞屋 MOWO</title>
+<title>联名作品 — 哞屋 MOWO</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Noto+Sans+SC:wght@300;400;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../css/nav.css">
@@ -248,8 +248,8 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
 <!-- 页面标题区（滚动后消失） -->
 <div class="page-header" id="pageHeader">
   <div class="ph-inner">
-    <h1 class="ph-title">创意社区 <span class="ph-spark">✦</span></h1>
-    <p class="ph-sub">发现灵感，分享创意，让每一帧画面动起来</p>
+    <h1 class="ph-title">联名作品 <span class="ph-spark">✦</span></h1>
+    <p class="ph-sub">浏览经过审核并已开放展示的联名作品</p>
   </div>
 </div>
 
@@ -272,8 +272,8 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
         <button class="sort-tab active" onclick="setSort('latest',this)">最新</button>
         <button class="sort-tab" onclick="setSort('popular',this)">热门</button>
       </div>
-      <a href="customize-start.html" class="incentive-link">
-        📦 上传作品，有机会获官方推荐并销售赚收益 →
+      <a href="contact.html" class="incentive-link">
+        联系我们，了解创作者合作方式 →
       </a>
     </div>
   </div>
@@ -301,13 +301,13 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
   <div class="cta-inner">
     <div class="cta-badge">开放联名合作</div>
     <h2 class="cta-heading">你的画，也能成为动起来的礼物</h2>
-    <p class="cta-desc">哞屋持续开放创作者联名合作。上传你的逐帧动画作品，通过官方审核后即可在展示页公开销售，每笔收益按分红规则结算，官方推荐作品额外获得流量加持。</p>
+    <p class="cta-desc">哞屋持续开放创作者联名合作。邀请测试阶段由工作人员人工核验版权与生产条件，具体上架、优惠和合作方式以双方确认记录为准。</p>
     <div class="cta-steps">
       <div class="cta-step">
         <span class="cta-step-num">01</span>
         <div class="cta-step-content">
           <h3>上传作品</h3>
-          <p>将逐帧动画序列上传至平台，支持多帧 PNG / JPG，平台自动生成预览 GIF</p>
+          <p>通过定制入口上传素材，或在联络页面留下作品与联系方式</p>
         </div>
       </div>
       <div class="cta-step-sep">→</div>
@@ -315,19 +315,19 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
         <span class="cta-step-num">02</span>
         <div class="cta-step-content">
           <h3>审核上架</h3>
-          <p>官方在 3 个工作日内完成审核，通过后作品将出现在本页并开放购买</p>
+          <p>工作人员核验版权、生产效果和适合的标准款式</p>
         </div>
       </div>
       <div class="cta-step-sep">→</div>
       <div class="cta-step">
         <span class="cta-step-num">03</span>
         <div class="cta-step-content">
-          <h3>获得收益</h3>
-          <p>每笔销售按平台分红规则按周结算，优质作品可获官方推荐并提升牛量等级</p>
+          <h3>确认合作</h3>
+          <p>双方确认合作内容后再安排上架，首发阶段不开放线上分红和提现</p>
         </div>
       </div>
     </div>
-    <a href="customize-start.html" class="cta-action">申请联名，上传我的作品 →</a>
+    <a href="contact.html" class="cta-action">联系工作人员了解合作 →</a>
   </div>
 </section>
 
@@ -346,6 +346,7 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
 </footer>
 
 <script src="../js/auth.js"></script>
+<script src="../js/feature-flags.js"></script>
 <script>
 const API = (location.hostname === '127.0.0.1' ? 'http://127.0.0.1:3001' : 'http://localhost:3001')
 
@@ -391,6 +392,7 @@ function renderSkeletons(n = 8) {
 async function loadWorks() {
   renderSkeletons()
   try {
+    if (typeof getMowoFeatureFlags === 'function') await getMowoFeatureFlags()
     const token = localStorage.getItem('mowo_token') || ''
     const headers = token ? { Authorization: `Bearer ${token}` } : {}
     const res = await fetch(`${API}/api/collab/works?status=approved&limit=200`, { headers })
@@ -510,10 +512,10 @@ function buildCard(w) {
           <span class="author-name">@${name}</span>
         </div>
         <div class="card-actions">
-          <button class="card-like ${liked}" onclick="event.stopPropagation();toggleLike(this,'${esc(w.id)}')">
+          ${window.mowoFeatures?.community ? `<button class="card-like ${liked}" onclick="event.stopPropagation();toggleLike(this,'${esc(w.id)}')">
             <span class="like-icon">${likeIcon}</span>
             <span class="like-count">${likeCount}</span>
-          </button>
+          </button>` : ''}
           <a class="card-cart" href="./showcase-confirm.html?workId=${esc(w.id)}" onclick="event.stopPropagation()" aria-label="查看购买">
             <svg viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
           </a>

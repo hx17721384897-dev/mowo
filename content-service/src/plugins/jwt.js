@@ -4,37 +4,105 @@
 
 import fp from 'fastify-plugin'
 import fastifyJwt from '@fastify/jwt'
-import { isUserBanned, isUserLimited } from '../lib/security.js'
+import { isUserLimited } from '../lib/security.js'
+import { effectiveStaffRole, hasPermission } from '../lib/permissions.js'
 
 async function jwtPlugin(fastify) {
   fastify.register(fastifyJwt, {
-    secret: process.env.JWT_SECRET || 'mowo_dev_secret_change_in_production'
+    secret: fastify.config.jwtSecret
   })
 
-  // ── 基础身份验证（兼容旧 payload { userId } 和新 payload { sub }）──
-  fastify.decorate('authenticate', async function (request, reply) {
+  async function verifyActiveSession(request, reply) {
     try {
       await request.jwtVerify()
-      // 统一：无论哪种 payload，都确保 userId 字段存在
       if (!request.user.userId && request.user.sub) {
         request.user.userId = request.user.sub
       }
-    } catch (err) {
-      reply.code(401).send({ success: false, message: '请先登录' })
+
+      const userId = request.user.userId
+      const sessionId = request.user.sid
+      if (!userId || !sessionId) {
+        reply.code(401).send({
+          success: false,
+          message: '登录状态已升级，请重新登录',
+          code: 'SESSION_REQUIRED'
+        })
+        return false
+      }
+
+      const session = await fastify.prisma.refreshToken.findFirst({
+        where: {
+          userId,
+          sessionId,
+          revokedAt: null,
+          expiresAt: { gt: new Date() }
+        },
+        select: {
+          id: true,
+          user: {
+            select: {
+              role: true,
+              staffRole: true,
+              certifyStatus: true,
+              isBanned: true,
+              status: true
+            }
+          }
+        }
+      })
+      const user = session?.user
+
+      if (!session) {
+        reply.code(401).send({
+          success: false,
+          message: '当前设备已退出登录，请重新登录',
+          code: 'SESSION_REVOKED'
+        })
+        return false
+      }
+
+      if (!user || user.isBanned || ['SUSPENDED', 'DELETED'].includes(user.status)) {
+        reply.code(403).send({
+          success: false,
+          message: '账号已停用，请联系客服',
+          code: 'ACCOUNT_DISABLED'
+        })
+        return false
+      }
+
+      // 后台权限以数据库当前值为准，角色调整后立即生效。
+      request.user.role = user.role
+      request.user.staffRole = effectiveStaffRole(user)
+      request.user.certifyStatus = user.certifyStatus
+      request.user.accountStatus = user.status
+      if (user.status === 'PENDING_DELETE' && !pendingDeletionActionAllowed(request)) {
+        reply.code(403).send({
+          success: false,
+          message: '账号正在注销处理中，不能新增业务；您可以查看已有订单或撤销注销',
+          code: 'ACCOUNT_DELETION_PENDING'
+        })
+        return false
+      }
+      return true
+    } catch {
+      reply.code(401).send({ success: false, message: '请先登录', code: 'AUTH_REQUIRED' })
+      return false
     }
+  }
+
+  fastify.decorate('authenticate', verifyActiveSession)
+
+  fastify.decorate('optionalAuthenticate', async function (request, reply) {
+    const authorization = String(request.headers.authorization || '')
+    if (!authorization.startsWith('Bearer ') || authorization.slice(7).trim() === '') return true
+    return verifyActiveSession(request, reply)
   })
 
   // ── 角色校验中间件工厂（role >= minRole）──
   fastify.decorate('requireRole', function (minRole) {
     return async function (request, reply) {
-      try {
-        await request.jwtVerify()
-        if (!request.user.userId && request.user.sub) {
-          request.user.userId = request.user.sub
-        }
-      } catch (err) {
-        return reply.code(401).send({ success: false, message: '请先登录' })
-      }
+      const active = await verifyActiveSession(request, reply)
+      if (!active) return
 
       const userRole = request.user.role ?? 0
       if (userRole < minRole) {
@@ -43,6 +111,20 @@ async function jwtPlugin(fastify) {
           message:  '权限不足',
           required: minRole,
           current:  userRole
+        })
+      }
+    }
+  })
+
+  fastify.decorate('requirePermission', function (permission) {
+    return async function (request, reply) {
+      const active = await verifyActiveSession(request, reply)
+      if (!active) return
+      if (!hasPermission(request.user, permission)) {
+        return reply.code(403).send({
+          success: false,
+          message: '当前员工岗位无权执行此操作',
+          code: 'STAFF_PERMISSION_DENIED'
         })
       }
     }
@@ -61,18 +143,24 @@ async function jwtPlugin(fastify) {
     }
   })
 
-  // ── 封禁检查中间件（结合 TokenBlacklist 即时封禁）──
+  // 保留给旧路由组合使用；基础 authenticate 已统一执行账号状态检查。
   fastify.decorate('requireNotBanned', async function (request, reply) {
-    const userId = request.user?.userId ?? request.user?.sub
-    if (!userId) return
-    if (await isUserBanned(userId, fastify.prisma)) {
-      return reply.code(403).send({
-        success: false,
-        message: '账号已被封禁，请联系客服',
-        code:    'ACCOUNT_BANNED'
-      })
-    }
+    return verifyActiveSession(request, reply)
   })
 }
 
 export default fp(jwtPlugin)
+  function pendingDeletionActionAllowed(request) {
+    const path = request.url.split('?')[0]
+    if (request.method === 'GET') {
+      // 查询本身可用，但这些旧 GET 接口会创建购物车或签发新的上传权限。
+      return path !== '/api/cart' && !path.includes('/upload-url')
+    }
+    if (request.method === 'DELETE') return true
+    if ([
+      '/api/v1/account/deactivate/cancel',
+      '/api/v1/auth/logout',
+      '/api/v1/auth/logout-all'
+    ].includes(path)) return true
+    return /^\/api\/(orders\/[^/]+\/(confirm-receipt|cancel|aftersale)|customize-orders\/[^/]+\/cancel)$/.test(path)
+  }

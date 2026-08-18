@@ -1,8 +1,6 @@
 // src/routes/auth.js
 // 用户身份相关接口：注册、登录、获取当前用户、更新资料
 
-import { hashPassword, verifyPassword, signToken } from '../lib/auth.js'
-
 export default async function authRoutes(fastify) {
 
   // ─────────────────────────────────────────
@@ -25,55 +23,11 @@ export default async function authRoutes(fastify) {
         }
       }
     }
-  }, async (request, reply) => {
-    const { phone, password } = request.body
-    // nickname 选填，默认用「用户」+ 手机号后四位
-    const nickname = request.body.nickname || `用户${phone.slice(-4)}`
-
-    // 检查手机号是否已注册
-    const existing = await fastify.prisma.user.findUnique({ where: { phone } })
-    if (existing) {
-      return reply.code(400).send({ success: false, message: '该手机号已注册' })
-    }
-
-    // 加密密码
-    const passwordHash = await hashPassword(password)
-
-    // 事务：同时创建 users、user_profiles、credit_scores 三条记录
-    // 用事务是为了保证三条记录要么全部成功，要么全部失败，不会出现只创建了一半的情况
-    const user = await fastify.prisma.$transaction(async (tx) => {
-      const newUser = await tx.user.create({
-        data: {
-          phone,
-          passwordHash,
-          certifyStatus: 0
-        }
-      })
-
-      await tx.userProfile.create({
-        data: {
-          userId: newUser.id,
-          nickname
-        }
-      })
-
-      await tx.creditScore.create({
-        data: {
-          userId: newUser.id,
-          score: 100
-        }
-      })
-
-      return newUser
-    })
-
-    // 生成 token 返回给前端
-    const token = signToken(fastify, user)
-
-    return reply.code(201).send({
-      success: true,
-      message: '注册成功',
-      data: { token }
+  }, async (_request, reply) => {
+    return reply.code(410).send({
+      success: false,
+      message: '旧注册入口已停用，请使用短信验证码',
+      code: 'LEGACY_AUTH_RETIRED'
     })
   })
 
@@ -95,52 +49,11 @@ export default async function authRoutes(fastify) {
         }
       }
     }
-  }, async (request, reply) => {
-    const { phone, password } = request.body
-
-    // 查找用户，同时带出 profile 里的昵称和头像
-    const user = await fastify.prisma.user.findUnique({
-      where: { phone },
-      include: {
-        profile: {
-          select: { nickname: true, avatarUrl: true }
-        }
-      }
-    })
-
-    // 用户不存在或密码错误，返回同一个错误信息
-    // 不区分「用户不存在」和「密码错误」，防止被人探测哪些手机号已注册
-    if (!user || !(await verifyPassword(password, user.passwordHash))) {
-      return reply.code(401).send({ success: false, message: '手机号或密码错误' })
-    }
-
-    // 检查是否被封号
-    if (user.isBanned) {
-      return reply.code(403).send({ success: false, message: '账号已被封禁，请联系客服' })
-    }
-
-    // 更新最后登录时间
-    await fastify.prisma.user.update({
-      where: { id: user.id },
-      data: { lastLoginAt: new Date() }
-    })
-
-    // 生成 token
-    const token = signToken(fastify, user)
-
-    return reply.send({
-      success: true,
-      message: '登录成功',
-      data: {
-        token,
-        user: {
-          id: user.id,
-          phone: user.phone,
-          certifyStatus: user.certifyStatus,
-          nickname: user.profile?.nickname || null,
-          avatarUrl: user.profile?.avatarUrl || null
-        }
-      }
+  }, async (_request, reply) => {
+    return reply.code(410).send({
+      success: false,
+      message: '旧登录入口已停用，请使用新版登录',
+      code: 'LEGACY_AUTH_RETIRED'
     })
   })
 

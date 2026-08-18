@@ -3,12 +3,15 @@
 // 前缀：/api/v1/auth/* 和 /api/v1/user/*
 
 import crypto from 'crypto'
-import { sendSmsCode, verifySmsCode } from '../lib/sms.js'
+import { assertSmsCooldownAllowed, sendSmsCode, verifySmsCode } from '../lib/sms.js'
 import { generateTokenResponse } from '../lib/token.js'
 import { hashPassword, verifyPassword, maybeUpgradeHash, checkLoginLock, recordLoginFail, resetLoginFail } from '../lib/auth.js'
-import { isUserBanned, revokeAllSessions } from '../lib/security.js'
-
-const CURRENT_PRIVACY_VERSION = process.env.CURRENT_PRIVACY_VERSION || '2025-01'
+import { isUserBanned, revokeAllSessions, revokeCurrentSession } from '../lib/security.js'
+import {
+  assertSmsVerificationAllowed,
+  enforceSmsSendLimits,
+  recordSmsVerificationFailure
+} from '../lib/rate-limit.js'
 
 // ─── 注册认证路由（prefix: /api/v1/auth）───
 export async function authV1Routes(fastify) {
@@ -40,7 +43,30 @@ export async function authV1Routes(fastify) {
       return reply.code(400).send({ success: false, message: '无效的短信用途' })
     }
 
+    if (purpose === 'LOGIN' || purpose === 'REGISTER') {
+      const account = await fastify.prisma.user.findUnique({
+        where: { phone },
+        select: { id: true }
+      })
+      if (purpose === 'LOGIN' && !account) {
+        return reply.code(404).send({
+          success: false,
+          message: '该手机号尚未注册，请前往注册',
+          code: 'ACCOUNT_NOT_FOUND'
+        })
+      }
+      if (purpose === 'REGISTER' && account) {
+        return reply.code(409).send({
+          success: false,
+          message: '该手机号已注册，请直接登录',
+          code: 'ACCOUNT_ALREADY_EXISTS'
+        })
+      }
+    }
+
     try {
+      await assertSmsCooldownAllowed(fastify.prisma, phone, purpose)
+      if (!await enforceSmsSendLimits(fastify, req, reply, phone)) return
       const result = await sendSmsCode(fastify.prisma, phone, purpose)
       const resp = { success: true, message: '验证码已发送' }
       // 开发Mock模式：在响应中返回验证码（生产环境不暴露）
@@ -57,47 +83,27 @@ export async function authV1Routes(fastify) {
   })
 
   // ────────────────────────────────────────────
-  // POST /api/v1/auth/sms/verify — 验证码登录/注册
-  // 已存在手机号 → 登录；新手机号 → 注册（需 agreedToPrivacy=true）
+  // POST /api/v1/auth/sms/verify — 验证码登录或注册（必须明确 mode）
   // ────────────────────────────────────────────
   fastify.post('/sms/verify', {
     schema: {
       body: {
         type: 'object',
-        required: ['phone', 'code'],
+        required: ['phone', 'code', 'mode'],
+        additionalProperties: false,
         properties: {
           phone:            { type: 'string', minLength: 11, maxLength: 11 },
           code:             { type: 'string', minLength: 6, maxLength: 6 },
+          mode:             { type: 'string', enum: ['LOGIN', 'REGISTER'] },
           agreedToPrivacy:  { type: 'boolean' }
         }
       }
     }
   }, async (req, reply) => {
-    const { phone, code, agreedToPrivacy } = req.body
+    const { phone, code, mode, agreedToPrivacy } = req.body
 
     if (!/^1[3-9]\d{9}$/.test(phone)) {
       return reply.code(400).send({ success: false, message: '手机号格式不正确' })
-    }
-
-    // 验证短信验证码
-    try {
-      await verifySmsCode(fastify.prisma, phone, code, 'LOGIN')
-    } catch (err) {
-      // 尝试 REGISTER 用途（兼容注册流程）
-      try {
-        await verifySmsCode(fastify.prisma, phone, code, 'REGISTER')
-      } catch (_) {
-        const msgMap = {
-          CODE_NOT_FOUND:          '验证码不存在或已过期',
-          CODE_TOO_MANY_ATTEMPTS:  '验证码尝试次数过多，请重新获取',
-          CODE_INVALID:            '验证码不正确'
-        }
-        return reply.code(400).send({
-          success: false,
-          message: msgMap[err.code] || '验证码验证失败',
-          code:    err.code
-        })
-      }
     }
 
     let user = await fastify.prisma.user.findUnique({
@@ -105,16 +111,57 @@ export async function authV1Routes(fastify) {
       include: { profile: { select: { nickname: true, avatarUrl: true } } }
     })
 
-    if (!user) {
-      // ── 新用户注册 ──
-      if (!agreedToPrivacy) {
-        return reply.code(400).send({
-          success: false,
-          message: '注册前请阅读并同意《隐私政策》和《用户协议》',
-          code:    'PRIVACY_NOT_AGREED'
+    if (mode === 'LOGIN' && !user) {
+      return reply.code(404).send({
+        success: false,
+        message: '该手机号尚未注册，请前往注册',
+        code: 'ACCOUNT_NOT_FOUND'
+      })
+    }
+    if (mode === 'REGISTER' && user) {
+      return reply.code(409).send({
+        success: false,
+        message: '该手机号已注册，请直接登录',
+        code: 'ACCOUNT_ALREADY_EXISTS'
+      })
+    }
+    if (mode === 'REGISTER' && !agreedToPrivacy) {
+      return reply.code(400).send({
+        success: false,
+        message: '注册前请阅读并同意《隐私政策》和《用户协议》',
+        code: 'PRIVACY_NOT_AGREED'
+      })
+    }
+
+    // 登录码和注册码严格分开，不能跨用途复用。
+    try {
+      await assertSmsVerificationAllowed(fastify, req)
+      await verifySmsCode(fastify.prisma, phone, code, mode)
+    } catch (err) {
+      if (err.code !== 'VERIFY_TEMPORARILY_LOCKED') {
+        await recordSmsVerificationFailure(fastify, req)
+      }
+      if (err.code === 'VERIFY_TEMPORARILY_LOCKED') {
+        reply.header('Retry-After', String(err.retryAfterSeconds))
+        return reply.code(429).send({
+          success: false, message: err.message, code: err.code,
+          retryAfterSeconds: err.retryAfterSeconds
         })
       }
+      const msgMap = {
+        CODE_NOT_FOUND:          '验证码不存在或已过期',
+        CODE_TOO_MANY_ATTEMPTS:  '验证码尝试次数过多，请重新获取',
+        CODE_INVALID:            '验证码不正确'
+      }
+      return reply.code(400).send({
+        success: false,
+        message: msgMap[err.code] || '验证码验证失败',
+        code:    err.code
+      })
+    }
 
+    if (mode === 'REGISTER') {
+      // ── 新用户注册 ──
       const nickname = `用户${phone.slice(-4)}`
       user = await fastify.prisma.$transaction(async (tx) => {
         const newUser = await tx.user.create({
@@ -122,17 +169,41 @@ export async function authV1Routes(fastify) {
             phone,
             certifyStatus:       0,
             privacyAgreedAt:     new Date(),
-            privacyPolicyVersion: CURRENT_PRIVACY_VERSION
+            privacyPolicyVersion: fastify.config.privacyVersion
           }
         })
         await tx.userProfile.create({ data: { userId: newUser.id, nickname } })
         await tx.creditScore.create({ data: { userId: newUser.id, score: 100 } })
+        await tx.consentRecord.createMany({
+          data: [
+            {
+              userId: newUser.id,
+              type: 'USER_AGREEMENT',
+              version: fastify.config.userAgreementVersion,
+              scene: 'REGISTER',
+              ip: req.ip || null,
+              userAgent: String(req.headers['user-agent'] || '').slice(0, 500) || null
+            },
+            {
+              userId: newUser.id,
+              type: 'PRIVACY_POLICY',
+              version: fastify.config.privacyVersion,
+              scene: 'REGISTER',
+              ip: req.ip || null,
+              userAgent: String(req.headers['user-agent'] || '').slice(0, 500) || null
+            }
+          ]
+        })
         // PIPL合规审计日志
         await tx.auditLog.create({
           data: {
             userId: newUser.id,
             action: 'PRIVACY_AGREED',
-            detail: { version: CURRENT_PRIVACY_VERSION },
+            detail: {
+              privacyVersion: fastify.config.privacyVersion,
+              userAgreementVersion: fastify.config.userAgreementVersion,
+              scene: 'REGISTER'
+            },
             ip:     req.ip
           }
         })
@@ -173,6 +244,14 @@ export async function authV1Routes(fastify) {
       }
     }
   }, async (req, reply) => {
+    if (!fastify.config.passwordLoginEnabled) {
+      return reply.code(404).send({
+        success: false,
+        message: '当前版本仅支持短信验证码登录',
+        code: 'PASSWORD_LOGIN_DISABLED'
+      })
+    }
+
     const { phone, password } = req.body
 
     const user = await fastify.prisma.user.findUnique({
@@ -255,20 +334,31 @@ export async function authV1Routes(fastify) {
       data:  { revokedAt: new Date() }
     })
 
-    return generateTokenResponse(fastify, fastify.prisma, record.user, req, reply)
+    return generateTokenResponse(fastify, fastify.prisma, record.user, req, reply, {
+      sessionId: record.sessionId || crypto.randomUUID()
+    })
   })
 
   // ────────────────────────────────────────────
-  // POST /api/v1/auth/logout — 退出登录（会话熔断）
+  // POST /api/v1/auth/logout — 只退出当前设备
   // ────────────────────────────────────────────
   fastify.post('/logout', {
     preHandler: fastify.authenticate
   }, async (req, reply) => {
     const userId = req.user.userId ?? req.user.sub
-    await revokeAllSessions(userId, fastify.prisma, 'user_logout')
-    // 清除 Cookie
+    await revokeCurrentSession(userId, req.user.sid, fastify.prisma, 'user_logout')
     reply.clearCookie('refresh_token', { path: '/' })
-    return reply.send({ success: true, message: '已退出登录' })
+    return reply.send({ success: true, message: '当前设备已退出登录' })
+  })
+
+  // POST /api/v1/auth/logout-all — 退出账号下全部设备
+  fastify.post('/logout-all', {
+    preHandler: fastify.authenticate
+  }, async (req, reply) => {
+    const userId = req.user.userId ?? req.user.sub
+    await revokeAllSessions(userId, fastify.prisma, 'user_logout_all')
+    reply.clearCookie('refresh_token', { path: '/' })
+    return reply.send({ success: true, message: '全部设备已退出登录' })
   })
 }
 
@@ -276,73 +366,13 @@ export async function authV1Routes(fastify) {
 export async function userV1Routes(fastify) {
 
   // ────────────────────────────────────────────
-  // POST /api/v1/user/account/deactivate — 账号注销（PIPL软删除+匿名化）
+  // 旧立即注销入口永久停用，统一使用 /api/v1/account/deactivate/*。
   // ────────────────────────────────────────────
-  fastify.post('/account/deactivate', {
-    preHandler: fastify.authenticate,
-    schema: {
-      body: {
-        type: 'object',
-        required: ['password'],
-        properties: {
-          password: { type: 'string', minLength: 1 },
-          reason:   { type: 'string', maxLength: 200 }
-        }
-      }
-    }
-  }, async (req, reply) => {
-    const userId = req.user.userId ?? req.user.sub
-    const { password, reason } = req.body
-
-    const user = await fastify.prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true, phone: true, passwordHash: true, status: true }
+  fastify.post('/account/deactivate', async (_req, reply) => {
+    return reply.code(410).send({
+      success: false,
+      message: '旧注销入口已停用，请在账号设置中提交注销申请',
+      code: 'LEGACY_ACCOUNT_DELETION_RETIRED'
     })
-
-    if (!user) {
-      return reply.code(404).send({ success: false, message: '用户不存在' })
-    }
-    if (user.status === 'DELETED') {
-      return reply.code(400).send({ success: false, message: '账号已注销' })
-    }
-
-    // 验证密码（身份确认）
-    if (!user.passwordHash || !(await verifyPassword(password, user.passwordHash))) {
-      return reply.code(401).send({ success: false, message: '密码不正确，无法注销' })
-    }
-
-    // 匿名化处理
-    const anonPhone = `DELETED_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`
-
-    await fastify.prisma.$transaction(async (tx) => {
-      // 软删除 + 匿名化
-      await tx.user.update({
-        where: { id: userId },
-        data: {
-          status:       'DELETED',
-          deletedAt:    new Date(),
-          deleteReason: reason || null,
-          phone:        anonPhone,  // 匿名化手机号，释放手机号唯一键
-          passwordHash: null        // 清除密码
-        }
-      })
-      // 写审计日志
-      await tx.auditLog.create({
-        data: {
-          userId,
-          action:   'ACCOUNT_DEACTIVATED',
-          detail:   { reason: reason || null },
-          ip:       req.ip
-        }
-      })
-    }, { timeout: 5000 })
-
-    // 会话熔断（注销后立即让所有Token失效）
-    await revokeAllSessions(userId, fastify.prisma, 'account_deactivated')
-
-    // 清除 Cookie
-    reply.clearCookie('refresh_token', { path: '/' })
-
-    return reply.send({ success: true, message: '账号已注销，感谢您使用哞屋' })
   })
 }

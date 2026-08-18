@@ -16,37 +16,11 @@ const REVENUE_KEYS = [
   { key: 'revenue_bull_coeff_5',    label: '5级牛量系数（牛王）', unit: '×', default: 1.6 },
 ]
 
-function requireAdmin(request, reply, done) {
-  try {
-    request.jwtVerify()
-    if ((request.user?.role ?? 0) < 2) {
-      reply.code(403).send({ success: false, message: '无权限' })
-    } else {
-      done()
-    }
-  } catch {
-    reply.code(401).send({ success: false, message: '未登录' })
-  }
-}
-
-function requireSuperAdmin(request, reply, done) {
-  try {
-    request.jwtVerify()
-    if ((request.user?.role ?? 0) < 3) {
-      reply.code(403).send({ success: false, message: '仅超级管理员可修改分红规则' })
-    } else {
-      done()
-    }
-  } catch {
-    reply.code(401).send({ success: false, message: '未登录' })
-  }
-}
-
 export default async function revenueConfigRoutes(fastify) {
   const { prisma } = fastify
 
   // ─── GET /api/admin/revenue/configs ───
-  fastify.get('/admin/revenue/configs', { preHandler: requireAdmin }, async (req, reply) => {
+  fastify.get('/admin/revenue/configs', { preHandler: fastify.requireRole(2) }, async (req, reply) => {
     const rows = await prisma.platformConfig.findMany({
       where: { groupName: 'revenue' },
     })
@@ -70,7 +44,7 @@ export default async function revenueConfigRoutes(fastify) {
   })
 
   // ─── PUT /api/admin/revenue/configs ───
-  fastify.put('/admin/revenue/configs', { preHandler: requireSuperAdmin }, async (req, reply) => {
+  fastify.put('/admin/revenue/configs', { preHandler: fastify.requireRole(3) }, async (req, reply) => {
     const updates = req.body // { key: value, ... }
     if (!updates || typeof updates !== 'object') {
       return reply.code(400).send({ success: false, message: '请求体格式错误' })

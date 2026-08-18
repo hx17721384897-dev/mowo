@@ -2,6 +2,7 @@
 // 注册前缀：/api/orders
 
 import { unlockInventory, makeIdempotencyKey } from '../lib/inventory.js'
+import { FILE_PURPOSE, findOwnedReadyFiles, linkFiles } from '../lib/private-files.js'
 
 // 安全签名辅助：仅对 OSS key（相对路径）生成预签名 URL
 // data URL（base64）和完整 http(s) URL 直接返回 null（不适合做缩略图）
@@ -39,13 +40,9 @@ const ACTIVE_STATUSES = ['pending', 'paid', 'locked', 'processing', 'producing',
 async function orderRoutes(fastify, opts) {
   const { prisma } = fastify
 
-  // 所有接口均需登录
+  // 所有接口统一检查设备会话和账号状态。
   fastify.addHook('preHandler', async (req, reply) => {
-    try {
-      await req.jwtVerify()
-    } catch (e) {
-      reply.code(401).send({ success: false, message: '请先登录' })
-    }
+    return fastify.authenticate(req, reply)
   })
 
   // ──────────────────────────────────────────────
@@ -178,7 +175,7 @@ async function orderRoutes(fastify, opts) {
       })
 
       // 若为联名款，将 collabOrder 从 estimated/cooling → cooling（写入冷却期结束时间）
-      if (order.sourceType === 'collab') {
+      if (fastify.config.features.creatorFinance && order.sourceType === 'collab') {
         const coolingEndAt = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
         await tx.collabOrder.updateMany({
           where: {
@@ -351,9 +348,16 @@ async function orderRoutes(fastify, opts) {
       return reply.code(400).send({ success: false, message: '已有处理中的申请，请等待客服回复' })
     }
 
+    let evidenceFiles = []
+    try {
+      evidenceFiles = await findOwnedReadyFiles(prisma, imageUrls, userId, [FILE_PURPOSE.AFTERSALE_EVIDENCE])
+    } catch (error) {
+      return reply.code(400).send({ success: false, message: error.message })
+    }
+
     // 事务：创建申请 + 订单变为 aftersale + 次数+1 + 联名分红取消
     await prisma.$transaction(async tx => {
-      await tx.aftersaleRequest.create({
+      const aftersale = await tx.aftersaleRequest.create({
         data: {
           orderId: id,
           userId,
@@ -363,6 +367,7 @@ async function orderRoutes(fastify, opts) {
           imageUrls: JSON.stringify(Array.isArray(imageUrls) ? imageUrls : []),
         },
       })
+      await linkFiles(tx, evidenceFiles, 'AFTERSALE_REQUEST', aftersale.id)
       await tx.customizeOrder.update({
         where: { id },
         data: { status: 'aftersale', aftersaleCount: { increment: 1 } },

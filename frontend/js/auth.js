@@ -10,10 +10,20 @@ const USER_KEY  = 'mowo_user';
    Token 工具
 ───────────────────────────────────────── */
 function getToken()    { return localStorage.getItem(TOKEN_KEY); }
-function removeToken() { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(USER_KEY); }
+function removeToken() {
+  clearTimeout(_proactiveRefreshTimer);
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+}
+
+function clearLocalSession() {
+  removeToken();
+  updateNavState(null);
+}
 
 /* 主动刷新定时器：在 AccessToken 过期前 2 分钟静默刷新，避免 401 */
 var _proactiveRefreshTimer = null;
+var _logoutInProgress = false;
 function _scheduleProactiveRefresh(token) {
   clearTimeout(_proactiveRefreshTimer);
   try {
@@ -26,6 +36,7 @@ function _scheduleProactiveRefresh(token) {
 }
 
 function setToken(t) {
+  _logoutInProgress = false;
   localStorage.setItem(TOKEN_KEY, t);
   _scheduleProactiveRefresh(t);
   window.dispatchEvent(new CustomEvent('mowoTokenRefreshed'));
@@ -35,6 +46,7 @@ function setToken(t) {
    刷新 AccessToken（利用 HttpOnly Cookie 中的 refresh_token）
 ───────────────────────────────────────── */
 async function refreshAccessToken() {
+  if (_logoutInProgress) return null;
   try {
     const res = await fetch(`${MOWO_API_BASE}/api/v1/auth/refresh`, {
       method: 'POST',
@@ -43,7 +55,7 @@ async function refreshAccessToken() {
     if (!res.ok) return null;
     const json = await res.json();
     const newToken = json.data?.accessToken || json.data?.token;
-    if (newToken) { setToken(newToken); return newToken; }
+    if (newToken && !_logoutInProgress) { setToken(newToken); return newToken; }
     return null;
   } catch(_) { return null; }
 }
@@ -62,7 +74,8 @@ async function refreshAccessToken() {
 
     // 只拦截 API 请求的 401；刷新请求本身不再拦截（防递归）
     const urlStr = String(url);
-    if (res.status !== 401 || !urlStr.includes('/api/') || urlStr.includes('/auth/refresh')) {
+    const isAuthExitRequest = urlStr.includes('/auth/logout');
+    if (res.status !== 401 || !urlStr.includes('/api/') || urlStr.includes('/auth/refresh') || isAuthExitRequest) {
       return res;
     }
 
@@ -72,14 +85,11 @@ async function refreshAccessToken() {
     }
     const newToken = await _refreshPromise;
     if (!newToken) {
-      // refresh token 也失效了，清除本地凭证，跳回前台首页
+      // refresh token 也失效了，清除本地凭证。
       removeToken();
       const isAdminOrCreator = window.location.pathname.includes('admin') || window.location.pathname.includes('creator');
       if (isAdminOrCreator) {
-        // 计算到 frontend 根目录的相对路径（admin 页面在 pages/ 子目录）
-        const depth = window.location.pathname.split('/').length - 2;
-        const prefix = depth > 1 ? '../'.repeat(depth - 1) : '';
-        window.location.href = prefix + 'index.html';
+        window.location.href = 'index.html?auth=1';
       }
       return res;
     }
@@ -98,7 +108,7 @@ async function refreshAccessToken() {
 })();
 
 /* ─────────────────────────────────────────
-   获取当前用户（缓存优先，自动刷新Token）
+   获取当前用户（由服务端确认当前设备会话仍有效）
 ───────────────────────────────────────── */
 async function fetchCurrentUser() {
   const token = getToken();
@@ -107,18 +117,18 @@ async function fetchCurrentUser() {
     const refreshed = await refreshAccessToken();
     if (!refreshed) return null;
   }
-  const cached = localStorage.getItem(USER_KEY);
-  if (cached) { try { return JSON.parse(cached); } catch(e) {} }
   try {
     const currentToken = getToken();
-    const res  = await fetch(`${MOWO_API_BASE}/api/auth/me`, {
+    const res  = await fetch(`${MOWO_API_BASE}/api/v1/account/me`, {
+      credentials: 'include',
       headers: { Authorization: `Bearer ${currentToken}` }
     });
     if (res.status === 401) {
       // AccessToken 过期，尝试刷新
       const newToken = await refreshAccessToken();
       if (!newToken) { removeToken(); return null; }
-      const res2 = await fetch(`${MOWO_API_BASE}/api/auth/me`, {
+      const res2 = await fetch(`${MOWO_API_BASE}/api/v1/account/me`, {
+        credentials: 'include',
         headers: { Authorization: `Bearer ${newToken}` }
       });
       if (!res2.ok) { removeToken(); return null; }
@@ -166,7 +176,7 @@ function injectCSS() {
 .dd-badge.creator{background:#EDFBEE;color:#287030;}
 .dd-badge.user{background:#EBEBEA;color:#787874;}
 
-.dd-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;font-weight:800;font-size:13px;color:#111110;width:100%;text-align:left;background:none;border:none;font-family:inherit;cursor:pointer;transition:background .15s;}
+.dd-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;font-weight:800;font-size:13px;color:#111110;width:100%;text-align:left;background:none;border:none;font-family:inherit;cursor:pointer;transition:background .15s;text-decoration:none;box-sizing:border-box;}
 .dd-item:hover{background:#F5F3EF;}
 .dd-item-icon{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
 .dd-item.danger{color:#E03030;}
@@ -197,6 +207,7 @@ function injectCSS() {
 .auth-main-tabs{display:flex;gap:0;margin:20px 0 0;border-bottom:2px solid #EBEBEA;}
 .auth-main-tab{font-weight:900;font-size:15px;color:#C4C3BF;padding:6px 20px 10px;border-bottom:2.5px solid transparent;margin-bottom:-2px;cursor:pointer;transition:all .2s;}
 .auth-main-tab.active{color:#111110;border-bottom-color:#111110;}
+.auth-error-link{border:0;background:none;color:#1565C0;font:inherit;font-weight:900;cursor:pointer;padding:0 0 0 4px;text-decoration:underline;}
 
 /* 表单面板 */
 .auth-panel{display:none;padding-top:24px;}
@@ -268,19 +279,12 @@ function injectAuthModal() {
 
       <!-- 主Tab：登录 / 注册 -->
       <div class="auth-main-tabs">
-        <div class="auth-main-tab active" onclick="switchMainTab('login',this)">登录</div>
-        <div class="auth-main-tab" onclick="switchMainTab('register',this)">注册</div>
+        <div class="auth-main-tab active" data-auth-tab="login" onclick="switchMainTab('login',this)">登录</div>
+        <div class="auth-main-tab" data-auth-tab="register" onclick="switchMainTab('register',this)">注册</div>
       </div>
 
       <!-- ══ 登录面板 ══ -->
       <div class="auth-panel active" id="authLoginPanel">
-        <!-- 子Tab：验证码 / 密码 -->
-        <div class="login-sub-tabs">
-          <span class="login-sub-tab active" onclick="switchSubTab('code',this)">短信登录</span>
-          <span class="login-sub-sep">|</span>
-          <span class="login-sub-tab" onclick="switchSubTab('password',this)">密码登录</span>
-        </div>
-
         <!-- 验证码登录 -->
         <div class="login-sub-panel active" id="loginCodePanel">
           <div class="auth-field">
@@ -299,23 +303,6 @@ function injectAuthModal() {
           <button class="auth-submit-btn" id="lcSubmitBtn" onclick="submitLoginByCode()">登录</button>
         </div>
 
-        <!-- 密码登录 -->
-        <div class="login-sub-panel" id="loginPwdPanel">
-          <div class="auth-field">
-            <div class="auth-field-row" id="lpPhoneRow">
-              <input class="auth-input" type="tel" id="lpPhone" placeholder="请输入手机号" maxlength="11" oninput="authFormatPhone(this)">
-            </div>
-            <p class="auth-field-err" id="lpPhoneErr">请输入正确的手机号</p>
-          </div>
-          <div class="auth-field">
-            <div class="auth-field-row" id="lpPwdRow">
-              <input class="auth-input" type="password" id="lpPwd" placeholder="请输入密码">
-              <button class="auth-eye-btn" onclick="authTogglePwd('lpPwd',this)">👁</button>
-            </div>
-            <p class="auth-field-err" id="lpPwdErr">手机号或密码不正确</p>
-          </div>
-          <button class="auth-submit-btn" id="lpSubmitBtn" onclick="submitLoginByPassword()">登录</button>
-        </div>
       </div>
 
       <!-- ══ 注册面板 ══ -->
@@ -335,7 +322,7 @@ function injectAuthModal() {
         </div>
         <div class="auth-agree">
           <div class="auth-agree-box" id="authAgreeBox" onclick="authToggleAgree()"></div>
-          <p class="auth-agree-text">我已阅读并同意 <a href="#">《用户协议》</a> 和 <a href="#">《隐私政策》</a></p>
+          <p class="auth-agree-text">我已阅读并同意 <a href="user-agreement.html" target="_blank" rel="noopener">《用户协议》</a> 和 <a href="privacy-policy.html" target="_blank" rel="noopener">《隐私政策》</a></p>
         </div>
         <button class="auth-submit-btn" id="regSubmitBtn" onclick="submitRegister()" disabled>注册并登录</button>
       </div>
@@ -414,12 +401,12 @@ function injectNavUser() {
       <button class="dd-item" onclick="navGoTo('myAnimations')">
         <div class="dd-item-icon" style="background:#F0F4FF;">🎬</div>我的动画
       </button>
-      <button class="dd-item creator-only" onclick="navGoTo('creatorCenter')">
-        <div class="dd-item-icon" style="background:#FFF3FB;">✦</div>创作者中心
+      <button class="dd-item creator-only" onclick="navGoTo('myAnimations')">
+        <div class="dd-item-icon" style="background:#FFF3FB;">✦</div>我的创作
       </button>
-      <button class="dd-item admin-only" onclick="navGoTo('admin')">
+      <a class="dd-item admin-only" href="admin-orders.html">
         <div class="dd-item-icon" style="background:#FFF9C4;">🛠</div>进入后台
-      </button>
+      </a>
       <div class="dd-divider"></div>
       <button class="dd-item" onclick="navGoTo('settings')">
         <div class="dd-item-icon" style="background:#EBEBEA;">⚙️</div>账号设置
@@ -452,9 +439,8 @@ function updateNavState(user) {
     if (user.certifyStatus === 2) navUser.classList.add('is-creator');
     else navUser.classList.remove('is-creator');
 
-    // role >= 2 显示「进入后台」入口
-    const userRole = user.role ?? 0;
-    if (userRole >= 2) navUser.classList.add('is-admin');
+    // 固定员工岗位显示「进入后台」入口，具体页面仍由服务端权限控制。
+    if (user.staffRole) navUser.classList.add('is-admin');
     else navUser.classList.remove('is-admin');
 
     const nickname  = user.profile?.nickname || '用户';
@@ -489,7 +475,7 @@ function updateNavState(user) {
     }
   } else {
     if (loginBtn) loginBtn.style.display = '';
-    navUser.classList.remove('show','is-creator');
+    navUser.classList.remove('show','is-creator','is-admin');
   }
 }
 
@@ -528,23 +514,33 @@ function navGoTo(page) {
   };
   window.location.href = map[page] || 'index.html';
 }
-async function navLogout() {
-  document.getElementById('mowoDropdown')?.classList.remove('open');
-  document.getElementById('mowoNavAvatarBtn')?.classList.remove('open');
-  // 通知后端撤销所有 session（含 HttpOnly Cookie 中的 refresh_token）
+async function logoutSession(scope = 'current') {
+  _logoutInProgress = true;
+  const endpoint = scope === 'all' ? '/api/v1/auth/logout-all' : '/api/v1/auth/logout';
   try {
-    await fetch(`${MOWO_API_BASE}/api/v1/auth/logout`, {
+    await fetch(`${MOWO_API_BASE}${endpoint}`, {
       method: 'POST',
       credentials: 'include',
       headers: getToken() ? { 'Authorization': `Bearer ${getToken()}` } : {}
     });
-  } catch(_) {}
-  removeToken();
-  updateNavState(null);
+  } catch(_) {
+    // 即使服务端暂时不可用，也要立即清除当前浏览器里的登录信息。
+  } finally {
+    removeToken();
+    updateNavState(null);
+  }
+}
+
+async function navLogout() {
+  document.getElementById('mowoDropdown')?.classList.remove('open');
+  document.getElementById('mowoNavAvatarBtn')?.classList.remove('open');
+  await logoutSession('current');
   const protected_ = ['orders','cart','my-animations','settings','my-addresses','creator-dashboard','creator-earnings','creator-animations','creator-collab','creator-links'];
   const cur = window.location.pathname.split('/').pop().replace('.html','');
-  if (protected_.includes(cur)) window.location.href = 'index.html';
+  if (protected_.includes(cur)) window.location.replace('index.html');
 }
+
+window.mowoLogout = logoutSession;
 
 /* ─────────────────────────────────────────
    弹窗开关
@@ -571,9 +567,30 @@ function closeProfileModal() {
 ───────────────────────────────────────── */
 function switchMainTab(tab, btn) {
   document.querySelectorAll('.auth-main-tab').forEach(t=>t.classList.remove('active'));
-  btn.classList.add('active');
+  (btn || document.querySelector(`[data-auth-tab="${tab}"]`))?.classList.add('active');
   document.querySelectorAll('.auth-panel').forEach(p=>p.classList.remove('active'));
   document.getElementById(tab==='login'?'authLoginPanel':'authRegPanel').classList.add('active');
+}
+function authGoToMode(mode) {
+  const sourceId = mode==='register' ? 'lcPhone' : 'regPhone';
+  const targetId = mode==='register' ? 'regPhone' : 'lcPhone';
+  const source = document.getElementById(sourceId)?.value || '';
+  switchMainTab(mode);
+  const target = document.getElementById(targetId);
+  if (target) { target.value=source; target.focus(); }
+  if (mode==='register') checkRegForm();
+}
+function authShowAccountModeError(errId, code, fallback) {
+  const error = document.getElementById(errId);
+  if (!error) return;
+  if (code==='ACCOUNT_NOT_FOUND') {
+    error.innerHTML = '该手机号尚未注册。<button type="button" class="auth-error-link" onclick="authGoToMode(\'register\')">前往注册</button>';
+  } else if (code==='ACCOUNT_ALREADY_EXISTS') {
+    error.innerHTML = '该手机号已注册。<button type="button" class="auth-error-link" onclick="authGoToMode(\'login\')">返回登录</button>';
+  } else {
+    error.textContent = fallback;
+  }
+  error.classList.add('show');
 }
 function switchSubTab(method, btn) {
   document.querySelectorAll('.login-sub-tab').forEach(t=>t.classList.remove('active'));
@@ -624,8 +641,7 @@ async function authSendCode(type) {
     });
     const json = await res.json();
     if (!res.ok) {
-      document.getElementById(errId).textContent = json.message || '发送失败，请重试';
-      document.getElementById(errId).classList.add('show');
+      authShowAccountModeError(errId, json.code, json.message || '发送失败，请重试');
       btn.disabled=false; btn.textContent='获取验证码';
       return;
     }
@@ -683,15 +699,14 @@ async function submitLoginByCode() {
       method: 'POST',
       credentials: 'include', // 接收 refresh_token HttpOnly Cookie
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ phone, code })
+      body: JSON.stringify({ phone, code, mode: 'LOGIN' })
     });
     const json = await res.json();
     if (json.success) {
       closeAuthModal();
       await _finalizeLogin(json.data.token || json.data.accessToken);
     } else {
-      document.getElementById('lcCodeErr').textContent = json.message || '登录失败';
-      document.getElementById('lcCodeErr').classList.add('show');
+      authShowAccountModeError('lcCodeErr', json.code, json.message || '登录失败');
     }
   } catch(e) {
     document.getElementById('lcCodeErr').textContent='网络异常，请稍后重试';
@@ -757,7 +772,7 @@ async function submitRegister() {
       method: 'POST',
       credentials: 'include',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ phone, code, agreedToPrivacy: true })
+      body: JSON.stringify({ phone, code, mode: 'REGISTER', agreedToPrivacy: true })
     });
     const json = await res.json();
     if (json.success) {
@@ -768,8 +783,7 @@ async function submitRegister() {
       const msg = json.code==='PRIVACY_NOT_AGREED'
         ? '请先勾选同意《隐私政策》和《用户协议》'
         : (json.message || '注册失败，请重试');
-      document.getElementById('regCodeErr').textContent = msg;
-      document.getElementById('regCodeErr').classList.add('show');
+      authShowAccountModeError('regCodeErr', json.code, msg);
     }
   } catch(e) {
     document.getElementById('regCodeErr').textContent='网络异常，请稍后重试';
@@ -794,7 +808,7 @@ async function submitProfile() {
   btn.classList.add('loading'); btn.textContent=''; btn.disabled=true;
   const token=_pendingToken||getToken();
   try {
-    await fetch(`${MOWO_API_BASE}/api/auth/profile`,{method:'PUT',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},body:JSON.stringify({nickname})});
+    await fetch(`${MOWO_API_BASE}/api/v1/account/profile`,{method:'PUT',credentials:'include',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},body:JSON.stringify({nickname})});
     closeProfileModal();
     await _finalizeLogin(token);
   } catch(e) { console.error('完善资料失败',e); }
@@ -810,6 +824,13 @@ async function _finalizeLogin(token) {
   const user = await fetchCurrentUser();
   updateNavState(user);
   showToast(`👋 欢迎回来，${user?.profile?.nickname||'用户'}！`);
+  window.dispatchEvent(new CustomEvent('mowoLoginCompleted', { detail: { user } }));
+
+  const params = new URLSearchParams(window.location.search);
+  const redirect = params.get('redirect');
+  if (redirect && redirect.startsWith('/') && !redirect.startsWith('//')) {
+    window.location.href = redirect;
+  }
 }
 
 /* ─────────────────────────────────────────
@@ -833,6 +854,7 @@ window.showToast          = showToast;
 window.getToken           = getToken;
 window.fetchCurrentUser   = fetchCurrentUser;
 window.refreshAccessToken = refreshAccessToken;
+window.mowoClearLocalSession = clearLocalSession;
 
 /* ─────────────────────────────────────────
    页面初始化
@@ -862,4 +884,7 @@ window.refreshAccessToken = refreshAccessToken;
 
   const user = await fetchCurrentUser();
   updateNavState(user);
+  if (new URLSearchParams(window.location.search).get('auth') === '1' && !user) {
+    openAuthModal();
+  }
 })();

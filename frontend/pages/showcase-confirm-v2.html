@@ -924,6 +924,7 @@ footer { background: var(--dark); color: rgba(255,255,255,.4); padding: 44px var
 </footer>
 
 <script src="../js/auth.js"></script>
+<script src="../js/feature-flags.js"></script>
 <script>
 /* ══════════════════════════════════════════════════════
  * showcase-confirm-v2 · 业务逻辑
@@ -992,6 +993,7 @@ function fpPreload(urls) {
 
 /* ── Init ── */
 document.addEventListener('DOMContentLoaded', async () => {
+  if (typeof getMowoFeatureFlags === 'function') await getMowoFeatureFlags()
   if (!workId) { workData = DEMO; skuList = DEMO.supportedSkus; isLiked = DEMO.isLiked; likeCount = DEMO.likeCount; renderPage(); return }
   await loadWork()
 })
@@ -1139,9 +1141,9 @@ function renderPage() {
           <div class="creator-name">@${esc(crName)}</div>
           <div class="creator-fans">${fmtCount(cr.followerCount||0)} 粉丝</div>
         </div>
-        <button class="follow-btn ${isFollowing?'following':''}" id="followBtn" onclick="toggleFollow('${esc(w.creatorId||'')}')">
+        ${window.mowoFeatures?.community ? `<button class="follow-btn ${isFollowing?'following':''}" id="followBtn" onclick="toggleFollow('${esc(w.creatorId||'')}')">
           ${isFollowing?'✓ 已关注':'+ 关注'}
-        </button>
+        </button>` : ''}
       </div>
 
       <!-- 评分 -->
@@ -1154,12 +1156,12 @@ function renderPage() {
       </div>
 
       <!-- 点赞 -->
-      <div class="like-row">
+      ${window.mowoFeatures?.community ? `<div class="like-row">
         <button class="like-btn ${isLiked?'liked':''}" id="likeBigBtn" onclick="toggleLike()">
           <span class="like-icon">${isLiked?'♥':'♡'}</span>
           <span id="likeCount">${fmtCount(likeCount)}</span> 人喜欢
         </button>
-      </div>
+      </div>` : ''}
 
       <!-- 价格 -->
       <div class="price-row">

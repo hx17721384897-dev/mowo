@@ -5,6 +5,9 @@
 // 任务一（每小时）：冷却期到期 → collab_orders.revenueStatus: cooling → available
 // 任务二（每天凌晨2点）：储备金90天到期 → 释放回创作者余额
 
+import { cleanupAbandonedAvatars } from './private-file-cleanup.js'
+import { processDueAccountDeletions } from './account-deletion.js'
+
 export function startScheduler(fastify) {
   const log = fastify.log
 
@@ -180,9 +183,11 @@ export function startScheduler(fastify) {
 
   // 任务一：每小时整点运行
   const HOUR_MS = 60 * 60 * 1000
-  setInterval(processCoolingExpired, HOUR_MS)
-  // 启动时立即跑一次，处理服务重启期间积压的
-  processCoolingExpired()
+  if (fastify.config.features.creatorFinance) {
+    setInterval(processCoolingExpired, HOUR_MS)
+    // 启动时立即跑一次，处理服务重启期间积压的
+    processCoolingExpired()
+  }
 
   // 任务二：每天凌晨2点运行
   function scheduleReserveRelease() {
@@ -196,7 +201,7 @@ export function startScheduler(fastify) {
       setInterval(processReserveRelease, 24 * HOUR_MS)
     }, delay)
   }
-  scheduleReserveRelease()
+  if (fastify.config.features.creatorFinance) scheduleReserveRelease()
 
   // ─────────────────────────────────────────
   // 任务三：每日00:00 — 库存全量快照
@@ -432,7 +437,7 @@ export function startScheduler(fastify) {
             data:  { status: 'received' }
           })
 
-          if (order.sourceType === 'collab') {
+          if (fastify.config.features.creatorFinance && order.sourceType === 'collab') {
             const coolingEndAt = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
             await tx.collabOrder.updateMany({
               where: {
@@ -457,5 +462,54 @@ export function startScheduler(fastify) {
   setInterval(autoConfirmReceipt, HOUR_MS)
   autoConfirmReceipt() // 启动时立即跑一次
 
-  log.info('[scheduler] 定时任务已启动：冷却期检查（每小时）+ 储备金解冻（02:00）+ 库存快照（00:00）+ 授权检查（08:00）+ PreOrder超时（每2分钟）+ 草稿清理（03:00）+ 14天自动收货（每小时）')
+  // 任务八：清理超过保留期仍未采用或已经被替换的头像。
+  async function cleanupAvatarFiles() {
+    try {
+      const result = await cleanupAbandonedAvatars(fastify)
+      if (result.selected > 0) {
+        log.info(`[scheduler] 废弃头像清理：删除 ${result.deleted}，失败 ${result.failed}，跳过 ${result.skipped}`)
+      }
+    } catch (err) {
+      log.error('[scheduler] 废弃头像清理失败：' + err.message)
+    }
+  }
+
+  const avatarCleanupInterval = fastify.config.privateFileCleanup.intervalMinutes * 60 * 1000
+  setInterval(cleanupAvatarFiles, avatarCleanupInterval)
+  cleanupAvatarFiles()
+
+  // 任务九：执行已到期或等待重试的账号注销处理单。
+  async function processAccountDeletions() {
+    try {
+      const results = await processDueAccountDeletions(fastify)
+      if (results.length) {
+        const completed = results.filter(item => item.status === 'COMPLETED').length
+        const blocked = results.filter(item => item.status === 'BLOCKED').length
+        const failed = results.filter(item => item.status === 'FAILED').length
+        log.info(`[scheduler] 账号注销处理：完成 ${completed}，阻止 ${blocked}，失败 ${failed}`)
+      }
+    } catch (err) {
+      log.error('[scheduler] 账号注销任务失败：' + err.message)
+    }
+  }
+
+  const deletionInterval = fastify.config.accountDeletion.intervalMinutes * 60 * 1000
+  setInterval(processAccountDeletions, deletionInterval)
+  processAccountDeletions()
+
+  // 频率限制只需保留尚可能影响当前请求的时间窗，过期记录每天清理。
+  async function cleanupExpiredRateLimits() {
+    try {
+      const result = await fastify.prisma.rateLimitBucket.deleteMany({
+        where: { expiresAt: { lt: new Date(Date.now() - 24 * HOUR_MS) } }
+      })
+      if (result.count) log.info(`[scheduler] 过期限流记录清理：${result.count} 条`)
+    } catch (err) {
+      log.error('[scheduler] 过期限流记录清理失败：' + err.message)
+    }
+  }
+  setInterval(cleanupExpiredRateLimits, 24 * HOUR_MS)
+  cleanupExpiredRateLimits()
+
+  log.info(`[scheduler] 定时任务已启动：库存、授权、订单、文件清理、账号注销${fastify.config.features.creatorFinance ? '、创作者财务' : ''}`)
 }

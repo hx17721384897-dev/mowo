@@ -5,7 +5,20 @@
   "main": "src/index.js",
   "scripts": {
     "dev": "node --watch src/index.js",
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "check": "npm run check:env && npm run check:syntax && npm run check:prisma",
+    "check:env": "node scripts/check-env.mjs",
+    "check:syntax": "node scripts/check-syntax.mjs",
+    "check:prisma": "prisma validate",
+    "check:staff-security": "node scripts/check-staff-security.mjs",
+    "check:private-files": "node scripts/check-private-files.mjs",
+    "check:account-deletion": "node scripts/check-account-deletion.mjs",
+    "check:launch-safety": "node scripts/check-launch-safety.mjs",
+    "test-user:create": "node scripts/create-test-user.mjs",
+    "test-user:inspect": "node scripts/inspect-test-user.mjs",
+    "test-sms:reset": "node scripts/reset-test-sms.mjs",
+    "test-deletion:make-due": "node scripts/make-test-deletion-due.mjs",
+    "seed:demo": "prisma db seed"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
@@ -21,11 +34,13 @@
     "@fastify/multipart": "^9.4.0",
     "@prisma/client": "^5.22.0",
     "ali-oss": "^6.23.0",
+    "adm-zip": "^0.5.17",
     "archiver": "^7.0.1",
     "bcryptjs": "^3.0.3",
     "bwip-js": "^4.8.0",
     "canvas": "^3.2.3",
     "dotenv": "^17.3.1",
+    "docx": "^9.6.1",
     "fastify": "^5.8.2",
     "fastify-plugin": "^5.1.0",
     "gif-encoder": "^0.7.2",
@@ -33,6 +48,7 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
+    "acorn": "^8.15.0",
     "prisma": "^5.22.0",
     "tsx": "^4.21.0"
   }

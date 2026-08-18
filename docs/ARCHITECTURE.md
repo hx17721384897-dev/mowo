@@ -1,5 +1,7 @@
 # ARCHITECTURE.md — 整体架构说明
 
+> **文档状态（2026-08-12）：早期目标架构，不是当前部署或首发基线。** `crmeb/` 目前只有占位文件，首发已决定采用精简自建订单系统和微信官方支付能力，不重新引入 CRMEB。小程序已有 uni-app/Vue/Pinia 骨架但核心交易页面尚未闭环；社区与线上分红/牛量/提现首发关闭。下文原架构图和数据流保留用于追溯，当前有效口径请先读 `PROJECT_INDEX.md`、`OPEN_QUESTIONS.md` 和 `modules/operations-quality.md`。
+
 ## 系统架构图
 
 ```
@@ -174,12 +176,12 @@ server {
 
 ### content-service/.env（本地）
 ```
-DATABASE_URL=postgresql://postgres:Xiang1357999@localhost:5432/mowo_db
-JWT_SECRET=mowo_jwt_secret_2026_change_this
+DATABASE_URL=postgresql://postgres:<本地数据库密码>@localhost:5432/mowo_db
+JWT_SECRET=<至少32位的本地随机字符串>
 OSS_REGION=oss-cn-shanghai
 OSS_BUCKET=mowo-uploads
-OSS_ACCESS_KEY_ID=（已配置）
-OSS_ACCESS_KEY_SECRET=（已配置）
+OSS_ACCESS_KEY_ID=<仅保存在.env中>
+OSS_ACCESS_KEY_SECRET=<仅保存在.env中>
 PORT=3001
 NODE_ENV=development
 ```
@@ -197,3 +199,11 @@ CRMEB_API_TOKEN=xxx
 PORT=3001
 NODE_ENV=production
 ```
+
+---
+
+## 账号注销执行任务
+
+账号注销不在用户点击按钮时直接删除资料。`routes/account.js` 写入 `account_deletion_requests`、将账号标记为 `PENDING_DELETE`，并设置 10 分钟防误操作保护期；`lib/scheduler.js` 默认每 1 分钟寻找保护期已满的申请，再调用 `lib/account-deletion.js` 完成业务复查、私有文件删除和数据库匿名化。失败会记录原因并在 15 分钟后重试；连续失败 3 次或首次失败持续 1 小时会转 `MANUAL_REVIEW` 并停止自动重试。
+
+当前任务仍随 API 进程启动，适合本地和单实例邀请测试。后台 `admin-account-deletions.html` 提供客服只读监控及负责人重试、暂停和恢复；超过 24 小时显示紧急、超过 48 小时显示超出内部目标。正式多实例部署前应迁到独立 Worker 或可靠任务队列，并接入主动告警和处理时长监控；否则 API 全部停机时注销任务也会停止。

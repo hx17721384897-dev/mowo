@@ -20,7 +20,9 @@ let cropperBlobUrl = null
 // INIT
 // ─────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
-  Router.requireAuth()
+  // 账号退出属于安全操作，应优先绑定，不受其他页面数据加载失败影响。
+  setupLogoutButtons()
+  if (!window.Router || !window.Router.requireAuth()) return
 
   // 手机端默认显示列表，清除 HTML 里写死的 active 状态
   if (window.innerWidth <= 767 && !location.hash) {
@@ -33,6 +35,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupAvatarInput()
   setupBioCounter()
   setupDeactivateCheckbox()
+})
+
+window.addEventListener('mowoLoginCompleted', async () => {
+  if (sessionStorage.getItem('mowo_cancel_deletion_after_login') !== '1') return
+  sessionStorage.removeItem('mowo_cancel_deletion_after_login')
+  await performCancelDeactivate()
 })
 
 async function loadAllData() {
@@ -136,6 +144,10 @@ function renderCertify(user) {
 }
 
 function renderPasswordStatus(data) {
+  const row = document.getElementById('passwordSecurityRow')
+  if (row) row.style.display = data.passwordLoginEnabled ? '' : 'none'
+  if (!data.passwordLoginEnabled) return
+
   const hasPassword = data.hasPassword
   document.getElementById('passwordStatus').textContent = hasPassword ? '已设置' : '未设置（仅短信登录）'
   document.getElementById('passwordBtn').textContent = hasPassword ? '修改' : '设置'
@@ -158,11 +170,34 @@ function renderPrivacy(data) {
 }
 
 function renderDeactivateBanner(user) {
-  if (user.status === 'PENDING_DELETE' && user.deactivateDaysLeft !== null) {
-    document.getElementById('deactivateBanner').style.display = 'flex'
-    document.getElementById('deactivateDaysLeft').textContent = user.deactivateDaysLeft
-    // Show cancel button in the account section too
+  if (user.staffRole || Number(user.role) > 0) {
     document.getElementById('deactivateNormal').style.display = 'none'
+    document.getElementById('staffDeactivateNotice').style.display = 'block'
+  }
+  if (user.status === 'PENDING_DELETE' && user.deletionRequest) {
+    document.getElementById('deactivateBanner').style.display = 'flex'
+    const request = user.deletionRequest
+    const canCancel = request.canCancel === true
+    const bannerText = document.getElementById('deactivateBannerText')
+    if (request.status === 'PAUSED') {
+      const publicReason = request.pauseUserMessage || '注销处理因必要事项暂时暂停，请稍后查看处理状态'
+      bannerText.textContent = canCancel
+        ? `注销处理已暂停：${publicReason}。资料清理尚未开始，您仍可撤销注销。`
+        : `注销处理已暂停：${publicReason}。由于资料清理已经开始，暂时不能自行撤销，请联系我们协助处理。`
+    } else if (canCancel && request.protectionMinutesLeft > 0) {
+      bannerText.innerHTML = `注销申请已提交，约 <span id="deactivateMinutesLeft">${request.protectionMinutesLeft}</span> 分钟内可撤销，之后系统将自动清理资料`
+    } else if (canCancel) {
+      bannerText.textContent = '资料清理尚未开始，您仍可撤销注销；系统即将开始处理。'
+    } else {
+      const statusText = {
+        FAILED: '资料清理暂未完成，系统正在自动重试；为避免数据不一致，此时不能撤销',
+        MANUAL_REVIEW: '资料清理遇到异常，工作人员正在关注；为避免数据不一致，此时不能撤销'
+      }
+      bannerText.textContent = statusText[request.status] || '资料清理已经开始，为避免数据不一致，此时不能撤销'
+    }
+    document.getElementById('cancelDeactivateBtn').style.display = canCancel ? '' : 'none'
+    document.getElementById('deactivateNormal').style.display = 'none'
+    document.getElementById('staffDeactivateNotice').style.display = 'none'
     document.getElementById('deactivateFlow').style.display = 'none'
   }
 }
@@ -271,11 +306,11 @@ async function confirmCrop() {
     // Get presign URL
     const presignRes = await apiFetch('/api/upload/presign-avatar', {
       method: 'POST',
-      body: JSON.stringify({ fileType: 'image/jpeg' })
+      body: JSON.stringify({ fileType: 'image/jpeg', fileSize: blob.size })
     })
     if (!presignRes.success) throw new Error(presignRes.message)
 
-    const { uploadUrl, accessUrl } = presignRes.data
+    const { fileId, uploadUrl, completeUrl } = presignRes.data
 
     // Upload to OSS
     const uploadRes = await fetch(uploadUrl, {
@@ -284,13 +319,15 @@ async function confirmCrop() {
       headers: { 'Content-Type': 'image/jpeg' }
     })
     if (!uploadRes.ok) throw new Error('OSS 上传失败')
+    if (completeUrl) {
+      const completeRes = await apiFetch(completeUrl.replace(/^https?:\/\/[^/]+/, ''), { method: 'POST' })
+      if (!completeRes.success) throw new Error(completeRes.message || '头像校验失败')
+    }
 
-    // Save avatarUrl to profile
-    const saveRes = await apiFetch('/api/v1/account/profile', {
-      method: 'PUT',
-      body: JSON.stringify({ avatarUrl: accessUrl })
-    })
-    if (!saveRes.success) throw new Error(saveRes.message)
+    // Atomically verify ownership and adopt this uploaded file as the account avatar.
+    const adoptRes = await apiFetch(`/api/upload/files/${encodeURIComponent(fileId)}/use-as-avatar`, { method: 'POST' })
+    if (!adoptRes.success) throw new Error(adoptRes.message)
+    const accessUrl = adoptRes.data.avatarUrl
 
     // Update preview
     document.getElementById('avatarImg').src = accessUrl
@@ -306,7 +343,8 @@ async function confirmCrop() {
     localStorage.setItem('mowo_user', JSON.stringify(cached))
 
   } catch (e) {
-    showToast('上传失败，请检查图片格式或大小', 'error')
+    console.error('Avatar update failed:', e)
+    showToast(e.message || '头像上传失败，请重试', 'error')
   } finally {
     btn.disabled = false
     btn.textContent = '确认上传'
@@ -518,11 +556,10 @@ async function submitPhoneChange() {
     })
     if (!res.success) throw new Error(res.message)
     closeModal('phoneModal')
-    showToast('手机号换绑成功，其他设备已退出登录', 'success')
-    // Update display
-    const masked = newPhone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2')
-    document.getElementById('securityPhone').textContent = masked
-    if (currentUser) currentUser.maskedPhone = masked
+    showToast('手机号换绑成功，请使用新手机号重新登录', 'success')
+    localStorage.removeItem('mowo_token')
+    localStorage.removeItem('mowo_user')
+    setTimeout(() => { window.location.href = 'index.html' }, 900)
   } catch (e) {
     showFieldError('newOtpError', e.message || '换绑失败')
   }
@@ -644,16 +681,39 @@ async function savePrivacy() {
 // LOGOUT
 // ─────────────────────────────────────────────────
 async function confirmLogout() {
-  const confirmed = await showConfirmDialog('退出登录', '确认退出登录？')
+  const confirmed = await showConfirmDialog('退出当前设备', '只退出当前浏览器，其他设备仍可继续使用。确认退出吗？')
   if (!confirmed) return
 
-  try {
-    await apiFetch('/api/v1/auth/logout', { method: 'POST' })
-  } catch (e) { /* ignore */ }
+  await finishLogout('current')
+}
 
+async function confirmLogoutAll() {
+  const confirmed = await showConfirmDialog(
+    '退出全部设备',
+    '确认让手机、电脑和其他浏览器全部退出吗？之后每台设备都需要重新登录。'
+  )
+  if (!confirmed) return
+
+  await finishLogout('all')
+}
+
+async function finishLogout(scope) {
+  try {
+    if (typeof window.mowoLogout === 'function') {
+      await window.mowoLogout(scope)
+    } else {
+      const endpoint = scope === 'all' ? '/api/v1/auth/logout-all' : '/api/v1/auth/logout'
+      await apiFetch(endpoint, { method: 'POST' })
+    }
+  } catch (e) { /* 当前设备仍应清除本地登录信息 */ }
   localStorage.removeItem('mowo_token')
   localStorage.removeItem('mowo_user')
-  window.location.href = 'index.html'
+  window.location.replace('index.html')
+}
+
+function setupLogoutButtons() {
+  document.getElementById('logoutCurrentBtn')?.addEventListener('click', confirmLogout)
+  document.getElementById('logoutAllBtn')?.addEventListener('click', confirmLogoutAll)
 }
 
 // ─────────────────────────────────────────────────
@@ -680,7 +740,8 @@ async function startDeactivate() {
       issuesEl.style.display = 'none'
     }
   } catch (e) {
-    // Proceed anyway if check fails
+    showToast(e.message || '注销条件检查失败，请稍后重试', 'error')
+    return
   }
 
   document.getElementById('deactivateNormal').style.display = 'none'
@@ -740,10 +801,22 @@ async function submitDeactivate() {
     // Show banner
     if (currentUser) {
       currentUser.status = 'PENDING_DELETE'
-      currentUser.deactivateDaysLeft = 7
+      currentUser.deletionRequest = {
+        status: 'REQUESTED',
+        scheduledAt: res.data?.scheduledAt,
+        protectionMinutesLeft: res.data?.graceMinutes || 10,
+        canCancel: true
+      }
     }
     document.getElementById('deactivateBanner').style.display = 'flex'
-    document.getElementById('deactivateDaysLeft').textContent = '7'
+    document.getElementById('deactivateBannerText').innerHTML = `注销申请已提交，约 <span id="deactivateMinutesLeft">${res.data?.graceMinutes || 10}</span> 分钟内可撤销，之后系统将自动清理资料`
+    document.getElementById('cancelDeactivateBtn').style.display = ''
+    if (typeof window.mowoClearLocalSession === 'function') {
+      window.mowoClearLocalSession()
+    } else {
+      localStorage.removeItem('mowo_token')
+      localStorage.removeItem('mowo_user')
+    }
   } catch (e) {
     showFieldError('deactivateOtpError', e.message || '验证失败')
   }
@@ -753,8 +826,25 @@ async function cancelDeactivate() {
   const confirmed = await showConfirmDialog('撤销注销', '确认撤销注销申请？账号将恢复正常。')
   if (!confirmed) return
 
+  if (!localStorage.getItem('mowo_token')) {
+    sessionStorage.setItem('mowo_cancel_deletion_after_login', '1')
+    showToast('请重新验证手机号，登录成功后将自动撤销注销', 'error')
+    window.openAuthModal?.()
+    return
+  }
+
+  await performCancelDeactivate()
+}
+
+async function performCancelDeactivate() {
   try {
     const res = await apiFetch('/api/v1/account/deactivate/cancel', { method: 'POST' })
+    if (!res.success && res.code === 'AUTH_REQUIRED') {
+      sessionStorage.setItem('mowo_cancel_deletion_after_login', '1')
+      showToast('请重新验证手机号，登录成功后将自动撤销注销', 'error')
+      window.openAuthModal?.()
+      return
+    }
     if (!res.success) throw new Error(res.message)
     showToast('已撤销注销申请，账号恢复正常', 'success')
     document.getElementById('deactivateBanner').style.display = 'none'
@@ -763,10 +853,17 @@ async function cancelDeactivate() {
     if (currentUser) {
       currentUser.status = 'ACTIVE'
       currentUser.deactivateDaysLeft = null
+      currentUser.deletionRequest = null
     }
   } catch (e) {
     showToast(e.message || '撤销失败', 'error')
   }
+}
+
+function finishDeactivate() {
+  localStorage.removeItem('mowo_token')
+  localStorage.removeItem('mowo_user')
+  window.location.href = 'index.html'
 }
 
 // ─────────────────────────────────────────────────
@@ -774,21 +871,24 @@ async function cancelDeactivate() {
 // ─────────────────────────────────────────────────
 async function apiFetch(path, options = {}) {
   const token = localStorage.getItem('mowo_token')
+  const headers = {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(options.headers || {})
+  }
+  const hasContentType = Object.keys(headers).some(name => name.toLowerCase() === 'content-type')
+  if (options.body !== undefined && !hasContentType) {
+    headers['Content-Type'] = 'application/json'
+  }
   const res = await fetch(MOWO_API_BASE + path, {
     ...options,
     credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options.headers || {})
-    }
+    headers
   })
 
   if (res.status === 401) {
     localStorage.removeItem('mowo_token')
     localStorage.removeItem('mowo_user')
-    window.location.href = 'index.html'
-    return { success: false, message: '登录已过期' }
+    return { success: false, message: '请重新登录', code: 'AUTH_REQUIRED' }
   }
 
   const data = await res.json()

@@ -456,13 +456,16 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   if (!_token) { location.href = 'index.html'; return }
   try {
-    const res  = await fetch(`${API}/api/auth/me`, { headers:{Authorization:`Bearer ${_token}`} })
+    const res  = await fetch(`${API}/api/v1/account/me`, {
+      credentials: 'include',
+      headers:{Authorization:`Bearer ${_token}`}
+    })
     const json = await res.json()
     if (!json.success || json.data.role < 2) { location.href = 'index.html'; return }
     const u = json.data
-    document.getElementById('sidebarName').textContent   = u.profile?.nickname || u.phone
+    document.getElementById('sidebarName').textContent   = u.profile?.nickname || u.maskedPhone || '管理员'
     document.getElementById('sidebarRole').textContent   = ROLE_LABEL[u.role]
-    document.getElementById('sidebarAvatar').textContent = (u.profile?.nickname || u.phone)[0].toUpperCase()
+    document.getElementById('sidebarAvatar').textContent = (u.profile?.nickname || u.maskedPhone || '管')[0].toUpperCase()
   } catch { location.href = 'index.html'; return }
 
   // 点击空白关闭下拉
@@ -1445,7 +1448,7 @@ async function renderExMediaGrid() {
   // 获取每张图的预签名 URL
   for (let i = 0; i < _exMediaList.length; i++) {
     try {
-      const res  = await fetch(`${API}/api/upload/presign-get?key=${encodeURIComponent(_exMediaList[i])}`, {
+      const res  = await fetch(`${API}/api/machine-models/skus/${_exMediaSkuId}/example-media-url?key=${encodeURIComponent(_exMediaList[i])}`, {
         headers: { Authorization: `Bearer ${_token}` }
       })
       const json = await res.json()
@@ -1561,6 +1564,6 @@ function closeSidebar() {
 }
 </script>
 <script src="../js/auth.js"></script>
-<script src="../js/admin-sidebar.js"></script>
+<script src="../js/admin-sidebar.js?v=20260813-shell-init"></script>
 </body>
 </html>

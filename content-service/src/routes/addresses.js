@@ -5,13 +5,9 @@ const PHONE_RE = /^1[3-9]\d{9}$/
 async function addressRoutes(fastify, opts) {
   const { prisma } = fastify
 
-  // 鉴权中间件（所有接口均需登录）
+  // 所有接口统一检查设备会话和账号状态。
   fastify.addHook('preHandler', async (req, reply) => {
-    try {
-      await req.jwtVerify()
-    } catch {
-      return reply.code(401).send({ success: false, message: '请先登录' })
-    }
+    return fastify.authenticate(req, reply)
   })
 
   /* ─────────────────── GET /api/addresses ─────────────────── */
