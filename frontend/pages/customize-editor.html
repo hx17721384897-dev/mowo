@@ -114,10 +114,8 @@ a { text-decoration:none; color:inherit; }
 .human-form.visible { display:block; }
 .human-note { width:100%; min-height:86px; resize:vertical; border:2px solid var(--gray1); border-radius:10px; padding:12px 14px; font-family:var(--font); font-weight:700; font-size:13px; outline:none; }
 .human-note:focus { border-color:var(--black); }
-.choice-list { display:flex; flex-direction:column; gap:9px; margin-top:12px; }
-.choice-row { display:flex; align-items:flex-start; gap:9px; font-weight:700; font-size:12px; line-height:1.5; color:var(--black); cursor:pointer; }
-.choice-row input { width:17px; height:17px; margin-top:1px; accent-color:var(--black); flex-shrink:0; }
 .human-screening { margin-top:10px; font-weight:700; font-size:12px; line-height:1.6; color:var(--gray3); }
+.human-screening:empty { display:none; }
 @media (max-width:800px) {
   .upload-method-grid { grid-template-columns:1fr; }
   .upload-method { padding:18px; }
@@ -667,11 +665,6 @@ a { text-decoration:none; color:inherit; }
       </div>
       <div class="human-form" id="humanForm">
         <textarea class="human-note" id="humanNote" maxlength="1000" placeholder="希望保留的片段、画面重点或其他说明（选填）"></textarea>
-        <div class="choice-list">
-          <label class="choice-row"><input type="checkbox" id="humanCreator">我是本素材的创作者或版权方</label>
-          <label class="choice-row" id="humanCopyrightRow" style="display:none;"><input type="checkbox" id="humanCopyright">我确认有权提交本素材用于本次定制</label>
-          <label class="choice-row"><input type="checkbox" id="humanCooperation">我愿意了解后续联名合作（选填）</label>
-        </div>
         <p class="human-screening" id="humanScreening"></p>
         <div class="method-delay"><span>◷</span><span>人工筛选不会立即完成，提交后可凭定制编号查看处理进度。</span></div>
         <div class="method-actions"><button class="btn btn-primary" id="btnHumanSubmit">提交人工处理</button></div>
@@ -1175,10 +1168,6 @@ humanDropZone.addEventListener('drop', e => {
 });
 humanFileInput.addEventListener('change', () => handleHumanFiles(Array.from(humanFileInput.files)));
 document.getElementById('btnRemoveHumanFile').addEventListener('click', clearHumanFiles);
-document.getElementById('humanCreator').addEventListener('change', e => {
-  document.getElementById('humanCopyrightRow').style.display = e.target.checked ? 'flex' : 'none';
-  if (!e.target.checked) document.getElementById('humanCopyright').checked = false;
-});
 document.getElementById('btnHumanSubmit').addEventListener('click', submitHumanRequest);
 window.addEventListener('mowoLoginCompleted', () => {
   if (pendingHumanSubmit) {
@@ -1256,8 +1245,8 @@ async function handleHumanFiles(files) {
   document.getElementById('humanFilePreview').style.display = 'flex';
   document.getElementById('humanForm').classList.add('visible');
   document.getElementById('humanScreening').textContent = humanScreeningData.ratioOk === false
-    ? `基础检查：画面比例约 ${humanScreeningData.ratioActual}，工作人员会结合 ${humanScreeningData.ratioSuggested} 款式判断。`
-    : '基础检查完成，最终制作效果由工作人员确认。';
+    ? `画面比例约为 ${humanScreeningData.ratioActual}，工作人员会结合 ${humanScreeningData.ratioSuggested} 款式判断。`
+    : '';
 }
 
 function clearHumanFiles() {
@@ -1270,7 +1259,11 @@ function clearHumanFiles() {
 }
 
 function currentModelMeta() {
-  try { return JSON.parse(localStorage.getItem('mowo_customize_meta') || '{}'); } catch { return {}; }
+  let meta = {};
+  try { meta = JSON.parse(localStorage.getItem('mowo_customize_meta') || '{}'); } catch {}
+  const queryModelId = new URLSearchParams(location.search).get('modelId') || '';
+  const modelId = meta.modelId || meta.id || queryModelId;
+  return { ...meta, id: modelId, modelId };
 }
 
 async function submitHumanRequest() {
@@ -1279,12 +1272,6 @@ async function submitHumanRequest() {
   if (!token) {
     pendingHumanSubmit = true;
     if (typeof openAuthModal === 'function') openAuthModal();
-    return;
-  }
-  const creatorDeclared = document.getElementById('humanCreator').checked;
-  const copyrightConfirmed = document.getElementById('humanCopyright').checked;
-  if (creatorDeclared && !copyrightConfirmed) {
-    alert('请确认你有权提交本素材，或者取消创作者选项');
     return;
   }
   const meta = currentModelMeta();
@@ -1310,9 +1297,7 @@ async function submitHumanRequest() {
       body: JSON.stringify({
         mode: 'HUMAN', machineModelId: meta.id, sourceKeys, clientRequestKey,
         screeningData: humanScreeningData,
-        userNote: document.getElementById('humanNote').value,
-        creatorDeclared, copyrightConfirmed,
-        cooperationInterested: document.getElementById('humanCooperation').checked
+        userNote: document.getElementById('humanNote').value
       })
     });
     const result = await response.json();
