@@ -32,6 +32,11 @@ a { text-decoration:none; color:inherit; }
 /* ── 进度步骤条 ── */
 .progress-steps { position:fixed; top:var(--nav-h); left:0; right:0; z-index:799; background:rgba(252,226,179,0.92); backdrop-filter:blur(12px); border-bottom:1.5px solid rgba(44,31,20,.1); padding:10px var(--pad-mobile); display:flex; align-items:center; justify-content:center; gap:0; height:var(--prog-h); }
 @media (min-width:1024px) { .progress-steps { padding:10px var(--pad-desk); } }
+.progress-back { position:absolute; left:var(--pad-mobile); top:50%; transform:translateY(-50%); height:32px; display:inline-flex; align-items:center; gap:7px; padding:0 10px; border:1.5px solid rgba(44,31,20,.18); border-radius:6px; background:rgba(255,255,255,.55); color:var(--black); font-size:12px; font-weight:800; transition:background .2s,border-color .2s; }
+.progress-back:hover { background:var(--white); border-color:rgba(44,31,20,.4); }
+.progress-back-arrow { font-size:18px; line-height:1; }
+@media (min-width:1024px) { .progress-back { left:var(--pad-desk); } }
+@media (max-width:900px) { .progress-back { width:32px; padding:0; justify-content:center; } .progress-back-label { display:none; } }
 .step-item { display:flex; align-items:center; gap:8px; font-weight:800; font-size:12px; letter-spacing:.04em; color:var(--gray2); white-space:nowrap; }
 .step-item.active { color:var(--black); }
 .step-item.done { color:var(--black); }
@@ -39,7 +44,7 @@ a { text-decoration:none; color:inherit; }
 .step-item.active .step-num { background:var(--black); color:var(--white); border-color:var(--black); }
 .step-item.done .step-num { background:var(--black); color:var(--white); border-color:var(--black); }
 .step-divider { width:clamp(20px,4vw,60px); height:2px; background:var(--gray1); flex-shrink:0; margin:0 4px; }
-@media (max-width:480px) { .step-label { display:none; } .step-item { gap:0; } .step-num { width:26px; height:26px; font-size:12px; } .step-divider { width:16px; } }
+@media (max-width:700px) { .step-label { display:none; } .step-item { gap:0; } .step-num { width:26px; height:26px; font-size:12px; } .step-divider { width:16px; } }
 
 /* ── 通用按钮 ── */
 .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; font-family:var(--font); font-weight:800; font-size:15px; letter-spacing:.02em; padding:14px 28px; border-radius:999px; min-height:52px; transition:transform .2s, box-shadow .2s; cursor:pointer; border:none; -webkit-tap-highlight-color:transparent; }
@@ -58,45 +63,41 @@ a { text-decoration:none; color:inherit; }
 ══════════════════════════════ */
 #stateUpload {
   min-height:100vh;
-  padding-top:calc(var(--prog-h) + 60px);
-  padding-bottom:80px;
+  padding-top:calc(var(--prog-h) + 24px);
+  padding-bottom:24px;
   padding-left:var(--pad-mobile); padding-right:var(--pad-mobile);
   display:flex; flex-direction:column; align-items:center;
 }
 @media (min-width:1024px) { #stateUpload { padding-left:var(--pad-desk); padding-right:var(--pad-desk); } }
 
-.upload-header { text-align:center; margin-bottom:30px; max-width:760px; width:100%; }
-.upload-eyebrow { font-weight:800; font-size:11px; letter-spacing:.25em; text-transform:uppercase; color:var(--gray3); margin-bottom:14px; }
-.upload-title { font-weight:900; font-size:clamp(28px,4vw,42px); line-height:1.08; letter-spacing:0; color:var(--black); margin-bottom:14px; }
+.upload-header { text-align:center; margin-bottom:16px; max-width:760px; width:100%; }
+.upload-eyebrow { font-weight:800; font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--gray3); margin-bottom:6px; }
+.upload-title { font-weight:900; font-size:clamp(26px,3vw,34px); line-height:1.08; letter-spacing:0; color:var(--black); margin-bottom:8px; }
 .upload-title em { font-style:normal; position:relative; display:inline-block; }
-.upload-title em::after { content:''; position:absolute; bottom:2px; left:0; right:0; height:6px; background:var(--accent-y); z-index:-1; border-radius:3px; }
-.upload-sub { font-weight:700; font-size:15px; color:var(--gray3); line-height:1.7; }
+.upload-title em::after { content:''; position:absolute; bottom:1px; left:0; right:0; height:5px; background:var(--accent-y); z-index:-1; border-radius:3px; }
+.upload-sub { font-weight:700; font-size:13px; color:var(--gray3); line-height:1.5; }
 
-.upload-method-grid { width:min(1080px,100%); display:grid; grid-template-columns:1fr 1fr; gap:18px; align-items:start; }
-.upload-method { background:var(--white); border:2px solid var(--gray1); border-radius:18px; padding:22px; min-width:0; }
+.upload-method-grid { width:min(1080px,100%); display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; }
+.upload-method { background:var(--white); border:2px solid var(--gray1); border-radius:18px; padding:16px; min-width:0; }
 .upload-method.self { border-top:6px solid var(--accent-y); }
 .upload-method.human { border-top:6px solid var(--accent-o); }
-.method-head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:18px; }
-.method-kicker { font-weight:800; font-size:10px; letter-spacing:.14em; color:var(--gray3); margin-bottom:5px; }
-.method-title { font-weight:900; font-size:22px; letter-spacing:0; }
-.method-desc { font-weight:700; font-size:13px; line-height:1.65; color:var(--gray3); margin-top:5px; }
-.method-icon { width:42px; height:42px; border-radius:8px; background:var(--cream); display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; }
+.method-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:12px; }
+.method-kicker { font-weight:800; font-size:10px; letter-spacing:.12em; color:var(--gray3); margin-bottom:3px; }
+.method-title { font-weight:900; font-size:19px; letter-spacing:0; }
+.method-desc { font-weight:700; font-size:12px; line-height:1.5; color:var(--gray3); margin-top:4px; }
+.method-icon { width:36px; height:36px; border-radius:8px; background:var(--cream); display:flex; align-items:center; justify-content:center; font-size:19px; flex-shrink:0; }
 .method-delay { display:flex; align-items:flex-start; gap:9px; margin:14px 0 0; padding:11px 12px; background:#FFF3EE; border-left:4px solid var(--accent-o); font-weight:700; font-size:12px; line-height:1.55; color:#8A3D1C; }
-.drop-zone { width:100%; max-width:none; min-height:235px; border:2.5px dashed var(--gray2); border-radius:16px; padding:34px 22px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; cursor:pointer; transition:border-color .2s, background .2s; background:var(--cream); position:relative; }
+.drop-zone { width:100%; max-width:none; min-height:160px; border:2.5px dashed var(--gray2); border-radius:16px; padding:20px 16px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; cursor:pointer; transition:border-color .2s, background .2s; background:var(--cream); position:relative; }
 .drop-zone:hover, .drop-zone.dragover { border-color:var(--black); background:#EEECEA; }
-.drop-icon { font-size:52px; line-height:1; }
-.drop-title { font-weight:900; font-size:20px; letter-spacing:-.01em; color:var(--black); }
-.drop-sub { font-weight:700; font-size:13px; color:var(--gray3); }
+.drop-icon { font-size:38px; line-height:1; }
+.drop-title { font-weight:900; font-size:17px; letter-spacing:0; color:var(--black); }
+.drop-sub { font-weight:700; font-size:12px; color:var(--gray3); }
 .drop-formats { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
 .fmt-tag { font-weight:800; font-size:10px; letter-spacing:.12em; text-transform:uppercase; padding:5px 12px; border-radius:999px; background:var(--white); border:1.5px solid var(--gray1); color:var(--gray3); }
 .fmt-tag.fmt-video { border-color:#FFD0BC; color:var(--accent-o); background:#FFF3EE; }
 .fmt-tag.fmt-gif { border-color:#C6F0CB; color:#2A6B30; background:#F0FBF1; }
 .fmt-tag.fmt-img { border-color:#C6DCF0; color:#1A5A8A; background:#EEF5FB; }
 .drop-input { position:absolute; inset:0; opacity:0; cursor:pointer; }
-
-.upload-warn { max-width:1080px; width:100%; background:#FFF8E6; border:1.5px solid #F5E642; border-radius:12px; padding:14px 20px; display:flex; align-items:flex-start; gap:12px; margin-top:16px; }
-.upload-warn-icon { font-size:18px; flex-shrink:0; }
-.upload-warn p { font-weight:700; font-size:13px; color:#7A6800; line-height:1.7; }
 
 .file-preview { width:100%; background:var(--white); border:2px solid var(--gray1); border-radius:12px; padding:14px 16px; display:flex; align-items:center; gap:12px; margin-top:14px; }
 .file-preview-icon { font-size:28px; flex-shrink:0; }
@@ -106,9 +107,9 @@ a { text-decoration:none; color:inherit; }
 .file-preview-remove { font-size:18px; cursor:pointer; color:var(--gray2); transition:color .2s; flex-shrink:0; background:none; border:none; font-family:var(--font); padding:4px; }
 .file-preview-remove:hover { color:var(--black); }
 
-.upload-actions { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-top:28px; }
-.method-actions { display:flex; gap:10px; margin-top:16px; }
+.method-actions { display:flex; gap:10px; margin-top:10px; }
 .method-actions .btn { flex:1; }
+.method-actions .btn { min-height:44px; padding:10px 20px; font-size:13px; }
 .human-form { display:none; margin-top:14px; }
 .human-form.visible { display:block; }
 .human-note { width:100%; min-height:86px; resize:vertical; border:2px solid var(--gray1); border-radius:10px; padding:12px 14px; font-family:var(--font); font-weight:700; font-size:13px; outline:none; }
@@ -120,7 +121,8 @@ a { text-decoration:none; color:inherit; }
 @media (max-width:800px) {
   .upload-method-grid { grid-template-columns:1fr; }
   .upload-method { padding:18px; }
-  .drop-zone { min-height:210px; }
+  .drop-zone { min-height:190px; }
+  #stateUpload { padding-top:calc(var(--prog-h) + 28px); padding-bottom:36px; }
 }
 
 /* ══════════════════════════════
@@ -593,6 +595,9 @@ a { text-decoration:none; color:inherit; }
 
 <script src="../js/nav.js"></script>
 <div class="progress-steps">
+  <a class="progress-back" href="customize-start.html" title="返回选型号" aria-label="返回选型号">
+    <span class="progress-back-arrow" aria-hidden="true">←</span><span class="progress-back-label">返回选型号</span>
+  </a>
   <div class="step-item done"><div class="step-num">1</div><span class="step-label">选型号</span></div>
   <div class="step-divider"></div>
   <div class="step-item active"><div class="step-num">2</div><span class="step-label">上传 &amp; 筛帧</span></div>
@@ -671,16 +676,7 @@ a { text-decoration:none; color:inherit; }
         <div class="method-delay"><span>◷</span><span>人工筛选不会立即完成，提交后可凭定制编号查看处理进度。</span></div>
         <div class="method-actions"><button class="btn btn-primary" id="btnHumanSubmit">提交人工处理</button></div>
       </div>
-    </div>
-  </div>
-
-  <div class="upload-warn">
-    <span class="upload-warn-icon">🔒</span>
-    <p>原素材和筛选帧按定制申请私密保存；无论选择哪种方式，最终都需要工作人员确认是否适合制作。</p>
-  </div>
-
-  <div class="upload-actions">
-    <a href="customize-start.html" class="btn btn-secondary btn-sm">← 返回选型号</a>
+    </section>
   </div>
 </div>
 
@@ -1293,6 +1289,8 @@ async function submitHumanRequest() {
   }
   const meta = currentModelMeta();
   if (!meta.id) { alert('没有找到已选款式，请返回上一步重新选择'); return; }
+  const confirmed = window.confirm('提交后会进入人工筛选和制作可行性审核，不会立即生成可支付订单。工作人员处理后，结果会显示在“我的定制”。确认提交吗？');
+  if (!confirmed) return;
   const button = document.getElementById('btnHumanSubmit');
   let clientRequestKey = sessionStorage.getItem('mowo_human_submission_key');
   if (!clientRequestKey) {
