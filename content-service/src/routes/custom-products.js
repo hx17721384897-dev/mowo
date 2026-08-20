@@ -177,6 +177,14 @@ export default async function customProductRoutes(fastify) {
     if (cp.status === 'ordered' || cp.status === 'removed') {
       return reply.code(400).send({ success: false, message: '该草稿已提交，不可再编辑' })
     }
+    const customizationRequest = await prisma.customizationRequest.findFirst({
+      where: { customProductId: cp.id },
+      orderBy: { createdAt: 'desc' },
+      select: { status: true }
+    })
+    if (customizationRequest && customizationRequest.status !== 'DRAFT') {
+      return reply.code(409).send({ success: false, message: '该定制已提交或正在清理，不能继续修改帧图' })
+    }
 
     let nextFrameKeys = null
     let newlyLinkedFrames = []
@@ -239,6 +247,13 @@ export default async function customProductRoutes(fastify) {
     if (cp.userId !== userId) return reply.code(403).send({ success: false, message: '无权操作' })
     if (cp.status === 'in_cart' || cp.status === 'ordered') {
       return reply.code(400).send({ success: false, message: '该动画已在购物车或订单中，无法删除' })
+    }
+    const submittedRequest = await prisma.customizationRequest.findFirst({
+      where: { customProductId: cp.id, status: { not: 'DRAFT' } },
+      select: { id: true }
+    })
+    if (submittedRequest) {
+      return reply.code(409).send({ success: false, message: '该动画已提交制作审核，不能删除' })
     }
 
     await prisma.customProduct.update({ where: { id }, data: { status: 'removed' } })

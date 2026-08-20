@@ -40,6 +40,8 @@ import customProductRoutes from './routes/custom-products.js'
 import paymentRoutes       from './routes/payment.js'
 import addressRoutes       from './routes/addresses.js'
 import orderRoutes         from './routes/orders.js'
+import customizationRequestRoutes from './routes/customization-requests.js'
+import adminCustomizationRequestRoutes from './routes/admin-customization-requests.js'
 import materialsRoutes    from './routes/materials.js'
 import framePacksRoutes  from './routes/frame-packs.js'
 import accountRoutes     from './routes/account.js'
@@ -193,6 +195,7 @@ async function start() {
     // ── 联络表单 ──
     await fastify.register(contactRoutes,        { prefix: '/api/contact' })
     await fastify.register(adminContactRoutes,   { prefix: '/api/admin/contact' })
+    await fastify.register(adminCustomizationRequestRoutes, { prefix: '/api/admin/customization-requests' })
 
     // ── 结算 + 牛量 + 引流链接 + 商务合同 + 分红配置 ──
     await fastify.register(settlementRoutes,     { prefix: '/api' })
@@ -204,6 +207,7 @@ async function start() {
     // ── 购物车系统 ──
     await fastify.register(cartRoutes,           { prefix: '/api/cart' })
     await fastify.register(customProductRoutes,  { prefix: '/api/custom-products' })
+    await fastify.register(customizationRequestRoutes, { prefix: '/api/customization-requests' })
     await fastify.register(paymentRoutes,        { prefix: '/api/payment' })
     await fastify.register(addressRoutes,        { prefix: '/api/addresses' })
     await fastify.register(orderRoutes,          { prefix: '/api/orders' })

@@ -455,6 +455,12 @@ button { font-family:var(--font); }
   font-weight:800; font-size:11px; color:var(--gray3); letter-spacing:.06em;
 }
 .creator-dot { width:6px; height:6px; border-radius:50%; background:var(--accent-g); }
+.review-declaration { padding:14px; background:var(--cream); border-radius:10px; display:flex; flex-direction:column; gap:9px; }
+.review-choice { display:flex; align-items:flex-start; gap:9px; font-weight:700; font-size:12px; line-height:1.5; cursor:pointer; }
+.review-choice input { width:17px; height:17px; margin-top:1px; accent-color:var(--black); flex-shrink:0; }
+.review-note { width:100%; min-height:72px; resize:vertical; border:2px solid var(--gray1); border-radius:9px; padding:10px 12px; font-family:var(--font); font-weight:700; font-size:12px; outline:none; }
+.review-note:focus { border-color:var(--black); }
+.review-price-tip { font-weight:700; font-size:11px; line-height:1.55; color:var(--gray3); }
 
 
 /* ══════════════════════════════
@@ -525,7 +531,7 @@ button { font-family:var(--font); }
   <div class="step-divider"></div>
   <div class="step-item active"><div class="step-num">3</div><span class="step-label">选款式</span></div>
   <div class="step-divider"></div>
-  <div class="step-item"><div class="step-num">4</div><span class="step-label">确认 &amp; 购买</span></div>
+  <div class="step-item"><div class="step-num">4</div><span class="step-label">提交审核</span></div>
 </div>
 
 <!-- 主体 -->
@@ -685,17 +691,17 @@ button { font-family:var(--font); }
           </div>
         </div>
 
-        <!-- 结算按钮 -->
+        <!-- 提交审核 -->
         <div class="price-card-btns">
-          <button class="btn btn-yellow" id="btnBuy" disabled onclick="goBuy()">
-            立即购买 →
-          </button>
-          <button class="btn btn-secondary" id="btnAddCart" disabled onclick="goAddCart()" style="font-size:13px;">
-            🛒 加入购物车
-          </button>
-          <div class="btn-creator-tag" id="creatorBtns" style="display:none;">
-            <span class="creator-dot"></span>创作者认证账号可发布至社区
+          <div class="review-declaration">
+            <label class="review-choice"><input type="checkbox" id="reviewCreator">我是本素材的创作者或版权方</label>
+            <label class="review-choice" id="reviewCopyrightRow" style="display:none;"><input type="checkbox" id="reviewCopyright">我确认有权提交本素材用于本次定制</label>
+            <label class="review-choice"><input type="checkbox" id="reviewCooperation">我愿意了解后续联名合作（选填）</label>
+            <textarea class="review-note" id="reviewNote" maxlength="1000" placeholder="给工作人员的补充说明（选填）"></textarea>
           </div>
+          <p class="review-price-tip">当前金额为参考价格。工作人员确认素材和适配款式后，会返回固定最终价格供你确认。</p>
+          <button class="btn btn-yellow" id="btnBuy" disabled onclick="submitReview()">提交制作审核 →</button>
+          <button class="btn btn-secondary" id="btnAddCart" disabled onclick="goAddCart()" style="display:none;">加入购物车</button>
         </div>
 
       </div>
@@ -774,17 +780,10 @@ let _reuseOldFrames     = false; // 用户选择"复用上次的动画"
   // 渲染帧数选项
   renderFrameOptions();
 
-  // 判断创作者身份
-  try {
-    const token = localStorage.getItem('mowo_token');
-    if (token) {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      if (payload.certifyStatus === 2) {
-        document.getElementById('creatorBtns').style.display = 'block';
-        document.getElementById('mobBtnPublish').style.display = 'flex';
-      }
-    }
-  } catch(e) {}
+  document.getElementById('reviewCreator').addEventListener('change', event => {
+    document.getElementById('reviewCopyrightRow').style.display = event.target.checked ? 'flex' : 'none';
+    if (!event.target.checked) document.getElementById('reviewCopyright').checked = false;
+  });
 
   // 检测是否曾用相同机型下过单，进入页面即提示
   await detectPreviousOrder()
@@ -1011,7 +1010,6 @@ function updatePriceCard() {
   const canBuy = isComplete || CART.length > 0;
   document.getElementById('btnAddMore').disabled    = !canAdd;
   document.getElementById('btnBuy').disabled        = !canBuy;
-  document.getElementById('btnAddCart').disabled    = !canBuy;
 
   // 提示文字
   const hint = document.getElementById('incompleteHint');
@@ -1285,6 +1283,56 @@ async function _createCustomProducts(token, frameSources) {
   localStorage.setItem('mowo_customize_product_map', JSON.stringify(map));
   localStorage.removeItem('mowo_customize_draft_id');
   return map;
+}
+
+async function submitReview() {
+  const token = localStorage.getItem('mowo_token');
+  if (!token) { if (typeof openAuthModal === 'function') openAuthModal(); return; }
+  const draftId = localStorage.getItem('mowo_customize_request_draft_id');
+  if (!draftId) {
+    alert('没有找到本次定制草稿，请返回上传页面重新提交素材');
+    return;
+  }
+  if (SEL.selectedFrame && SEL.selectedSku && SEL.selectedColor) addVariantSilent();
+  if (!CART.length) return;
+
+  const creatorDeclared = document.getElementById('reviewCreator').checked;
+  const copyrightConfirmed = document.getElementById('reviewCopyright').checked;
+  if (creatorDeclared && !copyrightConfirmed) {
+    alert('请确认你有权提交本素材，或者取消创作者选项');
+    return;
+  }
+  const primaryChoice = CART[CART.length - 1];
+  const button = document.getElementById('btnBuy');
+  button.disabled = true;
+  button.textContent = '正在提交';
+  try {
+    const response = await fetch(`${MOWO_API}/api/customization-requests/${encodeURIComponent(draftId)}/submit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        desiredSkuId: primaryChoice.skuId,
+        userNote: document.getElementById('reviewNote').value,
+        creatorDeclared,
+        copyrightConfirmed,
+        cooperationInterested: document.getElementById('reviewCooperation').checked,
+        editorData: { requestedOptions: CART.map(item => ({
+          skuId:item.skuId, frame:item.frame, size:item.size, material:item.material,
+          colorName:item.colorName, referencePrice:item.price
+        })) }
+      })
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success) throw new Error(result.message || '提交失败');
+    localStorage.removeItem('mowo_customize_request_draft_id');
+    localStorage.removeItem('mowo_customize_request_draft_key');
+    localStorage.removeItem('mowo_customize_request_draft_owner');
+    location.href = `my-customizations.html?submitted=${encodeURIComponent(result.data.requestNo)}`;
+  } catch (error) {
+    alert('提交失败：' + (error.message || '请稍后重试'));
+    button.disabled = false;
+    button.textContent = '提交制作审核 →';
+  }
 }
 
 async function goBuy() {

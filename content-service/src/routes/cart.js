@@ -140,6 +140,21 @@ export default async function cartRoutes(fastify) {
       if (cp.status === 'ordered' || cp.status === 'removed') {
         return reply.code(400).send({ success: false, message: '该草稿已提交，不可再加入购物车' })
       }
+      const approvedRequest = await prisma.customizationRequest.findFirst({
+        where: {
+          userId,
+          customProductId: cp.id,
+          status: 'CONFIRMED',
+          OR: [{ desiredSkuId: null }, { desiredSkuId: hardwareSkuId }]
+        },
+        select: { id: true }
+      })
+      if (!approvedRequest) {
+        return reply.code(409).send({
+          success: false,
+          message: '该定制尚未完成制作审核，请先在“我的定制”中确认工作人员给出的方案'
+        })
+      }
       // 帧数兼容性校验（支持循环补帧：sku.frameCount 必须是 cp.frameCount 的整数倍）
       if (cp.frameCount && sku.frameCount && sku.frameCount % cp.frameCount !== 0) {
         return reply.code(400).send({

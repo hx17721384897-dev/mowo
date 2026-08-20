@@ -5,7 +5,11 @@
 // 任务一（每小时）：冷却期到期 → collab_orders.revenueStatus: cooling → available
 // 任务二（每天凌晨2点）：储备金90天到期 → 释放回创作者余额
 
-import { cleanupAbandonedAvatars } from './private-file-cleanup.js'
+import {
+  cleanupAbandonedAvatars,
+  cleanupAbandonedCustomizationFiles,
+  cleanupExpiredCustomizationDrafts
+} from './private-file-cleanup.js'
 import { processDueAccountDeletions } from './account-deletion.js'
 
 export function startScheduler(fastify) {
@@ -477,6 +481,27 @@ export function startScheduler(fastify) {
   const avatarCleanupInterval = fastify.config.privateFileCleanup.intervalMinutes * 60 * 1000
   setInterval(cleanupAvatarFiles, avatarCleanupInterval)
   cleanupAvatarFiles()
+
+  // 定制素材沿用相同检查频率：中断上传保留 24 小时，云端草稿保留 7 天。
+  async function cleanupCustomizationFiles() {
+    try {
+      const [abandoned, drafts] = await Promise.all([
+        cleanupAbandonedCustomizationFiles(fastify),
+        cleanupExpiredCustomizationDrafts(fastify)
+      ])
+      if (abandoned.selected > 0 || drafts.selected > 0) {
+        log.info(
+          `[scheduler] 定制素材清理：中断上传删除 ${abandoned.deleted}，` +
+          `过期草稿 ${drafts.expired}，草稿文件删除 ${drafts.filesDeleted}，失败 ${abandoned.failed + drafts.failed}`
+        )
+      }
+    } catch (err) {
+      log.error('[scheduler] 定制素材清理失败：' + err.message)
+    }
+  }
+
+  setInterval(cleanupCustomizationFiles, avatarCleanupInterval)
+  cleanupCustomizationFiles()
 
   // 任务九：执行已到期或等待重试的账号注销处理单。
   async function processAccountDeletions() {

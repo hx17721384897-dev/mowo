@@ -1,8 +1,11 @@
+import { Prisma } from '@prisma/client'
+
 const ACTIVE_ORDER_STATUSES = ['pending', 'paid', 'locked', 'processing', 'producing', 'shipped', 'aftersale']
 const OPEN_AFTERSALE_STATUSES = ['pending', 'approved']
 const OPEN_WITHDRAWAL_STATUSES = ['pending', 'processing', 'failed']
 const OPEN_SETTLEMENT_STATUSES = ['pending', 'failed']
 const OPEN_REVENUE_STATUSES = ['estimated', 'cooling', 'available']
+const ACTIVE_CUSTOMIZATION_STATUSES = ['SUBMITTED', 'REVIEWING', 'NEEDS_SUPPLEMENT', 'OPTIONS_READY', 'CONFIRMED']
 const PROTECTED_FILE_LINKS = new Set(['AFTERSALE_REQUEST', 'CUSTOMIZE_ORDER', 'CONTRACT', 'FRAME_PACK'])
 
 function blocker(code, message, count = 1) {
@@ -30,7 +33,8 @@ export async function getAccountDeletionBlockers(prisma, userId) {
     reserve,
     openSettlements,
     activeContracts,
-    openReports
+    openReports,
+    activeCustomizationRequests
   ] = await Promise.all([
     prisma.customizeOrder.count({ where: { userId, status: { in: ACTIVE_ORDER_STATUSES } } }),
     prisma.aftersaleRequest.count({ where: { userId, status: { in: OPEN_AFTERSALE_STATUSES } } }),
@@ -64,7 +68,8 @@ export async function getAccountDeletionBlockers(prisma, userId) {
         { reporterId: userId },
         { targetType: 'user', targetId: userId }
       ]
-    } })
+    } }),
+    prisma.customizationRequest.count({ where: { userId, status: { in: ACTIVE_CUSTOMIZATION_STATUSES } } })
   ])
 
   const blockers = []
@@ -84,6 +89,11 @@ export async function getAccountDeletionBlockers(prisma, userId) {
   if (openSettlements) blockers.push(blocker('OPEN_SETTLEMENTS', `有 ${openSettlements} 笔结算尚未完成`, openSettlements))
   if (activeContracts) blockers.push(blocker('ACTIVE_CONTRACTS', `有 ${activeContracts} 份生效中的合作合同`, activeContracts))
   if (openReports) blockers.push(blocker('OPEN_DISPUTES', `有 ${openReports} 个投诉或举报尚未处理`, openReports))
+  if (activeCustomizationRequests) blockers.push(blocker(
+    'ACTIVE_CUSTOMIZATION_REQUESTS',
+    `有 ${activeCustomizationRequests} 个定制申请仍在处理中，请先结束申请再注销`,
+    activeCustomizationRequests
+  ))
   return blockers
 }
 
@@ -180,6 +190,18 @@ async function anonymizeAccountData(prisma, userId, requestId, now) {
     await tx.creatorReferralLink.updateMany({ where: { creatorId: userId }, data: { isActive: false } })
     await tx.referralClick.updateMany({ where: { creatorId: userId }, data: { ip: null, userAgent: null, referrer: null } })
     await tx.creatorNotification.deleteMany({ where: { userId } })
+    await tx.customizationRequestEvent.updateMany({
+      where: { request: { userId } },
+      data: { internalNote: null, detail: Prisma.JsonNull }
+    })
+    await tx.customizationRequest.updateMany({
+      where: { userId },
+      data: {
+        customProductId: null, sourceKeys: [], selectedFrameKeys: [], screeningData: Prisma.JsonNull,
+        editorData: Prisma.JsonNull, userNote: null, creatorDeclared: false,
+        copyrightConfirmed: false, cooperationInterested: false
+      }
+    })
     await tx.actionToken.deleteMany({ where: { userId } })
     await tx.refreshToken.deleteMany({ where: { userId } })
     await tx.smsCode.deleteMany({ where: { OR: [{ userId }, ...(user?.phone ? [{ phone: user.phone }] : [])] } })

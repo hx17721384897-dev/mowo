@@ -28,6 +28,12 @@
       ]
     },
     {
+      key: 'customization', label: '定制', icon: '✂',
+      items: [
+        { href: 'admin-customization-requests.html', icon: '☷', label: '定制审核' }
+      ]
+    },
+    {
       key: 'collab', label: '联名', icon: '🤝',
       items: [
         { href: 'admin-collab-works.html',      icon: '🎨', label: '联名作品' },
@@ -67,9 +73,9 @@
   ];
 
   const STAFF_GROUPS = {
-    OWNER: ['production', 'product', 'collab', 'creator', 'ops', 'users', 'system'],
-    CUSTOMER_SERVICE: ['production', 'product', 'ops', 'users'],
-    PRODUCTION: ['production', 'product'],
+    OWNER: ['production', 'customization', 'product', 'collab', 'creator', 'ops', 'users', 'system'],
+    CUSTOMER_SERVICE: ['production', 'customization', 'product', 'ops', 'users'],
+    PRODUCTION: ['production', 'customization', 'product'],
     COLLAB_OPS: ['collab', 'creator']
   };
 

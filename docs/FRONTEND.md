@@ -43,8 +43,9 @@
 | `customize-start.html` | 选款式 | ✅ 已重写（走马灯+详情弹窗） |
 | `customize-editor.html` | 上传与筛帧 | ✅ 已对接 |
 | `customize-confirm.html` | 选配+提交 | ✅ 已对接 |
+| `my-customizations.html` | 我的定制、状态筛选和时间线 | ✅ 首批已完成 |
 
-定制编辑器中的帧图只在浏览器内用于即时预览。登录用户进入确认页前，`js/private-upload.js` 会逐帧完成私有文件登记、上传和校验；草稿与购物车只保存服务器返回的私有 key。确认页会核对本地 key 所属账号，避免切换账号后复用上一位用户的文件。
+定制编辑器保留原有设计器，并在第一屏增加“自己筛选”和“工作人员筛选”两个入口。登录用户进入确认页前，选中帧上传为私有帧图，原视频/原图上传为私有源素材；自己筛选先保存无编号草稿，正式提交才生成定制编号。确认页当前提交制作审核，不直接加入购物车。完整流程见 `modules/web-customization.md`。
 
 ### 管理后台（内部使用）
 
@@ -56,6 +57,7 @@
 | `admin-collab-activities.html` | 活动管理 | 合作运营/负责人 | ✅ |
 | `admin-users.html` | 用户与员工岗位管理 | 运营客服只读普通用户并可封禁；负责人管理岗位 | ✅ 已更新 |
 | `admin-account-deletions.html` | 注销任务监控 | 运营客服只读脱敏状态；负责人可重试、暂停和恢复；暂停时分开填写内部原因和用户说明 | ✅ 已更新 |
+| `admin-customization-requests.html` | 定制申请接收与私有素材查看 | 运营客服/生产人员/负责人 | ✅ 首批只读接收 |
 | `admin-logs.html` | 安全记录 | 仅负责人 | ✅ 已更新 |
 | `admin-models.html` | 款式管理 | 运营客服/负责人 | ✅ |
 | `admin-inventory.html` | 库存管理 | 生产人员/负责人 | ✅ |

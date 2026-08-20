@@ -65,14 +65,24 @@ a { text-decoration:none; color:inherit; }
 }
 @media (min-width:1024px) { #stateUpload { padding-left:var(--pad-desk); padding-right:var(--pad-desk); } }
 
-.upload-header { text-align:center; margin-bottom:40px; max-width:680px; width:100%; }
+.upload-header { text-align:center; margin-bottom:30px; max-width:760px; width:100%; }
 .upload-eyebrow { font-weight:800; font-size:11px; letter-spacing:.25em; text-transform:uppercase; color:var(--gray3); margin-bottom:14px; }
-.upload-title { font-weight:900; font-size:clamp(28px,4vw,52px); line-height:1.08; letter-spacing:-.03em; color:var(--black); margin-bottom:14px; }
+.upload-title { font-weight:900; font-size:clamp(28px,4vw,42px); line-height:1.08; letter-spacing:0; color:var(--black); margin-bottom:14px; }
 .upload-title em { font-style:normal; position:relative; display:inline-block; }
 .upload-title em::after { content:''; position:absolute; bottom:2px; left:0; right:0; height:6px; background:var(--accent-y); z-index:-1; border-radius:3px; }
 .upload-sub { font-weight:700; font-size:15px; color:var(--gray3); line-height:1.7; }
 
-.drop-zone { width:100%; max-width:680px; border:2.5px dashed var(--gray2); border-radius:32px; padding:56px 32px; display:flex; flex-direction:column; align-items:center; gap:14px; cursor:pointer; transition:border-color .2s, background .2s; background:var(--cream); position:relative; }
+.upload-method-grid { width:min(1080px,100%); display:grid; grid-template-columns:1fr 1fr; gap:18px; align-items:start; }
+.upload-method { background:var(--white); border:2px solid var(--gray1); border-radius:18px; padding:22px; min-width:0; }
+.upload-method.self { border-top:6px solid var(--accent-y); }
+.upload-method.human { border-top:6px solid var(--accent-o); }
+.method-head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:18px; }
+.method-kicker { font-weight:800; font-size:10px; letter-spacing:.14em; color:var(--gray3); margin-bottom:5px; }
+.method-title { font-weight:900; font-size:22px; letter-spacing:0; }
+.method-desc { font-weight:700; font-size:13px; line-height:1.65; color:var(--gray3); margin-top:5px; }
+.method-icon { width:42px; height:42px; border-radius:8px; background:var(--cream); display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; }
+.method-delay { display:flex; align-items:flex-start; gap:9px; margin:14px 0 0; padding:11px 12px; background:#FFF3EE; border-left:4px solid var(--accent-o); font-weight:700; font-size:12px; line-height:1.55; color:#8A3D1C; }
+.drop-zone { width:100%; max-width:none; min-height:235px; border:2.5px dashed var(--gray2); border-radius:16px; padding:34px 22px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; cursor:pointer; transition:border-color .2s, background .2s; background:var(--cream); position:relative; }
 .drop-zone:hover, .drop-zone.dragover { border-color:var(--black); background:#EEECEA; }
 .drop-icon { font-size:52px; line-height:1; }
 .drop-title { font-weight:900; font-size:20px; letter-spacing:-.01em; color:var(--black); }
@@ -84,11 +94,11 @@ a { text-decoration:none; color:inherit; }
 .fmt-tag.fmt-img { border-color:#C6DCF0; color:#1A5A8A; background:#EEF5FB; }
 .drop-input { position:absolute; inset:0; opacity:0; cursor:pointer; }
 
-.upload-warn { max-width:680px; width:100%; background:#FFF8E6; border:1.5px solid #F5E642; border-radius:16px; padding:14px 20px; display:flex; align-items:flex-start; gap:12px; margin-top:16px; }
+.upload-warn { max-width:1080px; width:100%; background:#FFF8E6; border:1.5px solid #F5E642; border-radius:12px; padding:14px 20px; display:flex; align-items:flex-start; gap:12px; margin-top:16px; }
 .upload-warn-icon { font-size:18px; flex-shrink:0; }
 .upload-warn p { font-weight:700; font-size:13px; color:#7A6800; line-height:1.7; }
 
-.file-preview { max-width:680px; width:100%; background:var(--white); border:2px solid var(--gray1); border-radius:20px; padding:18px 22px; display:flex; align-items:center; gap:16px; margin-top:16px; }
+.file-preview { width:100%; background:var(--white); border:2px solid var(--gray1); border-radius:12px; padding:14px 16px; display:flex; align-items:center; gap:12px; margin-top:14px; }
 .file-preview-icon { font-size:28px; flex-shrink:0; }
 .file-preview-info { flex:1; min-width:0; }
 .file-preview-name { font-weight:900; font-size:15px; color:var(--black); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -97,6 +107,21 @@ a { text-decoration:none; color:inherit; }
 .file-preview-remove:hover { color:var(--black); }
 
 .upload-actions { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-top:28px; }
+.method-actions { display:flex; gap:10px; margin-top:16px; }
+.method-actions .btn { flex:1; }
+.human-form { display:none; margin-top:14px; }
+.human-form.visible { display:block; }
+.human-note { width:100%; min-height:86px; resize:vertical; border:2px solid var(--gray1); border-radius:10px; padding:12px 14px; font-family:var(--font); font-weight:700; font-size:13px; outline:none; }
+.human-note:focus { border-color:var(--black); }
+.choice-list { display:flex; flex-direction:column; gap:9px; margin-top:12px; }
+.choice-row { display:flex; align-items:flex-start; gap:9px; font-weight:700; font-size:12px; line-height:1.5; color:var(--black); cursor:pointer; }
+.choice-row input { width:17px; height:17px; margin-top:1px; accent-color:var(--black); flex-shrink:0; }
+.human-screening { margin-top:10px; font-weight:700; font-size:12px; line-height:1.6; color:var(--gray3); }
+@media (max-width:800px) {
+  .upload-method-grid { grid-template-columns:1fr; }
+  .upload-method { padding:18px; }
+  .drop-zone { min-height:210px; }
+}
 
 /* ══════════════════════════════
    状态二：全屏 Loading
@@ -581,40 +606,81 @@ a { text-decoration:none; color:inherit; }
 <div id="stateUpload">
   <div class="upload-header">
     <p class="upload-eyebrow">第二步 · 共四步</p>
-    <h1 class="upload-title">上传你的<em>动画</em></h1>
-    <p class="upload-sub">支持 MP4、GIF，或一组 PNG / JPG 图片。上传后我们帮你提取每一帧。</p>
+    <h1 class="upload-title">选择素材<em>处理方式</em></h1>
+    <p class="upload-sub">你可以自己完成筛帧，也可以把原素材交给工作人员处理。</p>
   </div>
 
-  <div class="drop-zone" id="dropZone">
-    <input class="drop-input" type="file" id="fileInput" accept=".mp4,.gif,.png,.jpg,.jpeg" multiple>
-    <div class="drop-icon">🎞</div>
-    <p class="drop-title">拖拽文件到这里</p>
-    <p class="drop-sub">或点击选择文件</p>
-    <div class="drop-formats">
-      <span class="fmt-tag fmt-video">MP4</span>
-      <span class="fmt-tag fmt-gif">GIF</span>
-      <span class="fmt-tag fmt-img">PNG</span>
-      <span class="fmt-tag fmt-img">JPG</span>
+  <div class="upload-method-grid">
+    <section class="upload-method self">
+      <div class="method-head">
+        <div>
+          <p class="method-kicker">较快完成</p>
+          <h2 class="method-title">我自己筛选</h2>
+          <p class="method-desc">进入现有编辑器，自行裁剪、抽帧并预览，完成后提交制作审核。</p>
+        </div>
+        <div class="method-icon">✂</div>
+      </div>
+      <div class="drop-zone" id="dropZone">
+        <input class="drop-input" type="file" id="fileInput" accept=".mp4,.webm,.mov,.gif,.png,.jpg,.jpeg,.webp" multiple>
+        <div class="drop-icon">🎞</div>
+        <p class="drop-title">上传并自己筛选</p>
+        <p class="drop-sub">拖拽文件，或点击选择</p>
+        <div class="drop-formats">
+          <span class="fmt-tag fmt-video">MP4</span><span class="fmt-tag fmt-gif">GIF</span><span class="fmt-tag fmt-img">图片</span>
+        </div>
+      </div>
+      <div class="file-preview" id="filePreview" style="display:none;">
+        <span class="file-preview-icon" id="fileIcon">🎞</span>
+        <div class="file-preview-info"><p class="file-preview-name" id="fileName">文件名</p><p class="file-preview-meta" id="fileMeta">—</p></div>
+        <button class="file-preview-remove" id="btnRemoveFile" title="移除素材">✕</button>
+      </div>
+      <div class="method-actions"><button class="btn btn-yellow" id="btnStartEdit" disabled>开始筛选 →</button></div>
+    </section>
+
+    <section class="upload-method human">
+      <div class="method-head">
+        <div>
+          <p class="method-kicker">人工协助</p>
+          <h2 class="method-title">请工作人员帮我筛选</h2>
+          <p class="method-desc">提交原始素材和期望，工作人员处理后会在“我的定制”返回结果。</p>
+        </div>
+        <div class="method-icon">☷</div>
+      </div>
+      <div class="drop-zone" id="humanDropZone">
+        <input class="drop-input" type="file" id="humanFileInput" accept=".mp4,.webm,.mov,.gif,.png,.jpg,.jpeg,.webp" multiple>
+        <div class="drop-icon">＋</div>
+        <p class="drop-title">上传原始素材</p>
+        <p class="drop-sub">视频、GIF 或一组图片</p>
+        <div class="drop-formats">
+          <span class="fmt-tag fmt-video">视频</span><span class="fmt-tag fmt-gif">GIF</span><span class="fmt-tag fmt-img">图片</span>
+        </div>
+      </div>
+      <div class="file-preview" id="humanFilePreview" style="display:none;">
+        <span class="file-preview-icon">📁</span>
+        <div class="file-preview-info"><p class="file-preview-name" id="humanFileName">文件名</p><p class="file-preview-meta" id="humanFileMeta">—</p></div>
+        <button class="file-preview-remove" id="btnRemoveHumanFile" title="移除素材">✕</button>
+      </div>
+      <div class="human-form" id="humanForm">
+        <textarea class="human-note" id="humanNote" maxlength="1000" placeholder="希望保留的片段、画面重点或其他说明（选填）"></textarea>
+        <div class="choice-list">
+          <label class="choice-row"><input type="checkbox" id="humanCreator">我是本素材的创作者或版权方</label>
+          <label class="choice-row" id="humanCopyrightRow" style="display:none;"><input type="checkbox" id="humanCopyright">我确认有权提交本素材用于本次定制</label>
+          <label class="choice-row"><input type="checkbox" id="humanCooperation">我愿意了解后续联名合作（选填）</label>
+        </div>
+        <p class="human-screening" id="humanScreening"></p>
+        <div class="method-delay"><span>◷</span><span>人工筛选不会立即完成，提交后可凭定制编号查看处理进度。</span></div>
+        <div class="method-actions"><button class="btn btn-primary" id="btnHumanSubmit">提交人工处理</button></div>
+      </div>
     </div>
   </div>
 
   <div class="upload-warn">
-    <span class="upload-warn-icon">✂️</span>
-    <p>如果上传 MP4 或 GIF，建议提前裁剪，只保留想做成动画机的那一段——视频太长会导出几百帧，筛选起来很累。</p>
-  </div>
-
-  <div class="file-preview" id="filePreview" style="display:none;">
-    <span class="file-preview-icon" id="fileIcon">🎞</span>
-    <div class="file-preview-info">
-      <p class="file-preview-name" id="fileName">文件名</p>
-      <p class="file-preview-meta" id="fileMeta">—</p>
-    </div>
-    <button class="file-preview-remove" id="btnRemoveFile">✕</button>
+    <span class="upload-warn-icon">🔒</span>
+    <p>原素材和筛选帧按定制申请私密保存；无论选择哪种方式，最终都需要工作人员确认是否适合制作。</p>
   </div>
 
   <div class="upload-actions">
     <a href="customize-start.html" class="btn btn-secondary btn-sm">← 返回选型号</a>
-    <button class="btn btn-yellow" id="btnStartEdit" disabled>开始编辑 →</button>
   </div>
 </div>
 
@@ -857,6 +923,7 @@ a { text-decoration:none; color:inherit; }
 <script src="../js/private-upload.js"></script>
 <script>
 'use strict';
+const CAPI_BASE = location.hostname === '127.0.0.1' ? 'http://127.0.0.1:3001' : 'http://localhost:3001';
 
 /* ══════════════
    读取型号信息
@@ -1082,6 +1149,11 @@ function drawFrameToCanvas(src) {
 let selFile  = null;
 let selFiles = [];
 let isMulti  = false;
+let sourceScreening = {};
+let humanFiles = [];
+let humanScreeningData = {};
+let pendingHumanSubmit = false;
+let pendingSelfNext = false;
 
 const dropZone   = document.getElementById('dropZone');
 const fileInput  = document.getElementById('fileInput');
@@ -1097,11 +1169,164 @@ dropZone.addEventListener('drop', e => {
 fileInput.addEventListener('change', () => handleFiles(Array.from(fileInput.files)));
 document.getElementById('btnRemoveFile').addEventListener('click', clearFile);
 
+const humanDropZone = document.getElementById('humanDropZone');
+const humanFileInput = document.getElementById('humanFileInput');
+humanDropZone.addEventListener('dragover', e => { e.preventDefault(); humanDropZone.classList.add('dragover'); });
+humanDropZone.addEventListener('dragleave', () => humanDropZone.classList.remove('dragover'));
+humanDropZone.addEventListener('drop', e => {
+  e.preventDefault(); humanDropZone.classList.remove('dragover');
+  handleHumanFiles(Array.from(e.dataTransfer.files));
+});
+humanFileInput.addEventListener('change', () => handleHumanFiles(Array.from(humanFileInput.files)));
+document.getElementById('btnRemoveHumanFile').addEventListener('click', clearHumanFiles);
+document.getElementById('humanCreator').addEventListener('change', e => {
+  document.getElementById('humanCopyrightRow').style.display = e.target.checked ? 'flex' : 'none';
+  if (!e.target.checked) document.getElementById('humanCopyright').checked = false;
+});
+document.getElementById('btnHumanSubmit').addEventListener('click', submitHumanRequest);
+window.addEventListener('mowoLoginCompleted', () => {
+  if (pendingHumanSubmit) {
+    pendingHumanSubmit = false;
+    submitHumanRequest();
+    return;
+  }
+  if (pendingSelfNext) {
+    pendingSelfNext = false;
+    document.getElementById('btnNextStep').click();
+  }
+});
+
 function clearFile() {
   selFile = null; selFiles = []; isMulti = false;
+  sourceScreening = {};
   filePrev.style.display = 'none';
   btnStart.disabled = true;
   fileInput.value = '';
+}
+
+function validSourceSelection(files) {
+  if (!files.length || files.length > 50) return '一次请选择 1 至 50 个素材文件';
+  const imageExts = ['png','jpg','jpeg','webp'];
+  const singleExts = ['mp4','gif','webm','mov'];
+  const extensions = files.map(file => file.name.split('.').pop().toLowerCase());
+  const allImages = extensions.every(ext => imageExts.includes(ext));
+  const singleMedia = files.length === 1 && singleExts.includes(extensions[0]);
+  if (!allImages && !singleMedia) return '请上传单个视频或 GIF，或者一组 JPG、PNG、WEBP 图片';
+  const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
+  if (totalBytes > 200 * 1024 * 1024) return '本次原素材合计不能超过 200MB';
+  return null;
+}
+
+async function inspectFirstSource(files) {
+  const first = files[0];
+  const ext = first.name.split('.').pop().toLowerCase();
+  const isVideo = ['mp4','webm','mov'].includes(ext);
+  let dimensions = null;
+  if (isVideo) {
+    dimensions = await new Promise(resolve => {
+      const url = URL.createObjectURL(first), video = document.createElement('video');
+      video.onloadedmetadata = () => {
+        resolve({ width: video.videoWidth, height: video.videoHeight, duration: video.duration || null });
+        URL.revokeObjectURL(url);
+      };
+      video.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+      video.src = url;
+    });
+  } else if (ext !== 'gif') {
+    const result = await getImageDimensions(first);
+    if (result) dimensions = { width: result.w, height: result.h, duration: null };
+  }
+  const ratio = dimensions ? checkRatio(dimensions.width, dimensions.height) : { ok: null };
+  return {
+    sourceCount: files.length,
+    totalBytes: files.reduce((sum, file) => sum + file.size, 0),
+    formats: [...new Set(files.map(file => file.type || ext))],
+    width: dimensions?.width || null,
+    height: dimensions?.height || null,
+    duration: dimensions?.duration || null,
+    ratioOk: ratio.ok,
+    ratioActual: ratio.actual || null,
+    ratioSuggested: ratio.suggested || allowedRatios.join(' 或 ')
+  };
+}
+
+async function handleHumanFiles(files) {
+  const error = validSourceSelection(files);
+  if (error) { alert(error); return; }
+  humanFiles = files;
+  humanScreeningData = await inspectFirstSource(files);
+  document.getElementById('humanFileName').textContent = files.length === 1 ? files[0].name : `${files.length} 张原始图片`;
+  document.getElementById('humanFileMeta').textContent = `${fmtSize(humanScreeningData.totalBytes)} · ${humanScreeningData.formats.join(' / ')}`;
+  document.getElementById('humanFilePreview').style.display = 'flex';
+  document.getElementById('humanForm').classList.add('visible');
+  document.getElementById('humanScreening').textContent = humanScreeningData.ratioOk === false
+    ? `基础检查：画面比例约 ${humanScreeningData.ratioActual}，工作人员会结合 ${humanScreeningData.ratioSuggested} 款式判断。`
+    : '基础检查完成，最终制作效果由工作人员确认。';
+}
+
+function clearHumanFiles() {
+  humanFiles = [];
+  humanScreeningData = {};
+  sessionStorage.removeItem('mowo_human_submission_key');
+  humanFileInput.value = '';
+  document.getElementById('humanFilePreview').style.display = 'none';
+  document.getElementById('humanForm').classList.remove('visible');
+}
+
+function currentModelMeta() {
+  try { return JSON.parse(localStorage.getItem('mowo_customize_meta') || '{}'); } catch { return {}; }
+}
+
+async function submitHumanRequest() {
+  if (!humanFiles.length) return;
+  const token = localStorage.getItem('mowo_token');
+  if (!token) {
+    pendingHumanSubmit = true;
+    if (typeof openAuthModal === 'function') openAuthModal();
+    return;
+  }
+  const creatorDeclared = document.getElementById('humanCreator').checked;
+  const copyrightConfirmed = document.getElementById('humanCopyright').checked;
+  if (creatorDeclared && !copyrightConfirmed) {
+    alert('请确认你有权提交本素材，或者取消创作者选项');
+    return;
+  }
+  const meta = currentModelMeta();
+  if (!meta.id) { alert('没有找到已选款式，请返回上一步重新选择'); return; }
+  const button = document.getElementById('btnHumanSubmit');
+  let clientRequestKey = sessionStorage.getItem('mowo_human_submission_key');
+  if (!clientRequestKey) {
+    clientRequestKey = window.crypto?.randomUUID?.() || `human-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    sessionStorage.setItem('mowo_human_submission_key', clientRequestKey);
+  }
+  button.disabled = true;
+  try {
+    const sourceKeys = await window.MowoPrivateUpload.uploadFiles({
+      files: humanFiles, token, purpose: 'CUSTOMIZATION_SOURCE',
+      onProgress: (done, total) => { button.textContent = `上传素材 ${done}/${total}`; }
+    });
+    button.textContent = '正在提交';
+    const response = await fetch(`${CAPI_BASE}/api/customization-requests`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        mode: 'HUMAN', machineModelId: meta.id, sourceKeys, clientRequestKey,
+        screeningData: humanScreeningData,
+        userNote: document.getElementById('humanNote').value,
+        creatorDeclared, copyrightConfirmed,
+        cooperationInterested: document.getElementById('humanCooperation').checked
+      })
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success) throw new Error(result.message || '提交失败');
+    localStorage.removeItem('mowo_customize_request_draft_id');
+    sessionStorage.removeItem('mowo_human_submission_key');
+    location.href = `my-customizations.html?submitted=${encodeURIComponent(result.data.requestNo)}`;
+  } catch (error) {
+    alert('提交失败：' + (error.message || '请稍后重试'));
+    button.disabled = false;
+    button.textContent = '提交人工处理';
+  }
 }
 
 async function checkQuotaBeforeUpload() {
@@ -1135,6 +1360,9 @@ function handleFiles(files) {
   const allImg  = files.every(f => imgExts.includes(f.name.split('.').pop().toLowerCase()));
   const isVideo = files.length===1 && videoExts.includes(ext0);
 
+  const sourceError = validSourceSelection(files);
+  if (sourceError) { alert(sourceError); return; }
+
   if (!isVideo && !allImg) {
     alert('请上传单个 MP4/GIF 视频，或一组 PNG/JPG 图片序列。');
     return;
@@ -1153,16 +1381,26 @@ function handleFiles(files) {
         v.onloadedmetadata=()=>{ res({w:v.videoWidth,h:v.videoHeight}); URL.revokeObjectURL(url); };
         v.onerror=()=>res(null); v.src=url;
       });
-      return r ? checkRatio(r.w, r.h) : { ok:true };
+      return r ? { ...checkRatio(r.w, r.h), width:r.w, height:r.h } : { ok:true };
     } else {
       const d = await getImageDimensions(files[0]);
-      return d ? checkRatio(d.w, d.h) : { ok:true };
+      return d ? { ...checkRatio(d.w, d.h), width:d.w, height:d.h } : { ok:true };
     }
   };
 
   checkQuotaBeforeUpload().then(canProceed => {
     if (!canProceed) return;
     doCheck().then(result => {
+      sourceScreening = {
+        sourceCount: files.length,
+        totalBytes: files.reduce((sum, file) => sum + file.size, 0),
+        formats: [...new Set(files.map(file => file.type || ext0))],
+        width: result.width || null,
+        height: result.height || null,
+        ratioOk: result.ok,
+        ratioActual: result.actual || null,
+        ratioSuggested: result.suggested || allowedRatios.join(' 或 ')
+      };
       if (result.ok) proceed();
       else showRatioWarning(result.actual, result.suggested, proceed);
     });
@@ -2116,7 +2354,7 @@ document.getElementById('btnNextStep').addEventListener('click', async ()=>{
     return; /* 不走买家流程 */
   }
 
-  /* ── 买家模式（原有流程）── */
+  /* ── 买家自己筛选：登录后保存原素材、筛选帧和云端草稿 ── */
   const urls = cl.map(i => frames[i]);
   try {
     localStorage.setItem('mowo_customize_frames', JSON.stringify(urls));
@@ -2126,39 +2364,72 @@ document.getElementById('btnNextStep').addEventListener('click', async ()=>{
     localStorage.setItem('mowo_customize_meta', JSON.stringify(meta));
   } catch(e) { console.warn('存储可能超出限制，帧数据较大', e); }
 
-  /* 登录状态下先安全上传帧图，再保存草稿到「我的动画」 */
   const token = localStorage.getItem('mowo_token');
-  if (token) {
-    const CAPI = location.hostname === '127.0.0.1' ? 'http://127.0.0.1:3001' : 'http://localhost:3001';
-    try {
-      document.getElementById('btnNextStep').disabled = true;
-      const uploadedKeys = await window.MowoPrivateUpload.uploadSources({
-        sources: urls,
-        token,
-        purpose: 'CUSTOMIZATION_FRAME',
-        onProgress: (done, total) => {
-          document.getElementById('btnNextStep').textContent = `上传 ${done}/${total}`;
-        }
-      });
-      localStorage.setItem('mowo_customize_frame_keys', JSON.stringify(uploadedKeys));
-      localStorage.setItem('mowo_customize_frame_owner', window.MowoPrivateUpload.tokenUserId(token) || '');
-      const res  = await fetch(`${CAPI}/api/custom-products`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ animationFrames: JSON.stringify(uploadedKeys), frameCount: cnt }),
-      });
-      const json = await res.json();
-      if (json.success && json.data?.id) {
-        localStorage.setItem('mowo_customize_draft_id', json.data.id);
-      } else {
-        throw new Error(json.message || '草稿保存失败');
-      }
-    } catch(e) {
-      alert('上传失败：' + (e.message || '请重试'));
-      document.getElementById('btnNextStep').disabled = false;
-      document.getElementById('btnNextStep').textContent = '确认 →';
-      return;
+  if (!token) {
+    pendingSelfNext = true;
+    if (typeof openAuthModal === 'function') openAuthModal();
+    return;
+  }
+
+  const originalFiles = isMulti ? selFiles : (selFile ? [selFile] : []);
+  if (!originalFiles.length) { alert('原素材已失效，请重新上传'); return; }
+  const button = document.getElementById('btnNextStep');
+  try {
+    button.disabled = true;
+    const uploadedKeys = await window.MowoPrivateUpload.uploadSources({
+      sources: urls, token, purpose: 'CUSTOMIZATION_FRAME',
+      onProgress: (done, total) => { button.textContent = `上传帧图 ${done}/${total}`; }
+    });
+    localStorage.setItem('mowo_customize_frame_keys', JSON.stringify(uploadedKeys));
+    const ownerUserId = window.MowoPrivateUpload.tokenUserId(token) || '';
+    localStorage.setItem('mowo_customize_frame_owner', ownerUserId);
+
+    const productResponse = await fetch(`${CAPI_BASE}/api/custom-products`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        animationFrames: JSON.stringify(uploadedKeys), frameCount: cnt,
+        draftData: JSON.stringify({ version:1, source:'customization-self', selectedIndexes:cl, trimStart, trimEnd }),
+        configJson: JSON.stringify({ frameCount:cnt, modelId:currentModelMeta().id, modelName:machineName })
+      })
+    });
+    const productResult = await productResponse.json();
+    if (!productResponse.ok || !productResult.success || !productResult.data?.id) {
+      throw new Error(productResult.message || '筛选草稿保存失败');
     }
+    localStorage.setItem('mowo_customize_draft_id', productResult.data.id);
+
+    const sourceKeys = await window.MowoPrivateUpload.uploadFiles({
+      files: originalFiles, token, purpose: 'CUSTOMIZATION_SOURCE',
+      onProgress: (done, total) => { button.textContent = `上传原素材 ${done}/${total}`; }
+    });
+    const meta = currentModelMeta();
+    const draftOwnerKey = localStorage.getItem('mowo_customize_request_draft_owner');
+    let clientDraftKey = localStorage.getItem('mowo_customize_request_draft_key');
+    if (!clientDraftKey || draftOwnerKey !== ownerUserId) {
+      clientDraftKey = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      localStorage.setItem('mowo_customize_request_draft_key', clientDraftKey);
+      localStorage.setItem('mowo_customize_request_draft_owner', ownerUserId);
+    }
+    button.textContent = '保存定制草稿';
+    const draftResponse = await fetch(`${CAPI_BASE}/api/customization-requests/draft`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        clientDraftKey, customProductId: productResult.data.id, machineModelId: meta.id,
+        sourceKeys, selectedFrameKeys: uploadedKeys,
+        screeningData: { ...sourceScreening, selectedFrameCount:cnt, validTargets },
+        editorData: { trimStart, trimEnd, selectedIndexes:cl, selectedFrameCount:cnt }
+      })
+    });
+    const draftResult = await draftResponse.json();
+    if (!draftResponse.ok || !draftResult.success) throw new Error(draftResult.message || '定制草稿保存失败');
+    localStorage.setItem('mowo_customize_request_draft_id', draftResult.data.id);
+  } catch(e) {
+    alert('上传失败：' + (e.message || '请重试'));
+    button.disabled = false;
+    button.textContent = '下一步 →';
+    return;
   }
 
   location.href = `customize-confirm.html?type=${machineType}&frames=${cnt}&targets=${validTargets.join(',')}`;

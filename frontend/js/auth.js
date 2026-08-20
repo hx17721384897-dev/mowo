@@ -398,6 +398,9 @@ function injectNavUser() {
       <button class="dd-item" onclick="navGoTo('orders')">
         <div class="dd-item-icon" style="background:#EBF5FF;">📦</div>我的订单
       </button>
+      <button class="dd-item" onclick="navGoTo('customizations')">
+        <div class="dd-item-icon" style="background:#FFF3EE;">✂</div>我的定制
+      </button>
       <button class="dd-item" onclick="navGoTo('myAnimations')">
         <div class="dd-item-icon" style="background:#F0F4FF;">🎬</div>我的动画
       </button>
@@ -505,6 +508,7 @@ function navGoTo(page) {
   const map = {
     cart:          'cart.html',
     orders:        'orders.html',
+    customizations:'my-customizations.html',
     addresses:     'my-addresses.html',
     myAnimations:  'my-animations.html',
     creatorCenter: 'creator-dashboard.html',

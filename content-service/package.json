@@ -13,6 +13,7 @@
     "check:staff-security": "node scripts/check-staff-security.mjs",
     "check:private-files": "node scripts/check-private-files.mjs",
     "check:account-deletion": "node scripts/check-account-deletion.mjs",
+    "check:customization-flow": "node scripts/check-customization-flow.mjs",
     "check:launch-safety": "node scripts/check-launch-safety.mjs",
     "test-user:create": "node scripts/create-test-user.mjs",
     "test-user:inspect": "node scripts/inspect-test-user.mjs",

@@ -114,10 +114,12 @@ model User {
   addresses UserAddress[]
 
   // 创作者通知
-  notifications     CreatorNotification[]
-  aftersaleRequests AftersaleRequest[]
-  privateFiles      PrivateFile[]
-  deletionRequest   AccountDeletionRequest?
+  notifications         CreatorNotification[]
+  aftersaleRequests     AftersaleRequest[]
+  privateFiles          PrivateFile[]
+  deletionRequest       AccountDeletionRequest?
+  customizationRequests CustomizationRequest[]      @relation("CustomizationRequester")
+  customizationEvents   CustomizationRequestEvent[] @relation("CustomizationEventActor")
 
   @@map("users")
 }
@@ -132,18 +134,18 @@ model AccountDeletionRequest {
   completedAt         DateTime? @map("completed_at")
   cancelledAt         DateTime? @map("cancelled_at")
   blockers            Json?
-    attemptCount        Int       @default(0) @map("attempt_count")
-    nextRetryAt         DateTime? @map("next_retry_at")
-    firstFailedAt       DateTime? @map("first_failed_at")
-    manualReviewAt      DateTime? @map("manual_review_at")
-    pausedAt            DateTime? @map("paused_at")
-    pausedBy            String?   @map("paused_by")
-    pauseReason         String?   @map("pause_reason") @db.VarChar(500)
-    pauseUserMessage    String?   @map("pause_user_message") @db.VarChar(300)
-    resumedAt           DateTime? @map("resumed_at")
-    lastManualActionAt  DateTime? @map("last_manual_action_at")
-    lastManualActionBy  String?   @map("last_manual_action_by")
-    lastError           String?   @map("last_error") @db.VarChar(1000)
+  attemptCount        Int       @default(0) @map("attempt_count")
+  nextRetryAt         DateTime? @map("next_retry_at")
+  firstFailedAt       DateTime? @map("first_failed_at")
+  manualReviewAt      DateTime? @map("manual_review_at")
+  pausedAt            DateTime? @map("paused_at")
+  pausedBy            String?   @map("paused_by")
+  pauseReason         String?   @map("pause_reason") @db.VarChar(500)
+  pauseUserMessage    String?   @map("pause_user_message") @db.VarChar(300)
+  resumedAt           DateTime? @map("resumed_at")
+  lastManualActionAt  DateTime? @map("last_manual_action_at")
+  lastManualActionBy  String?   @map("last_manual_action_by")
+  lastError           String?   @map("last_error") @db.VarChar(1000)
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")
 
@@ -1620,6 +1622,61 @@ model CustomProduct {
 
   @@index([userId, status])
   @@map("custom_products")
+}
+
+// 定制审核申请。与购物车、订单、生产任务分开，正式提交后生成 requestNo。
+model CustomizationRequest {
+  id                    String    @id @default(uuid())
+  requestNo             String?   @unique @map("request_no") @db.VarChar(32)
+  userId                String    @map("user_id")
+  mode                  String    @db.VarChar(20) // SELF | HUMAN
+  status                String    @default("DRAFT") @db.VarChar(30)
+  version               Int       @default(1)
+  clientDraftKey        String?   @unique @map("client_draft_key") @db.VarChar(80)
+  customProductId       String?   @map("custom_product_id")
+  machineModelId        String?   @map("machine_model_id")
+  desiredSkuId          String?   @map("desired_sku_id")
+  sourceKeys            Json      @map("source_keys")
+  selectedFrameKeys     Json?     @map("selected_frame_keys")
+  screeningData         Json?     @map("screening_data")
+  editorData            Json?     @map("editor_data")
+  userNote              String?   @map("user_note") @db.Text
+  creatorDeclared       Boolean   @default(false) @map("creator_declared")
+  copyrightConfirmed    Boolean   @default(false) @map("copyright_confirmed")
+  cooperationInterested Boolean   @default(false) @map("cooperation_interested")
+  submittedAt           DateTime? @map("submitted_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  user   User                        @relation("CustomizationRequester", fields: [userId], references: [id])
+  events CustomizationRequestEvent[]
+
+  @@index([userId, status, createdAt])
+  @@index([status, submittedAt])
+  @@index([machineModelId])
+  @@map("customization_requests")
+}
+
+// 定制申请的追加式时间线。业务状态改变时新增记录，不覆盖历史。
+model CustomizationRequestEvent {
+  id            String   @id @default(uuid())
+  requestId     String   @map("request_id")
+  actorUserId   String?  @map("actor_user_id")
+  actorType     String   @map("actor_type") @db.VarChar(20) // USER | STAFF | SYSTEM
+  eventType     String   @map("event_type") @db.VarChar(40)
+  fromStatus    String?  @map("from_status") @db.VarChar(30)
+  toStatus      String?  @map("to_status") @db.VarChar(30)
+  publicMessage String?  @map("public_message") @db.Text
+  internalNote  String?  @map("internal_note") @db.Text
+  detail        Json?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  request CustomizationRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  actor   User?                @relation("CustomizationEventActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([requestId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@map("customization_request_events")
 }
 
 // 预订单（10分钟库存锁定，支付前临时凭据）

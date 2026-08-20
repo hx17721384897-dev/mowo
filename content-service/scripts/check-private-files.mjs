@@ -204,9 +204,9 @@ try {
   })).status, 200)
   const sku = await prisma.machineModelSku.findFirst({ select: { id: true } })
   if (!sku) throw new Error('private file cart check requires at least one machine model SKU')
-  assertStatus('private-frame draft enters cart', (await request('/api/cart/add', userA.token, {
+  assertStatus('unreviewed private-frame draft cannot enter cart', (await request('/api/cart/add', userA.token, {
     method: 'POST', body: JSON.stringify({ itemType: 'CUSTOM', contentId: customProduct.id, hardwareSkuId: sku.id, quantity: 1 })
-  })).status, 201)
+  })).status, 409)
   const libraryResponse = await request('/api/custom-products?page=1&limit=20', userA.token)
   assertStatus('creator library loads', libraryResponse.status, 200)
   const library = await libraryResponse.json()

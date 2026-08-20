@@ -1,6 +1,6 @@
 # API.md — 哞屋 MOWO 接口文档
 
-> 最后更新：2026-04-16（新增用户订单接口）
+> 最后更新：2026-08-20（新增 Web 定制申请首批接口）
 > 后端服务：Node.js + Fastify，端口 **3001**
 > 本地地址：`http://localhost:3001`
 > 生产地址：`https://api.mowo.com`（待部署）
@@ -35,6 +35,23 @@ Authorization: Bearer <accessToken>   // 需要登录的接口必须携带
 ```
 
 基础响应包含 `X-Content-Type-Options: nosniff`、`X-Frame-Options: DENY`、Referrer/Permissions Policy 和缓存控制；生产环境额外发送 HSTS。静态页面的 CSP 和响应头仍由正式 Web 服务器负责。
+
+### Web 定制申请
+
+定制申请与购物车、订单、生产批次分开。草稿没有公开编号，正式提交后生成 `DZ-YYYYMMDD-XXXXXX`；未到 `CONFIRMED` 的定制不能加入购物车。
+
+| 方法 | 路径 | 权限 | 说明 |
+|---|---|---|---|
+| POST | `/api/customization-requests/draft` | 登录用户 | 保存自己筛选草稿，不编号、不进入后台队列 |
+| POST | `/api/customization-requests` | 登录用户 | 提交人工筛选申请并编号 |
+| POST | `/api/customization-requests/:id/submit` | 草稿本人 | 正式提交自己筛选草稿 |
+| GET | `/api/customization-requests/mine` | 登录用户 | 当前用户的定制列表 |
+| GET | `/api/customization-requests/mine/:id` | 记录本人 | 详情和状态时间线 |
+| GET | `/api/admin/customization-requests` | 负责人/客服/生产 | 非草稿申请队列，用户信息脱敏 |
+| GET | `/api/admin/customization-requests/stats` | 负责人/客服/生产 | 各状态数量 |
+| GET | `/api/admin/customization-requests/:id` | 负责人/客服/生产 | 详情与五分钟私有素材链接 |
+
+当前后台接口只读。状态处理、补素材、方案确认、最终价格和订单生成尚未实现，完整契约见 `modules/web-customization.md`。
 
 ### 用户角色与员工岗位
 

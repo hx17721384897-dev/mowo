@@ -4,9 +4,9 @@
 
 ## 调查范围与结论
 
-- 当前 Prisma Schema 定义 **75 个 model、4 个 enum**，不是 Schema 文件头注释的 25，也不是 `README.md` 的 37 或 `docs/DATABASE.md` 的 63。
+- 当前 Prisma Schema 定义 **77 个 model、4 个 enum**，不是 Schema 文件头注释的 25，也不是 `README.md` 的 37 或 `docs/DATABASE.md` 的 63。
 - 2026-08-13 已在本地库单独应用 `private_files`、账号注销、`rate_limit_buckets` 和 `consent_records` 等增量 SQL；此前数据库基线问题仍未解决。
-- 仓库有 20 个历史迁移，静态 SQL 只创建 42 张表；当前另有 29 张表没有对应迁移创建记录。
+- 仓库有 20 个历史迁移和 7 个 2026-08 增量迁移；完整空库基线问题仍未解决。
 - `prisma migrate status` 显示 20 个迁移在本机库中全部“尚未应用”，表明本地库不是由当前 Prisma 迁移账本建立或登记。
 - 结论：**本地结构可用不等于数据库可部署**。当前无法只靠仓库在空库可靠重建与当前相同的数据库，也缺少可审计的升级/回滚链。
 
@@ -16,12 +16,12 @@
 |---|---|
 | 数据库 | PostgreSQL，本地库名 `mowo_db`、schema `public` |
 | ORM | Prisma Client / Prisma CLI 5.22.0 |
-| Schema | 75 模型，使用 `@@map` 映射 snake_case 表名 |
-| 迁移 | 20 个迁移目录，最晚迁移日期为 2026-04-26 |
+| Schema | 77 模型，使用 `@@map` 映射 snake_case 表名 |
+| 迁移 | 27 个迁移目录；20 个历史迁移加 7 个已核验增量迁移 |
 | 种子 | `prisma/seed.js`，创建 5 类测试账号、SKU/库存、联名活动和平台规则 |
 | 本地验证 | `prisma validate` 通过；数据库与 Schema diff 为空 |
 
-## 75 个模型分组
+## 77 个模型分组
 
 | 分组 | 模型 |
 |---|---|
@@ -33,9 +33,9 @@
 | 库存与生产 | SkuInventory、InventoryLog、AuthCode、PlatformSkuMapping、ProductionBatch、BatchItem、FrameInstance、InventorySnapshot、OrderItemBinding、ChannelQuota、OperationLog |
 | 帧包与材料 | CollabFramePack、FramePackWork、FramePackVariant、FramePackLog、MaterialItem、MaterialLog、MaterialSkuBinding |
 | 联络 | ContactSubmission |
-| 新购物车 | Cart、CartItem、CustomProduct、PreOrder、UserAddress、ContentQuota |
+| 新购物车与定制申请 | Cart、CartItem、CustomProduct、CustomizationRequest、CustomizationRequestEvent、PreOrder、UserAddress、ContentQuota |
 
-完整字段和关系仍以 Schema 为准；各业务语义见对应模块文档。此处不复制 75 张表的全部字段，避免再次产生一份难以同步的 Schema 镜像。
+完整字段和关系仍以 Schema 为准；各业务语义见对应模块文档。此处不复制 77 张表的全部字段，避免再次产生一份难以同步的 Schema 镜像。
 
 ### 本轮新增表
 
@@ -43,6 +43,8 @@
 |---|---|---|
 | `rate_limit_buckets` | 跨重启/多实例共享短信、验证码错误、联络和上传频率计数 | `subject_hash/target_hash` 使用服务端密钥 HMAC，不存手机号或 IP 原文；过期超过 24 小时后清理 |
 | `consent_records` | 分别记录用户协议和隐私政策的同意证据 | 保存用户、类型、版本、场景、时间、IP、User-Agent；注销和法定保存规则需随正式政策确定 |
+| `customization_requests` | 定制草稿和正式申请；与订单/生产分开 | 草稿 7 天清理；正式处理中阻止注销；公开编号只在提交后生成 |
+| `customization_request_events` | 定制申请追加式状态时间线 | 分开用户说明与内部说明；申请删除时级联，操作者注销时置空 |
 
 本轮没有对现有库执行 `prisma migrate deploy`。由于历史迁移账本不完整，该命令可能应用超出本轮范围的旧迁移；只执行了已核验且使用 `IF NOT EXISTS` 的单个增量 SQL。完整基线仍是发布阻断项。
 

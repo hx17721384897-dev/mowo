@@ -2,9 +2,9 @@
 
 > 目标：让新加入的开发者或 AI 先读少量入口文档，再按业务域深入，不必重新猜测代码结构。
 >
-> 调查基准：2026-08-13，进度更新：2026-08-18。本文档区分“已核对代码事实”“原规划”“待确认”，不把规划自动视为已实现。
+> 调查基准：2026-08-13，进度更新：2026-08-20。本文档区分“已核对代码事实”“原规划”“待确认”，不把规划自动视为已实现。
 
-> 当前进度：账号与文件安全已完成人工回测和五组自动回归，可以进入 Web 定制作品流程开发。真实订单存在时的注销拦截已由合成数据自动验证，待订单流程跑通后再补页面人工联调；公开上线前的正式 OSS、恶意文件扫描、法律文本、备份恢复、监控与压测仍未完成。
+> 当前进度：账号与文件安全已完成；Web 定制首批“用户提交、独立编号、我的定制、后台接收、素材清理”已实现并通过自动回归。下一批处理工作人员审核、用户补素材/确认方案、最终价格和订单生成；公开上线前的正式 OSS、恶意文件扫描、法律文本、备份恢复、监控与压测仍未完成。
 
 ## 建议阅读顺序
 
@@ -15,13 +15,14 @@
 5. `CLAUDE.md`：开发约束、合规边界、角色规则和协作规范；其中历史进度或旧架构描述不覆盖 `RELEASE_SCOPE.md`。
 6. `docs/LAUNCH_READINESS.md`：B/C/D 阶段门槛、R0-R4 工程就绪等级、复杂度和责任域。
 7. `docs/modules/README.md`：按代码模块进入详细说明。
-   员工岗位与安全记录见 `docs/modules/staff-permissions-audit.md`；本地/OSS私有上传与文件权限见 `docs/modules/private-file-security.md`。
+   员工岗位与安全记录见 `docs/modules/staff-permissions-audit.md`；本地/OSS私有上传与文件权限见 `docs/modules/private-file-security.md`；Web 定制首批事实见 `docs/modules/web-customization.md`。
 8. `docs/DOC_CODE_DIFFERENCES.md`：文档与代码不一致、风险和过渡状态。
 9. `docs/OPEN_QUESTIONS.md`：待确认问题，以及已从问题台账收敛出的阶段性产品决策。
 10. `docs/ACCOUNT_DELETION_POLICY.md`：账号注销的法规参考、建议规则和数据处理边界。
 11. `docs/ACCOUNT_FILE_SECURITY_ACCEPTANCE.md`：账号、权限、文件、注销与首发安全的人工验收步骤。
-12. `docs/TROUBLESHOOTING.md`：本地开发已经发生过的故障、识别方法和修复边界。
-13. 对应业务规划：`PRODUCTION.md`、`REVENUE.md`、`docs/USER_SCENARIOS.md` 等。
+12. `docs/WEB_CUSTOMIZATION_ACCEPTANCE.md`：Web 定制首批的人工验收步骤与延后边界。
+13. `docs/TROUBLESHOOTING.md`：本地开发已经发生过的故障、识别方法和修复边界。
+14. 对应业务规划：`PRODUCTION.md`、`REVENUE.md`、`docs/USER_SCENARIOS.md` 等。
 
 ## 文档分层
 
@@ -58,7 +59,7 @@
 5. 默认监听 `0.0.0.0:3001`，可由 `HOST`、`PORT` 调整。
 6. 在进程内启动常规定时任务；牛量和创作者财务任务只有对应首发开关启用时才启动。
 
-当前 `package.json` 已有 `dev`、`start`、`npm run check`、`npm run check:staff-security`、`npm run check:private-files`、`npm run check:account-deletion` 和 `npm run check:launch-safety`。专项脚本覆盖岗位、文件、注销、功能开关、协议记录和防刷，并在结束后清理测试数据。项目仍没有完整 CI，早期本地库的 Prisma 迁移基线也尚待 R0.2 处理。
+当前 `package.json` 已有 `dev`、`start`、`npm run check`、`npm run check:staff-security`、`npm run check:private-files`、`npm run check:account-deletion`、`npm run check:launch-safety` 和 `npm run check:customization-flow`。专项脚本覆盖岗位、文件、注销、功能开关、协议记录、防刷和定制提交，并在结束后清理测试数据。项目仍没有完整 CI，早期本地库的 Prisma 迁移基线也尚待 R0.2 处理。
 
 ## 技术栈事实（已核对）
 
@@ -75,9 +76,9 @@
 
 ## 数据库规模（已核对）
 
-`content-service/prisma/schema.prisma` 当前定义（2026-08-13 安全收尾后）：
+`content-service/prisma/schema.prisma` 当前定义（2026-08-20 Web 定制首批后）：
 
-- 75 个 Prisma `model`。
+- 77 个 Prisma `model`。
 - 4 个 Prisma `enum`：`UserStatus`、`SmsPurpose`、`ActionType`、`StaffRole`。
 - 数据表覆盖用户、内容社交、动画/商品、定制订单、联名、库存生产、结算、牛量、合同链接、账户安全、购物车地址和材料等领域。
 
