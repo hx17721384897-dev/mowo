@@ -138,8 +138,8 @@ a{text-decoration:none;color:inherit;}
   <!-- 筛选栏 -->
   <div class="filter-bar">
     <button class="filter-btn active" data-filter="all"     onclick="setFilter(this,'all')">全部</button>
+    <button class="filter-btn"        data-filter="asset"   onclick="setFilter(this,'asset')">动画资产</button>
     <button class="filter-btn"        data-filter="draft"   onclick="setFilter(this,'draft')">草稿</button>
-    <button class="filter-btn"        data-filter="ordered" onclick="setFilter(this,'ordered')">已下单</button>
     <span class="filter-count" id="totalCount"></span>
   </div>
 
@@ -183,7 +183,7 @@ a{text-decoration:none;color:inherit;}
 const API = (location.hostname==='127.0.0.1'||location.hostname==='localhost')
   ? 'http://127.0.0.1:3001' : 'http://localhost:3001';
 
-let _allItems = [];      // CustomProduct 列表
+let _allItems = [];      // 正式动画资产与未确认草稿
 let _currentFilter = 'all';
 let _deleteTarget = null;
 let _renameTarget = null;
@@ -202,8 +202,10 @@ function askDelete(id) {
   _deleteTarget = id;
   const item = _allItems.find(i => i.id === id);
   const cfg = safeJson(item?.configJson);
-  const name = cfg?.animName || fmtDate(item?.createdAt) || '该动画';
-  document.getElementById('deleteConfirmSub').textContent = `「${name}」删除后无法恢复。`;
+  const name = item?.kind === 'asset' ? item.title : (cfg?.animName || fmtDate(item?.createdAt) || '该动画');
+  document.getElementById('deleteConfirmSub').textContent = item?.kind === 'asset'
+    ? `「${name}」将从您的动画列表移除。`
+    : `「${name}」删除后无法恢复。`;
   document.getElementById('deleteModal').classList.add('open');
 }
 
@@ -222,7 +224,9 @@ async function confirmDelete() {
   btn.disabled = true; btn.textContent = '删除中…';
   const token = localStorage.getItem('mowo_token');
   try {
-    const res = await fetch(`${API}/api/custom-products/${_deleteTarget}`, {
+    const item = _allItems.find(i => i.id === _deleteTarget);
+    const endpoint = item?.kind === 'asset' ? 'animation-assets' : 'custom-products';
+    const res = await fetch(`${API}/api/${endpoint}/${_deleteTarget}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` }
     });
@@ -241,6 +245,11 @@ async function confirmDelete() {
 
 /* ── 工具 ── */
 function safeJson(s) { try { return JSON.parse(s) } catch(e) { return null } }
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>'"]/g, ch => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;'
+  })[ch]);
+}
 function fmtDate(d) {
   const dt = new Date(d);
   return `${dt.getFullYear()}.${String(dt.getMonth()+1).padStart(2,'0')}.${String(dt.getDate()).padStart(2,'0')}`;
@@ -251,7 +260,7 @@ function fmtDatetimeMin(iso) {
   return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 }
 function cpStatusLabel(s) {
-  return { draft:'草稿', in_cart:'已加购', ordered:'已下单', removed:'已删除' }[s] || '草稿';
+  return { draft:'草稿', in_cart:'已加购', ordered:'已下单', removed:'已删除', ACTIVE:'动画资产' }[s] || '草稿';
 }
 function cpStatusClass(s) {
   if (s === 'ordered') return 'status-done';
@@ -264,7 +273,7 @@ function openRename(id) {
   _renameTarget = id;
   const item = _allItems.find(i => i.id === id);
   const cfg = safeJson(item?.configJson);
-  document.getElementById('renameInput').value = cfg?.animName || '';
+  document.getElementById('renameInput').value = item?.kind === 'asset' ? item.title : (cfg?.animName || '');
   document.getElementById('renameModal').classList.add('open');
   setTimeout(() => { const inp = document.getElementById('renameInput'); inp.focus(); inp.select(); }, 80);
 }
@@ -292,16 +301,20 @@ async function confirmRename() {
   const token = localStorage.getItem('mowo_token');
   try {
     const item = _allItems.find(i => i.id === _renameTarget);
+    const isAsset = item?.kind === 'asset';
     const existing = safeJson(item?.configJson) || {};
     const updated = { ...existing, animName: newName };
-    const res = await fetch(`${API}/api/custom-products/${_renameTarget}`, {
-      method: 'PUT',
+    const res = await fetch(`${API}/api/${isAsset ? 'animation-assets' : 'custom-products'}/${_renameTarget}`, {
+      method: isAsset ? 'PATCH' : 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ configJson: JSON.stringify(updated) })
+      body: JSON.stringify(isAsset ? { title: newName } : { configJson: JSON.stringify(updated) })
     });
     const json = await res.json();
     if (!json.success) throw new Error(json.message);
-    if (item) item.configJson = JSON.stringify(updated);
+    if (item) {
+      if (isAsset) item.title = newName;
+      else item.configJson = JSON.stringify(updated);
+    }
     closeRenameModal();
     renderItems();
     showToast('已重命名');
@@ -324,8 +337,8 @@ function setFilter(btn, filter) {
 function renderItems() {
   const area = document.getElementById('contentArea');
   let list = _allItems;
-  if (_currentFilter === 'draft')   list = list.filter(i => i.status === 'draft' || i.status === 'in_cart');
-  if (_currentFilter === 'ordered') list = list.filter(i => i.status === 'ordered');
+  if (_currentFilter === 'asset') list = list.filter(i => i.kind === 'asset');
+  if (_currentFilter === 'draft') list = list.filter(i => i.kind === 'draft');
 
   document.getElementById('totalCount').textContent = `共 ${_allItems.length} 件`;
 
@@ -344,24 +357,27 @@ function renderItems() {
 }
 
 function animCard(item) {
-  const frames     = safeJson(item.animationFrames) || [];
-  const cfg        = safeJson(item.configJson) || {};
-  const frameCount = item.frameCount || frames.length || cfg.frameCount || 0;
+  const isAsset    = item.kind === 'asset';
+  const frames     = isAsset ? [] : (safeJson(item.animationFrames) || []);
+  const cfg        = isAsset ? {} : (safeJson(item.configJson) || {});
+  const frameCount = isAsset ? (item.currentVersion?.baseFrameCount || 0) : (item.frameCount || frames.length || cfg.frameCount || 0);
   const dateStr    = fmtDate(item.createdAt);
-  const statusL    = cpStatusLabel(item.status);
-  const statusC    = cpStatusClass(item.status);
+  const statusL    = isAsset ? (item.assetType === 'COLLAB' ? '联名动画' : '动画资产') : cpStatusLabel(item.status);
+  const statusC    = isAsset ? 'status-shipped' : cpStatusClass(item.status);
 
   // 规格行：modelName size frameCount帧 material colorName
   const specParts = [cfg.modelName, cfg.size,
     frameCount ? frameCount + '帧' : null,
     cfg.material, cfg.colorName].filter(Boolean);
   const specStr = specParts.join(' ') || `定制动画 ${fmtDatetimeMin(item.createdAt)}`;
-  const displayName = cfg.animName || specStr;
+  const displayName = isAsset ? item.title : (cfg.animName || specStr);
+  const safeDisplayName = escapeHtml(displayName);
 
   // 预览缩略图：优先 previewUrl，其次第一帧
   let thumbInner;
-  if (item.previewUrl) {
-    thumbInner = `<img src="${item.previewUrl}" alt="预览" loading="lazy" style="width:100%;height:100%;object-fit:cover;">`;
+  const previewUrl = isAsset ? item.currentVersion?.previewFrameUrl : item.previewUrl;
+  if (previewUrl) {
+    thumbInner = `<img src="${escapeHtml(previewUrl)}" alt="预览" loading="lazy" style="width:100%;height:100%;object-fit:cover;">`;
   } else if (frames.length > 0 && typeof frames[0] === 'string') {
     thumbInner = `<img src="${frames[0].startsWith('data:') ? frames[0] : frames[0]}" alt="第一帧" loading="lazy" style="width:100%;height:100%;object-fit:cover;">`;
   } else {
@@ -370,7 +386,7 @@ function animCard(item) {
 
   // 工程剩余天数
   const now = Date.now();
-  const expiry = item.draftExpiresAt ? new Date(item.draftExpiresAt).getTime() : null;
+  const expiry = !isAsset && item.draftExpiresAt ? new Date(item.draftExpiresAt).getTime() : null;
   const daysLeft = expiry ? Math.max(0, Math.ceil((expiry - now) / 86400000)) : null;
 
   const editHref = `customize-editor.html?editId=${item.id}`;
@@ -384,17 +400,19 @@ function animCard(item) {
     </div>
     <div class="card-body">
       <div class="card-name-row">
-        <div class="card-model">${displayName}</div>
+        <div class="card-model">${safeDisplayName}</div>
         <button class="rename-btn" onclick="event.stopPropagation();openRename('${item.id}')" title="重命名">✎</button>
       </div>
       <div class="card-meta">
+        ${isAsset ? `<span class="card-meta-item">${escapeHtml(item.assetNo)}</span><span class="card-meta-item">V${item.currentVersionNo}</span>` : ''}
         ${daysLeft !== null ? `<span class="card-meta-item">🗂 工程${daysLeft > 0 ? daysLeft + '天' : '已过期'}</span>` : ''}
         <span class="card-meta-item">📅 ${dateStr}</span>
       </div>
     </div>
     <div class="card-footer">
-      <a href="${editHref}" class="card-link" onclick="event.stopPropagation()">✏️ 重新编辑</a>
-      ${item.status === 'ordered' ? `<span class="card-link" style="color:var(--accent-g)">已下单 ✓</span>` : `<a href="customize-start.html" class="card-link">去选配 →</a>`}
+      ${isAsset
+        ? `<span class="card-link" style="color:var(--gray3)">已保存 V${item.currentVersionNo}</span>`
+        : `<a href="${editHref}" class="card-link" onclick="event.stopPropagation()">✏️ 重新编辑</a><a href="customize-start.html" class="card-link">去选配 →</a>`}
       <button class="card-delete-btn" onclick="event.stopPropagation();askDelete('${item.id}')">删除</button>
     </div>
   </div>`;
@@ -433,13 +451,19 @@ async function loadAnimations() {
     return;
   }
   try {
-    const res = await fetch(`${API}/api/custom-products?page=1&limit=50`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const json = await res.json();
-    if (!json.success) throw new Error(json.message || '加载失败');
-    _allItems = json.data?.items || [];
+    const headers = { Authorization: `Bearer ${token}` };
+    const [assetRes, draftRes] = await Promise.all([
+      fetch(`${API}/api/animation-assets?page=1&limit=50`, { headers }),
+      fetch(`${API}/api/custom-products?page=1&limit=50`, { headers })
+    ]);
+    if (!assetRes.ok || !draftRes.ok) throw new Error(`HTTP ${assetRes.status}/${draftRes.status}`);
+    const [assetJson, draftJson] = await Promise.all([assetRes.json(), draftRes.json()]);
+    if (!assetJson.success || !draftJson.success) throw new Error(assetJson.message || draftJson.message || '加载失败');
+    const assets = (assetJson.data?.items || []).map(item => ({ ...item, kind: 'asset' }));
+    const drafts = (draftJson.data?.items || [])
+      .filter(item => !item.animationAssetId)
+      .map(item => ({ ...item, kind: 'draft' }));
+    _allItems = [...assets, ...drafts].sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt));
     renderItems();
   } catch(e) {
     renderError('加载失败，请检查网络后重试');

@@ -57,24 +57,34 @@ async function upload(user, purpose, name) {
 
 async function cleanup() {
   if (browser) await browser.close().catch(() => {})
-  if (userIds.length) {
-    await prisma.cartItem.deleteMany({ where:{ cart:{ userId:{ in:userIds } } } })
-    await prisma.cart.deleteMany({ where:{ userId:{ in:userIds } } })
-    await prisma.operationLog.deleteMany({ where:{ userId:{ in:userIds } } })
-    await prisma.auditLog.deleteMany({ where:{ userId:{ in:userIds } } })
-    await prisma.customizationRequestEvent.deleteMany({ where:{ OR:[{ actorUserId:{ in:userIds } }, { request:{ userId:{ in:userIds } } }] } })
-    await prisma.customizationRequest.deleteMany({ where:{ userId:{ in:userIds } } })
-    await prisma.customProduct.deleteMany({ where:{ userId:{ in:userIds } } })
-    await prisma.privateFile.deleteMany({ where:{ OR:[{ ownerUserId:{ in:userIds } }, { objectKey:{ in:objectKeys } }] } })
-    await prisma.refreshToken.deleteMany({ where:{ userId:{ in:userIds } } })
-    await prisma.smsCode.deleteMany({ where:{ phone:{ in:phones } } })
-    await prisma.creditScore.deleteMany({ where:{ userId:{ in:userIds } } })
-    await prisma.userProfile.deleteMany({ where:{ userId:{ in:userIds } } })
-    await prisma.user.deleteMany({ where:{ id:{ in:userIds } } })
+  const staleUsers = await prisma.user.findMany({
+    where:{ privacyPolicyVersion:'custom-ui-test' }, select:{ id:true }
+  })
+  const cleanupUserIds = [...new Set([...userIds, ...staleUsers.map(item => item.id)])]
+  const staleFiles = cleanupUserIds.length
+    ? await prisma.privateFile.findMany({ where:{ ownerUserId:{ in:cleanupUserIds } }, select:{ objectKey:true } })
+    : []
+  const cleanupObjectKeys = [...new Set([...objectKeys, ...staleFiles.map(item => item.objectKey)])]
+  if (cleanupUserIds.length) {
+    await prisma.cartItem.deleteMany({ where:{ cart:{ userId:{ in:cleanupUserIds } } } })
+    await prisma.cart.deleteMany({ where:{ userId:{ in:cleanupUserIds } } })
+    await prisma.operationLog.deleteMany({ where:{ userId:{ in:cleanupUserIds } } })
+    await prisma.auditLog.deleteMany({ where:{ userId:{ in:cleanupUserIds } } })
+    await prisma.customizationRequestEvent.deleteMany({ where:{ OR:[{ actorUserId:{ in:cleanupUserIds } }, { request:{ userId:{ in:cleanupUserIds } } }] } })
+    await prisma.customizationRequest.deleteMany({ where:{ userId:{ in:cleanupUserIds } } })
+    await prisma.animationAssetVersion.deleteMany({ where:{ asset:{ ownerUserId:{ in:cleanupUserIds } } } })
+    await prisma.animationAsset.deleteMany({ where:{ ownerUserId:{ in:cleanupUserIds } } })
+    await prisma.customProduct.deleteMany({ where:{ userId:{ in:cleanupUserIds } } })
+    await prisma.privateFile.deleteMany({ where:{ OR:[{ ownerUserId:{ in:cleanupUserIds } }, { objectKey:{ in:cleanupObjectKeys } }] } })
+    await prisma.refreshToken.deleteMany({ where:{ userId:{ in:cleanupUserIds } } })
+    await prisma.smsCode.deleteMany({ where:{ OR:[{ userId:{ in:cleanupUserIds } }, { phone:{ in:phones } }] } })
+    await prisma.creditScore.deleteMany({ where:{ userId:{ in:cleanupUserIds } } })
+    await prisma.userProfile.deleteMany({ where:{ userId:{ in:cleanupUserIds } } })
+    await prisma.user.deleteMany({ where:{ id:{ in:cleanupUserIds } } })
   }
   if (skuId) await prisma.machineModelSku.deleteMany({ where:{ id:skuId } })
   if (modelId) await prisma.machineModel.deleteMany({ where:{ id:modelId } })
-  for (const key of objectKeys) {
+  for (const key of cleanupObjectKeys) {
     await fs.rm(new URL(`../storage/private/${key}`, import.meta.url), { force:true }).catch(() => {})
   }
   await prisma.$disconnect()
@@ -145,6 +155,14 @@ try {
     throw new Error(`提交订单后未进入结算页；停留在 ${page.url()}；页面提示：${orderDialogs.join(' | ') || '无'}`)
   })
   console.log('PASS customer previews staff frames and submits the customization directly to checkout')
+
+  await page.goto(`${webBase}/my-animations.html`, { waitUntil:'networkidle' })
+  const assetCard = page.locator('.anim-card').filter({ hasText:'ANM-' }).first()
+  await assetCard.waitFor({ timeout:10000 })
+  if (!await assetCard.getByText(/动画资产/).count() || !await assetCard.getByText(/V1/).count()) {
+    throw new Error('我的动画没有把已确认内容显示为带版本的正式动画资产')
+  }
+  console.log('PASS my animations separates reusable assets from temporary drafts')
 
   await page.goto(`${webBase}/customize-editor.html?modelId=${encodeURIComponent(modelId)}`, { waitUntil:'networkidle' })
   await page.evaluate(meta => {

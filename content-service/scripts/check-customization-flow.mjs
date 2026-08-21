@@ -115,6 +115,8 @@ async function cleanup() {
       OR: [{ actorUserId: { in: ids } }, { request: { userId: { in: ids } } }]
     } })
     await prisma.customizationRequest.deleteMany({ where: { userId: { in: ids } } })
+    await prisma.animationAssetVersion.deleteMany({ where: { asset: { ownerUserId: { in: ids } } } })
+    await prisma.animationAsset.deleteMany({ where: { ownerUserId: { in: ids } } })
     const carts = await prisma.cart.findMany({ where: { userId: { in: ids } }, select: { id: true } })
     if (carts.length) await prisma.cartItem.deleteMany({ where: { cartId: { in: carts.map(item => item.id) } } })
     await prisma.cart.deleteMany({ where: { userId: { in: ids } } })
@@ -255,6 +257,24 @@ try {
     method: 'POST'
   })))
   acceptResponses.forEach((response, index) => assertStatus(`customer concurrent frame accept ${index + 1}`, response.status, 200))
+  const acceptedManual = await prisma.customizationRequest.findUnique({ where: { id: manual.id } })
+  const manualAsset = acceptedManual?.animationAssetId
+    ? await prisma.animationAsset.findUnique({ where: { id: acceptedManual.animationAssetId }, include: { versions: true } })
+    : null
+  if (!manualAsset || !/^ANM-\d{8}-[A-Z2-9]{6}$/.test(manualAsset.assetNo) || manualAsset.versions.length !== 1 || manualAsset.versions[0].sourceType !== 'STAFF_SCREENED') {
+    throw new Error('accepted staff screening did not create exactly one immutable animation asset version')
+  }
+  console.log('PASS accepted staff screening creates one reusable animation asset version')
+  assertStatus('customer lists animation assets', (await request('/api/animation-assets', customer.token)).status, 200)
+  assertStatus('other customer cannot read animation asset', (await request(`/api/animation-assets/${manualAsset.id}`, other.token)).status, 404)
+  assertStatus('customer renames private animation asset', (await request(`/api/animation-assets/${manualAsset.id}`, customer.token, {
+    method: 'PATCH', body: JSON.stringify({ title: '人工筛帧测试动画' })
+  })).status, 200)
+  await prisma.animationAsset.update({ where: { id: manualAsset.id }, data: { assetType: 'COLLAB', collabStatus: 'AUTHORIZED' } })
+  assertStatus('authorized collab animation cannot be deleted', (await request(`/api/animation-assets/${manualAsset.id}`, customer.token, {
+    method: 'DELETE'
+  })).status, 409)
+  await prisma.animationAsset.update({ where: { id: manualAsset.id }, data: { assetType: 'PRIVATE', collabStatus: 'NONE' } })
   const chooseResponses = await Promise.all([1, 2].map(() => request(`/api/customization-requests/mine/${manual.id}/choose-sku`, customer.token, {
     method: 'POST', body: JSON.stringify({ desiredSkuId: skuId, userNote: '筛帧与款式均已确认' })
   })))
@@ -285,6 +305,13 @@ try {
   assertStatus('self-screened draft submits', submitResponse.status, 200)
   const submittedSelf = (await submitResponse.json()).data
   if (!submittedSelf.requestNo || submittedSelf.status !== 'CONFIRMED') throw new Error('self draft was not directly confirmed for checkout')
+  const selfAsset = submittedSelf.animationAssetId
+    ? await prisma.animationAsset.findUnique({ where: { id: submittedSelf.animationAssetId }, include: { versions: true } })
+    : null
+  if (!selfAsset || selfAsset.versions.length !== 1 || selfAsset.versions[0].sourceType !== 'SELF_SCREENED') {
+    throw new Error('confirmed self screening did not create exactly one immutable animation asset version')
+  }
+  console.log('PASS confirmed self screening creates one reusable animation asset version')
   const selfRetry = await request(`/api/customization-requests/${self.request.id}/submit`, customer.token, {
     method: 'POST', body: JSON.stringify({ desiredSkuId: skuId, userNote: '重复提交' })
   })
@@ -302,6 +329,16 @@ try {
   assertStatus('confirmed self customization can enter cart', (await request('/api/cart/add', customer.token, {
     method: 'POST', body: JSON.stringify({ itemType: 'CUSTOM', contentId: self.product.id, hardwareSkuId: skuId })
   })).status, 201)
+  assertStatus('customer can remove private asset from frontend', (await request(`/api/animation-assets/${selfAsset.id}`, customer.token, {
+    method: 'DELETE'
+  })).status, 200)
+  const retainedVersion = await prisma.animationAssetVersion.findUnique({ where: { id: selfAsset.versions[0].id } })
+  const hiddenAsset = await prisma.animationAsset.findUnique({ where: { id: selfAsset.id } })
+  if (!retainedVersion || hiddenAsset?.status !== 'USER_DELETED' || !hiddenAsset.frontDeletedAt) {
+    throw new Error('frontend deletion removed backend animation history or failed to hide the asset')
+  }
+  assertStatus('frontend-deleted asset is no longer readable by customer', (await request(`/api/animation-assets/${selfAsset.id}`, customer.token)).status, 404)
+  console.log('PASS frontend deletion hides private asset and retains immutable backend version')
 
   const abandonedKey = await upload(other, 'CUSTOMIZATION_SOURCE', 'abandoned.png')
   await prisma.privateFile.update({ where: { objectKey: abandonedKey }, data: { updatedAt: new Date(Date.now() - 25 * 60 * 60 * 1000) } })

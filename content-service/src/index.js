@@ -37,6 +37,7 @@ import linksRoutes        from './routes/links.js'
 import contractsRoutes    from './routes/contracts.js'
 import cartRoutes          from './routes/cart.js'
 import customProductRoutes from './routes/custom-products.js'
+import animationAssetRoutes from './routes/animation-assets.js'
 import paymentRoutes       from './routes/payment.js'
 import addressRoutes       from './routes/addresses.js'
 import orderRoutes         from './routes/orders.js'
@@ -207,6 +208,7 @@ async function start() {
     // ── 购物车系统 ──
     await fastify.register(cartRoutes,           { prefix: '/api/cart' })
     await fastify.register(customProductRoutes,  { prefix: '/api/custom-products' })
+    await fastify.register(animationAssetRoutes, { prefix: '/api/animation-assets' })
     await fastify.register(customizationRequestRoutes, { prefix: '/api/customization-requests' })
     await fastify.register(paymentRoutes,        { prefix: '/api/payment' })
     await fastify.register(addressRoutes,        { prefix: '/api/addresses' })

@@ -114,14 +114,16 @@ model User {
   addresses UserAddress[]
 
   // 创作者通知
-  notifications         CreatorNotification[]
-  aftersaleRequests     AftersaleRequest[]
-  privateFiles          PrivateFile[]
-  deletionRequest       AccountDeletionRequest?
-  customizationRequests CustomizationRequest[]      @relation("CustomizationRequester")
-  customizationEvents   CustomizationRequestEvent[] @relation("CustomizationEventActor")
-  assignedCustomizationRequests CustomizationRequest[]       @relation("CustomizationAssignee")
-  customizationFrameSelections CustomizationFrameSelection[] @relation("CustomizationFrameSelectionStaff")
+  notifications                 CreatorNotification[]
+  aftersaleRequests             AftersaleRequest[]
+  privateFiles                  PrivateFile[]
+  deletionRequest               AccountDeletionRequest?
+  customizationRequests         CustomizationRequest[]        @relation("CustomizationRequester")
+  customizationEvents           CustomizationRequestEvent[]   @relation("CustomizationEventActor")
+  assignedCustomizationRequests CustomizationRequest[]        @relation("CustomizationAssignee")
+  customizationFrameSelections  CustomizationFrameSelection[] @relation("CustomizationFrameSelectionStaff")
+  animationAssetsOwned          AnimationAsset[]              @relation("AnimationAssetOwner")
+  animationVersionsCreated      AnimationAssetVersion[]       @relation("AnimationVersionCreator")
 
   @@map("users")
 }
@@ -1608,82 +1610,155 @@ model CartItem {
 
 // DIY 草稿工作区（7天有效，编辑器产出）
 model CustomProduct {
+  id                 String    @id @default(uuid())
+  userId             String    @map("user_id")
+  animationFrames    String    @map("animation_frames") @db.Text // JSON 帧图列表
+  draftData          String?   @map("draft_data") @db.Text // 工程文件（7天）
+  draftExpiresAt     DateTime? @map("draft_expires_at")
+  previewUrl         String?   @map("preview_url") @db.Text // GIF（编辑器实时版）
+  staticPreviewUrl   String?   @map("static_preview_url") @db.Text // 效果图合成 PNG
+  configJson         String?   @map("config_json") @db.Text // 实时定制参数
+  hardwareSkuId      String?   @map("hardware_sku_id")
+  frameCount         Int?      @map("frame_count") // 帧数（用于物理校验）
+  animationAssetId   String?   @map("animation_asset_id")
+  animationVersionId String?   @map("animation_version_id")
+  status             String    @default("draft") // draft|in_cart|ordered|removed
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  animationAsset          AnimationAsset?         @relation(fields: [animationAssetId], references: [id], onDelete: SetNull)
+  animationVersion        AnimationAssetVersion?  @relation("CustomProductAnimationVersion", fields: [animationVersionId], references: [id], onDelete: SetNull)
+  sourceAnimationVersions AnimationAssetVersion[] @relation("AnimationVersionSourceCustomProduct")
+
+  @@index([userId, status])
+  @@index([animationAssetId])
+  @@index([animationVersionId])
+  @@map("custom_products")
+}
+
+// 可复购的动画主资产。它与一次定制申请、SKU 和订单相互独立。
+model AnimationAsset {
   id               String    @id @default(uuid())
-  userId           String    @map("user_id")
-  animationFrames  String    @map("animation_frames") @db.Text // JSON 帧图列表
-  draftData        String?   @map("draft_data") @db.Text // 工程文件（7天）
-  draftExpiresAt   DateTime? @map("draft_expires_at")
-  previewUrl       String?   @map("preview_url") @db.Text // GIF（编辑器实时版）
-  staticPreviewUrl String?   @map("static_preview_url") @db.Text // 效果图合成 PNG
-  configJson       String?   @map("config_json") @db.Text // 实时定制参数
-  hardwareSkuId    String?   @map("hardware_sku_id")
-  frameCount       Int?      @map("frame_count") // 帧数（用于物理校验）
-  status           String    @default("draft") // draft|in_cart|ordered|removed
+  assetNo          String    @unique @map("asset_no") @db.VarChar(32)
+  ownerUserId      String    @map("owner_user_id")
+  title            String    @default("未命名动画") @db.VarChar(200)
+  sourceType       String    @map("source_type") @db.VarChar(30) // SELF_SCREENED | STAFF_SCREENED | STAFF_CREATED
+  assetType        String    @default("PRIVATE") @map("asset_type") @db.VarChar(20) // PRIVATE | COLLAB
+  status           String    @default("ACTIVE") @db.VarChar(30) // ACTIVE | USER_DELETED | ARCHIVED
+  collabStatus     String    @default("NONE") @map("collab_status") @db.VarChar(30) // NONE | PENDING | AUTHORIZED | STOPPED
+  currentVersionNo Int       @default(0) @map("current_version_no")
+  frontDeletedAt   DateTime? @map("front_deleted_at")
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
 
-  @@index([userId, status])
-  @@map("custom_products")
+  owner                 User                    @relation("AnimationAssetOwner", fields: [ownerUserId], references: [id])
+  versions              AnimationAssetVersion[]
+  customProducts        CustomProduct[]
+  customizationRequests CustomizationRequest[]
+
+  @@index([ownerUserId, status, updatedAt])
+  @@index([assetType, collabStatus])
+  @@map("animation_assets")
+}
+
+// 一旦确认便不可覆盖的核心帧版本。重新编辑必须新增 versionNo。
+model AnimationAssetVersion {
+  id                     String   @id @default(uuid())
+  assetId                String   @map("asset_id")
+  versionNo              Int      @map("version_no")
+  sourceKey              String   @unique @map("source_key") @db.VarChar(120)
+  sourceType             String   @map("source_type") @db.VarChar(30)
+  sourceRequestId        String?  @map("source_request_id")
+  sourceFrameSelectionId String?  @unique @map("source_frame_selection_id")
+  sourceCustomProductId  String?  @map("source_custom_product_id")
+  createdByUserId        String?  @map("created_by_user_id")
+  frameKeys              Json     @map("frame_keys")
+  baseFrameCount         Int      @map("base_frame_count")
+  editorData             Json?    @map("editor_data")
+  manifestHash           String   @map("manifest_hash") @db.VarChar(64)
+  createdAt              DateTime @default(now()) @map("created_at")
+
+  asset                AnimationAsset               @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  sourceRequest        CustomizationRequest?        @relation("AnimationVersionSourceRequest", fields: [sourceRequestId], references: [id], onDelete: SetNull)
+  sourceFrameSelection CustomizationFrameSelection? @relation("AnimationVersionSourceSelection", fields: [sourceFrameSelectionId], references: [id], onDelete: SetNull)
+  sourceCustomProduct  CustomProduct?               @relation("AnimationVersionSourceCustomProduct", fields: [sourceCustomProductId], references: [id], onDelete: SetNull)
+  createdBy            User?                        @relation("AnimationVersionCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  customProducts       CustomProduct[]              @relation("CustomProductAnimationVersion")
+  acceptedRequests     CustomizationRequest[]       @relation("CustomizationAcceptedAnimationVersion")
+
+  @@unique([assetId, versionNo])
+  @@index([assetId, createdAt])
+  @@index([sourceRequestId])
+  @@index([sourceCustomProductId])
+  @@map("animation_asset_versions")
 }
 
 // 定制审核申请。与购物车、订单、生产任务分开，正式提交后生成 requestNo。
 model CustomizationRequest {
-  id                    String    @id @default(uuid())
-  requestNo             String?   @unique @map("request_no") @db.VarChar(32)
-  userId                String    @map("user_id")
-  mode                  String    @db.VarChar(20) // SELF | HUMAN
-  status                String    @default("DRAFT") @db.VarChar(30)
-  version               Int       @default(1)
-  clientDraftKey        String?   @unique @map("client_draft_key") @db.VarChar(80)
-  customProductId       String?   @map("custom_product_id")
-  machineModelId        String?   @map("machine_model_id")
-  desiredSkuId          String?   @map("desired_sku_id")
-  sourceKeys            Json      @map("source_keys")
-  selectedFrameKeys     Json?     @map("selected_frame_keys")
-  screeningData         Json?     @map("screening_data")
-  editorData            Json?     @map("editor_data")
-  userNote              String?   @map("user_note") @db.Text
-  creatorDeclared       Boolean   @default(false) @map("creator_declared")
-  copyrightConfirmed    Boolean   @default(false) @map("copyright_confirmed")
-  cooperationInterested Boolean   @default(false) @map("cooperation_interested")
-  assignedStaffId       String?   @map("assigned_staff_id")
-  claimedAt             DateTime? @map("claimed_at")
-  lockExpiresAt         DateTime? @map("lock_expires_at")
-  staffDraftData        Json?     @map("staff_draft_data")
-  staffDraftUpdatedAt   DateTime? @map("staff_draft_updated_at")
-  submittedAt           DateTime? @map("submitted_at")
-  createdAt             DateTime  @default(now()) @map("created_at")
-  updatedAt             DateTime  @updatedAt @map("updated_at")
+  id                         String    @id @default(uuid())
+  requestNo                  String?   @unique @map("request_no") @db.VarChar(32)
+  userId                     String    @map("user_id")
+  mode                       String    @db.VarChar(20) // SELF | HUMAN
+  status                     String    @default("DRAFT") @db.VarChar(30)
+  version                    Int       @default(1)
+  clientDraftKey             String?   @unique @map("client_draft_key") @db.VarChar(80)
+  customProductId            String?   @map("custom_product_id")
+  machineModelId             String?   @map("machine_model_id")
+  desiredSkuId               String?   @map("desired_sku_id")
+  animationAssetId           String?   @map("animation_asset_id")
+  acceptedAnimationVersionId String?   @map("accepted_animation_version_id")
+  sourceKeys                 Json      @map("source_keys")
+  selectedFrameKeys          Json?     @map("selected_frame_keys")
+  screeningData              Json?     @map("screening_data")
+  editorData                 Json?     @map("editor_data")
+  userNote                   String?   @map("user_note") @db.Text
+  creatorDeclared            Boolean   @default(false) @map("creator_declared")
+  copyrightConfirmed         Boolean   @default(false) @map("copyright_confirmed")
+  cooperationInterested      Boolean   @default(false) @map("cooperation_interested")
+  assignedStaffId            String?   @map("assigned_staff_id")
+  claimedAt                  DateTime? @map("claimed_at")
+  lockExpiresAt              DateTime? @map("lock_expires_at")
+  staffDraftData             Json?     @map("staff_draft_data")
+  staffDraftUpdatedAt        DateTime? @map("staff_draft_updated_at")
+  submittedAt                DateTime? @map("submitted_at")
+  createdAt                  DateTime  @default(now()) @map("created_at")
+  updatedAt                  DateTime  @updatedAt @map("updated_at")
 
-  user   User                        @relation("CustomizationRequester", fields: [userId], references: [id])
-  assignedStaff User?                @relation("CustomizationAssignee", fields: [assignedStaffId], references: [id], onDelete: SetNull)
-  events CustomizationRequestEvent[]
-  frameSelections CustomizationFrameSelection[]
+  user                      User                          @relation("CustomizationRequester", fields: [userId], references: [id])
+  assignedStaff             User?                         @relation("CustomizationAssignee", fields: [assignedStaffId], references: [id], onDelete: SetNull)
+  events                    CustomizationRequestEvent[]
+  frameSelections           CustomizationFrameSelection[]
+  animationAsset            AnimationAsset?               @relation(fields: [animationAssetId], references: [id], onDelete: SetNull)
+  acceptedAnimationVersion  AnimationAssetVersion?        @relation("CustomizationAcceptedAnimationVersion", fields: [acceptedAnimationVersionId], references: [id], onDelete: SetNull)
+  producedAnimationVersions AnimationAssetVersion[]       @relation("AnimationVersionSourceRequest")
 
   @@index([userId, status, createdAt])
   @@index([status, submittedAt])
   @@index([machineModelId])
+  @@index([animationAssetId])
+  @@index([acceptedAnimationVersionId])
   @@index([assignedStaffId, status])
   @@map("customization_requests")
 }
 
 // 工作人员每次正式提交的筛帧结果。新版本追加保存，不覆盖旧结果。
 model CustomizationFrameSelection {
-  id               String    @id @default(uuid())
-  requestId        String    @map("request_id")
-  version          Int
-  selectedFrameKeys Json     @map("selected_frame_keys")
-  editorData       Json?     @map("editor_data")
-  staffMessage     String?   @map("staff_message") @db.Text
-  internalNote     String?   @map("internal_note") @db.Text
-  status           String    @default("SUBMITTED") @db.VarChar(30)
-  createdByStaffId String?   @map("created_by_staff_id")
-  submittedAt      DateTime  @default(now()) @map("submitted_at")
-  respondedAt      DateTime? @map("responded_at")
-  createdAt        DateTime  @default(now()) @map("created_at")
+  id                String                 @id @default(uuid())
+  requestId         String                 @map("request_id")
+  version           Int
+  selectedFrameKeys Json                   @map("selected_frame_keys")
+  editorData        Json?                  @map("editor_data")
+  staffMessage      String?                @map("staff_message") @db.Text
+  internalNote      String?                @map("internal_note") @db.Text
+  status            String                 @default("SUBMITTED") @db.VarChar(30)
+  createdByStaffId  String?                @map("created_by_staff_id")
+  submittedAt       DateTime               @default(now()) @map("submitted_at")
+  respondedAt       DateTime?              @map("responded_at")
+  createdAt         DateTime               @default(now()) @map("created_at")
+  animationVersion  AnimationAssetVersion? @relation("AnimationVersionSourceSelection")
 
-  request CustomizationRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  createdByStaff User? @relation("CustomizationFrameSelectionStaff", fields: [createdByStaffId], references: [id], onDelete: SetNull)
+  request        CustomizationRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  createdByStaff User?                @relation("CustomizationFrameSelectionStaff", fields: [createdByStaffId], references: [id], onDelete: SetNull)
 
   @@unique([requestId, version])
   @@index([requestId, status, createdAt])

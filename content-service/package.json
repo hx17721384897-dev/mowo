@@ -15,6 +15,7 @@
     "check:account-deletion": "node scripts/check-account-deletion.mjs",
     "check:customization-flow": "node scripts/check-customization-flow.mjs",
     "check:customization-ui": "node scripts/check-customization-ui.mjs",
+    "assets:backfill": "node scripts/backfill-animation-assets.mjs",
     "check:launch-safety": "node scripts/check-launch-safety.mjs",
     "test-user:create": "node scripts/create-test-user.mjs",
     "test-user:inspect": "node scripts/inspect-test-user.mjs",

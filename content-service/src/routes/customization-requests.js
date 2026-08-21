@@ -1,5 +1,6 @@
 import { FILE_PURPOSE, findOwnedReadyFiles, linkFiles } from '../lib/private-files.js'
 import { createCustomizationRequestNo, normalizeKeyList } from '../lib/customization-request.js'
+import { animationTitleFromCustomProduct, createAnimationAssetVersion } from '../lib/animation-assets.js'
 
 const MODES = new Set(['SELF', 'HUMAN'])
 
@@ -189,6 +190,9 @@ export default async function customizationRequestRoutes(fastify) {
     if (!Array.isArray(item.selectedFrameKeys) || item.selectedFrameKeys.length === 0) {
       return reply.code(400).send({ success: false, message: '请先完成帧图筛选' })
     }
+    const customProduct = item.customProductId
+      ? await prisma.customProduct.findUnique({ where: { id: item.customProductId } })
+      : null
 
     const requestNo = await createCustomizationRequestNo(prisma)
     const updated = await prisma.$transaction(async tx => {
@@ -202,9 +206,32 @@ export default async function customizationRequestRoutes(fastify) {
         submittedAt: new Date()
       } })
       if (changed.count !== 1) return null
+      const animation = await createAnimationAssetVersion(tx, {
+        ownerUserId: userId,
+        title: animationTitleFromCustomProduct(customProduct),
+        sourceType: 'SELF_SCREENED',
+        sourceKey: `CUSTOMIZATION_REQUEST:${item.id}:SELF_CONFIRMED`,
+        sourceRequestId: item.id,
+        sourceCustomProductId: item.customProductId,
+        createdByUserId: userId,
+        frameKeys: item.selectedFrameKeys,
+        editorData: body.editorData || item.editorData || null,
+        animationAssetId: item.animationAssetId
+      })
+      await tx.customizationRequest.update({
+        where: { id: item.id },
+        data: { animationAssetId: animation.asset.id, acceptedAnimationVersionId: animation.version.id }
+      })
+      if (item.customProductId) {
+        await tx.customProduct.update({
+          where: { id: item.customProductId },
+          data: { animationAssetId: animation.asset.id, animationVersionId: animation.version.id, draftExpiresAt: null }
+        })
+      }
       await tx.customizationRequestEvent.create({ data: {
         requestId: item.id, actorUserId: userId, actorType: 'USER', eventType: 'ORDER_CHECKOUT_READY',
-        fromStatus: 'DRAFT', toStatus: 'CONFIRMED', publicMessage: '定制内容与款式已确认，已进入订单结算'
+        fromStatus: 'DRAFT', toStatus: 'CONFIRMED', publicMessage: '定制内容与款式已确认，已进入订单结算',
+        detail: { animationAssetId: animation.asset.id, animationVersionId: animation.version.id }
       } })
       return tx.customizationRequest.findUnique({ where: { id: item.id } })
     })
@@ -297,6 +324,9 @@ export default async function customizationRequestRoutes(fastify) {
       where: { requestId: item.id, status: 'SUBMITTED' }, orderBy: { version: 'desc' }
     })
     if (!selection) return reply.code(409).send({ success: false, message: '当前筛帧结果已失效，请刷新后重试' })
+    const customProduct = item.customProductId
+      ? await prisma.customProduct.findUnique({ where: { id: item.customProductId } })
+      : null
     const updated = await prisma.$transaction(async tx => {
       const accepted = await tx.customizationFrameSelection.updateMany({
         where: { id: selection.id, status: 'SUBMITTED' }, data: { status: 'ACCEPTED', respondedAt: new Date() }
@@ -306,9 +336,34 @@ export default async function customizationRequestRoutes(fastify) {
         where: { id: item.id, status: 'OPTIONS_READY' }, data: { status: 'FRAME_ACCEPTED', version: { increment: 1 } }
       })
       if (changed.count !== 1) throw new Error('定制申请状态已变化')
+      const frameKeys = Array.isArray(selection.selectedFrameKeys) ? selection.selectedFrameKeys : []
+      const animation = await createAnimationAssetVersion(tx, {
+        ownerUserId: item.userId,
+        title: animationTitleFromCustomProduct(customProduct),
+        sourceType: 'STAFF_SCREENED',
+        sourceKey: `CUSTOMIZATION_FRAME_SELECTION:${selection.id}`,
+        sourceRequestId: item.id,
+        sourceFrameSelectionId: selection.id,
+        sourceCustomProductId: item.customProductId,
+        createdByUserId: selection.createdByStaffId,
+        frameKeys,
+        editorData: selection.editorData || null,
+        animationAssetId: item.animationAssetId
+      })
+      await tx.customizationRequest.update({
+        where: { id: item.id },
+        data: { animationAssetId: animation.asset.id, acceptedAnimationVersionId: animation.version.id }
+      })
+      if (item.customProductId) {
+        await tx.customProduct.update({
+          where: { id: item.customProductId },
+          data: { animationAssetId: animation.asset.id, animationVersionId: animation.version.id, draftExpiresAt: null }
+        })
+      }
       await tx.customizationRequestEvent.create({ data: {
         requestId: item.id, actorUserId: item.userId, actorType: 'USER', eventType: 'FRAME_SELECTION_ACCEPTED',
-        fromStatus: 'OPTIONS_READY', toStatus: 'FRAME_ACCEPTED', publicMessage: '您已确认筛帧结果，请继续选择款式'
+        fromStatus: 'OPTIONS_READY', toStatus: 'FRAME_ACCEPTED', publicMessage: '您已确认筛帧结果，请继续选择款式',
+        detail: { animationAssetId: animation.asset.id, animationVersionId: animation.version.id }
       } })
       return tx.customizationRequest.findUnique({ where: { id: item.id } })
     })
