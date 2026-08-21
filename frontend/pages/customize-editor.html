@@ -914,6 +914,11 @@ a { text-decoration:none; color:inherit; }
 'use strict';
 const CAPI_BASE = location.hostname === '127.0.0.1' ? 'http://127.0.0.1:3001' : 'http://localhost:3001';
 
+function safeStorageSet(key, value) {
+  try { localStorage.setItem(key, value); return true; }
+  catch (error) { console.warn(`浏览器未能保存 ${key}，将使用页面参数继续流程`, error); return false; }
+}
+
 /* ══════════════
    读取型号信息
 ══════════════ */
@@ -1337,6 +1342,12 @@ async function checkQuotaBeforeUpload() {
 
 function handleFiles(files) {
   if (!files.length) return;
+  const modeParams = new URLSearchParams(location.search);
+  if (!modeParams.get('adminRequestId') && !modeParams.get('reviewRequestId') && modeParams.get('mode') !== 'creator') {
+    sessionStorage.removeItem('mowo_customize_request_draft_key');
+    sessionStorage.removeItem('mowo_customize_request_draft_owner');
+    localStorage.removeItem('mowo_customize_request_draft_id');
+  }
   const imgExts   = ['png','jpg','jpeg','webp'];
   const videoExts = ['mp4','gif','webm','mov'];
   const ext0  = files[0].name.split('.').pop().toLowerCase();
@@ -2346,13 +2357,14 @@ document.getElementById('btnNextStep').addEventListener('click', async ()=>{
 
   /* ── 买家自己筛选：登录后保存原素材、筛选帧和云端草稿 ── */
   const urls = cl.map(i => frames[i]);
+  // 完整帧可能远超浏览器约 5 MB 的本地存储上限。帧已上传到私有存储，页面之间只传轻量编号。
+  localStorage.removeItem('mowo_customize_frames');
   try {
-    localStorage.setItem('mowo_customize_frames', JSON.stringify(urls));
     const meta = JSON.parse(localStorage.getItem('mowo_customize_meta')||'{}');
     meta.frameCount = cnt;
     meta.validTargets = validTargets;
-    localStorage.setItem('mowo_customize_meta', JSON.stringify(meta));
-  } catch(e) { console.warn('存储可能超出限制，帧数据较大', e); }
+    safeStorageSet('mowo_customize_meta', JSON.stringify(meta));
+  } catch(e) { console.warn('款式信息缓存失败，将使用网址参数继续', e); }
 
   const token = localStorage.getItem('mowo_token');
   if (!token) {
@@ -2364,15 +2376,16 @@ document.getElementById('btnNextStep').addEventListener('click', async ()=>{
   const originalFiles = isMulti ? selFiles : (selFile ? [selFile] : []);
   if (!originalFiles.length) { alert('原素材已失效，请重新上传'); return; }
   const button = document.getElementById('btnNextStep');
+  let savedRequestId = '';
   try {
     button.disabled = true;
     const uploadedKeys = await window.MowoPrivateUpload.uploadSources({
       sources: urls, token, purpose: 'CUSTOMIZATION_FRAME',
       onProgress: (done, total) => { button.textContent = `上传帧图 ${done}/${total}`; }
     });
-    localStorage.setItem('mowo_customize_frame_keys', JSON.stringify(uploadedKeys));
+    safeStorageSet('mowo_customize_frame_keys', JSON.stringify(uploadedKeys));
     const ownerUserId = window.MowoPrivateUpload.tokenUserId(token) || '';
-    localStorage.setItem('mowo_customize_frame_owner', ownerUserId);
+    safeStorageSet('mowo_customize_frame_owner', ownerUserId);
 
     const productResponse = await fetch(`${CAPI_BASE}/api/custom-products`, {
       method: 'POST',
@@ -2387,19 +2400,19 @@ document.getElementById('btnNextStep').addEventListener('click', async ()=>{
     if (!productResponse.ok || !productResult.success || !productResult.data?.id) {
       throw new Error(productResult.message || '筛选草稿保存失败');
     }
-    localStorage.setItem('mowo_customize_draft_id', productResult.data.id);
+    safeStorageSet('mowo_customize_draft_id', productResult.data.id);
 
     const sourceKeys = await window.MowoPrivateUpload.uploadFiles({
       files: originalFiles, token, purpose: 'CUSTOMIZATION_SOURCE',
       onProgress: (done, total) => { button.textContent = `上传原素材 ${done}/${total}`; }
     });
     const meta = currentModelMeta();
-    const draftOwnerKey = localStorage.getItem('mowo_customize_request_draft_owner');
-    let clientDraftKey = localStorage.getItem('mowo_customize_request_draft_key');
+    const draftOwnerKey = sessionStorage.getItem('mowo_customize_request_draft_owner');
+    let clientDraftKey = sessionStorage.getItem('mowo_customize_request_draft_key');
     if (!clientDraftKey || draftOwnerKey !== ownerUserId) {
       clientDraftKey = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      localStorage.setItem('mowo_customize_request_draft_key', clientDraftKey);
-      localStorage.setItem('mowo_customize_request_draft_owner', ownerUserId);
+      sessionStorage.setItem('mowo_customize_request_draft_key', clientDraftKey);
+      sessionStorage.setItem('mowo_customize_request_draft_owner', ownerUserId);
     }
     button.textContent = '保存定制草稿';
     const draftResponse = await fetch(`${CAPI_BASE}/api/customization-requests/draft`, {
@@ -2414,7 +2427,8 @@ document.getElementById('btnNextStep').addEventListener('click', async ()=>{
     });
     const draftResult = await draftResponse.json();
     if (!draftResponse.ok || !draftResult.success) throw new Error(draftResult.message || '定制草稿保存失败');
-    localStorage.setItem('mowo_customize_request_draft_id', draftResult.data.id);
+    savedRequestId = draftResult.data.id;
+    safeStorageSet('mowo_customize_request_draft_id', draftResult.data.id);
   } catch(e) {
     alert('上传失败：' + (e.message || '请重试'));
     button.disabled = false;
@@ -2422,7 +2436,15 @@ document.getElementById('btnNextStep').addEventListener('click', async ()=>{
     return;
   }
 
-  location.href = `customize-confirm.html?type=${machineType}&frames=${cnt}&targets=${validTargets.join(',')}`;
+  const meta = currentModelMeta();
+  const nextUrl = new URL('customize-confirm.html', location.href);
+  nextUrl.searchParams.set('type', machineType);
+  nextUrl.searchParams.set('modelId', meta.id);
+  nextUrl.searchParams.set('modelName', meta.name || machineName);
+  nextUrl.searchParams.set('frames', String(cnt));
+  nextUrl.searchParams.set('targets', validTargets.join(','));
+  nextUrl.searchParams.set('requestId', savedRequestId);
+  location.assign(nextUrl.href);
 });
 
 function goReupload() {

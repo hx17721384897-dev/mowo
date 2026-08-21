@@ -129,6 +129,29 @@ try {
   await page.waitForURL(/customize-confirm\.html/, { timeout:10000 })
   console.log('PASS customer previews staff frames and reaches style selection in browser')
 
+  await page.goto(`${webBase}/customize-editor.html?modelId=${encodeURIComponent(modelId)}`, { waitUntil:'networkidle' })
+  await page.evaluate(meta => {
+    localStorage.removeItem('mowo_customize_request_draft_id')
+    localStorage.removeItem('mowo_customize_request_draft_key')
+    localStorage.removeItem('mowo_customize_request_draft_owner')
+    localStorage.setItem('mowo_customize_meta', JSON.stringify(meta))
+  }, { id:modelId, modelId, name:model.name, frames:[1], ratios:['1:1'], sizes:['S'], modelType:'single' })
+  await page.reload({ waitUntil:'networkidle' })
+  await page.locator('#fileInput').setInputFiles({ name:'self-source.png', mimeType:'image/png', buffer:PNG })
+  await page.locator('#btnStartEdit').click()
+  await page.locator('#stateEditor.active').waitFor({ timeout:10000 })
+  await page.evaluate(() => {
+    const block = 'x'.repeat(100 * 1024)
+    for (let index = 0; index < 80; index += 1) {
+      try { localStorage.setItem(`mowo_test_quota_${index}`, block) } catch { break }
+    }
+  })
+  await page.getByRole('button', { name:/下一步/ }).click()
+  await page.waitForURL(/customize-confirm\.html/, { timeout:20000 })
+  if (!new URL(page.url()).searchParams.get('requestId')) throw new Error('选款式网址没有携带云端草稿编号')
+  console.log('PASS customer self-screened image reaches style selection when browser storage is full')
+  await page.evaluate(() => Object.keys(localStorage).filter(key => key.startsWith('mowo_test_quota_')).forEach(key => localStorage.removeItem(key)))
+
   await page.setViewportSize({ width:390, height:844 })
   await page.goto(`${webBase}/my-customizations.html`, { waitUntil:'networkidle' })
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1)

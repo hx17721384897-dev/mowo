@@ -744,14 +744,18 @@ let _reuseOldFrames     = false; // 用户选择"复用上次的动画"
    初始化（从API加载SKU数据）
 ══════════════════════════════ */
 (async function init() {
+  const route = new URLSearchParams(location.search);
   // 从 localStorage 读取上一步的数据
   let meta = {};
   try { meta = JSON.parse(localStorage.getItem('mowo_customize_meta') || '{}'); } catch(e) {}
 
-  SEL.modelId      = meta.modelId      || null;
-  SEL.modelName    = meta.name         || '动画机';
-  SEL.frameCount   = meta.frameCount   || 0;
-  SEL.validTargets = meta.validTargets || [];
+  SEL.modelId      = route.get('modelId') || meta.modelId || meta.id || null;
+  SEL.modelName    = route.get('modelName') || meta.name || '动画机';
+  SEL.frameCount   = Number(route.get('frames') || meta.frameCount || 0);
+  const routeTargets = String(route.get('targets') || '').split(',').map(Number).filter(value => Number.isInteger(value) && value > 0);
+  SEL.validTargets = routeTargets.length
+    ? routeTargets
+    : (Array.isArray(meta.validTargets) ? meta.validTargets.map(Number).filter(Number.isFinite) : []);
 
   // 更新页面标题
   document.getElementById('cardMachineName').textContent = SEL.modelName;
@@ -1289,7 +1293,7 @@ async function submitReview() {
   const token = localStorage.getItem('mowo_token');
   if (!token) { if (typeof openAuthModal === 'function') openAuthModal(); return; }
   const humanRequestId = new URLSearchParams(location.search).get('humanRequestId') || localStorage.getItem('mowo_customize_human_request_id');
-  const draftId = localStorage.getItem('mowo_customize_request_draft_id');
+  const draftId = new URLSearchParams(location.search).get('requestId') || localStorage.getItem('mowo_customize_request_draft_id');
   if (!humanRequestId && !draftId) {
     alert('没有找到本次定制草稿，请返回上传页面重新提交素材');
     return;
@@ -1332,6 +1336,8 @@ async function submitReview() {
     localStorage.removeItem('mowo_customize_request_draft_id');
     localStorage.removeItem('mowo_customize_request_draft_key');
     localStorage.removeItem('mowo_customize_request_draft_owner');
+    sessionStorage.removeItem('mowo_customize_request_draft_key');
+    sessionStorage.removeItem('mowo_customize_request_draft_owner');
     location.href = `my-customizations.html?submitted=${encodeURIComponent(result.data.requestNo)}`;
   } catch (error) {
     alert('提交失败：' + (error.message || '请稍后重试'));
