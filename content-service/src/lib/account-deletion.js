@@ -5,7 +5,7 @@ const OPEN_AFTERSALE_STATUSES = ['pending', 'approved']
 const OPEN_WITHDRAWAL_STATUSES = ['pending', 'processing', 'failed']
 const OPEN_SETTLEMENT_STATUSES = ['pending', 'failed']
 const OPEN_REVENUE_STATUSES = ['estimated', 'cooling', 'available']
-const ACTIVE_CUSTOMIZATION_STATUSES = ['SUBMITTED', 'REVIEWING', 'NEEDS_SUPPLEMENT', 'OPTIONS_READY', 'CONFIRMED']
+const ACTIVE_CUSTOMIZATION_STATUSES = ['SUBMITTED', 'REVIEWING', 'NEEDS_SUPPLEMENT', 'OPTIONS_READY', 'FRAME_ACCEPTED', 'STYLE_SELECTED', 'CONFIRMED']
 const PROTECTED_FILE_LINKS = new Set(['AFTERSALE_REQUEST', 'CUSTOMIZE_ORDER', 'CONTRACT', 'FRAME_PACK'])
 
 function blocker(code, message, count = 1) {

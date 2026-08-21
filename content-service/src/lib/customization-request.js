@@ -39,7 +39,9 @@ export function customizationStatusLabel(status) {
     SUBMITTED: '等待处理',
     REVIEWING: '正在处理',
     NEEDS_SUPPLEMENT: '需要补充素材',
-    OPTIONS_READY: '待确认方案',
+    OPTIONS_READY: '待确认筛帧',
+    FRAME_ACCEPTED: '筛帧已确认，请选款式',
+    STYLE_SELECTED: '款式已选择，等待最终确认',
     UNAVAILABLE: '暂时无法制作',
     CONFIRMED: '已确认',
     CLOSED: '已关闭'

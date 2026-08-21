@@ -230,6 +230,160 @@ export default async function customizationRequestRoutes(fastify) {
     return reply.send({ success: true, data: { items: await decorateRequests(prisma, items), total, page, hasMore: page * limit < total } })
   })
 
+  // 用户查看工作人员最新提交的筛帧结果。只返回该申请名下的私密帧图。
+  fastify.get('/mine/:id/frame-selection', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const item = await prisma.customizationRequest.findUnique({ where: { id: request.params.id } })
+    if (!item) return reply.code(404).send({ success: false, message: '定制记录不存在' })
+    if (item.userId !== request.user.userId) return reply.code(403).send({ success: false, message: '无权查看该筛帧结果' })
+    if (!['OPTIONS_READY', 'FRAME_ACCEPTED', 'STYLE_SELECTED'].includes(item.status)) {
+      return reply.code(409).send({ success: false, message: '工作人员尚未提交可确认的筛帧结果' })
+    }
+
+    const selection = await prisma.customizationFrameSelection.findFirst({
+      where: { requestId: item.id, status: { in: ['SUBMITTED', 'ACCEPTED'] } },
+      orderBy: { version: 'desc' }
+    })
+    if (!selection) return reply.code(404).send({ success: false, message: '筛帧结果不存在或已被新版本替换' })
+    const frameKeys = Array.isArray(selection.selectedFrameKeys) ? selection.selectedFrameKeys : []
+    const files = frameKeys.length ? await prisma.privateFile.findMany({ where: {
+      objectKey: { in: frameKeys }, ownerUserId: item.userId,
+      purpose: FILE_PURPOSE.CUSTOMIZATION_FRAME, status: 'READY',
+      linkedResourceType: 'CUSTOMIZATION_FRAME_SELECTION', linkedResourceId: selection.id
+    } }) : []
+    if (files.length !== frameKeys.length) {
+      return reply.code(409).send({ success: false, message: '筛帧文件不完整，请联系工作人员重新提交' })
+    }
+    const fileMap = new Map(files.map(file => [file.objectKey, file]))
+    const frames = frameKeys.map(key => {
+      const file = fileMap.get(key)
+      const signed = fastify.storagePresignGet(key, 1800)
+      return {
+        key,
+        filename: file.originalName,
+        mimeType: file.detectedMimeType || file.declaredMimeType,
+        url: signed.startsWith('/') ? `${request.protocol}://${request.headers.host}${signed}` : signed,
+        expiresIn: 1800
+      }
+    })
+    const model = item.machineModelId ? await prisma.machineModel.findUnique({
+      where: { id: item.machineModelId },
+      select: { id: true, name: true, ratios: true, frameOptions: true, sizes: true, modelType: true, isActive: true }
+    }) : null
+    return reply.send({ success: true, data: {
+      request: {
+        id: item.id, requestNo: item.requestNo, status: item.status,
+        customProductId: item.customProductId, machineModelId: item.machineModelId, desiredSkuId: item.desiredSkuId
+      },
+      selection: {
+        id: selection.id, version: selection.version, status: selection.status,
+        staffMessage: selection.staffMessage, editorData: selection.editorData,
+        submittedAt: selection.submittedAt, frames
+      },
+      model
+    } })
+  })
+
+  fastify.post('/mine/:id/frame-selection/accept', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const item = await prisma.customizationRequest.findUnique({ where: { id: request.params.id } })
+    if (!item) return reply.code(404).send({ success: false, message: '定制记录不存在' })
+    if (item.userId !== request.user.userId) return reply.code(403).send({ success: false, message: '无权确认该筛帧结果' })
+    if (['FRAME_ACCEPTED', 'STYLE_SELECTED'].includes(item.status)) {
+      return reply.send({ success: true, data: item, reused: true })
+    }
+    if (item.status !== 'OPTIONS_READY') {
+      return reply.code(409).send({ success: false, message: '当前没有待确认的筛帧结果' })
+    }
+    const selection = await prisma.customizationFrameSelection.findFirst({
+      where: { requestId: item.id, status: 'SUBMITTED' }, orderBy: { version: 'desc' }
+    })
+    if (!selection) return reply.code(409).send({ success: false, message: '当前筛帧结果已失效，请刷新后重试' })
+    const updated = await prisma.$transaction(async tx => {
+      const accepted = await tx.customizationFrameSelection.updateMany({
+        where: { id: selection.id, status: 'SUBMITTED' }, data: { status: 'ACCEPTED', respondedAt: new Date() }
+      })
+      if (accepted.count !== 1) return null
+      const changed = await tx.customizationRequest.updateMany({
+        where: { id: item.id, status: 'OPTIONS_READY' }, data: { status: 'FRAME_ACCEPTED', version: { increment: 1 } }
+      })
+      if (changed.count !== 1) throw new Error('定制申请状态已变化')
+      await tx.customizationRequestEvent.create({ data: {
+        requestId: item.id, actorUserId: item.userId, actorType: 'USER', eventType: 'FRAME_SELECTION_ACCEPTED',
+        fromStatus: 'OPTIONS_READY', toStatus: 'FRAME_ACCEPTED', publicMessage: '您已确认筛帧结果，请继续选择款式'
+      } })
+      return tx.customizationRequest.findUnique({ where: { id: item.id } })
+    })
+    if (!updated) {
+      const current = await prisma.customizationRequest.findUnique({ where: { id: item.id } })
+      if (current && ['FRAME_ACCEPTED', 'STYLE_SELECTED'].includes(current.status)) return reply.send({ success: true, data: current, reused: true })
+      return reply.code(409).send({ success: false, message: '筛帧结果状态已变化，请刷新后重试' })
+    }
+    return reply.send({ success: true, data: updated })
+  })
+
+  fastify.post('/mine/:id/frame-selection/revision', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const item = await prisma.customizationRequest.findUnique({ where: { id: request.params.id } })
+    if (!item) return reply.code(404).send({ success: false, message: '定制记录不存在' })
+    if (item.userId !== request.user.userId) return reply.code(403).send({ success: false, message: '无权反馈该筛帧结果' })
+    if (item.status !== 'OPTIONS_READY') return reply.code(409).send({ success: false, message: '当前结果不能再提交调整意见' })
+    const message = text(request.body?.message, 1000)
+    if (!message) return reply.code(400).send({ success: false, message: '请填写需要调整的内容' })
+    const selection = await prisma.customizationFrameSelection.findFirst({
+      where: { requestId: item.id, status: 'SUBMITTED' }, orderBy: { version: 'desc' }
+    })
+    if (!selection) return reply.code(409).send({ success: false, message: '当前筛帧结果已失效，请刷新后重试' })
+    const updated = await prisma.$transaction(async tx => {
+      const revised = await tx.customizationFrameSelection.updateMany({
+        where: { id: selection.id, status: 'SUBMITTED' }, data: { status: 'REVISION_REQUESTED', respondedAt: new Date() }
+      })
+      if (revised.count !== 1) return null
+      const changed = await tx.customizationRequest.updateMany({ where: { id: item.id, status: 'OPTIONS_READY' }, data: {
+        status: 'SUBMITTED', assignedStaffId: null, claimedAt: null, lockExpiresAt: null,
+        staffDraftData: undefined, staffDraftUpdatedAt: null, version: { increment: 1 }
+      } })
+      if (changed.count !== 1) throw new Error('定制申请状态已变化')
+      await tx.customizationRequestEvent.create({ data: {
+        requestId: item.id, actorUserId: item.userId, actorType: 'USER', eventType: 'FRAME_SELECTION_REVISION_REQUESTED',
+        fromStatus: 'OPTIONS_READY', toStatus: 'SUBMITTED', publicMessage: `您提出了筛帧调整：${message}`
+      } })
+      return tx.customizationRequest.findUnique({ where: { id: item.id } })
+    })
+    if (!updated) return reply.code(409).send({ success: false, message: '筛帧结果状态已变化，请刷新后重试' })
+    return reply.send({ success: true, data: updated })
+  })
+
+  fastify.post('/mine/:id/choose-sku', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const item = await prisma.customizationRequest.findUnique({ where: { id: request.params.id } })
+    if (!item) return reply.code(404).send({ success: false, message: '定制记录不存在' })
+    if (item.userId !== request.user.userId) return reply.code(403).send({ success: false, message: '无权选择该定制的款式' })
+    if (item.status === 'STYLE_SELECTED' && item.desiredSkuId === request.body?.desiredSkuId) {
+      return reply.send({ success: true, data: item, reused: true })
+    }
+    if (item.status !== 'FRAME_ACCEPTED') return reply.code(409).send({ success: false, message: '请先确认工作人员筛选的帧图' })
+    const selection = await validateModelAndSku(prisma, item.machineModelId, request.body?.desiredSkuId)
+    if (selection.error) return reply.code(400).send({ success: false, message: selection.error })
+    const updated = await prisma.$transaction(async tx => {
+      const changed = await tx.customizationRequest.updateMany({ where: { id: item.id, status: 'FRAME_ACCEPTED' }, data: {
+        desiredSkuId: request.body.desiredSkuId, status: 'STYLE_SELECTED', version: { increment: 1 },
+        userNote: text(request.body?.userNote, 1000) || item.userNote,
+        editorData: request.body?.editorData || item.editorData || undefined
+      } })
+      if (changed.count !== 1) return null
+      await tx.customizationRequestEvent.create({ data: {
+        requestId: item.id, actorUserId: item.userId, actorType: 'USER', eventType: 'STYLE_SELECTED',
+        fromStatus: 'FRAME_ACCEPTED', toStatus: 'STYLE_SELECTED', publicMessage: '您已选择款式，等待工作人员确认最终制作方案和价格'
+      } })
+      return tx.customizationRequest.findUnique({ where: { id: item.id } })
+    })
+    if (!updated) {
+      const current = await prisma.customizationRequest.findUnique({ where: { id: item.id } })
+      if (current?.status === 'STYLE_SELECTED' && current.desiredSkuId === request.body?.desiredSkuId) {
+        return reply.send({ success: true, data: current, reused: true })
+      }
+      return reply.code(409).send({ success: false, message: '定制申请状态已变化，请刷新后重试' })
+    }
+    return reply.send({ success: true, data: updated })
+  })
+
   fastify.get('/mine/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const item = await prisma.customizationRequest.findUnique({
       where: { id: request.params.id }, include: { events: { orderBy: { createdAt: 'asc' } } }

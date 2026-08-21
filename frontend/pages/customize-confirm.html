@@ -1288,8 +1288,9 @@ async function _createCustomProducts(token, frameSources) {
 async function submitReview() {
   const token = localStorage.getItem('mowo_token');
   if (!token) { if (typeof openAuthModal === 'function') openAuthModal(); return; }
+  const humanRequestId = new URLSearchParams(location.search).get('humanRequestId') || localStorage.getItem('mowo_customize_human_request_id');
   const draftId = localStorage.getItem('mowo_customize_request_draft_id');
-  if (!draftId) {
+  if (!humanRequestId && !draftId) {
     alert('没有找到本次定制草稿，请返回上传页面重新提交素材');
     return;
   }
@@ -1307,7 +1308,10 @@ async function submitReview() {
   button.disabled = true;
   button.textContent = '正在提交';
   try {
-    const response = await fetch(`${MOWO_API}/api/customization-requests/${encodeURIComponent(draftId)}/submit`, {
+    const endpoint = humanRequestId
+      ? `${MOWO_API}/api/customization-requests/mine/${encodeURIComponent(humanRequestId)}/choose-sku`
+      : `${MOWO_API}/api/customization-requests/${encodeURIComponent(draftId)}/submit`;
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({
@@ -1324,6 +1328,7 @@ async function submitReview() {
     });
     const result = await response.json();
     if (!response.ok || !result.success) throw new Error(result.message || '提交失败');
+    localStorage.removeItem('mowo_customize_human_request_id');
     localStorage.removeItem('mowo_customize_request_draft_id');
     localStorage.removeItem('mowo_customize_request_draft_key');
     localStorage.removeItem('mowo_customize_request_draft_owner');

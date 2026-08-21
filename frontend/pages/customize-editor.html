@@ -1315,7 +1315,7 @@ async function submitHumanRequest() {
 async function checkQuotaBeforeUpload() {
   /* 重新编辑已有动画时不受配额限制 */
   const params = new URLSearchParams(location.search);
-  if (params.get('editId') || params.get('productId')) return true;
+  if (params.get('editId') || params.get('productId') || params.get('adminRequestId') || params.get('reviewRequestId')) return true;
 
   const token = localStorage.getItem('mowo_token');
   if (!token) return true; /* 未登录，让后续步骤兜底 */
@@ -1384,7 +1384,7 @@ function handleFiles(files) {
         ratioActual: result.actual || null,
         ratioSuggested: result.suggested || allowedRatios.join(' 或 ')
       };
-      if (result.ok) proceed();
+      if (result.ok || new URLSearchParams(location.search).get('adminRequestId')) proceed();
       else showRatioWarning(result.actual, result.suggested, proceed);
     });
   });
@@ -1837,6 +1837,7 @@ function initEditor(urls) {
   buildThumbs();
   updateAll();
   goState(S.EDIT);
+  window.MowoCustomizationReview?.onEditorReady?.();
   setTimeout(showFirstHint, 800);
 }
 
@@ -1848,6 +1849,7 @@ function initEditorWithChecked(urls, checkedArr) {
   frames.forEach((_, i) => setThumbState(i));
   updateAll();
   goState(S.EDIT);
+  window.MowoCustomizationReview?.onEditorReady?.();
   setTimeout(showFirstHint, 800);
 }
 
@@ -2285,6 +2287,11 @@ document.getElementById('btnNextStep').addEventListener('click', async ()=>{
   const validTargets = allowedFrames.filter(f => f >= cnt && cnt > 0 && f % cnt === 0);
   if (!validTargets.length) return;
 
+  if (window.MowoCustomizationReview?.active) {
+    await window.MowoCustomizationReview.handleNext({ selectedIndexes:cl, selectedUrls:cl.map(i => frames[i]), frameCount:cnt, validTargets });
+    return;
+  }
+
   /* ── Creator 模式：保存到动画作品库后跳回 ── */
   const urlParams  = new URLSearchParams(location.search);
   const editorMode = urlParams.get('mode');
@@ -2418,7 +2425,13 @@ document.getElementById('btnNextStep').addEventListener('click', async ()=>{
   location.href = `customize-confirm.html?type=${machineType}&frames=${cnt}&targets=${validTargets.join(',')}`;
 });
 
-function goReupload() { goState(S.UPLOAD); }
+function goReupload() {
+  if (window.MowoCustomizationReview?.active) {
+    window.MowoCustomizationReview.handleBack();
+    return;
+  }
+  goState(S.UPLOAD);
+}
 
 /* ══════════════
    键盘快捷键
@@ -2475,6 +2488,7 @@ if (window.matchMedia('(pointer:fine)').matches) {
   });
 }
 </script>
+<script src="../js/customization-review-editor.js?v=20260821"></script>
 <script src="../js/auth.js"></script>
 </body>
 </html>

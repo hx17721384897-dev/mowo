@@ -194,6 +194,77 @@ try {
   }
   assertStatus('authorized signed source downloads', (await fetch(detail.sourceFiles[0].url)).status, 200)
 
+  assertStatus('support cannot claim frame task', (await request(`/api/admin/customization-requests/${manual.id}/claim`, support.token, {
+    method: 'POST'
+  })).status, 403)
+  assertStatus('production claims frame task', (await request(`/api/admin/customization-requests/${manual.id}/claim`, production.token, {
+    method: 'POST'
+  })).status, 200)
+  assertStatus('second staff cannot take active frame task', (await request(`/api/admin/customization-requests/${manual.id}/claim`, owner.token, {
+    method: 'POST'
+  })).status, 409)
+
+  const staffFrameV1 = await upload(production, 'CUSTOMIZATION_FRAME', 'staff-frame-v1.png')
+  const selectionV1Response = await request(`/api/admin/customization-requests/${manual.id}/frame-selections`, production.token, {
+    method: 'POST', body: JSON.stringify({
+      frameKeys: [staffFrameV1], editorData: { selectedIndexes: [0], frameCount: 1 },
+      staffMessage: '第一版筛帧结果', internalNote: '自动测试内部备注'
+    })
+  })
+  assertStatus('production submits first frame selection', selectionV1Response.status, 200)
+  const selectionV1 = (await selectionV1Response.json()).data
+  if (selectionV1.request.status !== 'OPTIONS_READY' || selectionV1.selection.version !== 1) {
+    throw new Error('first staff frame selection did not enter user confirmation')
+  }
+  assertStatus('other customer cannot see selected frames', (await request(`/api/customization-requests/mine/${manual.id}/frame-selection`, other.token)).status, 403)
+  const userSelectionV1Response = await request(`/api/customization-requests/mine/${manual.id}/frame-selection`, customer.token)
+  assertStatus('customer sees first selected-frame version', userSelectionV1Response.status, 200)
+  const userSelectionV1 = (await userSelectionV1Response.json()).data
+  if (userSelectionV1.selection.frames.length !== 1 || userSelectionV1.selection.staffMessage !== '第一版筛帧结果') {
+    throw new Error('customer did not receive the exact staff selection')
+  }
+  assertStatus('customer requests frame adjustment', (await request(`/api/customization-requests/mine/${manual.id}/frame-selection/revision`, customer.token, {
+    method: 'POST', body: JSON.stringify({ message: '希望更换动作画面' })
+  })).status, 200)
+  assertStatus('production reclaims revised task', (await request(`/api/admin/customization-requests/${manual.id}/claim`, production.token, {
+    method: 'POST'
+  })).status, 200)
+
+  const staffFrameV2 = await upload(production, 'CUSTOMIZATION_FRAME', 'staff-frame-v2.png')
+  const selectionV2Response = await request(`/api/admin/customization-requests/${manual.id}/frame-selections`, production.token, {
+    method: 'POST', body: JSON.stringify({
+      frameKeys: [staffFrameV2], editorData: { selectedIndexes: [0], frameCount: 1 },
+      staffMessage: '已按反馈更换画面'
+    })
+  })
+  assertStatus('production submits second frame selection', selectionV2Response.status, 200)
+  const selectionV2 = (await selectionV2Response.json()).data
+  if (selectionV2.selection.version !== 2) throw new Error('frame selection history did not create version 2')
+  const selectionHistory = await prisma.customizationFrameSelection.findMany({ where: { requestId: manual.id }, orderBy: { version: 'asc' } })
+  if (selectionHistory.length !== 2 || selectionHistory[0].status !== 'REVISION_REQUESTED' || selectionHistory[1].status !== 'SUBMITTED') {
+    throw new Error('frame selection version history was overwritten or has invalid status')
+  }
+  console.log('PASS staff selection keeps immutable version history')
+
+  const transferredFrame = await prisma.privateFile.findUnique({ where: { objectKey: staffFrameV2 } })
+  if (transferredFrame?.ownerUserId !== customer.id || transferredFrame.linkedResourceId !== selectionV2.selection.id) {
+    throw new Error('submitted staff frame was not securely transferred to the customer request')
+  }
+  console.log('PASS selected frames transfer to customer ownership and request binding')
+  const acceptResponses = await Promise.all([1, 2].map(() => request(`/api/customization-requests/mine/${manual.id}/frame-selection/accept`, customer.token, {
+    method: 'POST'
+  })))
+  acceptResponses.forEach((response, index) => assertStatus(`customer concurrent frame accept ${index + 1}`, response.status, 200))
+  const chooseResponses = await Promise.all([1, 2].map(() => request(`/api/customization-requests/mine/${manual.id}/choose-sku`, customer.token, {
+    method: 'POST', body: JSON.stringify({ desiredSkuId: skuId, userNote: '筛帧与款式均已确认' })
+  })))
+  chooseResponses.forEach((response, index) => assertStatus(`customer concurrent style choice ${index + 1}`, response.status, 200))
+  const completedManual = await prisma.customizationRequest.findUnique({ where: { id: manual.id } })
+  if (completedManual?.status !== 'STYLE_SELECTED' || completedManual.desiredSkuId !== skuId) {
+    throw new Error('accepted manual request did not advance to selected style')
+  }
+  console.log('PASS manual screening advances to style selection without creating a duplicate request')
+
   const blockers = await getAccountDeletionBlockers(prisma, customer.id)
   if (!blockers.some(item => item.code === 'ACTIVE_CUSTOMIZATION_REQUESTS')) {
     throw new Error('active customization did not block account deletion')

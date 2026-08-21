@@ -33,7 +33,7 @@
 | 库存与生产 | SkuInventory、InventoryLog、AuthCode、PlatformSkuMapping、ProductionBatch、BatchItem、FrameInstance、InventorySnapshot、OrderItemBinding、ChannelQuota、OperationLog |
 | 帧包与材料 | CollabFramePack、FramePackWork、FramePackVariant、FramePackLog、MaterialItem、MaterialLog、MaterialSkuBinding |
 | 联络 | ContactSubmission |
-| 新购物车与定制申请 | Cart、CartItem、CustomProduct、CustomizationRequest、CustomizationRequestEvent、PreOrder、UserAddress、ContentQuota |
+| 新购物车与定制申请 | Cart、CartItem、CustomProduct、CustomizationRequest、CustomizationRequestEvent、CustomizationFrameSelection、PreOrder、UserAddress、ContentQuota |
 
 完整字段和关系仍以 Schema 为准；各业务语义见对应模块文档。此处不复制 77 张表的全部字段，避免再次产生一份难以同步的 Schema 镜像。
 
@@ -45,8 +45,9 @@
 | `consent_records` | 分别记录用户协议和隐私政策的同意证据 | 保存用户、类型、版本、场景、时间、IP、User-Agent；注销和法定保存规则需随正式政策确定 |
 | `customization_requests` | 定制草稿和正式申请；与订单/生产分开 | 草稿 7 天清理；正式处理中阻止注销；公开编号只在提交后生成 |
 | `customization_request_events` | 定制申请追加式状态时间线 | 分开用户说明与内部说明；申请删除时级联，操作者注销时置空 |
+| `customization_frame_selections` | 员工正式提交的筛帧版本 | 版本只追加不覆盖；公开说明与内部备注分离；帧文件绑定具体版本 |
 
-本轮没有对现有库执行 `prisma migrate deploy`。由于历史迁移账本不完整，该命令可能应用超出本轮范围的旧迁移；只执行了已核验且使用 `IF NOT EXISTS` 的单个增量 SQL。完整基线仍是发布阻断项。
+本地库已单独执行人工筛帧增量迁移 `20260820210000_add_staff_frame_selection`。没有执行全量 `prisma migrate deploy`；由于历史迁移账本不完整，该命令可能应用超出本轮范围的旧迁移。完整基线仍是发布阻断项。
 
 ## 迁移缺口
 

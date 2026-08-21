@@ -120,6 +120,8 @@ model User {
   deletionRequest       AccountDeletionRequest?
   customizationRequests CustomizationRequest[]      @relation("CustomizationRequester")
   customizationEvents   CustomizationRequestEvent[] @relation("CustomizationEventActor")
+  assignedCustomizationRequests CustomizationRequest[]       @relation("CustomizationAssignee")
+  customizationFrameSelections CustomizationFrameSelection[] @relation("CustomizationFrameSelectionStaff")
 
   @@map("users")
 }
@@ -1644,17 +1646,49 @@ model CustomizationRequest {
   creatorDeclared       Boolean   @default(false) @map("creator_declared")
   copyrightConfirmed    Boolean   @default(false) @map("copyright_confirmed")
   cooperationInterested Boolean   @default(false) @map("cooperation_interested")
+  assignedStaffId       String?   @map("assigned_staff_id")
+  claimedAt             DateTime? @map("claimed_at")
+  lockExpiresAt         DateTime? @map("lock_expires_at")
+  staffDraftData        Json?     @map("staff_draft_data")
+  staffDraftUpdatedAt   DateTime? @map("staff_draft_updated_at")
   submittedAt           DateTime? @map("submitted_at")
   createdAt             DateTime  @default(now()) @map("created_at")
   updatedAt             DateTime  @updatedAt @map("updated_at")
 
   user   User                        @relation("CustomizationRequester", fields: [userId], references: [id])
+  assignedStaff User?                @relation("CustomizationAssignee", fields: [assignedStaffId], references: [id], onDelete: SetNull)
   events CustomizationRequestEvent[]
+  frameSelections CustomizationFrameSelection[]
 
   @@index([userId, status, createdAt])
   @@index([status, submittedAt])
   @@index([machineModelId])
+  @@index([assignedStaffId, status])
   @@map("customization_requests")
+}
+
+// 工作人员每次正式提交的筛帧结果。新版本追加保存，不覆盖旧结果。
+model CustomizationFrameSelection {
+  id               String    @id @default(uuid())
+  requestId        String    @map("request_id")
+  version          Int
+  selectedFrameKeys Json     @map("selected_frame_keys")
+  editorData       Json?     @map("editor_data")
+  staffMessage     String?   @map("staff_message") @db.Text
+  internalNote     String?   @map("internal_note") @db.Text
+  status           String    @default("SUBMITTED") @db.VarChar(30)
+  createdByStaffId String?   @map("created_by_staff_id")
+  submittedAt      DateTime  @default(now()) @map("submitted_at")
+  respondedAt      DateTime? @map("responded_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  request CustomizationRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  createdByStaff User? @relation("CustomizationFrameSelectionStaff", fields: [createdByStaffId], references: [id], onDelete: SetNull)
+
+  @@unique([requestId, version])
+  @@index([requestId, status, createdAt])
+  @@index([createdByStaffId, createdAt])
+  @@map("customization_frame_selections")
 }
 
 // 定制申请的追加式时间线。业务状态改变时新增记录，不覆盖历史。

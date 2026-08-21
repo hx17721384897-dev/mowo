@@ -1,0 +1,142 @@
+import fs from 'node:fs/promises'
+import { chromium } from 'file:///C:/Users/25839/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs'
+import { PrismaClient } from '@prisma/client'
+
+const prisma = new PrismaClient()
+const apiBase = process.env.TEST_API_BASE || 'http://127.0.0.1:3001'
+const webBase = process.env.TEST_WEB_BASE || 'http://127.0.0.1:5500/mowo/frontend/pages'
+const runId = String(Date.now()).slice(-7)
+const userIds = []
+const phones = []
+const objectKeys = []
+let modelId = null
+let skuId = null
+let browser
+
+const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+X7S0WQAAAABJRU5ErkJggg==', 'base64')
+
+async function api(path, token, options = {}) {
+  return fetch(`${apiBase}${path}`, {
+    ...options,
+    headers: {
+      ...(options.body ? { 'Content-Type':'application/json' } : {}),
+      ...(token ? { Authorization:`Bearer ${token}` } : {}),
+      ...(options.headers || {})
+    }
+  })
+}
+
+async function createUser(label, index, staffRole = null, role = 0) {
+  const phone = `196${runId}${index}`
+  const user = await prisma.user.create({ data: {
+    phone, role, staffRole, privacyAgreedAt:new Date(), privacyPolicyVersion:'custom-ui-test',
+    profile:{ create:{ nickname:`ui-${label}-${runId}` } }, creditScore:{ create:{ score:100 } }
+  } })
+  userIds.push(user.id)
+  phones.push(phone)
+  await prisma.smsCode.create({ data:{ userId:user.id, phone, code:'123456', purpose:'LOGIN', expiresAt:new Date(Date.now() + 300000) } })
+  const response = await api('/api/v1/auth/sms/verify', null, { method:'POST', body:JSON.stringify({ phone, code:'123456', mode:'LOGIN' }) })
+  const result = await response.json()
+  if (!response.ok || !result.success) throw new Error(`${label} 登录准备失败`)
+  return { ...user, token:result.data.accessToken }
+}
+
+async function upload(user, purpose, name) {
+  const initResponse = await api('/api/upload/presign', user.token, {
+    method:'POST', body:JSON.stringify({ purpose, fileName:name, fileType:'image/png', fileSize:PNG.length })
+  })
+  const init = await initResponse.json()
+  if (!initResponse.ok || !init.success) throw new Error(init.message || '测试素材登记失败')
+  objectKeys.push(init.data.objectKey)
+  const put = await fetch(init.data.uploadUrl, { method:'PUT', headers:{ 'Content-Type':'image/png' }, body:PNG })
+  if (put.status !== 204) throw new Error('测试素材上传失败')
+  const complete = await api(new URL(init.data.completeUrl).pathname, user.token, { method:'POST' })
+  if (!complete.ok) throw new Error('测试素材校验失败')
+  return init.data.objectKey
+}
+
+async function cleanup() {
+  if (browser) await browser.close().catch(() => {})
+  if (userIds.length) {
+    await prisma.operationLog.deleteMany({ where:{ userId:{ in:userIds } } })
+    await prisma.auditLog.deleteMany({ where:{ userId:{ in:userIds } } })
+    await prisma.customizationRequestEvent.deleteMany({ where:{ OR:[{ actorUserId:{ in:userIds } }, { request:{ userId:{ in:userIds } } }] } })
+    await prisma.customizationRequest.deleteMany({ where:{ userId:{ in:userIds } } })
+    await prisma.customProduct.deleteMany({ where:{ userId:{ in:userIds } } })
+    await prisma.privateFile.deleteMany({ where:{ OR:[{ ownerUserId:{ in:userIds } }, { objectKey:{ in:objectKeys } }] } })
+    await prisma.refreshToken.deleteMany({ where:{ userId:{ in:userIds } } })
+    await prisma.smsCode.deleteMany({ where:{ phone:{ in:phones } } })
+    await prisma.creditScore.deleteMany({ where:{ userId:{ in:userIds } } })
+    await prisma.userProfile.deleteMany({ where:{ userId:{ in:userIds } } })
+    await prisma.user.deleteMany({ where:{ id:{ in:userIds } } })
+  }
+  if (skuId) await prisma.machineModelSku.deleteMany({ where:{ id:skuId } })
+  if (modelId) await prisma.machineModel.deleteMany({ where:{ id:modelId } })
+  for (const key of objectKeys) {
+    await fs.rm(new URL(`../storage/private/${key}`, import.meta.url), { force:true }).catch(() => {})
+  }
+  await prisma.$disconnect()
+}
+
+try {
+  const owner = await createUser('owner', 1, 'OWNER', 3)
+  const customer = await createUser('customer', 2)
+  const model = await prisma.machineModel.create({ data:{
+    name:`UI测试款-${runId}`, ratios:'["1:1"]', frameOptions:'[1]', sizes:'["S"]'
+  } })
+  modelId = model.id
+  const sku = await prisma.machineModelSku.create({ data:{
+    modelId, size:'S', material:'TEST', frameCount:1, colorName:`UI测试色-${runId}`, colorHex:'#FFFFFF', price:199
+  } })
+  skuId = sku.id
+  const sourceKey = await upload(customer, 'CUSTOMIZATION_SOURCE', 'ui-source.png')
+  const createResponse = await api('/api/customization-requests', customer.token, {
+    method:'POST', body:JSON.stringify({
+      mode:'HUMAN', machineModelId:modelId, sourceKeys:[sourceKey], clientRequestKey:`ui-${runId}`,
+      userNote:'浏览器自动验收任务', screeningData:{ sourceCount:1 }
+    })
+  })
+  const created = await createResponse.json()
+  if (!createResponse.ok || !created.success) throw new Error(created.message || '人工任务创建失败')
+
+  browser = await chromium.launch({ headless:true, executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe' })
+  let context = await browser.newContext({ viewport:{ width:1440, height:900 } })
+  let page = await context.newPage()
+  const pageErrors = []
+  page.on('pageerror', error => pageErrors.push(error.message))
+  await page.addInitScript(value => localStorage.setItem('mowo_token', value), owner.token)
+  await page.goto(`${webBase}/admin-customization-requests.html`, { waitUntil:'networkidle' })
+  const taskRow = page.locator('.row').filter({ hasText:model.name })
+  await taskRow.getByRole('button', { name:'开始筛帧' }).waitFor({ timeout:10000 })
+  await taskRow.getByRole('button', { name:'开始筛帧' }).click()
+  await page.locator('#stateEditor.active').waitFor({ timeout:15000 })
+  await page.getByRole('button', { name:'提交给用户' }).click()
+  await page.locator('#staffSubmitDialog').waitFor()
+  await page.locator('#staffPublicMessage').fill('浏览器验收筛帧结果')
+  await page.getByRole('button', { name:'确认提交' }).click()
+  await page.waitForURL(/admin-customization-requests\.html/, { timeout:15000 })
+  console.log('PASS admin claims, edits and submits frame result in browser')
+
+  await context.close()
+  context = await browser.newContext({ viewport:{ width:1440, height:900 } })
+  page = await context.newPage()
+  page.on('pageerror', error => pageErrors.push(error.message))
+  await page.addInitScript(value => localStorage.setItem('mowo_token', value), customer.token)
+  await page.goto(`${webBase}/my-customizations.html`, { waitUntil:'networkidle' })
+  await page.getByRole('link', { name:'确认筛帧' }).click()
+  await page.locator('#stateEditor.active').waitFor({ timeout:10000 })
+  await page.getByRole('button', { name:/满意，选择款式/ }).click()
+  await page.waitForURL(/customize-confirm\.html/, { timeout:10000 })
+  console.log('PASS customer previews staff frames and reaches style selection in browser')
+
+  await page.setViewportSize({ width:390, height:844 })
+  await page.goto(`${webBase}/my-customizations.html`, { waitUntil:'networkidle' })
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1)
+  if (overflow) throw new Error('我的定制移动端出现横向溢出')
+  console.log('PASS customer customization list has no mobile horizontal overflow')
+
+  if (pageErrors.length) throw new Error(`浏览器脚本错误：${pageErrors.join(' | ')}`)
+  console.log('Customization browser UI checks passed')
+} finally {
+  await cleanup()
+}
