@@ -58,6 +58,8 @@ async function upload(user, purpose, name) {
 async function cleanup() {
   if (browser) await browser.close().catch(() => {})
   if (userIds.length) {
+    await prisma.cartItem.deleteMany({ where:{ cart:{ userId:{ in:userIds } } } })
+    await prisma.cart.deleteMany({ where:{ userId:{ in:userIds } } })
     await prisma.operationLog.deleteMany({ where:{ userId:{ in:userIds } } })
     await prisma.auditLog.deleteMany({ where:{ userId:{ in:userIds } } })
     await prisma.customizationRequestEvent.deleteMany({ where:{ OR:[{ actorUserId:{ in:userIds } }, { request:{ userId:{ in:userIds } } }] } })
@@ -121,13 +123,28 @@ try {
   context = await browser.newContext({ viewport:{ width:1440, height:900 } })
   page = await context.newPage()
   page.on('pageerror', error => pageErrors.push(error.message))
+  const orderDialogs = []
+  page.on('dialog', async dialog => {
+    orderDialogs.push(dialog.message())
+    await dialog.dismiss()
+  })
   await page.addInitScript(value => localStorage.setItem('mowo_token', value), customer.token)
   await page.goto(`${webBase}/my-customizations.html`, { waitUntil:'networkidle' })
   await page.getByRole('link', { name:'确认筛帧' }).click()
   await page.locator('#stateEditor.active').waitFor({ timeout:10000 })
   await page.getByRole('button', { name:/满意，选择款式/ }).click()
   await page.waitForURL(/customize-confirm\.html/, { timeout:10000 })
-  console.log('PASS customer previews staff frames and reaches style selection in browser')
+  if (await page.locator('.price-card-btns input[type="checkbox"]').count()) throw new Error('私人定制仍显示联名或版权勾选项')
+  if (await page.getByText(/当前金额为参考价格/).count()) throw new Error('私人定制仍显示人工确认价格提示')
+  await page.locator('#frameOptions .opt-btn').first().click()
+  await page.locator('#sizeOptions .opt-btn').first().click()
+  await page.locator('#materialOptions .opt-btn').first().click()
+  await page.locator('#colorOptions .color-opt').first().click()
+  await page.getByRole('button', { name:/提交订单/ }).click()
+  await page.waitForURL(/checkout\.html/, { timeout:20000 }).catch(() => {
+    throw new Error(`提交订单后未进入结算页；停留在 ${page.url()}；页面提示：${orderDialogs.join(' | ') || '无'}`)
+  })
+  console.log('PASS customer previews staff frames and submits the customization directly to checkout')
 
   await page.goto(`${webBase}/customize-editor.html?modelId=${encodeURIComponent(modelId)}`, { waitUntil:'networkidle' })
   await page.evaluate(meta => {

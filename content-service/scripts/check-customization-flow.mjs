@@ -260,10 +260,13 @@ try {
   })))
   chooseResponses.forEach((response, index) => assertStatus(`customer concurrent style choice ${index + 1}`, response.status, 200))
   const completedManual = await prisma.customizationRequest.findUnique({ where: { id: manual.id } })
-  if (completedManual?.status !== 'STYLE_SELECTED' || completedManual.desiredSkuId !== skuId) {
-    throw new Error('accepted manual request did not advance to selected style')
+  if (completedManual?.status !== 'CONFIRMED' || completedManual.desiredSkuId !== skuId) {
+    throw new Error('accepted manual request did not become order-ready')
   }
-  console.log('PASS manual screening advances to style selection without creating a duplicate request')
+  assertStatus('manual screening can enter cart without another review', (await request('/api/cart/add', customer.token, {
+    method: 'POST', body: JSON.stringify({ itemType: 'CUSTOM', contentId: completedManual.customProductId, hardwareSkuId: skuId })
+  })).status, 201)
+  console.log('PASS manual screening advances directly to order checkout without creating a duplicate request')
 
   const blockers = await getAccountDeletionBlockers(prisma, customer.id)
   if (!blockers.some(item => item.code === 'ACTIVE_CUSTOMIZATION_REQUESTS')) {
@@ -273,12 +276,15 @@ try {
 
   const self = await createSelfDraft(customer, 'submit')
   if (self.request.requestNo || self.request.status !== 'DRAFT') throw new Error('cloud draft received a formal number too early')
+  assertStatus('unconfirmed customization cannot enter cart', (await request('/api/cart/add', customer.token, {
+    method: 'POST', body: JSON.stringify({ itemType: 'CUSTOM', contentId: self.product.id, hardwareSkuId: skuId })
+  })).status, 409)
   const submitResponse = await request(`/api/customization-requests/${self.request.id}/submit`, customer.token, {
     method: 'POST', body: JSON.stringify({ desiredSkuId: skuId, userNote: '自己筛选完成' })
   })
   assertStatus('self-screened draft submits', submitResponse.status, 200)
   const submittedSelf = (await submitResponse.json()).data
-  if (!submittedSelf.requestNo || submittedSelf.status !== 'SUBMITTED') throw new Error('self draft was not formally numbered')
+  if (!submittedSelf.requestNo || submittedSelf.status !== 'CONFIRMED') throw new Error('self draft was not directly confirmed for checkout')
   const selfRetry = await request(`/api/customization-requests/${self.request.id}/submit`, customer.token, {
     method: 'POST', body: JSON.stringify({ desiredSkuId: skuId, userNote: '重复提交' })
   })
@@ -293,9 +299,9 @@ try {
   assertStatus('submitted frame draft cannot be deleted', (await request(`/api/custom-products/${self.product.id}`, customer.token, {
     method: 'DELETE'
   })).status, 409)
-  assertStatus('unreviewed customization cannot enter cart', (await request('/api/cart/add', customer.token, {
+  assertStatus('confirmed self customization can enter cart', (await request('/api/cart/add', customer.token, {
     method: 'POST', body: JSON.stringify({ itemType: 'CUSTOM', contentId: self.product.id, hardwareSkuId: skuId })
-  })).status, 409)
+  })).status, 201)
 
   const abandonedKey = await upload(other, 'CUSTOMIZATION_SOURCE', 'abandoned.png')
   await prisma.privateFile.update({ where: { objectKey: abandonedKey }, data: { updatedAt: new Date(Date.now() - 25 * 60 * 60 * 1000) } })
@@ -333,7 +339,7 @@ try {
   ])
   const racedResult = await prisma.customizationRequest.findUnique({ where: { id: raced.request.id } })
   const racedFiles = await prisma.privateFile.findMany({ where: { objectKey: { in: [raced.sourceKey, raced.frameKey] } } })
-  const submittedConsistently = racedResult?.status === 'SUBMITTED' && racedFiles.every(item => item.status === 'READY')
+  const submittedConsistently = racedResult?.status === 'CONFIRMED' && racedFiles.every(item => item.status === 'READY')
   const expiredConsistently = racedResult?.status === 'CLOSED' && racedFiles.every(item => item.status === 'DELETED')
   if (!submittedConsistently && !expiredConsistently) {
     throw new Error(`cleanup/submit race left inconsistent state: ${racedResult?.status}`)

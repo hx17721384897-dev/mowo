@@ -30,7 +30,7 @@
     {
       key: 'customization', label: '定制', icon: '✂',
       items: [
-        { href: 'admin-customization-requests.html', icon: '☷', label: '定制审核' }
+        { href: 'admin-customization-requests.html', icon: '☷', label: '定制处理' }
       ]
     },
     {

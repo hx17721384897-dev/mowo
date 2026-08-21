@@ -6,21 +6,21 @@
 
 用户先选标准潮玩款式，再从两种方式中选择一种：自己在网页筛帧，或上传原素材请工作人员异步筛选。正式提交后系统生成独立定制编号，用户在“我的定制”查看进度，工作人员在后台查看申请与私有素材。
 
-当前已完成“提交、员工人工筛帧、用户播放确认、选择标准 SKU”的闭环。用户要求重新筛帧也会回到员工队列并形成新版本。锁定最终价格、确认可制作性、生成待支付订单仍是下一批，尚不能视为完整交易上线。
+当前已完成“提交、员工人工筛帧、用户播放确认、选择标准 SKU、进入订单结算”的闭环。私人定制使用标准 SKU 的既定价格，不再进入内容审核或等待工作人员重新定价；用户要求重新筛帧时仍会回到员工队列并形成新版本。微信小程序承接订单与真实支付尚未完成，仍不能视为完整交易上线。
 
 ## 三类编号必须分开
 
 | 对象 | 当前标识 | 何时产生 | 用途 |
 |---|---|---|---|
 | 云端草稿 | 数据库内部 UUID；无公开编号 | 自己筛选结果保存时 | 用户暂存，不能作为客服凭证 |
-| 定制申请 | `DZ-YYYYMMDD-XXXXXX` | 用户正式提交时 | 用户与工作人员沟通、查看审核进度 |
-| 订单/生产 | 现有订单号、批次号体系 | 审核后生成订单/进入生产时 | 交易、库存、生产和售后；本批未改 |
+| 定制记录 | `DZ-YYYYMMDD-XXXXXX` | 用户正式提交时 | 关联素材、筛帧结果和后续订单；不是订单号 |
+| 订单/生产 | 现有订单号、批次号体系 | 用户在结算页提交订单/进入生产时 | 交易、库存、生产和售后；与定制编号分开 |
 
 编号尾码使用排除 `0/O/1/I` 的安全随机字符。数据库对定制编号和浏览器草稿键均设唯一约束；生成时最多重试八次。
 
 ## 两条用户流程
 
-上传选择页采用桌面端一屏双入口布局：顶部步骤栏提供“返回选型号”，页面不重复常驻审核说明。自己筛选在最终确认页说明需提交制作审核；人工筛选在实际提交前再次确认会进入人工筛选和制作可行性审核。
+上传选择页采用桌面端一屏双入口布局：顶部步骤栏提供“返回选型号”。自己筛选完成后直接选择标准 SKU 并进入订单；人工筛选入口只代表请工作人员处理画面，不代表联名上架或内容审核。
 
 ### 自己筛选
 
@@ -29,7 +29,7 @@
 3. 选中帧上传为 `CUSTOMIZATION_FRAME`，原始素材上传为 `CUSTOMIZATION_SOURCE`。
 4. `CustomProduct` 保存可继续编辑的帧草稿；`CustomizationRequest` 保存定制业务草稿，此时状态为 `DRAFT`，不生成 `DZ` 编号，也不进入员工队列。
 5. 上传页跳转到选款式页时，通过网址携带款式、帧数、可用帧数和云端草稿 ID；选款式页优先使用这些本次流程参数，避免被浏览器旧缓存干扰。
-6. 用户选定标准 SKU 并提交制作审核后，状态变为 `SUBMITTED`，此时才生成 `DZ` 编号。
+6. 用户选定标准 SKU 并点击“提交订单”后，状态直接变为 `CONFIRMED`，生成 `DZ` 编号并进入结算页，不进入员工审核队列。
 
 ### 请工作人员筛选
 
@@ -41,13 +41,13 @@
 6. 负责人或生产人员从后台领取任务，在现有帧编辑器中完成裁剪、抽帧、去重、排序和播放预览。
 7. 工作人员提交的筛帧结果形成只追加、不覆盖的版本，用户在“我的定制”进入同一编辑器的只读确认模式。
 8. 用户可以选择“需要调整”并说明原因，任务重新排入队列；也可以点击“满意，选择款式”，再选择标准 SKU。
-9. 选完 SKU 后状态停在 `STYLE_SELECTED`，等待后续人工确认制作可行性和最终固定价格；此时不能进入购物车。
+9. 选完 SKU 并点击“提交订单”后状态变为 `CONFIRMED`，按标准 SKU 价格进入结算，不再等待第二次人工审核或重新定价。
 
 ## 创作者与版权
 
-- 人工筛选上传区不再重复要求用户勾选创作者、版权和联名合作选项。
-- 已确认方向：版权提示以后放在用户从创作中心进入定制流程时统一展示；该入口提示尚未在本批实现，上线前必须补齐并确认具体文案。
-- 数据库暂时保留创作者、版权和合作意向字段，便于后续入口提示确定后继续使用；当前人工筛选页面不写入这些意向。
+- 私人定制的上传页和订单确认页均不要求勾选创作者、版权或联名合作选项，也不因这些字段进入内容审核。
+- 创作者希望作品公开成为联名款时，必须从独立联名合作流程申请并接受审核；不得复用私人定制下单按钮表达“申请上架”。
+- 数据库暂时保留创作者、版权和合作意向字段，供未来独立联名入口使用；当前私人定制不写入这些意向。
 - 初期优惠和合作仍由企业微信人工核验；标准优惠形式尚未定案。
 
 ## 状态
@@ -61,9 +61,9 @@
 | `NEEDS_SUPPLEMENT` | 需要用户补充素材 | 预留 |
 | `OPTIONS_READY` | 工作人员已提交筛帧，等待用户播放确认 | 是 |
 | `FRAME_ACCEPTED` | 用户已确认筛帧，等待选择款式 | 是 |
-| `STYLE_SELECTED` | 用户已选择标准 SKU，等待最终制作与价格确认 | 是 |
+| `STYLE_SELECTED` | 旧流程的过渡状态；再次提交可转为 `CONFIRMED` | 仅兼容旧记录 |
 | `UNAVAILABLE` | 当前素材暂时无法制作 | 预留 |
-| `CONFIRMED` | 用户已确认最终方案 | 预留；只有该状态未来可进入购物车 |
+| `CONFIRMED` | 私人定制与标准 SKU 已确认，可以进入购物车和结算 | 是 |
 | `CLOSED` | 已结束或草稿过期 | 7 天草稿清理会产生 |
 
 每次状态变化写入 `customization_request_events` 追加式时间线，不覆盖旧事件。员工内部说明与用户可见说明分字段保存，后续补素材、价格和订单阶段也必须继续遵守这一规则。
@@ -104,7 +104,7 @@
 |---|---|---|
 | Web | `frontend/pages/customize-start.html` | 选择机型 |
 | Web | `frontend/pages/customize-editor.html` | 双入口、浏览器筛帧、原素材提交 |
-| Web | `frontend/pages/customize-confirm.html` | 自己筛选后选 SKU 并正式提交审核 |
+| Web | `frontend/pages/customize-confirm.html` | 选择标准 SKU、提交订单并进入结算 |
 | Web | `frontend/pages/my-customizations.html` | 用户定制列表、状态筛选和时间线 |
 | Web | `frontend/pages/admin-customization-requests.html` | 员工接收列表、详情和素材查看 |
 | 公共脚本 | `frontend/js/private-upload.js` | 私有文件上传；支持原 File/Blob 与帧图 |
@@ -125,16 +125,16 @@
 |---|---|---|---|
 | POST | `/api/customization-requests/draft` | 登录用户 | 保存自己筛选的无编号草稿 |
 | POST | `/api/customization-requests` | 登录用户 | 提交人工筛选申请 |
-| POST | `/api/customization-requests/:id/submit` | 草稿本人 | 正式提交自己筛选草稿并编号 |
+| POST | `/api/customization-requests/:id/submit` | 草稿本人 | 确认自己筛选的定制、编号并开放结算 |
 | GET | `/api/customization-requests/mine` | 登录用户 | 查询自己的定制记录 |
 | GET | `/api/customization-requests/mine/:id` | 记录本人 | 查询自己的详情与时间线 |
 | GET | `/api/customization-requests/mine/:id/frame-selection` | 记录本人 | 读取最新有效筛帧版本和临时帧地址 |
 | POST | `/api/customization-requests/mine/:id/frame-selection/accept` | 记录本人 | 确认工作人员筛帧 |
 | POST | `/api/customization-requests/mine/:id/frame-selection/revision` | 记录本人 | 提出调整意见并重新进入队列 |
-| POST | `/api/customization-requests/mine/:id/choose-sku` | 记录本人 | 筛帧确认后选择标准 SKU |
-| GET | `/api/admin/customization-requests` | 定制审核岗位 | 非草稿队列 |
-| GET | `/api/admin/customization-requests/stats` | 定制审核岗位 | 状态数量 |
-| GET | `/api/admin/customization-requests/:id` | 定制审核岗位 | 脱敏详情与五分钟素材链接 |
+| POST | `/api/customization-requests/mine/:id/choose-sku` | 记录本人 | 人工筛帧确认后选择标准 SKU 并开放结算 |
+| GET | `/api/admin/customization-requests` | 定制处理岗位 | 非草稿记录与人工筛帧队列 |
+| GET | `/api/admin/customization-requests/stats` | 定制处理岗位 | 状态数量 |
+| GET | `/api/admin/customization-requests/:id` | 定制处理岗位 | 脱敏详情与五分钟素材链接 |
 | POST | `/api/admin/customization-requests/claim-next` | 负责人/生产 | 领取最早等待或锁已过期的任务 |
 | POST | `/api/admin/customization-requests/:id/claim` | 负责人/生产 | 领取指定任务 |
 | POST | `/api/admin/customization-requests/:id/heartbeat` | 当前处理人 | 延长 10 分钟编辑锁 |
@@ -144,18 +144,18 @@
 
 ## 当前明确未完成
 
-1. 后台判定不可制作、请求用户补充/替换原素材，以及推荐其他动画或其他适配款式。
-2. 最终制作可行性确认、价格快照、不可随意修改的最终确认记录，以及从 `CONFIRMED` 生成待支付订单。
+1. 人工筛帧遇到素材损坏或无法形成可用画面时，请求用户补充/替换素材的完整界面和通知。
+2. Web 结算订单转入微信小程序、身份绑定和真实支付。
 3. 通知中心提醒、员工超时提醒、任务 SLA 和批量分配。
 4. 恶意文件扫描、正式 OSS、备份恢复和大文件异步处理。
-5. 当前旧 `/api/cart/add` 已拒绝未到 `CONFIRMED` 的定制草稿；`FRAME_ACCEPTED` 和 `STYLE_SELECTED` 也不能绕过最终审核直接购买。
+5. `/api/cart/add` 拒绝尚未由用户确认到 `CONFIRMED` 的定制，并校验用户确实选择过对应 SKU；这是防止伪造订单参数，不是人工内容审核。
 
 人工筛选提交使用浏览器随机提交键，自己筛选使用草稿 ID；网络重试会返回原申请和原编号，不会重复建单。
 
 ## 自动验证
 
-运行 `npm run check:customization-flow`。接口测试会临时创建账号、机型、SKU 和私有素材，验证两种提交方式、任务锁、岗位权限、两版筛帧、文件所有权转移、用户调整/确认、选款式、注销阻断、购物车门槛和自动清理，结束后删除测试数据。
+运行 `npm run check:customization-flow`。接口测试会临时创建账号、机型、SKU 和私有素材，验证两种提交方式、任务锁、岗位权限、两版筛帧、文件所有权转移、用户调整/确认、选款式后直接进入购物车、未确认草稿拦截、注销阻断和自动清理，结束后删除测试数据。
 
-运行 `npm run check:customization-ui`。真实 Edge 浏览器会验证后台领取与提交、用户播放确认并进入选款式页、自己筛选在浏览器存储已满时仍能携带云端草稿 ID 进入选款式页，以及移动端列表无横向溢出；同样会自动清除临时数据。
+运行 `npm run check:customization-ui`。真实 Edge 浏览器会验证后台领取与提交、用户播放确认、私人定制不显示联名/版权勾选和人工改价提示、点击“提交订单”进入结算页、自己筛选在浏览器存储已满时仍能携带云端草稿 ID 进入选款式页，以及移动端列表无横向溢出；同样会自动清除临时数据。
 
 人工验收步骤见 `docs/WEB_CUSTOMIZATION_ACCEPTANCE.md`。

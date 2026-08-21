@@ -170,7 +170,7 @@ export default async function customizationRequestRoutes(fastify) {
     return reply.code(201).send({ success: true, data: created })
   })
 
-  // 自己筛选草稿选择规格后正式提交，编号只在这里生成。
+  // 自己筛选草稿选择规格后直接确认并进入订单结算，编号只在这里生成。
   fastify.post('/:id/submit', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const userId = request.user.userId
     const item = await prisma.customizationRequest.findUnique({ where: { id: request.params.id } })
@@ -193,18 +193,18 @@ export default async function customizationRequestRoutes(fastify) {
     const requestNo = await createCustomizationRequestNo(prisma)
     const updated = await prisma.$transaction(async tx => {
       const changed = await tx.customizationRequest.updateMany({ where: { id: item.id, status: 'DRAFT' }, data: {
-        requestNo, status: 'SUBMITTED', desiredSkuId: body.desiredSkuId,
+        requestNo, status: 'CONFIRMED', desiredSkuId: body.desiredSkuId,
         userNote: text(body.userNote, 1000),
         editorData: body.editorData || item.editorData || undefined,
-        creatorDeclared: body.creatorDeclared === true,
-        copyrightConfirmed: body.copyrightConfirmed === true,
-        cooperationInterested: body.cooperationInterested === true,
+        creatorDeclared: false,
+        copyrightConfirmed: false,
+        cooperationInterested: false,
         submittedAt: new Date()
       } })
       if (changed.count !== 1) return null
       await tx.customizationRequestEvent.create({ data: {
-        requestId: item.id, actorUserId: userId, actorType: 'USER', eventType: 'SUBMITTED',
-        fromStatus: 'DRAFT', toStatus: 'SUBMITTED', publicMessage: '定制需求已提交，等待工作人员处理'
+        requestId: item.id, actorUserId: userId, actorType: 'USER', eventType: 'ORDER_CHECKOUT_READY',
+        fromStatus: 'DRAFT', toStatus: 'CONFIRMED', publicMessage: '定制内容与款式已确认，已进入订单结算'
       } })
       return tx.customizationRequest.findUnique({ where: { id: item.id } })
     })
@@ -355,28 +355,28 @@ export default async function customizationRequestRoutes(fastify) {
     const item = await prisma.customizationRequest.findUnique({ where: { id: request.params.id } })
     if (!item) return reply.code(404).send({ success: false, message: '定制记录不存在' })
     if (item.userId !== request.user.userId) return reply.code(403).send({ success: false, message: '无权选择该定制的款式' })
-    if (item.status === 'STYLE_SELECTED' && item.desiredSkuId === request.body?.desiredSkuId) {
+    if (item.status === 'CONFIRMED' && item.desiredSkuId === request.body?.desiredSkuId) {
       return reply.send({ success: true, data: item, reused: true })
     }
-    if (item.status !== 'FRAME_ACCEPTED') return reply.code(409).send({ success: false, message: '请先确认工作人员筛选的帧图' })
+    if (!['FRAME_ACCEPTED', 'STYLE_SELECTED'].includes(item.status)) return reply.code(409).send({ success: false, message: '请先确认工作人员筛选的帧图' })
     const selection = await validateModelAndSku(prisma, item.machineModelId, request.body?.desiredSkuId)
     if (selection.error) return reply.code(400).send({ success: false, message: selection.error })
     const updated = await prisma.$transaction(async tx => {
-      const changed = await tx.customizationRequest.updateMany({ where: { id: item.id, status: 'FRAME_ACCEPTED' }, data: {
-        desiredSkuId: request.body.desiredSkuId, status: 'STYLE_SELECTED', version: { increment: 1 },
+      const changed = await tx.customizationRequest.updateMany({ where: { id: item.id, status: { in: ['FRAME_ACCEPTED', 'STYLE_SELECTED'] } }, data: {
+        desiredSkuId: request.body.desiredSkuId, status: 'CONFIRMED', version: { increment: 1 },
         userNote: text(request.body?.userNote, 1000) || item.userNote,
         editorData: request.body?.editorData || item.editorData || undefined
       } })
       if (changed.count !== 1) return null
       await tx.customizationRequestEvent.create({ data: {
-        requestId: item.id, actorUserId: item.userId, actorType: 'USER', eventType: 'STYLE_SELECTED',
-        fromStatus: 'FRAME_ACCEPTED', toStatus: 'STYLE_SELECTED', publicMessage: '您已选择款式，等待工作人员确认最终制作方案和价格'
+        requestId: item.id, actorUserId: item.userId, actorType: 'USER', eventType: 'ORDER_CHECKOUT_READY',
+        fromStatus: item.status, toStatus: 'CONFIRMED', publicMessage: '筛帧结果和定制款式已确认，已进入订单结算'
       } })
       return tx.customizationRequest.findUnique({ where: { id: item.id } })
     })
     if (!updated) {
       const current = await prisma.customizationRequest.findUnique({ where: { id: item.id } })
-      if (current?.status === 'STYLE_SELECTED' && current.desiredSkuId === request.body?.desiredSkuId) {
+      if (current?.status === 'CONFIRMED' && current.desiredSkuId === request.body?.desiredSkuId) {
         return reply.send({ success: true, data: current, reused: true })
       }
       return reply.code(409).send({ success: false, message: '定制申请状态已变化，请刷新后重试' })

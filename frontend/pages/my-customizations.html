@@ -36,7 +36,7 @@
 <div class="modal-bg" id="detailModal" onclick="if(event.target===this)closeDetail()"><section class="modal"><div class="modal-head"><div><p class="eyebrow">定制记录</p><h2 class="modal-title" id="detailTitle">—</h2></div><button class="close" onclick="closeDetail()">×</button></div><div class="modal-body" id="detailBody"></div></section></div>
 <script>
 const API=location.hostname==='127.0.0.1'?'http://127.0.0.1:3001':'http://localhost:3001';
-const LABEL={DRAFT:'草稿',EXPIRING:'草稿清理中',SUBMITTED:'等待处理',REVIEWING:'正在处理',NEEDS_SUPPLEMENT:'需要补充素材',OPTIONS_READY:'待确认筛帧',FRAME_ACCEPTED:'筛帧已确认，请选款式',STYLE_SELECTED:'款式已选择，等待最终确认',UNAVAILABLE:'暂时无法制作',CONFIRMED:'已确认',CLOSED:'已关闭'};
+const LABEL={DRAFT:'草稿',EXPIRING:'草稿清理中',SUBMITTED:'等待处理',REVIEWING:'正在处理',NEEDS_SUPPLEMENT:'需要补充素材',OPTIONS_READY:'待确认筛帧',FRAME_ACCEPTED:'筛帧已确认，请选款式',STYLE_SELECTED:'款式已选择，请提交订单',UNAVAILABLE:'暂时无法制作',CONFIRMED:'已进入订单',CLOSED:'已关闭'};
 let items=[],filter='ALL';
 function esc(v){const d=document.createElement('div');d.textContent=String(v??'');return d.innerHTML}
 function statusClass(s){if(['DRAFT','EXPIRING'].includes(s))return's-draft';if(s==='SUBMITTED')return's-wait';if(['REVIEWING','STYLE_SELECTED'].includes(s))return's-work';if(['NEEDS_SUPPLEMENT','OPTIONS_READY','FRAME_ACCEPTED'].includes(s))return's-action';if(s==='CONFIRMED')return's-ok';return's-closed'}

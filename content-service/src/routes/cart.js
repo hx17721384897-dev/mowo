@@ -123,7 +123,7 @@ export default async function cartRoutes(fastify) {
       where: { id: hardwareSkuId },
       include: { model: { select: { name: true } } }
     })
-    if (!sku) return reply.code(404).send({ success: false, message: 'SKU 不存在' })
+    if (!sku || !sku.isActive) return reply.code(404).send({ success: false, message: 'SKU 不存在或已停用' })
 
     let snapshotTitle = ''
     let coverUrl = null
@@ -140,19 +140,22 @@ export default async function cartRoutes(fastify) {
       if (cp.status === 'ordered' || cp.status === 'removed') {
         return reply.code(400).send({ success: false, message: '该草稿已提交，不可再加入购物车' })
       }
-      const approvedRequest = await prisma.customizationRequest.findFirst({
+      const confirmedRequest = await prisma.customizationRequest.findFirst({
         where: {
           userId,
           customProductId: cp.id,
-          status: 'CONFIRMED',
-          OR: [{ desiredSkuId: null }, { desiredSkuId: hardwareSkuId }]
+          status: 'CONFIRMED'
         },
-        select: { id: true }
+        select: { id: true, machineModelId: true, desiredSkuId: true, editorData: true }
       })
-      if (!approvedRequest) {
+      const requestedOptions = Array.isArray(confirmedRequest?.editorData?.requestedOptions)
+        ? confirmedRequest.editorData.requestedOptions
+        : []
+      const skuWasSelected = confirmedRequest?.desiredSkuId === hardwareSkuId || requestedOptions.some(item => item?.skuId === hardwareSkuId)
+      if (!confirmedRequest || confirmedRequest.machineModelId !== sku.modelId || !skuWasSelected) {
         return reply.code(409).send({
           success: false,
-          message: '该定制尚未完成制作审核，请先在“我的定制”中确认工作人员给出的方案'
+          message: '该定制款式尚未确认，请返回定制页面重新选择'
         })
       }
       // 帧数兼容性校验（支持循环补帧：sku.frameCount 必须是 cp.frameCount 的整数倍）

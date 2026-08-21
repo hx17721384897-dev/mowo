@@ -159,8 +159,10 @@
     applyModel(data.model)
     const urls = data.selection.frames.map(frame => frame.url)
     const keys = data.selection.frames.map(frame => frame.key)
-    localStorage.setItem('mowo_customize_frames', JSON.stringify(urls))
+    localStorage.removeItem('mowo_customize_frames')
     localStorage.setItem('mowo_customize_frame_keys', JSON.stringify(keys))
+    const ownerUserId = window.MowoPrivateUpload?.tokenUserId(token) || ''
+    if (ownerUserId) localStorage.setItem('mowo_customize_frame_owner', ownerUserId)
     localStorage.setItem('mowo_customize_human_request_id', reviewRequestId)
     if (data.request.customProductId) localStorage.setItem('mowo_customize_draft_id', data.request.customProductId)
     const meta = JSON.parse(localStorage.getItem('mowo_customize_meta') || '{}')
