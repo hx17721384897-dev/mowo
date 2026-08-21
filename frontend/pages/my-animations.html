@@ -119,8 +119,10 @@ a{text-decoration:none;color:inherit;}
 /* ── RENAME ── */
 .card-name-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
 .card-name-row .card-model{margin-bottom:0;flex:1;min-width:0;}
-.rename-btn{font-size:13px;color:var(--gray2);padding:2px 5px;border-radius:6px;line-height:1;flex-shrink:0;cursor:pointer;transition:color .2s,background .2s;}
+.rename-btn{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;color:var(--gray3);padding:4px 6px;border-radius:6px;line-height:1;flex-shrink:0;cursor:pointer;transition:color .2s,background .2s;}
 .rename-btn:hover{color:var(--black);background:var(--gray1);}
+.asset-reuse-btn{display:inline-flex;align-items:center;gap:5px;font-weight:900;font-size:12px;color:var(--black);}
+.asset-reuse-btn:hover{opacity:.6;}
 
 </style>
 </head>
@@ -401,7 +403,7 @@ function animCard(item) {
     <div class="card-body">
       <div class="card-name-row">
         <div class="card-model">${safeDisplayName}</div>
-        <button class="rename-btn" onclick="event.stopPropagation();openRename('${item.id}')" title="重命名">✎</button>
+        <button class="rename-btn" onclick="event.stopPropagation();openRename('${item.id}')" title="修改动画名称"><span aria-hidden="true">✎</span>重命名</button>
       </div>
       <div class="card-meta">
         ${isAsset ? `<span class="card-meta-item">${escapeHtml(item.assetNo)}</span><span class="card-meta-item">V${item.currentVersionNo}</span>` : ''}
@@ -411,7 +413,7 @@ function animCard(item) {
     </div>
     <div class="card-footer">
       ${isAsset
-        ? `<span class="card-link" style="color:var(--gray3)">已保存 V${item.currentVersionNo}</span>`
+        ? `<a href="customize-start.html?assetId=${encodeURIComponent(item.id)}" class="asset-reuse-btn" onclick="event.stopPropagation()">选择新款式 →</a>`
         : `<a href="${editHref}" class="card-link" onclick="event.stopPropagation()">✏️ 重新编辑</a><a href="customize-start.html" class="card-link">去选配 →</a>`}
       <button class="card-delete-btn" onclick="event.stopPropagation();askDelete('${item.id}')">删除</button>
     </div>

@@ -729,12 +729,15 @@ let CART = [];
 /* 重复下单检测 */
 let _prevOrderedProduct = null;  // 检测到的历史已购同款产品
 let _reuseOldFrames     = false; // 用户选择"复用上次的动画"
+let _reuseAssetId       = null;  // 从“我的动画”明确选择的正式动画资产
+let _reuseAsset         = null;
 
 /* ══════════════════════════════
    初始化（从API加载SKU数据）
 ══════════════════════════════ */
 (async function init() {
   const route = new URLSearchParams(location.search);
+  _reuseAssetId = route.get('assetId');
   // 从 localStorage 读取上一步的数据
   let meta = {};
   try { meta = JSON.parse(localStorage.getItem('mowo_customize_meta') || '{}'); } catch(e) {}
@@ -746,6 +749,27 @@ let _reuseOldFrames     = false; // 用户选择"复用上次的动画"
   SEL.validTargets = routeTargets.length
     ? routeTargets
     : (Array.isArray(meta.validTargets) ? meta.validTargets.map(Number).filter(Number.isFinite) : []);
+
+  if (_reuseAssetId) {
+    const token = localStorage.getItem('mowo_token');
+    if (!token) {
+      location.href = `auth.html?redirect=${encodeURIComponent(location.pathname + location.search)}`;
+      return;
+    }
+    try {
+      const assetRes = await fetch(`${MOWO_API}/api/animation-assets/${encodeURIComponent(_reuseAssetId)}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const assetJson = await assetRes.json();
+      if (!assetRes.ok || !assetJson.success) throw new Error(assetJson.message || '动画资产加载失败');
+      _reuseAsset = assetJson.data;
+      const current = (_reuseAsset.versions || []).find(v => v.versionNo === _reuseAsset.currentVersionNo);
+      if (!current || current.baseFrameCount !== SEL.frameCount) throw new Error('动画版本信息已经变化，请重新选择');
+    } catch (error) {
+      document.getElementById('frameDesc').textContent = error.message || '动画资产加载失败';
+      return;
+    }
+  }
 
   // 更新页面标题
   document.getElementById('cardMachineName').textContent = SEL.modelName;
@@ -775,7 +799,7 @@ let _reuseOldFrames     = false; // 用户选择"复用上次的动画"
   renderFrameOptions();
 
   // 检测是否曾用相同机型下过单，进入页面即提示
-  await detectPreviousOrder()
+  if (!_reuseAssetId) await detectPreviousOrder()
 })();
 
 /* ══════════════════════════════
@@ -1286,7 +1310,7 @@ async function submitOrder() {
   if (!token) { if (typeof openAuthModal === 'function') openAuthModal(); return; }
   const humanRequestId = new URLSearchParams(location.search).get('humanRequestId') || localStorage.getItem('mowo_customize_human_request_id');
   const draftId = new URLSearchParams(location.search).get('requestId') || localStorage.getItem('mowo_customize_request_draft_id');
-  if (!humanRequestId && !draftId) {
+  if (!_reuseAssetId && !humanRequestId && !draftId) {
     alert('没有找到本次定制草稿，请返回上传页面重新提交素材');
     return;
   }
@@ -1298,6 +1322,36 @@ async function submitOrder() {
   button.disabled = true;
   button.textContent = '正在提交';
   try {
+    if (_reuseAssetId) {
+      const keyName = `mowo_asset_reuse_key_${_reuseAssetId}_${SEL.modelId}`;
+      let clientRequestKey = sessionStorage.getItem(keyName);
+      if (!clientRequestKey) {
+        clientRequestKey = `asset-reuse-${crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2)}`;
+        sessionStorage.setItem(keyName, clientRequestKey);
+      }
+      const reuseResponse = await fetch(`${MOWO_API}/api/animation-assets/${encodeURIComponent(_reuseAssetId)}/reuse`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          clientRequestKey,
+          machineModelId: SEL.modelId,
+          desiredSkuId: primaryChoice.skuId,
+          userNote: document.getElementById('orderNote').value,
+          requestedOptions: CART.map(item => ({
+            skuId:item.skuId, frame:item.frame, size:item.size, material:item.material,
+            colorName:item.colorName, referencePrice:item.price
+          }))
+        })
+      });
+      const reuseResult = await reuseResponse.json();
+      if (!reuseResponse.ok || !reuseResult.success) throw new Error(reuseResult.message || '动画复购准备失败');
+      localStorage.setItem('mowo_customize_draft_id', reuseResult.data.customProductId);
+      localStorage.removeItem('mowo_customize_product_map');
+      const enteredCheckout = await goBuy();
+      if (!enteredCheckout) throw new Error('订单商品准备失败，请重试');
+      sessionStorage.removeItem(keyName);
+      return;
+    }
     const endpoint = humanRequestId
       ? `${MOWO_API}/api/customization-requests/mine/${encodeURIComponent(humanRequestId)}/choose-sku`
       : `${MOWO_API}/api/customization-requests/${encodeURIComponent(draftId)}/submit`;

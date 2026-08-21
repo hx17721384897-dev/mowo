@@ -162,6 +162,28 @@ try {
   if (!await assetCard.getByText(/动画资产/).count() || !await assetCard.getByText(/V1/).count()) {
     throw new Error('我的动画没有把已确认内容显示为带版本的正式动画资产')
   }
+  if (!await assetCard.getByRole('button', { name: /重命名/ }).count() || !await assetCard.getByRole('link', { name: /选择新款式/ }).count()) {
+    throw new Error('我的动画没有提供清晰的重命名和再次制作入口')
+  }
+  await assetCard.getByRole('button', { name: /重命名/ }).click()
+  await page.locator('#renameInput').fill('浏览器复购测试动画')
+  await page.locator('#btnConfirmRename').click()
+  await assetCard.getByText('浏览器复购测试动画').waitFor({ timeout:10000 })
+  await assetCard.getByRole('link', { name: /选择新款式/ }).click()
+  await page.waitForURL(/customize-start\.html\?assetId=/, { timeout:10000 })
+  await page.locator('#reuseBanner.show').waitFor({ timeout:10000 })
+  await page.locator('.model-card').first().getByRole('button', { name:'选择此款' }).click()
+  await page.locator('#nextBtn').click()
+  await page.waitForURL(/customize-confirm\.html\?.*assetId=/, { timeout:10000 })
+  await page.locator('#frameOptions .opt-btn').first().click()
+  await page.locator('#sizeOptions .opt-btn').first().click()
+  await page.locator('#materialOptions .opt-btn').first().click()
+  await page.locator('#colorOptions .color-opt').first().click()
+  await page.getByRole('button', { name:/提交订单/ }).click()
+  await page.waitForURL(/checkout\.html/, { timeout:20000 }).catch(() => {
+    throw new Error(`已有动画选择新款式后未进入结算页；停留在 ${page.url()}；页面提示：${orderDialogs.join(' | ') || '无'}`)
+  })
+  console.log('PASS customer renames and reuses an animation asset for a new SKU in browser')
   console.log('PASS my animations separates reusable assets from temporary drafts')
 
   await page.goto(`${webBase}/customize-editor.html?modelId=${encodeURIComponent(modelId)}`, { waitUntil:'networkidle' })

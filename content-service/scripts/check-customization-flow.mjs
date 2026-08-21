@@ -270,6 +270,49 @@ try {
   assertStatus('customer renames private animation asset', (await request(`/api/animation-assets/${manualAsset.id}`, customer.token, {
     method: 'PATCH', body: JSON.stringify({ title: '人工筛帧测试动画' })
   })).status, 200)
+  const reusePayload = {
+    clientRequestKey: `asset-reuse-${runId}`,
+    machineModelId: modelId,
+    desiredSkuId: skuId,
+    userNote: '使用已有动画选择新款式',
+    requestedOptions: [{ skuId, frame: 1, size: 'S', material: 'TEST', colorName: `测试色-${runId}`, referencePrice: 199 }]
+  }
+  assertStatus('other customer cannot reuse animation asset', (await request(`/api/animation-assets/${manualAsset.id}/reuse`, other.token, {
+    method: 'POST', body: JSON.stringify({ ...reusePayload, clientRequestKey: `other-reuse-${runId}` })
+  })).status, 404)
+  await prisma.animationAssetVersion.update({ where: { id: manualAsset.versions[0].id }, data: { baseFrameCount: 2 } })
+  assertStatus('incompatible SKU cannot reuse animation asset', (await request(`/api/animation-assets/${manualAsset.id}/reuse`, customer.token, {
+    method: 'POST', body: JSON.stringify({ ...reusePayload, clientRequestKey: `bad-reuse-${runId}` })
+  })).status, 400)
+  await prisma.animationAssetVersion.update({ where: { id: manualAsset.versions[0].id }, data: { baseFrameCount: 1 } })
+  const reuseResponse = await request(`/api/animation-assets/${manualAsset.id}/reuse`, customer.token, {
+    method: 'POST', body: JSON.stringify(reusePayload)
+  })
+  assertStatus('customer reuses animation asset for a new purchase', reuseResponse.status, 201)
+  const reusedPurchase = (await reuseResponse.json()).data
+  const reusedProduct = await prisma.customProduct.findUnique({ where: { id: reusedPurchase.customProductId } })
+  const versionsAfterReuse = await prisma.animationAssetVersion.count({ where: { assetId: manualAsset.id } })
+  if (
+    reusedPurchase.request.status !== 'CONFIRMED' ||
+    reusedPurchase.request.animationAssetId !== manualAsset.id ||
+    reusedPurchase.request.acceptedAnimationVersionId !== manualAsset.versions[0].id ||
+    reusedProduct?.animationVersionId !== manualAsset.versions[0].id ||
+    versionsAfterReuse !== 1
+  ) {
+    throw new Error('asset reuse did not create a new purchase record pinned to the existing animation version')
+  }
+  const reuseRetry = await request(`/api/animation-assets/${manualAsset.id}/reuse`, customer.token, {
+    method: 'POST', body: JSON.stringify(reusePayload)
+  })
+  assertStatus('animation reuse retry is idempotent', reuseRetry.status, 200)
+  const reuseRetryBody = await reuseRetry.json()
+  if (!reuseRetryBody.reused || reuseRetryBody.data.customProductId !== reusedPurchase.customProductId) {
+    throw new Error('animation reuse retry created a duplicate purchase record')
+  }
+  assertStatus('reused animation enters cart with the new SKU', (await request('/api/cart/add', customer.token, {
+    method: 'POST', body: JSON.stringify({ itemType: 'CUSTOM', contentId: reusedPurchase.customProductId, hardwareSkuId: skuId })
+  })).status, 201)
+  console.log('PASS reuse creates a new DZ purchase record while keeping the same ANM version')
   await prisma.animationAsset.update({ where: { id: manualAsset.id }, data: { assetType: 'COLLAB', collabStatus: 'AUTHORIZED' } })
   assertStatus('authorized collab animation cannot be deleted', (await request(`/api/animation-assets/${manualAsset.id}`, customer.token, {
     method: 'DELETE'

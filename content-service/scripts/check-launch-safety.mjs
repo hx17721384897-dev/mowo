@@ -44,6 +44,18 @@ try {
   assert(flagsResponse.status === 200, 'feature configuration is public and readable')
   assert(flagsResponse.headers.get('x-content-type-options') === 'nosniff', 'security response headers are present')
   assert(flagsResponse.headers.get('cross-origin-resource-policy') === 'same-site', 'ordinary API responses keep strict resource isolation')
+  const patchPreflight = await request('/api/animation-assets/test-id', {
+    method: 'OPTIONS',
+    headers: {
+      Origin: 'http://127.0.0.1:5500',
+      'Access-Control-Request-Method': 'PATCH',
+      'Access-Control-Request-Headers': 'authorization,content-type'
+    }
+  })
+  assert(
+    patchPreflight.status === 204 && String(patchPreflight.headers.get('access-control-allow-methods')).includes('PATCH'),
+    'browser CORS preflight allows PATCH updates'
+  )
   const avatarProbe = await request('/api/upload/public/not-a-real-avatar')
   assert(avatarProbe.headers.get('cross-origin-resource-policy') === 'cross-origin', 'public avatar responses can render from the static frontend origin')
   const signedFileProbe = await request('/api/storage/local')

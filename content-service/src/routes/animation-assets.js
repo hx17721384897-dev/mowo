@@ -1,3 +1,5 @@
+import { createCustomizationRequestNo } from '../lib/customization-request.js'
+
 function pageNumber(value, fallback) {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? Math.max(1, Math.floor(parsed)) : fallback
@@ -92,6 +94,135 @@ export default async function animationAssetRoutes(fastify) {
     }
     const updated = await prisma.animationAsset.update({ where: { id: asset.id }, data: { title } })
     return reply.send({ success: true, data: updated })
+  })
+
+  // 使用已确认的动画版本创建新的购买记录，不复制帧文件，也不生成新动画版本。
+  fastify.post('/:id/reuse', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const userId = request.user.userId
+    const body = request.body || {}
+    const clientRequestKey = String(body.clientRequestKey || '').trim().slice(0, 80)
+    const machineModelId = String(body.machineModelId || '').trim()
+    const desiredSkuId = String(body.desiredSkuId || '').trim()
+    if (!clientRequestKey || !machineModelId || !desiredSkuId) {
+      return reply.code(400).send({ success: false, message: '请选择需要再次制作的款式和规格' })
+    }
+
+    const existing = await prisma.customizationRequest.findUnique({ where: { clientDraftKey: clientRequestKey } })
+    if (existing) {
+      if (existing.userId !== userId || existing.animationAssetId !== request.params.id) {
+        return reply.code(409).send({ success: false, message: '本次购买标识冲突，请刷新后重试' })
+      }
+      return reply.send({ success: true, reused: true, data: { request: existing, customProductId: existing.customProductId } })
+    }
+
+    const asset = await prisma.animationAsset.findUnique({
+      where: { id: request.params.id },
+      include: { versions: { orderBy: { versionNo: 'desc' }, take: 1 } }
+    })
+    if (!asset || asset.ownerUserId !== userId || asset.status !== 'ACTIVE' || asset.frontDeletedAt) {
+      return reply.code(404).send({ success: false, message: '动画资产不存在或已从动画库删除' })
+    }
+    const version = asset.versions[0]
+    if (!version || version.versionNo !== asset.currentVersionNo) {
+      return reply.code(409).send({ success: false, message: '动画版本信息不完整，请联系客服处理' })
+    }
+
+    const sku = await prisma.machineModelSku.findFirst({
+      where: { id: desiredSkuId, modelId: machineModelId, isActive: true },
+      include: { model: { select: { id: true, name: true, isActive: true } } }
+    })
+    if (!sku || !sku.model?.isActive) {
+      return reply.code(400).send({ success: false, message: '所选款式或规格不存在、已停用' })
+    }
+    if (!version.baseFrameCount || !sku.frameCount || sku.frameCount % version.baseFrameCount !== 0) {
+      return reply.code(400).send({
+        success: false,
+        message: `该动画为 ${version.baseFrameCount} 帧，不能用于当前 ${sku.frameCount} 帧规格`
+      })
+    }
+
+    const frameKeys = Array.isArray(version.frameKeys) ? version.frameKeys : []
+    const uniqueKeys = [...new Set(frameKeys)]
+    const readyFileCount = uniqueKeys.length ? await prisma.privateFile.count({ where: {
+      objectKey: { in: uniqueKeys }, ownerUserId: userId, status: 'READY', deletedAt: null
+    } }) : 0
+    if (!uniqueKeys.length || readyFileCount !== uniqueKeys.length) {
+      return reply.code(409).send({ success: false, message: '动画素材不完整，暂时不能再次制作，请联系客服' })
+    }
+
+    const requestedOptions = Array.isArray(body.requestedOptions)
+      ? body.requestedOptions.slice(0, 20).map(item => ({
+          skuId: String(item?.skuId || ''),
+          frame: Number(item?.frame || 0),
+          size: String(item?.size || '').slice(0, 60),
+          material: String(item?.material || '').slice(0, 60),
+          colorName: String(item?.colorName || '').slice(0, 60),
+          referencePrice: Number(item?.referencePrice || 0)
+        }))
+      : []
+    const requestNo = await createCustomizationRequestNo(prisma)
+    let created
+    try {
+      created = await prisma.$transaction(async tx => {
+        const product = await tx.customProduct.create({ data: {
+          userId,
+          animationFrames: JSON.stringify(frameKeys),
+          draftData: JSON.stringify({
+            version: 1,
+            source: 'animation-asset-reuse',
+            animationAssetId: asset.id,
+            animationVersionId: version.id,
+            animationVersionNo: version.versionNo
+          }),
+          draftExpiresAt: null,
+          configJson: JSON.stringify({
+            animName: asset.title,
+            frameCount: version.baseFrameCount,
+            modelId: machineModelId,
+            modelName: sku.model.name
+          }),
+          hardwareSkuId: sku.id,
+          frameCount: version.baseFrameCount,
+          animationAssetId: asset.id,
+          animationVersionId: version.id,
+          status: 'draft'
+        } })
+        const customization = await tx.customizationRequest.create({ data: {
+          requestNo,
+          userId,
+          mode: 'SELF',
+          status: 'CONFIRMED',
+          clientDraftKey: clientRequestKey,
+          customProductId: product.id,
+          machineModelId,
+          desiredSkuId: sku.id,
+          animationAssetId: asset.id,
+          acceptedAnimationVersionId: version.id,
+          sourceKeys: [],
+          selectedFrameKeys: frameKeys,
+          screeningData: { source: 'ANIMATION_ASSET_REUSE', assetNo: asset.assetNo, versionNo: version.versionNo },
+          editorData: { requestedOptions },
+          userNote: String(body.userNote || '').trim().slice(0, 1000) || null,
+          submittedAt: new Date()
+        } })
+        await tx.customizationRequestEvent.create({ data: {
+          requestId: customization.id,
+          actorUserId: userId,
+          actorType: 'USER',
+          eventType: 'ANIMATION_ASSET_REUSED',
+          toStatus: 'CONFIRMED',
+          publicMessage: `已使用动画 ${asset.assetNo} V${version.versionNo} 选择新款式`,
+          detail: { animationAssetId: asset.id, animationVersionId: version.id, desiredSkuId: sku.id }
+        } })
+        return { request: customization, customProductId: product.id }
+      })
+    } catch (error) {
+      if (error.code !== 'P2002') throw error
+      const retry = await prisma.customizationRequest.findUnique({ where: { clientDraftKey: clientRequestKey } })
+      if (!retry || retry.userId !== userId || retry.animationAssetId !== asset.id) throw error
+      return reply.send({ success: true, reused: true, data: { request: retry, customProductId: retry.customProductId } })
+    }
+    return reply.code(201).send({ success: true, data: created })
   })
 
   fastify.delete('/:id', { preHandler: [fastify.authenticate] }, async (request, reply) => {

@@ -66,7 +66,7 @@ async function start() {
         cb(new Error('不允许的跨域来源'), false)
       },
       credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
     })
 
     // Cookie 插件（HttpOnly Refresh Token）
