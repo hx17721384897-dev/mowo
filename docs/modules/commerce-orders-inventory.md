@@ -5,6 +5,22 @@
 > 已完成：逐路由阅读、主要 Schema 对照、Web 前端消费者检索、现有 API/数据库/库存规划文档对照。
 > 尚未覆盖：生产批次如何消耗四态库存、外部平台导入订单、真实支付渠道参数、小程序消费者和数据库迁移实况；这些分别留到批次 5、7、8。
 
+> 2026-08-22 实施更新：当前 Web 主流程已经建立 `SalesOrder -> SalesOrderItem -> CustomizeOrder` 三层结构。一次支付只生成一个用户订单；购物车每种商品形成一条订单商品；每条商品再按购买数量展开为单件生产任务。本文后面标注为“调查时风险”的旧结论用于保留历史原因，最新代码事实以“聚合订单实施结果”为准。
+
+## 聚合订单实施结果（2026-08-22）
+
+| 层级 | 当前模型/编号 | 用户或员工看到什么 |
+|---|---|---|
+| 用户订单 | `SalesOrder` / `SO-YYYYMMDD-XXXXXXXX` | 一次支付只显示一张订单卡片，保存总金额与收件快照 |
+| 订单商品 | `SalesOrderItem` / `SO-...-01` | 一种动画版本与 SKU 的成交组合，锁定数量、单价、动画版本和规格快照 |
+| 单件生产任务 | `CustomizeOrder` / `PU-YYYYMMDD-XXXXXXXX` | 每一件实物一条任务，继续供现有生产后台排产、扫码、物流和售后使用 |
+
+支付通知以 `PreOrder.preOrderId -> SalesOrder.preOrderId` 唯一关系防止重复落单。重复或并发通知不会创建第二张用户订单。两个购物车条目、数量分别为 1 和 2 时，结果是 1 张用户订单、2 条订单商品、3 条生产任务。
+
+订单列表和详情接口现在优先返回聚合订单及其商品；没有新关系的本地旧 `CustomizeOrder` 继续按单商品旧订单展示。账号注销只删除未成交预订单，已被正式订单引用的支付凭证继续受控保留。
+
+数据库迁移为 `prisma/migrations/20260822150000_add_sales_order_structure/migration.sql`，已于 2026-08-22 应用到本地开发库；正式环境发布时仍需纳入受控迁移和回滚流程。
+
 ## 模块职责
 
 这一业务域负责从“可销售内容 + 硬件规格”到“支付订单 + 生产履约”的完整链路：
@@ -12,7 +28,7 @@
 1. 管理员维护机型、SKU、价格、展示图和库存。
 2. 用户创建自己的动画定制品，或选择已上架的联名作品。
 3. 商品加入购物车，结算时形成 10 分钟有效的预订单并预锁库存。
-4. 支付回调把购物车条目转换为生产使用的 `CustomizeOrder`。
+4. 支付回调创建一个 `SalesOrder`，把购物车条目转换为 `SalesOrderItem`，再按数量展开生产使用的 `CustomizeOrder`。
 5. 用户查看订单、取消、确认收货或申请售后。
 6. 生产/管理员管理硬件库存、材料和预制帧包。
 
@@ -47,8 +63,9 @@
 | `routes/customize-orders.js` | 旧式直接创建/查询/取消定制订单 | `CustomizeOrder`、`lib/inventory.js` |
 | `routes/custom-products.js` | 用户定制草稿、配额、重命名和预览再生成 | `CustomProduct`、`MachineModelSku` |
 | `routes/cart.js` | 购物车、游客合并、实时价格/库存、结算和预锁 | `Cart`、`CartItem`、`PreOrder`、`CollabWork`、`CustomProduct`、SKU 库存 |
-| `routes/payment.js` | 支付通知、状态轮询、开发 Mock、支付后建单 | `PreOrder`、`CustomizeOrder`、`CollabOrder`、`CustomProduct` |
-| `routes/orders.js` | 用户订单列表/详情、取消、收货和售后 | `CustomizeOrder`、`AftersaleRequest`、`CollabOrder`、库存服务 |
+| `routes/payment.js` | 支付通知、状态轮询、开发 Mock、支付后建立订单头/商品/单件任务 | `PreOrder`、`SalesOrder`、`SalesOrderItem`、`CustomizeOrder`、`CustomProduct` |
+| `routes/orders.js` | 聚合订单列表/详情、取消、收货和售后；兼容旧单件订单 | `SalesOrder`、`SalesOrderItem`、`CustomizeOrder`、`AftersaleRequest`、库存服务 |
+| `lib/sales-orders.js` | 生成 `SO`、订单商品和 `PU` 编号，按单件任务汇总用户订单状态 | 聚合订单和生产任务 |
 | `routes/addresses.js` | 每用户最多 20 个地址及默认地址 | `UserAddress` |
 | `routes/inventory.js` | 四态库存、预警、日志、快照、渠道配额和发货核销 | `lib/inventory.js`、`lib/material-inventory.js`、OSS |
 | `lib/inventory.js` | 可售计算、锁定/释放、转在制、扣减和手工调整 | `SkuInventory`、`InventoryLog` |
@@ -98,7 +115,9 @@
 | `CustomProduct` | 用户 DIY 草稿 | `draft -> in_cart -> ordered/removed`，默认 7 天过期 |
 | `Cart` / `CartItem` | 用户购物车 | 条目类型 `MARKET` 或 `CUSTOM`，保存数量、加购时价格和当前选中状态 |
 | `PreOrder` | 支付前快照 | 总金额、地址快照、购物车条目 ID JSON、唯一幂等键、10 分钟过期 |
-| `CustomizeOrder` | 单件生产订单 | 保存 SKU、帧、收件信息和生产状态；模型没有数量字段，也没有订单金额字段 |
+| `SalesOrder` | 用户订单头 | 一次支付一条；保存总金额、地址、支付时间和用户侧状态 |
+| `SalesOrderItem` | 订单商品 | 锁定动画资产/版本、SKU、规格、单价、数量和行金额 |
+| `CustomizeOrder` | 单件生产任务 | 每件实物一条，关联订单商品，保存生产编号、SKU、帧、批次和履约状态 |
 | `AftersaleRequest` | 售后单 | 退款/质量问题、凭证图、审核状态；每单申请次数上限由路由控制 |
 | `CollabOrder` | 联名销售和分账快照 | 必填创作者、成交价、分红率和分红金额；支付回调当前无法按 Schema 创建 |
 
@@ -122,7 +141,7 @@
 4. `cart.html` 修改数量和选择状态。
 5. `checkout.html` 选择地址并调用 `/api/cart/checkout`。
 6. 后端创建 `PreOrder`；当前只为 `MARKET` 条目预锁硬件库存。
-7. Mock 或真实支付回调把每个购物车条目各转换成一个 `CustomizeOrder`。
+7. Mock 或真实支付回调创建一个 `SalesOrder`；每个购物车条目形成 `SalesOrderItem`，再按数量展开单件 `CustomizeOrder`。
 
 ### 联名作品
 
@@ -144,8 +163,8 @@ Schema 注释的主状态为：
 
 - 购物车金额是 `MachineModelSku.price * CartItem.quantity`。
 - 联名详情页展示价是 SKU 基础价加 `CollabWork.creatorMarkups[skuId]`，但购物车只取 SKU 基础价，未计创作者加价。
-- `CustomizeOrder` 表示单件生产任务，没有 `quantity`；支付回调却只按购物车条目创建一条订单。因此数量大于 1 时会收多件钱、锁多件库存，但只生成一件生产订单。
-- `CustomizeOrder` 没有金额字段；订单接口读取不存在的 `totalAmount` 并回退为 0。金额只保留在 `PreOrder` 总额中，无法可靠分配到每个生产订单。
+- **已修复：**`CustomizeOrder` 明确表示单件生产任务；`SalesOrderItem.quantity` 保存购买数量，并按数量生成对应任务。
+- **已修复：**总金额保存在 `SalesOrder`，单价和行金额保存在 `SalesOrderItem`；生产任务不再承担用户订单金额。
 - 文档定义可用库存为 `currentStock - reservedStock - wipFrameQty - wipKitQty`。购物车结算使用了完整公式，但 `lib/inventory.js` 漏减 `wipKitQty`，旧下单和后台库存视图会高估可售量。
 
 ## 已确认的文档与代码差异
@@ -166,7 +185,7 @@ Schema 注释的主状态为：
 | 支付回调无验签 | 知道预订单 ID 的人可伪造支付成功 | 接入支付方官方 SDK/证书验签，核验商户号、订单号、金额、币种、交易状态和重放 |
 | 联名订单无法落库 | 支付成功但没有分账记录 | 统一 `CollabOrder` 契约，在同一事务内按成交快照创建；失败必须使回调失败并可安全重试 |
 | 加购/合并数量未校验 | 零数、负数或异常大数量可污染金额和库存 | 在所有入口统一校验正整数、上限和逐 SKU 限购 |
-| 数量与生产订单模型冲突 | 多件付款只生成一件生产任务 | 明确“一件一单”还是订单数量字段，再统一订单、库存、售后和分账 |
+| 数量与生产订单模型冲突 | **已修复基础结构：**多件商品已按数量展开 `PU` 单件任务 | 后续继续统一拆分售后、分账和包裹关系 |
 | 联名加价未进入结算 | 展示价与实付价、创作者收益不一致 | 建立服务端价格快照服务，禁止各路由各自算价 |
 | 过期/失败库存不释放 | 库存永久占用，商品错误售罄 | 状态变更和释放放进单事务，增加幂等状态机和补偿扫描 |
 | CUSTOM 不锁硬件库存 | 定制品可超卖 | 明确所有实物是否共享 SKU 库存；若共享，结算统一锁定 |

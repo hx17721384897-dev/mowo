@@ -2,6 +2,12 @@
 // 支付回调与状态查询
 // 注册前缀：/api/payment
 
+import {
+  createProductionUnitNo,
+  createSalesOrderItemNo,
+  createSalesOrderNo
+} from '../lib/sales-orders.js'
+
 export default async function paymentRoutes(fastify) {
   const { prisma } = fastify
 
@@ -27,7 +33,8 @@ export default async function paymentRoutes(fastify) {
 
     if (preOrder.status !== 'pending_payment') {
       // 幂等：已处理过直接返回 OK
-      return reply.send({ success: true, message: '已处理' })
+      const salesOrder = await prisma.salesOrder.findUnique({ where: { preOrderId } })
+      return reply.send({ success: true, message: '已处理', data: salesOrder })
     }
 
     if (paySuccess === false || paySuccess === 'false') {
@@ -39,13 +46,20 @@ export default async function paymentRoutes(fastify) {
       return reply.send({ success: true, message: '支付失败已记录' })
     }
 
-    // 支付成功：事务内创建生产订单
-    await prisma.$transaction(async tx => {
+    // 支付成功：一次支付创建一个用户订单，商品按数量展开为单件生产任务。
+    let salesOrder
+    try {
+      salesOrder = await prisma.$transaction(async tx => {
       // 更新预订单状态
-      await tx.preOrder.update({
-        where: { id: preOrderId },
+      const claimed = await tx.preOrder.updateMany({
+        where: { id: preOrderId, status: 'pending_payment' },
         data: { status: 'paid' }
       })
+      if (claimed.count !== 1) {
+        const processing = new Error('支付通知已由其他请求处理')
+        processing.code = 'PAYMENT_ALREADY_PROCESSING'
+        throw processing
+      }
 
       // 取出 CartItem
       let cartItemIds = []
@@ -54,9 +68,29 @@ export default async function paymentRoutes(fastify) {
       const items = await tx.cartItem.findMany({
         where: { id: { in: cartItemIds } }
       })
+      if (!items.length || items.length !== cartItemIds.length) {
+        throw new Error('结算商品已变化，无法创建完整订单')
+      }
 
-      for (const item of items) {
-        const orderNo = `ORD${Date.now()}${Math.random().toString(36).slice(2, 6).toUpperCase()}`
+      const orderNo = createSalesOrderNo()
+      const order = await tx.salesOrder.create({
+        data: {
+          orderNo,
+          userId: preOrder.userId,
+          preOrderId: preOrder.id,
+          status: 'paid',
+          totalAmount: preOrder.totalAmount,
+          receiverName: preOrder.receiverName,
+          receiverPhone: preOrder.receiverPhone,
+          receiverAddress: preOrder.receiverAddress,
+          receiverCity: preOrder.receiverCity,
+          platform: 'SELF',
+          paidAt: new Date()
+        }
+      })
+
+      for (let itemIndex = 0; itemIndex < items.length; itemIndex += 1) {
+        const item = items[itemIndex]
 
         // 查询 SKU + 关联 model，补全 CustomizeOrder 必填字段
         const sku = await tx.machineModelSku.findUnique({
@@ -66,56 +100,69 @@ export default async function paymentRoutes(fastify) {
 
         // 帧图 URL：优先从 customProduct 取 animationFrames
         let frameUrls = '[]'
+        let customProduct = null
         if (item.customProductId) {
-          const cp = await tx.customProduct.findUnique({ where: { id: item.customProductId } })
-          if (cp?.animationFrames) frameUrls = cp.animationFrames
+          customProduct = await tx.customProduct.findUnique({ where: { id: item.customProductId } })
+          if (customProduct?.animationFrames) frameUrls = customProduct.animationFrames
         }
 
-        // 创建 CustomizeOrder（进入现有生产流程）
-        const newOrder = await tx.customizeOrder.create({
+        const unitPrice = Number(item.snapshotPrice || sku?.price || 0)
+        const quantity = Math.max(1, Number(item.quantity || 1))
+        const orderItem = await tx.salesOrderItem.create({
           data: {
-            orderNo,
-            userId:        preOrder.userId,
-            skuId:         item.hardwareSkuId,
-            modelId:       sku?.modelId      || '',
-            modelName:     sku?.model?.name  || '',
-            frameCount:    sku?.frameCount   || 0,
-            size:          sku?.size         || '',
-            material:      sku?.material     || '',
-            color:         sku?.colorHex     || '',
-            colorName:     sku?.colorName    || '',
-            ossPath:       '',
-            status:        'paid',
-            sourceType:    item.itemType === 'MARKET' ? 'collab' : 'custom',
-            collabWorkId:  item.itemType === 'MARKET' ? item.contentId : null,
-            frameUrls,
-            receiverName:    preOrder.receiverName    || '',
-            receiverPhone:   preOrder.receiverPhone   || '',
-            receiverAddress: preOrder.receiverAddress || '',
-            receiverCity:    preOrder.receiverCity    || '',
-            platform:        'SELF'
+            itemNo: createSalesOrderItemNo(orderNo, itemIndex + 1),
+            salesOrderId: order.id,
+            cartItemId: item.id,
+            itemType: item.itemType,
+            contentId: item.contentId,
+            customProductId: item.customProductId,
+            animationAssetId: customProduct?.animationAssetId || null,
+            animationVersionId: customProduct?.animationVersionId || null,
+            skuId: item.hardwareSkuId,
+            skuCode: item.hardwareSkuCode || sku?.skuCode || null,
+            snapshotTitle: item.snapshotTitle,
+            snapshotPreviewUrl: item.snapshotPreviewUrl || item.coverUrl || null,
+            configSnapshotJson: item.configSnapshotJson,
+            unitPrice: unitPrice.toFixed(2),
+            quantity,
+            lineTotal: (unitPrice * quantity).toFixed(2),
+            status: 'paid'
           }
-        }).catch(e => {
-          fastify.log.error(`创建 CustomizeOrder 失败: ${e.message}`)
-          throw e  // 上抛让事务回滚，避免静默丢单
         })
 
-        // MARKET 类型：创建 CollabOrder（创作者分成流程）
-        if (fastify.config.features.creatorFinance && item.itemType === 'MARKET' && newOrder) {
-          await tx.collabOrder.create({
+        for (let unitIndex = 1; unitIndex <= quantity; unitIndex += 1) {
+          // CustomizeOrder 继续承载现有生产后台，但现在一条记录明确代表一件实物。
+          const newOrder = await tx.customizeOrder.create({
             data: {
-              orderId:       newOrder.id,
-              collabWorkId:  item.contentId,
-              buyerId:       preOrder.userId,
-              status:        'pending',
-              coolingEndAt:  new Date(Date.now() + 15 * 24 * 60 * 60 * 1000) // 15天冷静期
+              orderNo: createProductionUnitNo(),
+              userId: preOrder.userId,
+              skuId: item.hardwareSkuId,
+              modelId: sku?.modelId || '',
+              modelName: sku?.model?.name || '',
+              frameCount: sku?.frameCount || 0,
+              size: sku?.size || '',
+              material: sku?.material || '',
+              color: sku?.colorHex || '',
+              colorName: sku?.colorName || '',
+              ossPath: '',
+              status: 'paid',
+              sourceType: item.itemType === 'MARKET' ? 'collab' : 'custom',
+              collabWorkId: item.itemType === 'MARKET' ? item.contentId : null,
+              frameUrls,
+              receiverName: preOrder.receiverName || '',
+              receiverPhone: preOrder.receiverPhone || '',
+              receiverAddress: preOrder.receiverAddress || '',
+              receiverCity: preOrder.receiverCity || '',
+              platform: 'SELF',
+              salesOrderItemId: orderItem.id,
+              unitIndex
             }
-          }).catch(e => {
-            fastify.log.warn(`创建 CollabOrder 失败: ${e.message}`)
           })
 
-          // 正式扣减 reservedStock（库存预锁→正式占用，currentStock 不变，等发货时 deduct）
-          // reservedStock 已在 checkout 时递增，此处不再重复操作
+          // 分红系统首发关闭；未来启用时必须按每件生产任务建立成交快照。
+          if (fastify.config.features.creatorFinance && item.itemType === 'MARKET' && newOrder) {
+            fastify.log.warn('creatorFinance 已开启，但新订单结构的联名分红快照尚未启用')
+          }
         }
 
         // CUSTOM 品状态 → ordered
@@ -131,9 +178,18 @@ export default async function paymentRoutes(fastify) {
       await tx.cartItem.deleteMany({
         where: { id: { in: cartItemIds } }
       }).catch(() => {})
-    })
+        return order
+      })
+    } catch (error) {
+      // 支付平台可能并发或重复通知；preOrderId 唯一约束保证只落一个用户订单。
+      if (error.code === 'P2002' || error.code === 'PAYMENT_ALREADY_PROCESSING') {
+        const existing = await prisma.salesOrder.findUnique({ where: { preOrderId } })
+        if (existing) return reply.send({ success: true, message: '支付成功，订单已创建', data: existing, reused: true })
+      }
+      throw error
+    }
 
-    return reply.send({ success: true, message: '支付成功，订单已创建' })
+    return reply.send({ success: true, message: '支付成功，订单已创建', data: salesOrder })
   })
 
   // ── GET /api/payment/status/:preOrderId — 前端轮询支付状态 ──

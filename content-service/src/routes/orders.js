@@ -3,6 +3,7 @@
 
 import { unlockInventory, makeIdempotencyKey } from '../lib/inventory.js'
 import { FILE_PURPOSE, findOwnedReadyFiles, linkFiles } from '../lib/private-files.js'
+import { summarizeProductionStatus } from '../lib/sales-orders.js'
 
 // 安全签名辅助：仅对 OSS key（相对路径）生成预签名 URL
 // data URL（base64）和完整 http(s) URL 直接返回 null（不适合做缩略图）
@@ -37,6 +38,89 @@ const STATUS_MAP = {
 // 进行中的状态（active tab）
 const ACTIVE_STATUSES = ['pending', 'paid', 'locked', 'processing', 'producing', 'shipped']
 
+const SALES_ORDER_INCLUDE = {
+  items: {
+    orderBy: { createdAt: 'asc' },
+    include: { productionTasks: { orderBy: { unitIndex: 'asc' } } }
+  }
+}
+
+function parseConfig(value) {
+  try { return JSON.parse(value || '{}') } catch { return {} }
+}
+
+function serializeSalesOrder(fastify, order, includeAddress = false) {
+  const tasks = order.items.flatMap(item => item.productionTasks)
+  const status = summarizeProductionStatus(tasks)
+  const display = STATUS_MAP[status] || { label: status, group: 'unknown', step: -1 }
+  const items = order.items.map(item => {
+    const config = parseConfig(item.configSnapshotJson)
+    const firstTask = item.productionTasks[0]
+    let previewUrl = ossSign(fastify, item.snapshotPreviewUrl)
+    if (!previewUrl && firstTask?.frameUrls) {
+      try { previewUrl = ossSign(fastify, JSON.parse(firstTask.frameUrls)[0]) } catch {}
+    }
+    return {
+      id: item.id,
+      itemNo: item.itemNo,
+      itemType: item.itemType,
+      productTitle: item.snapshotTitle,
+      coverUrl: previewUrl,
+      modelName: config.modelName || firstTask?.modelName || null,
+      size: config.size || firstTask?.size || null,
+      material: config.material || firstTask?.material || null,
+      frameCount: config.skuFrameCount || firstTask?.frameCount || null,
+      colorName: config.colorName || firstTask?.colorName || null,
+      quantity: item.quantity,
+      unitPrice: Number(item.unitPrice),
+      lineTotal: Number(item.lineTotal),
+      animationAssetId: item.animationAssetId,
+      animationVersionId: item.animationVersionId,
+      skuId: item.skuId,
+      productionTasks: item.productionTasks.map(task => ({
+        id: task.id, productionNo: task.orderNo, unitIndex: task.unitIndex,
+        status: task.status, trackingNo: task.trackingNo, trackingCompany: task.trackingCompany
+      }))
+    }
+  })
+  const firstItem = items[0] || {}
+  const trackingTasks = tasks.filter(task => task.trackingNo)
+  return {
+    id: order.id,
+    orderNo: order.orderNo,
+    status,
+    displayStatus: display.label,
+    statusGroup: display.group,
+    statusStep: display.step,
+    sourceType: order.items.every(item => item.itemType === 'MARKET') ? 'collab' : 'custom',
+    platform: order.platform,
+    productTitle: items.length > 1 ? `${items.length} 种商品 · 共 ${items.reduce((sum, item) => sum + item.quantity, 0)} 件` : firstItem.productTitle,
+    coverUrl: firstItem.coverUrl || null,
+    modelName: firstItem.modelName || null,
+    size: firstItem.size || null,
+    material: firstItem.material || null,
+    frameCount: firstItem.frameCount || null,
+    colorName: firstItem.colorName || null,
+    totalAmount: Number(order.totalAmount),
+    itemCount: items.length,
+    totalQuantity: items.reduce((sum, item) => sum + item.quantity, 0),
+    items,
+    trackingNo: trackingTasks.length === tasks.length && new Set(trackingTasks.map(task => task.trackingNo)).size === 1 ? trackingTasks[0]?.trackingNo : null,
+    trackingCompany: trackingTasks.length === tasks.length && new Set(trackingTasks.map(task => task.trackingCompany)).size === 1 ? trackingTasks[0]?.trackingCompany : null,
+    shippedAt: tasks.length && tasks.every(task => ['shipped', 'received'].includes(task.status))
+      ? tasks.reduce((latest, task) => !latest || task.shippedAt > latest ? task.shippedAt : latest, null)
+      : null,
+    receiverName: order.receiverName || null,
+    receiverCity: order.receiverCity || null,
+    ...(includeAddress ? {
+      receiverPhone: order.receiverPhone || null,
+      receiverAddress: order.receiverAddress || null
+    } : {}),
+    createdAt: order.createdAt,
+    updatedAt: order.updatedAt
+  }
+}
+
 async function orderRoutes(fastify, opts) {
   const { prisma } = fastify
 
@@ -56,84 +140,39 @@ async function orderRoutes(fastify, opts) {
     const limit  = Math.min(50, Math.max(1, Number(req.query.limit || 30)))
     const skip   = (page - 1) * limit
 
-    const where = { userId }
-    if (tab === 'active') {
-      where.status = { in: ACTIVE_STATUSES }
-    }
-
-    const [orders, activeCount, totalCount] = await Promise.all([
-      prisma.customizeOrder.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: limit,
-      }),
-      prisma.customizeOrder.count({ where: { userId, status: { in: ACTIVE_STATUSES } } }),
-      prisma.customizeOrder.count({ where: { userId } }),
-    ])
-
-    // 批量获取联名作品封面（MARKET 订单用）
-    const collabWorkIds = orders
-      .filter(o => o.sourceType === 'collab' && o.collabWorkId)
-      .map(o => o.collabWorkId)
-      .filter(Boolean)
-
-    const collabMap = {}
-    if (collabWorkIds.length) {
-      const works = await prisma.collabWork.findMany({
-        where: { id: { in: collabWorkIds } },
-        select: { id: true, coverUrl: true, title: true },
-      })
-      works.forEach(w => { collabMap[w.id] = w })
-    }
-
-    const result = orders.map(o => {
-      const display    = STATUS_MAP[o.status] || { label: o.status, group: 'unknown', step: -1 }
-      const collab     = o.collabWorkId ? (collabMap[o.collabWorkId] || null) : null
-
-      // 商品展示标题
-      const productTitle = o.sourceType === 'collab' && collab
-        ? collab.title
-        : `DIY 定制款 · ${o.size} ${o.frameCount}帧 ${o.colorName}`
-
-      // 缩略图：联名取 coverUrl，自定义取 frameUrls 第一帧
-      // 仅当值是 OSS key（相对路径）时才预签名；data URL / 完整 http URL 直接使用
-      let previewUrl = null
-      try {
-        if (o.sourceType === 'collab' && collab?.coverUrl) {
-          previewUrl = ossSign(fastify, collab.coverUrl)
-        } else {
-          const frames = JSON.parse(o.frameUrls || '[]')
-          if (frames[0]) previewUrl = ossSign(fastify, frames[0])
-        }
-      } catch {}
-
+    const salesOrders = await prisma.salesOrder.findMany({
+      where: { userId }, include: SALES_ORDER_INCLUDE, orderBy: { createdAt: 'desc' }
+    })
+    // 旧测试数据没有订单头，继续作为单商品旧订单显示，避免本地历史记录突然消失。
+    const legacy = await prisma.customizeOrder.findMany({
+      where: { userId, salesOrderItemId: null }, orderBy: { createdAt: 'desc' }
+    })
+    const legacyResult = legacy.map(order => {
+      const display = STATUS_MAP[order.status] || { label: order.status, group: 'unknown', step: -1 }
+      let coverUrl = null
+      try { coverUrl = ossSign(fastify, JSON.parse(order.frameUrls || '[]')[0]) } catch {}
       return {
-        id:             o.id,
-        orderNo:        o.orderNo,
-        status:         o.status,
-        displayStatus:  display.label,
-        statusGroup:    display.group,
-        statusStep:     display.step,
-        sourceType:     o.sourceType,     // 'custom' | 'collab'
-        platform:       o.platform,
-        modelName:      o.modelName,
-        size:           o.size,
-        material:       o.material,
-        frameCount:     o.frameCount,
-        colorName:      o.colorName,
-        productTitle,
-        totalAmount:    Number(o.totalAmount || 0),
-        trackingNo:     o.trackingNo     || null,
-        trackingCompany: o.trackingCompany || null,
-        shippedAt:      o.shippedAt      || null,
-        receiverName:   o.receiverName   || null,
-        receiverCity:   o.receiverCity   || null,
-        coverUrl:       previewUrl,
-        createdAt:      o.createdAt,
-        updatedAt:      o.updatedAt,
+        id: order.id, orderNo: order.orderNo, status: order.status,
+        displayStatus: display.label, statusGroup: display.group, statusStep: display.step,
+        sourceType: order.sourceType, platform: order.platform,
+        productTitle: `DIY 定制款 · ${order.size} ${order.frameCount}帧 ${order.colorName}`,
+        modelName: order.modelName, size: order.size, material: order.material,
+        frameCount: order.frameCount, colorName: order.colorName, totalAmount: 0,
+        itemCount: 1, totalQuantity: 1, coverUrl,
+        receiverName: order.receiverName, receiverCity: order.receiverCity,
+        trackingNo: order.trackingNo, trackingCompany: order.trackingCompany,
+        shippedAt: order.shippedAt, createdAt: order.createdAt, updatedAt: order.updatedAt,
+        legacy: true
       }
     })
+    const all = [
+      ...salesOrders.map(order => serializeSalesOrder(fastify, order)),
+      ...legacyResult
+    ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    const visible = tab === 'active' ? all.filter(order => ACTIVE_STATUSES.includes(order.status)) : all
+    const activeCount = all.filter(order => ACTIVE_STATUSES.includes(order.status)).length
+    const totalCount = all.length
+    const result = visible.slice(skip, skip + limit)
 
     return reply.send({
       success: true,
@@ -143,7 +182,7 @@ async function orderRoutes(fastify, opts) {
         totalCount,
         page,
         limit,
-        hasMore: skip + orders.length < (tab === 'active' ? activeCount : totalCount),
+        hasMore: skip + result.length < visible.length,
       },
     })
   })
@@ -155,6 +194,32 @@ async function orderRoutes(fastify, opts) {
   fastify.post('/:id/confirm-receipt', async (req, reply) => {
     const userId = req.user.userId
     const { id } = req.params
+
+    const salesOrder = await prisma.salesOrder.findFirst({
+      where: { id, userId }, include: SALES_ORDER_INCLUDE
+    })
+    if (salesOrder) {
+      const tasks = salesOrder.items.flatMap(item => item.productionTasks)
+      if (!tasks.length || tasks.some(task => !['shipped', 'received'].includes(task.status))) {
+        return reply.code(400).send({ success: false, message: '订单中仍有商品尚未发货，暂时不能确认收货' })
+      }
+      const now = new Date()
+      await prisma.$transaction(async tx => {
+        await tx.customizeOrder.updateMany({
+          where: { id: { in: tasks.map(task => task.id) }, status: 'shipped' },
+          data: { status: 'received', receivedAt: now }
+        })
+        await tx.salesOrderItem.updateMany({ where: { salesOrderId: id }, data: { status: 'received' } })
+        await tx.salesOrder.update({ where: { id }, data: { status: 'received', receivedAt: now } })
+        if (fastify.config.features.creatorFinance) {
+          await tx.collabOrder.updateMany({
+            where: { orderId: { in: tasks.map(task => task.id) }, revenueStatus: { in: ['estimated', 'cooling'] } },
+            data: { revenueStatus: 'cooling', coolingEndAt: new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000) }
+          })
+        }
+      })
+      return reply.send({ success: true, data: { status: 'received' } })
+    }
 
     const order = await prisma.customizeOrder.findFirst({ where: { id, userId } })
     if (!order) {
@@ -202,6 +267,29 @@ async function orderRoutes(fastify, opts) {
     const userId = req.user.userId
     const { id } = req.params
 
+    const salesOrder = await prisma.salesOrder.findFirst({
+      where: { id, userId }, include: SALES_ORDER_INCLUDE
+    })
+    if (salesOrder) {
+      const tasks = salesOrder.items.flatMap(item => item.productionTasks)
+      if (tasks.some(task => !['pending', 'paid'].includes(task.status))) {
+        return reply.code(400).send({ success: false, message: '订单中已有商品进入生产，如需取消请联系客服' })
+      }
+      await prisma.$transaction(async tx => {
+        await tx.customizeOrder.updateMany({ where: { id: { in: tasks.map(task => task.id) } }, data: { status: 'cancelled' } })
+        await tx.salesOrderItem.updateMany({ where: { salesOrderId: id }, data: { status: 'cancelled' } })
+        await tx.salesOrder.update({ where: { id }, data: { status: 'cancelled', cancelledAt: new Date() } })
+      })
+      for (const item of salesOrder.items.filter(item => item.itemType === 'MARKET')) {
+        try {
+          await unlockInventory(prisma, item.skuId, item.quantity, id, `sales_order_cancel_${id}_${item.id}`)
+        } catch (error) {
+          fastify.log.warn(`取消聚合订单释放库存失败：${error.message}`)
+        }
+      }
+      return reply.send({ success: true, data: { status: 'cancelled' } })
+    }
+
     const order = await prisma.customizeOrder.findFirst({ where: { id, userId } })
     if (!order) {
       return reply.code(404).send({ success: false, message: '订单不存在' })
@@ -245,6 +333,13 @@ async function orderRoutes(fastify, opts) {
   fastify.get('/:id', async (req, reply) => {
     const userId = req.user.userId
     const { id } = req.params
+
+    const salesOrder = await prisma.salesOrder.findFirst({
+      where: { id, userId }, include: SALES_ORDER_INCLUDE
+    })
+    if (salesOrder) {
+      return reply.send({ success: true, data: serializeSalesOrder(fastify, salesOrder, true) })
+    }
 
     const order = await prisma.customizeOrder.findFirst({ where: { id, userId } })
     if (!order) {
@@ -323,26 +418,33 @@ async function orderRoutes(fastify, opts) {
       return reply.code(400).send({ success: false, message: '请选择申请原因' })
     }
 
-    const order = await prisma.customizeOrder.findFirst({ where: { id, userId } })
+    const salesOrder = await prisma.salesOrder.findFirst({
+      where: { id, userId }, include: SALES_ORDER_INCLUDE
+    })
+    const salesTasks = salesOrder?.items.flatMap(item => item.productionTasks) || []
+    const order = salesOrder
+      ? salesTasks[0]
+      : await prisma.customizeOrder.findFirst({ where: { id, userId } })
     if (!order) return reply.code(404).send({ success: false, message: '订单不存在' })
 
     const AFTERSALE_ALLOW = ['paid', 'locked', 'processing', 'producing', 'shipped', 'received']
-    if (!AFTERSALE_ALLOW.includes(order.status)) {
+    const relevantTasks = salesOrder ? salesTasks : [order]
+    if (!relevantTasks.length || relevantTasks.some(task => !AFTERSALE_ALLOW.includes(task.status))) {
       return reply.code(400).send({
         success: false,
-        message: `「${STATUS_MAP[order.status]?.label || order.status}」状态不可申请售后`,
+        message: '订单中有商品处于不可申请售后的状态',
       })
     }
-    if (type === 'quality' && order.status !== 'received') {
+    if (type === 'quality' && relevantTasks.some(task => task.status !== 'received')) {
       return reply.code(400).send({ success: false, message: '质量问题售后需在确认收货后申请' })
     }
-    if (order.aftersaleCount >= 3) {
+    if (relevantTasks.some(task => task.aftersaleCount >= 3)) {
       return reply.code(400).send({ success: false, message: '申请次数已达上限（3次），请联系客服处理' })
     }
 
     // 检查是否已有 pending 申请
     const existing = await prisma.aftersaleRequest.findFirst({
-      where: { orderId: id, status: 'pending' },
+      where: { orderId: { in: relevantTasks.map(task => task.id) }, status: 'pending' },
     })
     if (existing) {
       return reply.code(400).send({ success: false, message: '已有处理中的申请，请等待客服回复' })
@@ -359,23 +461,28 @@ async function orderRoutes(fastify, opts) {
     await prisma.$transaction(async tx => {
       const aftersale = await tx.aftersaleRequest.create({
         data: {
-          orderId: id,
+          orderId: order.id,
           userId,
           type,
           reason: reason.trim(),
-          description: description?.trim() || null,
+          description: [salesOrder ? `用户订单：${salesOrder.orderNo}` : null, description?.trim() || null].filter(Boolean).join('\n') || null,
           imageUrls: JSON.stringify(Array.isArray(imageUrls) ? imageUrls : []),
         },
       })
       await linkFiles(tx, evidenceFiles, 'AFTERSALE_REQUEST', aftersale.id)
-      await tx.customizeOrder.update({
-        where: { id },
-        data: { status: 'aftersale', aftersaleCount: { increment: 1 } },
+      await tx.customizeOrder.updateMany({
+        where: { id: { in: relevantTasks.map(task => task.id) } },
+        data: { status: 'aftersale' },
       })
+      await tx.customizeOrder.update({ where: { id: order.id }, data: { aftersaleCount: { increment: 1 } } })
+      if (salesOrder) {
+        await tx.salesOrderItem.updateMany({ where: { salesOrderId: salesOrder.id }, data: { status: 'aftersale' } })
+        await tx.salesOrder.update({ where: { id: salesOrder.id }, data: { status: 'aftersale' } })
+      }
       // 联名款：取消冷却期中的分红（还未打款的部分）
       if (order.sourceType === 'collab') {
         await tx.collabOrder.updateMany({
-          where: { orderId: id, revenueStatus: { in: ['estimated', 'cooling'] } },
+          where: { orderId: { in: relevantTasks.map(task => task.id) }, revenueStatus: { in: ['estimated', 'cooling'] } },
           data: { revenueStatus: 'cancelled' },
         })
       }
@@ -392,11 +499,15 @@ async function orderRoutes(fastify, opts) {
     const userId = req.user.userId
     const { id } = req.params
 
-    const order = await prisma.customizeOrder.findFirst({ where: { id, userId } })
-    if (!order) return reply.code(404).send({ success: false, message: '订单不存在' })
+    const salesOrder = await prisma.salesOrder.findFirst({
+      where: { id, userId }, include: SALES_ORDER_INCLUDE
+    })
+    const taskIds = salesOrder?.items.flatMap(item => item.productionTasks.map(task => task.id)) || []
+    const order = salesOrder ? null : await prisma.customizeOrder.findFirst({ where: { id, userId } })
+    if (!salesOrder && !order) return reply.code(404).send({ success: false, message: '订单不存在' })
 
     const request = await prisma.aftersaleRequest.findFirst({
-      where: { orderId: id },
+      where: { orderId: salesOrder ? { in: taskIds } : id },
       orderBy: { createdAt: 'desc' },
     })
 

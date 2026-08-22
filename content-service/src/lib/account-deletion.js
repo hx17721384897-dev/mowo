@@ -156,7 +156,8 @@ async function anonymizeAccountData(prisma, userId, requestId, now) {
   await prisma.$transaction(async tx => {
     if (cart) await tx.cartItem.deleteMany({ where: { cartId: cart.id } })
     await tx.cart.deleteMany({ where: { userId } })
-    await tx.preOrder.deleteMany({ where: { userId } })
+    // 已成交预订单是正式销售订单的支付凭证，只清理未形成正式订单的记录。
+    await tx.preOrder.deleteMany({ where: { userId, salesOrder: { is: null } } })
     if (disposableProductIds.length) await tx.customProduct.deleteMany({ where: { id: { in: disposableProductIds } } })
     await tx.userAddress.deleteMany({ where: { userId } })
 

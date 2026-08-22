@@ -124,6 +124,7 @@ model User {
   customizationFrameSelections  CustomizationFrameSelection[] @relation("CustomizationFrameSelectionStaff")
   animationAssetsOwned          AnimationAsset[]              @relation("AnimationAssetOwner")
   animationVersionsCreated      AnimationAssetVersion[]       @relation("AnimationVersionCreator")
+  salesOrders                   SalesOrder[]
 
   @@map("users")
 }
@@ -631,37 +632,39 @@ model MachineModelSku {
 }
 
 model CustomizeOrder {
-  id              String    @id @default(uuid())
-  orderNo         String    @unique
-  userId          String    @map("user_id")
-  modelId         String    @map("model_id")
-  modelName       String    @map("model_name")
-  frameCount      Int       @map("frame_count")
-  size            String
-  material        String
-  color           String
-  colorName       String    @map("color_name")
-  skuId           String    @map("sku_id")
-  ossPath         String    @map("oss_path")
-  frameUrls       String    @map("frame_urls") // JSON数组
-  status          String    @default("pending")
+  id               String    @id @default(uuid())
+  orderNo          String    @unique
+  userId           String    @map("user_id")
+  modelId          String    @map("model_id")
+  modelName        String    @map("model_name")
+  frameCount       Int       @map("frame_count")
+  size             String
+  material         String
+  color            String
+  colorName        String    @map("color_name")
+  skuId            String    @map("sku_id")
+  ossPath          String    @map("oss_path")
+  frameUrls        String    @map("frame_urls") // JSON数组
+  status           String    @default("pending")
   // pending→paid→locked→processing→producing→shipped→received→aftersale/cancelled
-  inventoryStatus String    @default("normal") @map("inventory_status") @db.VarChar(20)
-  sourceType      String    @default("custom") @map("source_type")
-  collabWorkId    String?   @map("collab_work_id")
-  crmebOrderId    String?   @map("crmeb_order_id")
-  assignedTo      String?   @map("assigned_to")
-  receiverName    String?   @map("receiver_name")
-  receiverPhone   String?   @map("receiver_phone")
-  receiverAddress String?   @map("receiver_address")
-  receiverCity    String?   @map("receiver_city")
-  trackingNo      String?   @map("tracking_no")
-  trackingCompany String?   @map("tracking_company")
-  shippedAt       DateTime? @map("shipped_at")
-  receivedAt      DateTime? @map("received_at")
-  aftersaleCount  Int       @default(0) @map("aftersale_count") // 售后申请次数（防刷上限3次）
-  batchId         String?   @map("batch_id")
-  seqNo           Int?      @map("seq_no")
+  inventoryStatus  String    @default("normal") @map("inventory_status") @db.VarChar(20)
+  sourceType       String    @default("custom") @map("source_type")
+  collabWorkId     String?   @map("collab_work_id")
+  crmebOrderId     String?   @map("crmeb_order_id")
+  assignedTo       String?   @map("assigned_to")
+  receiverName     String?   @map("receiver_name")
+  receiverPhone    String?   @map("receiver_phone")
+  receiverAddress  String?   @map("receiver_address")
+  receiverCity     String?   @map("receiver_city")
+  trackingNo       String?   @map("tracking_no")
+  trackingCompany  String?   @map("tracking_company")
+  shippedAt        DateTime? @map("shipped_at")
+  receivedAt       DateTime? @map("received_at")
+  aftersaleCount   Int       @default(0) @map("aftersale_count") // 售后申请次数（防刷上限3次）
+  batchId          String?   @map("batch_id")
+  seqNo            Int?      @map("seq_no")
+  salesOrderItemId String?   @map("sales_order_item_id")
+  unitIndex        Int?      @map("unit_index")
 
   // v2 新增：多平台来源 + 锁单机制
   platform        String  @default("SELF") @map("platform") @db.VarChar(20)
@@ -679,8 +682,11 @@ model CustomizeOrder {
 
   user              User               @relation(fields: [userId], references: [id])
   aftersaleRequests AftersaleRequest[]
+  salesOrderItem    SalesOrderItem?    @relation(fields: [salesOrderItemId], references: [id], onDelete: SetNull)
 
   @@unique([platform, externalOrderId], name: "platform_external_order_unique")
+  @@unique([salesOrderItemId, unitIndex])
+  @@index([salesOrderItemId])
   @@map("customize_orders")
 }
 
@@ -1655,6 +1661,7 @@ model AnimationAsset {
   versions              AnimationAssetVersion[]
   customProducts        CustomProduct[]
   customizationRequests CustomizationRequest[]
+  salesOrderItems       SalesOrderItem[]
 
   @@index([ownerUserId, status, updatedAt])
   @@index([assetType, collabStatus])
@@ -1685,6 +1692,7 @@ model AnimationAssetVersion {
   createdBy            User?                        @relation("AnimationVersionCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
   customProducts       CustomProduct[]              @relation("CustomProductAnimationVersion")
   acceptedRequests     CustomizationRequest[]       @relation("CustomizationAcceptedAnimationVersion")
+  salesOrderItems      SalesOrderItem[]
 
   @@unique([assetId, versionNo])
   @@index([assetId, createdAt])
@@ -1790,26 +1798,88 @@ model CustomizationRequestEvent {
 
 // 预订单（10分钟库存锁定，支付前临时凭据）
 model PreOrder {
-  id                     String   @id @default(uuid())
-  userId                 String   @map("user_id")
-  cartItemIds            String   @map("cart_item_ids") @db.Text // JSON 数组，幂等校验用
-  checkoutIdempotencyKey String   @unique @map("checkout_idempotency_key")
-  status                 String   @default("pending_payment") // pending_payment|paid|expired|cancelled
-  orderType              String   @default("normal") @map("order_type") // normal|presale
-  discountAdjustment     Decimal? @map("discount_adjustment") @db.Decimal(10, 2)
-  totalAmount            Decimal  @map("total_amount") @db.Decimal(10, 2)
+  id                     String      @id @default(uuid())
+  userId                 String      @map("user_id")
+  cartItemIds            String      @map("cart_item_ids") @db.Text // JSON 数组，幂等校验用
+  checkoutIdempotencyKey String      @unique @map("checkout_idempotency_key")
+  status                 String      @default("pending_payment") // pending_payment|paid|expired|cancelled
+  orderType              String      @default("normal") @map("order_type") // normal|presale
+  discountAdjustment     Decimal?    @map("discount_adjustment") @db.Decimal(10, 2)
+  totalAmount            Decimal     @map("total_amount") @db.Decimal(10, 2)
   // 收件信息（结算时填写，字段名与 customize_orders 统一用 receiver*）
-  receiverName           String?  @map("receiver_name")
-  receiverPhone          String?  @map("receiver_phone")
-  receiverAddress        String?  @map("receiver_address") @db.Text
-  receiverCity           String?  @map("receiver_city")
-  expiresAt              DateTime @map("expires_at") // 创建时间 + 10分钟
-  wxPayParams            String?  @map("wx_pay_params") @db.Text // 微信支付参数 JSON
-  createdAt              DateTime @default(now()) @map("created_at")
+  receiverName           String?     @map("receiver_name")
+  receiverPhone          String?     @map("receiver_phone")
+  receiverAddress        String?     @map("receiver_address") @db.Text
+  receiverCity           String?     @map("receiver_city")
+  expiresAt              DateTime    @map("expires_at") // 创建时间 + 10分钟
+  wxPayParams            String?     @map("wx_pay_params") @db.Text // 微信支付参数 JSON
+  createdAt              DateTime    @default(now()) @map("created_at")
+  salesOrder             SalesOrder?
 
   @@index([userId, status])
   @@index([expiresAt])
   @@map("pre_orders")
+}
+
+// 一次支付对应一个用户订单。商品和生产任务在下方分层保存。
+model SalesOrder {
+  id              String    @id @default(uuid())
+  orderNo         String    @unique @map("order_no") @db.VarChar(32)
+  userId          String    @map("user_id")
+  preOrderId      String    @unique @map("pre_order_id")
+  status          String    @default("paid") @db.VarChar(20)
+  totalAmount     Decimal   @map("total_amount") @db.Decimal(10, 2)
+  receiverName    String?   @map("receiver_name")
+  receiverPhone   String?   @map("receiver_phone")
+  receiverAddress String?   @map("receiver_address") @db.Text
+  receiverCity    String?   @map("receiver_city")
+  platform        String    @default("SELF") @db.VarChar(20)
+  paidAt          DateTime? @map("paid_at")
+  cancelledAt     DateTime? @map("cancelled_at")
+  receivedAt      DateTime? @map("received_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  user     User             @relation(fields: [userId], references: [id])
+  preOrder PreOrder         @relation(fields: [preOrderId], references: [id], onDelete: Restrict)
+  items    SalesOrderItem[]
+
+  @@index([userId, status, createdAt])
+  @@map("sales_orders")
+}
+
+// 用户订单中的一条商品，锁定成交时的动画版本、SKU、数量和价格快照。
+model SalesOrderItem {
+  id                 String   @id @default(uuid())
+  itemNo             String   @unique @map("item_no") @db.VarChar(40)
+  salesOrderId       String   @map("sales_order_id")
+  cartItemId         String?  @map("cart_item_id")
+  itemType           String   @map("item_type") @db.VarChar(20)
+  contentId          String   @map("content_id")
+  customProductId    String?  @map("custom_product_id")
+  animationAssetId   String?  @map("animation_asset_id")
+  animationVersionId String?  @map("animation_version_id")
+  skuId              String   @map("sku_id")
+  skuCode            String?  @map("sku_code")
+  snapshotTitle      String   @map("snapshot_title")
+  snapshotPreviewUrl String?  @map("snapshot_preview_url") @db.Text
+  configSnapshotJson String?  @map("config_snapshot_json") @db.Text
+  unitPrice          Decimal  @map("unit_price") @db.Decimal(10, 2)
+  quantity           Int
+  lineTotal          Decimal  @map("line_total") @db.Decimal(10, 2)
+  status             String   @default("paid") @db.VarChar(20)
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  salesOrder       SalesOrder             @relation(fields: [salesOrderId], references: [id], onDelete: Restrict)
+  animationAsset   AnimationAsset?        @relation(fields: [animationAssetId], references: [id], onDelete: SetNull)
+  animationVersion AnimationAssetVersion? @relation(fields: [animationVersionId], references: [id], onDelete: SetNull)
+  productionTasks  CustomizeOrder[]
+
+  @@index([salesOrderId])
+  @@index([animationAssetId, animationVersionId])
+  @@index([skuId])
+  @@map("sales_order_items")
 }
 
 // 用户收货地址簿

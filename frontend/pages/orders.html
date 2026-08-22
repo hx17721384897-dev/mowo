@@ -285,14 +285,25 @@ function buildCard(o, i) {
   const isActive = stepIdx >= 0 && stepIdx <= 2  // 待付款/制作中/运输中
   const isDone   = o.status === 'received'
 
-  // 缩略图
-  const thumbHtml = o.coverUrl
-    ? `<img src="${o.coverUrl}" alt="" loading="lazy" onerror="this.style.display='none'">`
-    : (o.sourceType === 'collab' ? '🎬' : '🎨')
-
-  // 机型规格
-  const specParts = [o.modelName, o.size, o.frameCount ? o.frameCount + '帧' : null, o.material, o.colorName].filter(Boolean)
-  const specText  = specParts.join(' · ') || '—'
+  const cardItems = o.items?.length ? o.items : [{
+    productTitle:o.productTitle, coverUrl:o.coverUrl, modelName:o.modelName,
+    size:o.size, frameCount:o.frameCount, material:o.material, colorName:o.colorName,
+    quantity:o.totalQuantity || 1, lineTotal:o.totalAmount, itemType:o.sourceType === 'collab' ? 'MARKET' : 'CUSTOM'
+  }]
+  const itemsHtml = cardItems.map(item => {
+    const thumbHtml = item.coverUrl
+      ? `<img src="${escHtml(item.coverUrl)}" alt="" loading="lazy" onerror="this.style.display='none'">`
+      : (item.itemType === 'MARKET' ? '🎬' : '🎨')
+    const specText = [item.modelName, item.size, item.frameCount ? item.frameCount + '帧' : null, item.material, item.colorName].filter(Boolean).join(' · ') || '—'
+    return `<div class="items-row">
+      <div class="item-thumb">${thumbHtml}</div>
+      <div class="item-info-col">
+        <div class="item-title-sm">${escHtml(item.productTitle || '—')}</div>
+        <div class="item-machine-sm">⚙ ${escHtml(specText)} · 数量 ${Number(item.quantity || 1)}</div>
+      </div>
+      <div class="item-total">¥${Number(item.lineTotal || 0).toFixed(2)}</div>
+    </div>`
+  }).join('')
 
   // 进度条
   let progressHtml = ''
@@ -365,14 +376,8 @@ function buildCard(o, i) {
       </div>
       <div class="card-body">
         ${progressHtml}
-        <div class="items-row">
-          <div class="item-thumb">${thumbHtml}</div>
-          <div class="item-info-col">
-            <div class="item-title-sm">${escHtml(o.productTitle || '—')}</div>
-            <div class="item-machine-sm">⚙ ${escHtml(specText)}</div>
-          </div>
-          <div class="item-total">¥${Number(o.totalAmount || 0).toFixed(2)}</div>
-        </div>
+        ${itemsHtml}
+        ${cardItems.length > 1 ? `<div style="text-align:right;font-weight:900;padding:10px 0">订单合计 ¥${Number(o.totalAmount || 0).toFixed(2)}</div>` : ''}
         <div class="card-actions">${actions}</div>
       </div>
     </div>`

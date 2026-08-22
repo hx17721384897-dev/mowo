@@ -460,23 +460,30 @@ function buildPage() {
     </div>
     ${etaHtml}`
 
-  // ── Items（单条订单 = 单件商品）
-  const coverHtml = o.coverUrl
-    ? `<img src="${escHtml(o.coverUrl)}" alt="" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">`
-    : (o.sourceType === 'collab' ? '🎬' : '🎨')
-  const specParts = [o.modelName, o.size, o.frameCount ? o.frameCount + '帧' : null, o.material, o.colorName].filter(Boolean)
-  const specText  = specParts.join(' · ') || '—'
-
-  document.getElementById('itemsList').innerHTML = `
-    <div class="order-item">
+  // ── Items：一个用户订单可以包含多条商品，每条再展开为单件生产任务
+  const orderItems = o.items?.length ? o.items : [{
+    productTitle:o.productTitle, coverUrl:o.coverUrl, modelName:o.modelName,
+    size:o.size, frameCount:o.frameCount, material:o.material, colorName:o.colorName,
+    quantity:1, lineTotal:o.totalAmount, itemType:o.sourceType === 'collab' ? 'MARKET' : 'CUSTOM'
+  }]
+  document.getElementById('itemsList').innerHTML = orderItems.map(item => {
+    const coverHtml = item.coverUrl
+      ? `<img src="${escHtml(item.coverUrl)}" alt="" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'">`
+      : (item.itemType === 'MARKET' ? '🎬' : '🎨')
+    const specText = [item.modelName, item.size, item.frameCount ? item.frameCount + '帧' : null, item.material, item.colorName].filter(Boolean).join(' · ') || '—'
+    const productionText = item.productionTasks?.length
+      ? ` · 已生成 ${item.productionTasks.length} 个生产任务`
+      : ''
+    return `<div class="order-item">
       <div class="oi-cover" style="background:var(--cream)">${coverHtml}</div>
       <div class="oi-info">
-        <div class="oi-title">${escHtml(o.productTitle || '—')}</div>
+        <div class="oi-title">${escHtml(item.productTitle || '—')}</div>
         <div class="oi-machine">⚙ ${escHtml(specText)}</div>
-        <div class="oi-qty">数量：1</div>
+        <div class="oi-qty">数量：${Number(item.quantity || 1)}${productionText}</div>
       </div>
-      <div class="oi-price">¥${Number(o.totalAmount || 0).toFixed(2)}</div>
+      <div class="oi-price">¥${Number(item.lineTotal || 0).toFixed(2)}</div>
     </div>`
+  }).join('')
 
   // ── Address
   const phone = maskPhone(o.receiverPhone)
