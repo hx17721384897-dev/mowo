@@ -621,6 +621,7 @@ model MachineModelSku {
   skuType           String    @default("KIT") @map("sku_type") @db.VarChar(20) // KIT / CBR_TEMPLATE / MTO_TEMPLATE
   licenseExpireDate DateTime? @map("license_expire_date") // CBR授权到期日
   licenseStatus     String?   @default("Active") @map("license_status") @db.VarChar(20) // Active / Expiring / Expired
+  bomVersion        Int       @default(0) @map("bom_version")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -1922,12 +1923,17 @@ model ContentQuota {
 // 材料物品清单
 model MaterialItem {
   id           String   @id @default(uuid())
+  itemCode     String?  @unique @map("item_code") @db.VarChar(50)
   name         String   @db.VarChar(100)
+  itemType     String   @default("RAW") @map("item_type") @db.VarChar(20) // RAW / PACKED / CONSUMABLE
+  specification String? @db.VarChar(200)
   unit         String   @default("个") @db.VarChar(20)
   currentStock Int      @default(0) @map("current_stock")
   safetyStock  Int      @default(10) @map("safety_stock")
   leadTime     Int      @default(7) @map("lead_time") // 采购周期（天）
   note         String?  @db.VarChar(200)
+  sourceMaterialId String? @map("source_material_id")
+  sourceQtyPerUnit Int?    @map("source_qty_per_unit")
   isActive     Boolean  @default(true) @map("is_active")
   createdBy    String   @map("created_by")
   createdAt    DateTime @default(now()) @map("created_at")
@@ -1935,6 +1941,7 @@ model MaterialItem {
 
   logs        MaterialLog[]
   skuBindings MaterialSkuBinding[]
+  receipts    MaterialReceipt[]
 
   @@map("material_items")
 }
@@ -1951,6 +1958,7 @@ model MaterialLog {
   operatorId String   @map("operator_id")
   note       String?  @db.VarChar(200)
   orderId    String?  @map("order_id")
+  referenceNo String? @map("reference_no") @db.VarChar(50)
   createdAt  DateTime @default(now()) @map("created_at")
 
   material MaterialItem @relation(fields: [materialId], references: [id])
@@ -1966,11 +1974,95 @@ model MaterialSkuBinding {
   skuId      String   @map("sku_id") // machine_model_skus.id
   qtyPerUnit Int      @default(1) @map("qty_per_unit") // 每出1个SKU消耗的材料数量
   createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
   material MaterialItem @relation(fields: [materialId], references: [id])
 
   @@unique([materialId, skuId])
   @@map("material_sku_bindings")
+}
+
+model MaterialReceipt {
+  id              String   @id @default(uuid())
+  receiptNo       String   @unique @map("receipt_no") @db.VarChar(50)
+  materialId      String   @map("material_id")
+  orderedSpec     String?  @map("ordered_spec") @db.VarChar(200)
+  actualQty       Int      @map("actual_qty")
+  acceptedQty     Int      @map("accepted_qty")
+  rejectedQty     Int      @default(0) @map("rejected_qty")
+  supplierName    String?  @map("supplier_name") @db.VarChar(100)
+  supplierLotNo   String?  @map("supplier_lot_no") @db.VarChar(100)
+  operatorId      String   @map("operator_id")
+  note            String?  @db.VarChar(300)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  material MaterialItem @relation(fields: [materialId], references: [id])
+
+  @@index([materialId, createdAt])
+  @@map("material_receipts")
+}
+
+model MaterialPreparationBatch {
+  id               String   @id @default(uuid())
+  batchNo          String   @unique @map("batch_no") @db.VarChar(50)
+  outputMaterialId String   @map("output_material_id")
+  outputQty        Int      @map("output_qty")
+  operatorId       String   @map("operator_id")
+  note             String?  @db.VarChar(300)
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  inputs MaterialPreparationInput[]
+
+  @@index([outputMaterialId, createdAt])
+  @@map("material_preparation_batches")
+}
+
+model MaterialPreparationInput {
+  id          String @id @default(uuid())
+  prepBatchId String @map("prep_batch_id")
+  materialId  String @map("material_id")
+  usedQty     Int    @map("used_qty")
+  lossQty     Int    @default(0) @map("loss_qty")
+
+  batch MaterialPreparationBatch @relation(fields: [prepBatchId], references: [id], onDelete: Cascade)
+
+  @@index([materialId])
+  @@map("material_preparation_inputs")
+}
+
+model KitContainer {
+  id         String   @id @default(uuid())
+  code       String   @unique @db.VarChar(50)
+  skuId      String   @map("sku_id")
+  currentQty Int      @default(0) @map("current_qty")
+  location   String?  @db.VarChar(100)
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  assemblies KitAssemblyBatch[]
+
+  @@index([skuId])
+  @@map("kit_containers")
+}
+
+model KitAssemblyBatch {
+  id           String   @id @default(uuid())
+  batchNo      String   @unique @map("batch_no") @db.VarChar(50)
+  skuId        String   @map("sku_id")
+  quantity     Int
+  bomVersion   Int      @map("bom_version")
+  bomSnapshot  String   @map("bom_snapshot")
+  containerId  String?  @map("container_id")
+  operatorId   String   @map("operator_id")
+  note         String?  @db.VarChar(300)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  container KitContainer? @relation(fields: [containerId], references: [id])
+
+  @@index([skuId, createdAt])
+  @@index([containerId])
+  @@map("kit_assembly_batches")
 }
 
 // ================================================================

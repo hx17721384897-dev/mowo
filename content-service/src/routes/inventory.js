@@ -10,6 +10,11 @@ import {
 
 export default async function inventoryRoutes(fastify) {
 
+  const makeBatchNo = () => {
+    const date = new Date().toISOString().slice(0, 10).replaceAll('-', '')
+    return `KB-${date}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`
+  }
+
   // ─────────────────────────────────────────────
   // 管理员接口（role >= 2）
   // ─────────────────────────────────────────────
@@ -80,6 +85,133 @@ export default async function inventoryRoutes(fastify) {
     })
 
     return reply.send({ success: true, data: result })
+  })
+
+  // GET /api/inventory/kits/assemblies — 最近的材料包入库记录
+  fastify.get('/kits/assemblies', { preHandler: requireAdmin }, async (req, reply) => {
+    const rows = await fastify.prisma.kitAssemblyBatch.findMany({
+      orderBy: { createdAt: 'desc' }, take: 100, include: { container: true }
+    })
+    return reply.send({ success: true, data: rows })
+  })
+
+  // GET /api/inventory/kits/containers — 可重复使用的材料包箱码
+  fastify.get('/kits/containers', { preHandler: requireAdmin }, async (req, reply) => {
+    const rows = await fastify.prisma.kitContainer.findMany({
+      where: { isActive: true }, orderBy: { code: 'asc' }
+    })
+    return reply.send({ success: true, data: rows })
+  })
+
+  // POST /api/inventory/kits/assemble
+  // 员工只执行一次“材料包入库”：系统按当前 BOM 原子扣零件并增加材料包库存。
+  fastify.post('/kits/assemble', { preHandler: requireProduction }, async (req, reply) => {
+    const { skuId, quantity, boxCode, location, note } = req.body || {}
+    const qty = Number(quantity)
+    const operatorId = req.user.userId
+    if (!skuId) return reply.code(400).send({ success: false, message: '请选择材料包 SKU' })
+    if (!Number.isInteger(qty) || qty <= 0)
+      return reply.code(400).send({ success: false, message: '入库数量必须为正整数' })
+
+    const sku = await fastify.prisma.machineModelSku.findUnique({ where: { id: skuId } })
+    if (!sku) return reply.code(404).send({ success: false, message: 'SKU不存在' })
+    const bindings = await fastify.prisma.materialSkuBinding.findMany({ where: { skuId } })
+    if (!bindings.length)
+      return reply.code(400).send({ success: false, message: '该 SKU 还没有材料清单，请先到款式管理设置' })
+
+    const materials = await fastify.prisma.materialItem.findMany({
+      where: { id: { in: bindings.map(item => item.materialId) }, isActive: true }
+    })
+    const materialMap = Object.fromEntries(materials.map(item => [item.id, item]))
+    if (materials.length !== bindings.length)
+      return reply.code(400).send({ success: false, message: '材料清单中存在已停用零件，请先修正材料清单' })
+
+    const requirements = bindings.map(binding => ({
+      material: materialMap[binding.materialId],
+      qtyPerUnit: binding.qtyPerUnit,
+      requiredQty: binding.qtyPerUnit * qty
+    }))
+    const shortages = requirements.filter(row => row.material.currentStock < row.requiredQty)
+    if (shortages.length) {
+      return reply.code(400).send({
+        success: false,
+        message: `零件库存不足：${shortages.map(row => `${row.material.name}需要${row.requiredQty}${row.material.unit}，现有${row.material.currentStock}${row.material.unit}`).join('；')}`,
+        data: { shortages }
+      })
+    }
+
+    const normalizedBoxCode = boxCode?.trim().toUpperCase() || null
+    if (normalizedBoxCode) {
+      const existingBox = await fastify.prisma.kitContainer.findUnique({ where: { code: normalizedBoxCode } })
+      if (existingBox && existingBox.skuId !== skuId)
+        return reply.code(400).send({ success: false, message: '该箱码已经用于另一种 SKU；一个箱子只能存放一种材料包' })
+    }
+
+    const batchNo = makeBatchNo()
+    const bomSnapshot = JSON.stringify(requirements.map(row => ({
+      materialId: row.material.id,
+      itemCode: row.material.itemCode,
+      name: row.material.name,
+      specification: row.material.specification,
+      unit: row.material.unit,
+      qtyPerUnit: row.qtyPerUnit,
+      totalQty: row.requiredQty
+    })))
+
+    try {
+      await fastify.prisma.$transaction(async tx => {
+        for (const row of requirements) {
+          const changed = await tx.materialItem.updateMany({
+            where: { id: row.material.id, currentStock: { gte: row.requiredQty } },
+            data: { currentStock: { decrement: row.requiredQty } }
+          })
+          if (changed.count !== 1) throw new Error(`${row.material.name}库存刚刚发生变化，请刷新后重试`)
+          const materialAfter = await tx.materialItem.findUnique({ where: { id: row.material.id } })
+          await tx.materialLog.create({
+            data: {
+              materialId: row.material.id, type: 'kit_assembly_consumed', quantity: row.requiredQty,
+              beforeQty: materialAfter.currentStock + row.requiredQty, afterQty: materialAfter.currentStock,
+              operatorId, referenceNo: batchNo, note: `组装 ${sku.skuCode || sku.skuBarcode || sku.id} × ${qty}`
+            }
+          })
+        }
+
+        const inventory = await tx.skuInventory.findUnique({ where: { skuId } })
+        if (!inventory) throw new Error('SKU库存记录不存在')
+        const inventoryAfter = await tx.skuInventory.update({ where: { skuId }, data: { currentStock: { increment: qty } } })
+        await tx.inventoryLog.create({
+          data: {
+            skuId, type: 'kit_assembled', quantity: qty, operatorId,
+            beforeQty: inventoryAfter.currentStock - qty, afterQty: inventoryAfter.currentStock,
+            reason: '材料包组装入库', note: `${batchNo}${normalizedBoxCode ? `；箱码 ${normalizedBoxCode}` : ''}`
+          }
+        })
+
+        let container = null
+        if (normalizedBoxCode) {
+          container = await tx.kitContainer.upsert({
+            where: { code: normalizedBoxCode },
+            create: { code: normalizedBoxCode, skuId, currentQty: qty, location: location?.trim() || null },
+            update: { currentQty: { increment: qty }, location: location?.trim() || undefined }
+          })
+        }
+        await tx.kitAssemblyBatch.create({
+          data: {
+            batchNo, skuId, quantity: qty, bomVersion: sku.bomVersion || 0,
+            bomSnapshot, containerId: container?.id || null,
+            operatorId, note: note?.trim() || null
+          }
+        })
+      })
+    } catch (error) {
+      return reply.code(409).send({ success: false, message: error.message || '材料包入库失败' })
+    }
+
+    return reply.send({
+      success: true,
+      message: `✓ 已入库 ${qty} 套材料包，零件已同步扣除`,
+      data: { batchNo, skuId, quantity: qty, boxCode: normalizedBoxCode, requirements }
+    })
   })
 
   // GET /api/inventory/:skuId
@@ -327,11 +459,6 @@ export default async function inventoryRoutes(fastify) {
         data: { code: authCode, orderId: order.id, skuId: sku.id, issuedAt: new Date() }
       })
     ])
-
-    // 自动扣减绑定材料（若 materialsRoutes 已注册则调用）
-    if (fastify.deductMaterialsForSku) {
-      fastify.deductMaterialsForSku(sku.id, order.id, operatorId).catch(() => {})
-    }
 
     return reply.send({ success: true, message: '✓ 发货成功', data: { orderNo, trackingNo, trackingCompany, authCode } })
   })

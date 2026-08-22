@@ -940,6 +940,10 @@ function renderSkuTable(m) {
           onclick="openExampleMediaModal('${s.id}','${esc(s.size)}·${esc(s.material)}·${s.frameCount}帧')">
           示例图
         </button>
+        <button class="btn btn-ghost btn-sm"
+          onclick="openBomModal('${s.id}','${esc(m.name)} · ${esc(s.size)} · ${s.frameCount}帧')">
+          材料清单
+        </button>
       </div>
     </div>`
   }).join('')
@@ -1551,7 +1555,122 @@ async function deleteExMedia(objectKey) {
   </div>
 </div>
 
+<!-- SKU 材料清单：只选择库存页已建立的零件 -->
+<div id="bomOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(6px);z-index:2000;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--white);border-radius:16px;width:100%;max-width:680px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;">
+    <div style="padding:20px 24px 16px;border-bottom:1px solid var(--gray1);display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">
+      <div>
+        <div id="bomTitle" style="font-weight:900;font-size:17px;">材料清单</div>
+        <div id="bomSub" style="font-weight:700;font-size:12px;color:var(--gray3);margin-top:5px;"></div>
+      </div>
+      <button onclick="closeBomModal()" style="font-size:22px;color:var(--gray3);cursor:pointer;">×</button>
+    </div>
+    <div style="padding:16px 24px;overflow-y:auto;flex:1;">
+      <div style="font-weight:700;font-size:12px;color:var(--gray3);line-height:1.6;margin-bottom:12px;">这里只能选择已经在“库存管理”建立的零件。每套用量表示入库一套材料包时要扣除多少。</div>
+      <input id="bomSearch" class="form-input" placeholder="搜索零件名称、编码或规格" oninput="renderBomMaterials()" style="margin-bottom:12px;">
+      <div id="bomMaterialList"><div class="loading-state">正在加载…</div></div>
+    </div>
+    <div style="padding:14px 24px 20px;border-top:1px solid var(--gray1);display:flex;justify-content:space-between;align-items:center;gap:12px;">
+      <a href="admin-inventory.html" class="btn btn-ghost">去库存管理新增零件</a>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost" onclick="closeBomModal()">取消</button>
+        <button class="btn btn-black" id="bomSaveBtn" onclick="saveBom()">保存材料清单</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
+let _bomSkuId = null
+let _bomMaterials = []
+let _bomSelected = new Map()
+
+async function openBomModal(skuId, label) {
+  _bomSkuId = skuId
+  _bomSelected = new Map()
+  document.getElementById('bomTitle').textContent = '材料清单'
+  document.getElementById('bomSub').textContent = label
+  document.getElementById('bomSearch').value = ''
+  document.getElementById('bomMaterialList').innerHTML = '<div class="loading-state">正在加载…</div>'
+  document.getElementById('bomOverlay').style.display = 'flex'
+  try {
+    const [materialsRes, bomRes] = await Promise.all([
+      fetch(`${API}/api/materials`, { headers:{Authorization:`Bearer ${_token}`} }),
+      fetch(`${API}/api/machine-models/skus/${skuId}/bom`, { headers:{Authorization:`Bearer ${_token}`} })
+    ])
+    const materialsJson = await materialsRes.json()
+    const bomJson = await bomRes.json()
+    if (!materialsJson.success) throw new Error(materialsJson.message)
+    if (!bomJson.success) throw new Error(bomJson.message)
+    _bomMaterials = materialsJson.data || []
+    for (const row of bomJson.data.items || []) _bomSelected.set(row.materialId, row.qtyPerUnit)
+    renderBomMaterials()
+  } catch (error) {
+    document.getElementById('bomMaterialList').innerHTML = `<div class="loading-state">加载失败：${esc(error.message)}</div>`
+  }
+}
+
+function closeBomModal() {
+  document.getElementById('bomOverlay').style.display = 'none'
+  _bomSkuId = null
+}
+
+function renderBomMaterials() {
+  const q = (document.getElementById('bomSearch')?.value || '').trim().toLowerCase()
+  const typeLabel = { RAW:'散装/基础零件', PACKED:'已分装零件', CONSUMABLE:'直接耗材' }
+  const rows = _bomMaterials.filter(item => [item.name,item.itemCode,item.specification].join(' ').toLowerCase().includes(q))
+  const list = document.getElementById('bomMaterialList')
+  if (!rows.length) {
+    list.innerHTML = '<div class="loading-state">没有找到零件，请先到库存管理建立</div>'
+    return
+  }
+  list.innerHTML = rows.map(item => {
+    const checked = _bomSelected.has(item.id)
+    const qty = _bomSelected.get(item.id) || 1
+    return `<label style="display:grid;grid-template-columns:24px 1fr 132px;gap:12px;align-items:center;padding:12px;border:1px solid var(--gray1);border-radius:8px;margin-bottom:8px;cursor:pointer;">
+      <input type="checkbox" ${checked?'checked':''} onchange="toggleBomMaterial('${item.id}',this.checked)">
+      <span>
+        <strong style="font-size:13px;">${esc(item.name)}</strong>
+        <span style="display:block;font-size:11px;color:var(--gray3);margin-top:3px;">${esc(typeLabel[item.itemType]||item.itemType)}${item.specification?' · '+esc(item.specification):''}${item.itemCode?' · '+esc(item.itemCode):''} · 库存 ${item.currentStock}${esc(item.unit)}</span>
+      </span>
+      <span style="display:flex;align-items:center;gap:6px;">
+        <input type="number" min="1" step="1" value="${qty}" ${checked?'':'disabled'} id="bomQty-${item.id}" class="form-input" style="height:36px;padding:0 8px;" onclick="event.stopPropagation()" onchange="setBomQty('${item.id}',this.value)">
+        <span style="font-size:11px;color:var(--gray3);white-space:nowrap;">${esc(item.unit)}/套</span>
+      </span>
+    </label>`
+  }).join('')
+}
+
+function toggleBomMaterial(id, checked) {
+  if (checked) _bomSelected.set(id, Number(document.getElementById(`bomQty-${id}`)?.value || 1))
+  else _bomSelected.delete(id)
+  renderBomMaterials()
+}
+
+function setBomQty(id, value) {
+  const qty = Number(value)
+  if (_bomSelected.has(id) && Number.isInteger(qty) && qty > 0) _bomSelected.set(id, qty)
+}
+
+async function saveBom() {
+  if (!_bomSkuId) return
+  const items = [..._bomSelected.entries()].map(([materialId, qtyPerUnit]) => ({materialId, qtyPerUnit}))
+  if (items.some(item => !Number.isInteger(item.qtyPerUnit) || item.qtyPerUnit <= 0)) return showToast('每套用量必须为正整数')
+  const btn = document.getElementById('bomSaveBtn')
+  btn.disabled = true
+  try {
+    const res = await fetch(`${API}/api/machine-models/skus/${_bomSkuId}/bom`, {
+      method:'PUT', headers:{'Content-Type':'application/json',Authorization:`Bearer ${_token}`},
+      body:JSON.stringify({items})
+    })
+    const json = await res.json()
+    if (!json.success) throw new Error(json.message)
+    showToast('材料清单已保存')
+    closeBomModal()
+  } catch (error) { showToast('保存失败：'+error.message) }
+  finally { btn.disabled = false }
+}
+
 function openSidebar() {
   document.getElementById('sidebar').classList.add('open');
   document.getElementById('sidebarBackdrop').classList.add('show');

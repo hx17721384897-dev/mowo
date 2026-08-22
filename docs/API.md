@@ -527,7 +527,7 @@ quantity 范围：1-100。
 ---
 
 ### POST `/api/inventory/:skuId/restock`
-手动盘点入库。需 role≥1（负数需 role≥2）。
+历史通用手动调整接口。标准材料包正常入库不得使用该接口，应调用 `/api/inventory/kits/assemble`，以确保同步扣除零件。该接口仅保留给盘点修正和旧生产页面兼容。需 role≥1（负数需 role≥2）。
 
 **Body：**
 ```json
@@ -581,6 +581,53 @@ quantity 范围：1-100。
 **Body：**
 ```json
 { "skuBarcode": "MOWO-SKU-0001-0001", "orderId": "order_id" }
+```
+
+发货只处理订单、物流和正版码，不再按 SKU 材料清单扣零件。零件已在材料包入库时扣除。
+
+---
+
+### POST `/api/inventory/kits/assemble`
+标准材料包组装入库。按 SKU 当前材料清单检查并原子扣除全部零件，同时增加材料包库存、冻结配方快照并可写入可重复使用箱码。需生产库存权限。
+
+```json
+{
+  "skuId": "sku_id",
+  "quantity": 20,
+  "boxCode": "BX-008",
+  "location": "A区-02架",
+  "note": "本周材料包入库"
+}
+```
+
+### GET `/api/inventory/kits/assemblies`
+最近100条材料包组装入库记录。需生产库存权限。
+
+### GET `/api/inventory/kits/containers`
+有效箱码、对应 SKU、库位和当前数量。需生产库存权限。
+
+### GET/PUT `/api/machine-models/skus/:skuId/bom`
+读取或整体保存 SKU 当前材料清单。保存时只能引用库存页已有且有效的零件，并增加配方版本号。
+
+### POST `/api/materials/:id/restock`
+零件采购实收入库。库存只增加 `acceptedQty`，`orderedSpec` 不参与自动换算。
+
+```json
+{
+  "orderedSpec": "订购50米，切成5.5cm",
+  "actualQty": 120,
+  "acceptedQty": 118,
+  "rejectedQty": 2,
+  "supplierName": "供应商名称",
+  "supplierLotNo": "供应商批号"
+}
+```
+
+### POST `/api/materials/:id/prepare`
+把当前已分装零件配置的来源零件转换为分装成品，并单独记录额外损耗。
+
+```json
+{ "outputQty": 9, "lossQty": 2, "note": "分装时发现2根弯曲" }
 ```
 
 验证 skuBarcode 与订单SKU匹配后：

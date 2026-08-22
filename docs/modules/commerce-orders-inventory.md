@@ -126,7 +126,7 @@
 | 库存 | 模型 | 用途 | 当前连接情况 |
 |---|---|---|---|
 | 硬件 SKU 四态库存 | `SkuInventory`、`InventoryLog`、`InventorySnapshot`、`ChannelQuota` | 现货、支付/订单锁定、帧制在制、料制在制 | MARKET 购物车结算会预锁；CUSTOM 购物车不会预锁 |
-| 材料库存 | `MaterialItem`、`MaterialLog`、`MaterialSkuBinding` | 包装袋、感谢卡等按 SKU 单位用量扣减 | 发货后异步扣减，失败不回滚发货且没有可靠重试 |
+| 零件与材料包库存 | `MaterialItem`、`MaterialReceipt`、`MaterialPreparationBatch`、`MaterialSkuBinding`、`KitAssemblyBatch`、`KitContainer` | 实收入库、分装、SKU材料清单和标准材料包组装 | 组装入库已原子扣零件并增加材料包；生产任务领料和采购批次精确分配待完成 |
 | 帧包库存 | `FramePackWork`、`FramePackVariant`、`FramePackLog` | 联名作品帧包预制备货 | 目前主要是后台独立维护，未接入购物车配额或销售消耗 |
 
 `ContentQuota` 还定义了联名限量配额，但在源代码中未找到实际读写消费者。
@@ -205,7 +205,7 @@ Schema 注释的主状态为：
 - 创建 SKU 后再单独创建库存，不在一个事务中；第二步失败会留下无库存记录的 SKU。
 - SKU/机型批量排序使用 `Promise.all`，没有事务和完整归属校验，部分失败会留下半完成顺序。
 - 材料和帧包库存采用“先读再写绝对值”，并发操作可能丢失更新。
-- 材料扣减库存不足时会归零并继续发货，记录的扣减数可能大于实际持有数。
+- 2026-08-22 已移除“发货后异步扣零件”。材料包组装入库会先检查全部零件，并在一个事务中扣零件和增加材料包库存；不足时整笔拒绝。历史风险不再适用于该入口，领料和其他旧生产入口仍需后续统一。
 - 材料扣减在发货事务后异步执行，错误只写日志；没有订单级唯一约束，重复调用也可能重复扣料。
 - `/api/inventory/ship` 本身不扣 SKU 当前库存，依赖之前生产步骤；同时不写 `shippedAt`，自动收货无法覆盖该路径。
 - 旧商品详情对任意未软删除商品公开，包括待审核或驳回状态。
@@ -248,5 +248,6 @@ Schema 注释的主状态为：
 - `docs/admin-inventory-plan.md`：后台库存与材料规划。
 - `docs/USER_SCENARIOS.md`：联名下架、预存库存、押金和售罄待定规则。
 - `docs/ANIMATION_ORDER_PRODUCTION_FRAMEWORK.md`：动画资产、聚合订单、单件任务、帧素材包和标准材料包的目标关系。
+- `docs/STANDARD_KIT_INVENTORY.md`：零件实收、分装、SKU材料清单、材料包入库、误差与箱码的当前实现。
 - `docs/DOC_CODE_DIFFERENCES.md`：跨文档差异编号台账。
 - `docs/OPEN_QUESTIONS.md`：需要项目负责人决定的规则。

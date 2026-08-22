@@ -360,7 +360,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
     <!-- 主 Tab -->
     <div class="main-tabs">
       <button class="main-tab active" id="tabBtnStock"   onclick="switchTab('stock')">📦 SKU 库存</button>
-      <button class="main-tab"        id="tabBtnMat"     onclick="switchTab('mat')">🧩 材料包物品</button>
+      <button class="main-tab"        id="tabBtnMat"     onclick="switchTab('mat')">🧩 零件与分装</button>
       <button class="main-tab"        id="tabBtnLogs"    onclick="switchTab('logs')">📋 变动记录</button>
       <button class="main-tab"        id="tabBtnQuota"   onclick="switchTab('quota')">📡 渠道配额</button>
       <button class="main-tab"        id="tabBtnFrame"   onclick="switchTab('frame')">🎞 帧包库存</button>
@@ -384,7 +384,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
           <div></div>
           <div>款式</div>
           <div>规格</div>
-          <div>现货</div>
+          <div>材料包库存</div>
           <div class="col-locked">锁定</div>
           <div class="col-wip-f">在制量</div>
           <div>可用</div>
@@ -396,7 +396,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
       </div>
     </div>
 
-    <!-- ═══ Tab: 材料包物品 ═══ -->
+    <!-- ═══ Tab: 零件与分装 ═══ -->
     <div class="tab-panel" id="panelMat">
       <div class="toolbar">
         <div class="filter-tabs">
@@ -405,7 +405,10 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
           <button class="filter-tab"        id="mftWarning"  onclick="setMatFilter('WARNING')">🟡 库存偏低</button>
           <button class="filter-tab"        id="mftOk"       onclick="setMatFilter('OK')">✅ 充足</button>
         </div>
-        <button class="btn btn-black btn-sm" onclick="openMatNewModal()">＋ 新增物品</button>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-ghost btn-sm" onclick="openKitAssemblyModal()">材料包入库</button>
+          <button class="btn btn-black btn-sm" onclick="openMatNewModal()">＋ 新增零件</button>
+        </div>
       </div>
       <div class="mat-grid" id="matGrid"><div class="loading-row">加载中…</div></div>
     </div>
@@ -486,7 +489,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
   <div class="drawer-body" id="drawerBody"><div class="loading-row">加载中…</div></div>
 </div>
 
-<!-- ── 材料包物品抽屉 ── -->
+<!-- ── 零件详情抽屉 ── -->
 <div class="drawer-overlay" id="matDrawerOverlay" onclick="closeMatDrawer()"></div>
 <div class="drawer" id="matDrawer">
   <div class="drawer-header">
@@ -499,15 +502,45 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
   <div class="drawer-body" id="matDrawerBody"><div class="loading-row">加载中…</div></div>
 </div>
 
-<!-- ── 新增/编辑材料物品弹窗 ── -->
+<!-- ── 新增/编辑零件弹窗 ── -->
 <div class="modal-overlay" id="matModal">
   <div class="modal">
-    <div class="modal-title" id="matModalTitle">新增物品</div>
-    <div class="modal-sub">填写物品信息，保存后可随时编辑</div>
+    <div class="modal-title" id="matModalTitle">新增零件</div>
+    <div class="modal-sub">零件只能在库存页维护；款式页只能选择使用</div>
     <input type="hidden" id="matModalId">
     <div class="form-group">
-      <label class="form-label">物品名称 *</label>
-      <input class="form-input" id="matModalName" placeholder="如：感谢小卡、包装袋、防震纸…">
+      <label class="form-label">零件名称 *</label>
+      <input class="form-input" id="matModalName" placeholder="如：5.5cm铁丝、12根铁丝包、润滑蜡小包">
+    </div>
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label class="form-label">零件编码</label>
+        <input class="form-input" id="matModalCode" placeholder="留空自动生成">
+      </div>
+      <div class="form-group">
+        <label class="form-label">零件类型</label>
+        <select class="form-input" id="matModalType" onchange="togglePackedFields()">
+          <option value="RAW">散装/基础零件</option>
+          <option value="PACKED">已分装零件</option>
+          <option value="CONSUMABLE">直接耗材</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">规格</label>
+      <input class="form-input" id="matModalSpec" placeholder="如：长度5.5cm、椴木5×5cm">
+    </div>
+    <div id="packedFields" style="display:none;background:var(--cream);border-radius:8px;padding:12px;margin-bottom:14px;">
+      <div class="form-grid-2" style="margin-bottom:0;">
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">分装来源 *</label>
+          <select class="form-input" id="matModalSource"></select>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">每包使用来源数量 *</label>
+          <input class="form-input" id="matModalSourceQty" type="number" min="1" step="1" placeholder="如 12">
+        </div>
+      </div>
     </div>
     <div class="form-grid-2">
       <div class="form-group">
@@ -532,6 +565,56 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
       <button class="btn btn-ghost" onclick="closeMatModal()">取消</button>
       <button class="btn btn-black" onclick="submitMatModal()">保存</button>
     </div>
+  </div>
+</div>
+
+<!-- 零件采购实收入库 -->
+<div class="modal-overlay" id="matReceiptModal">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-title">零件实收入库</div>
+    <div class="modal-sub" id="matReceiptLabel"></div>
+    <div class="form-group"><label class="form-label">订购说明</label><input class="form-input" id="matReceiptOrdered" placeholder="如：50米，工厂切成5.5cm"></div>
+    <div class="form-grid-2">
+      <div class="form-group"><label class="form-label">实际合格数量 *</label><input class="form-input" id="matReceiptAccepted" type="number" min="1" step="1"></div>
+      <div class="form-group"><label class="form-label">到货次品数量</label><input class="form-input" id="matReceiptRejected" type="number" min="0" step="1" value="0"></div>
+    </div>
+    <div class="form-grid-2">
+      <div class="form-group"><label class="form-label">供应商</label><input class="form-input" id="matReceiptSupplier"></div>
+      <div class="form-group"><label class="form-label">供应商批号</label><input class="form-input" id="matReceiptLot"></div>
+    </div>
+    <div class="form-group"><label class="form-label">备注</label><input class="form-input" id="matReceiptNote" placeholder="清点情况、质量问题等"></div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeMatReceiptModal()">取消</button><button class="btn btn-black" onclick="submitMatReceipt()">确认入库</button></div>
+  </div>
+</div>
+
+<!-- 散装零件分装 -->
+<div class="modal-overlay" id="matPrepareModal">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-title">零件分装</div>
+    <div class="modal-sub" id="matPrepareLabel"></div>
+    <div class="form-grid-2">
+      <div class="form-group"><label class="form-label">分装成品数量 *</label><input class="form-input" id="matPrepareOutput" type="number" min="1" step="1" oninput="updatePreparePreview()"></div>
+      <div class="form-group"><label class="form-label">本次额外损耗</label><input class="form-input" id="matPrepareLoss" type="number" min="0" step="1" value="0" oninput="updatePreparePreview()"></div>
+    </div>
+    <div id="matPreparePreview" style="background:var(--cream);padding:12px;border-radius:8px;font-size:12px;font-weight:700;line-height:1.7;margin-bottom:14px;"></div>
+    <div class="form-group"><label class="form-label">备注</label><input class="form-input" id="matPrepareNote" placeholder="异常或分装说明"></div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeMatPrepareModal()">取消</button><button class="btn btn-black" onclick="submitMatPrepare()">确认分装</button></div>
+  </div>
+</div>
+
+<!-- 标准材料包组装入库 -->
+<div class="modal-overlay" id="kitAssemblyModal">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-title">材料包入库</div>
+    <div class="modal-sub">选择 SKU 和数量，系统按材料清单同步扣除零件</div>
+    <div class="form-group"><label class="form-label">材料包 SKU *</label><select class="form-input" id="kitAssemblySku"></select></div>
+    <div class="form-grid-2">
+      <div class="form-group"><label class="form-label">入库套数 *</label><input class="form-input" id="kitAssemblyQty" type="number" min="1" step="1"></div>
+      <div class="form-group"><label class="form-label">箱码（选填，可重复使用）</label><input class="form-input" id="kitAssemblyBox" placeholder="如 BX-008"></div>
+    </div>
+    <div class="form-group"><label class="form-label">库位（选填）</label><input class="form-input" id="kitAssemblyLocation" placeholder="如 A区-02架"></div>
+    <div class="form-group"><label class="form-label">备注</label><input class="form-input" id="kitAssemblyNote"></div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeKitAssemblyModal()">取消</button><button class="btn btn-black" onclick="submitKitAssembly()">确认材料包入库</button></div>
   </div>
 </div>
 
@@ -838,7 +921,7 @@ function renderSkuTable() {
         <span style="font-weight:900;">${item.safetyStock || 0}</span>
       </div>
       <div style="display:flex;gap:5px;">
-        <button class="btn btn-green btn-xs" onclick="event.stopPropagation();openSkuDrawer('${item.skuId}','restock')">＋入库</button>
+        <button class="btn btn-green btn-xs" onclick="event.stopPropagation();openKitAssemblyModal('${item.skuId}')">材料包入库</button>
         <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openSkuDrawer('${item.skuId}')">详情</button>
       </div>
     </div>`
@@ -914,14 +997,14 @@ function renderSkuDrawer(data, action) {
   const TYPE_MAP = {
     in:'📥 入库', out:'📤 发货出库', reserved:'🔒 锁定', released:'🔓 释放',
     wip_frame_start:'🎞 帧图在制', wip_defect_frame:'💥 帧图报废',
-    wip_deduct:'✅ 生产核销', manual_adjustment:'🔧 手动修正'
+    wip_deduct:'✅ 生产核销', kit_assembled:'🧰 材料包入库', manual_adjustment:'🔧 手动修正'
   }
   const TYPE_CLS = {
     in:'#E8F5E9', out:'#FFE8E3', reserved:'#E3F2FD', released:'#F3E5F5',
     wip_frame_start:'#E0F7FA', wip_defect_frame:'#FFE8E3',
-    wip_deduct:'#E8F5E9', manual_adjustment:'#EBEBEA'
+    wip_deduct:'#E8F5E9', kit_assembled:'#E8F5E9', manual_adjustment:'#EBEBEA'
   }
-  const isPositive = t => ['in','released'].includes(t)
+  const isPositive = t => ['in','released','kit_assembled'].includes(t)
 
   const logsHtml = data.logs?.length ? data.logs.map(log => {
     const icon = (TYPE_MAP[log.type] || log.type).split(' ')[0]
@@ -1018,7 +1101,7 @@ function renderSkuDrawer(data, action) {
     </div>
     <div class="drawer-section" id="restockToggle" style="${action === 'restock' ? 'display:none;' : ''}">
       <div style="display:flex;gap:8px;">
-        <button class="btn btn-green" onclick="showRestock(1)" style="flex:1;">＋ 录入入库</button>
+      <button class="btn btn-green" onclick="closeDrawer();openKitAssemblyModal('${data.skuId}')" style="flex:1;">材料包入库</button>
         <button class="btn btn-red btn-sm" onclick="showRestock(-1)" style="flex:1;">－ 调减库存</button>
       </div>
     </div>
@@ -1221,12 +1304,14 @@ function renderMatGrid() {
     const al    = m.alertLevel || 'OK'
     const info  = MAT_ALERT[al] || MAT_ALERT.OK
     const days  = m.availableDays !== null ? `约${m.availableDays}天可用` : '无消耗数据'
+    const typeLabel = {RAW:'散装/基础',PACKED:'已分装',CONSUMABLE:'直接耗材'}[m.itemType] || m.itemType
     return `
     <div class="mat-card">
       <div class="mat-card-top">
         <div>
           <div class="mat-card-name">${esc(m.name)}</div>
-          <div class="mat-card-unit">单位：${esc(m.unit)}</div>
+          <div class="mat-card-unit">${esc(typeLabel)} · ${m.itemCode?esc(m.itemCode)+' · ':''}单位：${esc(m.unit)}</div>
+          ${m.specification?`<div class="mat-card-unit">${esc(m.specification)}</div>`:''}
         </div>
         <div class="mat-card-stock">
           <div class="mat-card-stock-num" style="color:${info.numClr};">${m.currentStock}</div>
@@ -1244,6 +1329,7 @@ function renderMatGrid() {
       </div>
       <div class="mat-card-actions">
         <button class="btn btn-green btn-xs" onclick="openMatRestockModal('${m.id}')">＋ 入库</button>
+        ${m.itemType==='PACKED'?`<button class="btn btn-ghost btn-xs" onclick="openMatPrepareModal('${m.id}')">分装</button>`:''}
         <button class="btn btn-red btn-xs"   onclick="openMatDefectModal('${m.id}')">报损</button>
         <button class="btn btn-ghost btn-xs" onclick="openMatDrawer('${m.id}')">详情</button>
         <button class="btn btn-ghost btn-xs" onclick="openMatEditModal('${m.id}')">编辑</button>
@@ -1252,28 +1338,39 @@ function renderMatGrid() {
   }).join('')
 }
 
-// 材料快速入库（弹窗内）
+// 零件实收入库：库存只增加实际合格数量，订购说明和次品数量单独留痕。
 let _matRestockTarget = null
 function openMatRestockModal(id) {
   _matRestockTarget = id
   const m = _allMat.find(x => x.id === id)
   if (!m) return
-  const note = prompt(`入库「${m.name}」\n\n请输入入库数量（${m.unit}）：`)
-  if (!note && note !== '0') return
-  const qty = parseInt(note)
-  if (!qty || qty <= 0) { showToast('请输入有效数量'); return }
-  const reason = prompt('备注（选填，如：第二批采购）：') || ''
-  doMatRestock(id, qty, 'purchase_in', reason)
+  document.getElementById('matReceiptLabel').textContent = `${m.name} · 库存单位：${m.unit}`
+  ;['matReceiptOrdered','matReceiptAccepted','matReceiptSupplier','matReceiptLot','matReceiptNote'].forEach(id => document.getElementById(id).value='')
+  document.getElementById('matReceiptRejected').value='0'
+  document.getElementById('matReceiptModal').classList.add('show')
 }
 
-async function doMatRestock(id, qty, type, note) {
+function closeMatReceiptModal(){ document.getElementById('matReceiptModal').classList.remove('show') }
+
+async function submitMatReceipt() {
+  const acceptedQty = Number(document.getElementById('matReceiptAccepted').value)
+  const rejectedQty = Number(document.getElementById('matReceiptRejected').value || 0)
+  if (!Number.isInteger(acceptedQty) || acceptedQty <= 0) return showToast('请填写实际合格数量')
+  if (!Number.isInteger(rejectedQty) || rejectedQty < 0) return showToast('次品数量不能为负数')
+  const payload = {
+    acceptedQty, rejectedQty, actualQty:acceptedQty+rejectedQty,
+    orderedSpec:document.getElementById('matReceiptOrdered').value.trim()||undefined,
+    supplierName:document.getElementById('matReceiptSupplier').value.trim()||undefined,
+    supplierLotNo:document.getElementById('matReceiptLot').value.trim()||undefined,
+    note:document.getElementById('matReceiptNote').value.trim()||undefined
+  }
   try {
-    const res  = await fetch(`${API}/api/materials/${id}/restock`, {
+    const res  = await fetch(`${API}/api/materials/${_matRestockTarget}/restock`, {
       method: 'POST', headers: { ...authHeader(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ quantity: qty, type, note: note || undefined })
+      body: JSON.stringify(payload)
     })
     const json = await res.json()
-    if (json.success) { showToast(json.message); await loadMaterials() }
+    if (json.success) { showToast(json.message); closeMatReceiptModal(); await loadMaterials() }
     else showToast('入库失败：' + json.message)
   } catch { showToast('网络错误') }
 }
@@ -1305,12 +1402,18 @@ async function doMatDefect(id, qty, note) {
 // 新增物品弹窗
 function openMatNewModal() {
   document.getElementById('matModalId').value    = ''
-  document.getElementById('matModalTitle').textContent = '新增物品'
+  document.getElementById('matModalTitle').textContent = '新增零件'
   document.getElementById('matModalName').value  = ''
+  document.getElementById('matModalCode').value  = ''
+  document.getElementById('matModalType').value  = 'RAW'
+  document.getElementById('matModalSpec').value  = ''
   document.getElementById('matModalUnit').value  = '个'
   document.getElementById('matModalSafety').value = '10'
   document.getElementById('matModalLead').value  = '7'
   document.getElementById('matModalNote').value  = ''
+  fillSourceMaterialOptions()
+  document.getElementById('matModalSourceQty').value = ''
+  togglePackedFields()
   document.getElementById('matModal').classList.add('show')
 }
 
@@ -1320,10 +1423,17 @@ function openMatEditModal(id) {
   document.getElementById('matModalId').value    = m.id
   document.getElementById('matModalTitle').textContent = '编辑物品'
   document.getElementById('matModalName').value  = m.name
+  document.getElementById('matModalCode').value  = m.itemCode || ''
+  document.getElementById('matModalType').value  = m.itemType || 'RAW'
+  document.getElementById('matModalSpec').value  = m.specification || ''
   document.getElementById('matModalUnit').value  = m.unit
   document.getElementById('matModalSafety').value = m.safetyStock
   document.getElementById('matModalLead').value  = m.leadTime
   document.getElementById('matModalNote').value  = m.note || ''
+  fillSourceMaterialOptions(m.id)
+  document.getElementById('matModalSource').value = m.sourceMaterialId || ''
+  document.getElementById('matModalSourceQty').value = m.sourceQtyPerUnit || ''
+  togglePackedFields()
   document.getElementById('matModal').classList.add('show')
 }
 
@@ -1335,6 +1445,9 @@ async function submitMatModal() {
   const id      = document.getElementById('matModalId').value
   const name    = document.getElementById('matModalName').value.trim()
   const unit    = document.getElementById('matModalUnit').value.trim() || '个'
+  const itemCode = document.getElementById('matModalCode').value.trim() || undefined
+  const itemType = document.getElementById('matModalType').value
+  const specification = document.getElementById('matModalSpec').value.trim() || undefined
   const safety  = parseInt(document.getElementById('matModalSafety').value) || 10
   const lead    = parseInt(document.getElementById('matModalLead').value) || 7
   const note    = document.getElementById('matModalNote').value.trim() || undefined
@@ -1346,13 +1459,102 @@ async function submitMatModal() {
   try {
     const res  = await fetch(url, {
       method, headers: { ...authHeader(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, unit, safetyStock: safety, leadTime: lead, note })
+      body: JSON.stringify({
+        name, itemCode, itemType, specification, unit, safetyStock: safety, leadTime: lead, note,
+        sourceMaterialId:itemType==='PACKED'?document.getElementById('matModalSource').value:undefined,
+        sourceQtyPerUnit:itemType==='PACKED'?Number(document.getElementById('matModalSourceQty').value):undefined
+      })
     })
     const json = await res.json()
     if (json.success) {
       showToast(id ? '✓ 已保存' : '✓ 物品已创建')
       closeMatModal(); await loadMaterials()
     } else { showToast('保存失败：' + json.message) }
+  } catch { showToast('网络错误') }
+}
+
+function fillSourceMaterialOptions(excludeId='') {
+  const select = document.getElementById('matModalSource')
+  select.innerHTML = '<option value="">请选择来源零件</option>' + _allMat
+    .filter(item => item.id !== excludeId && item.itemType !== 'PACKED')
+    .map(item => `<option value="${item.id}">${esc(item.name)}（${item.currentStock}${esc(item.unit)}）</option>`).join('')
+}
+
+function togglePackedFields() {
+  document.getElementById('packedFields').style.display = document.getElementById('matModalType').value === 'PACKED' ? 'block' : 'none'
+}
+
+let _prepareMaterialId = null
+function openMatPrepareModal(id) {
+  const item = _allMat.find(row => row.id === id)
+  if (!item) return
+  _prepareMaterialId = id
+  document.getElementById('matPrepareLabel').textContent = `${item.name}：每${item.unit}使用 ${item.sourceQtyPerUnit} ${item.sourceMaterialName || '来源零件'}`
+  document.getElementById('matPrepareOutput').value = ''
+  document.getElementById('matPrepareLoss').value = '0'
+  document.getElementById('matPrepareNote').value = ''
+  updatePreparePreview()
+  document.getElementById('matPrepareModal').classList.add('show')
+}
+function closeMatPrepareModal(){ document.getElementById('matPrepareModal').classList.remove('show'); _prepareMaterialId=null }
+function updatePreparePreview() {
+  const item = _allMat.find(row => row.id === _prepareMaterialId)
+  if (!item) return
+  const output = Number(document.getElementById('matPrepareOutput').value || 0)
+  const loss = Number(document.getElementById('matPrepareLoss').value || 0)
+  const source = _allMat.find(row => row.id === item.sourceMaterialId)
+  const normal = output * Number(item.sourceQtyPerUnit || 0)
+  document.getElementById('matPreparePreview').textContent = `预计扣除 ${normal + loss} ${source?.unit || ''} ${source?.name || '来源零件'}（正常使用 ${normal}，损耗 ${loss}），增加 ${output} ${item.unit} ${item.name}`
+}
+async function submitMatPrepare() {
+  const outputQty = Number(document.getElementById('matPrepareOutput').value)
+  const lossQty = Number(document.getElementById('matPrepareLoss').value || 0)
+  if (!Number.isInteger(outputQty) || outputQty <= 0) return showToast('请填写分装成品数量')
+  if (!Number.isInteger(lossQty) || lossQty < 0) return showToast('损耗数量不能为负数')
+  try {
+    const res = await fetch(`${API}/api/materials/${_prepareMaterialId}/prepare`, {
+      method:'POST', headers:{...authHeader(),'Content-Type':'application/json'},
+      body:JSON.stringify({outputQty,lossQty,note:document.getElementById('matPrepareNote').value.trim()||undefined})
+    })
+    const json = await res.json()
+    if (!json.success) return showToast('分装失败：'+json.message)
+    showToast(json.message); closeMatPrepareModal(); await loadMaterials()
+  } catch { showToast('网络错误') }
+}
+
+async function openKitAssemblyModal(preselectedSkuId='') {
+  if (!_allSku.length) await loadInventory()
+  const select = document.getElementById('kitAssemblySku')
+  select.innerHTML = '<option value="">请选择 SKU</option>' + _allSku.map(s => {
+    const spec = [s.size,s.material,s.frameCount?`${s.frameCount}帧`:'',s.colorName].filter(Boolean).join(' · ')
+    return `<option value="${s.skuId}">${esc(s.modelName)} · ${esc(spec)}${s.skuCode?' · '+esc(s.skuCode):''}</option>`
+  }).join('')
+  select.value = preselectedSkuId
+  ;['kitAssemblyQty','kitAssemblyBox','kitAssemblyLocation','kitAssemblyNote'].forEach(id => document.getElementById(id).value='')
+  document.getElementById('kitAssemblyModal').classList.add('show')
+}
+function closeKitAssemblyModal(){ document.getElementById('kitAssemblyModal').classList.remove('show') }
+async function submitKitAssembly() {
+  const skuId = document.getElementById('kitAssemblySku').value
+  const quantity = Number(document.getElementById('kitAssemblyQty').value)
+  if (!skuId) return showToast('请选择材料包 SKU')
+  if (!Number.isInteger(quantity) || quantity <= 0) return showToast('请填写入库套数')
+  const sku = _allSku.find(row => row.skuId === skuId)
+  const label = sku ? `${sku.modelName} · ${sku.skuName}` : '所选 SKU'
+  if (!confirm(`确认入库 ${quantity} 套「${label}」？\n系统会按照材料清单同步扣除零件。`)) return
+  try {
+    const res = await fetch(`${API}/api/inventory/kits/assemble`, {
+      method:'POST', headers:{...authHeader(),'Content-Type':'application/json'},
+      body:JSON.stringify({
+        skuId,quantity,
+        boxCode:document.getElementById('kitAssemblyBox').value.trim()||undefined,
+        location:document.getElementById('kitAssemblyLocation').value.trim()||undefined,
+        note:document.getElementById('kitAssemblyNote').value.trim()||undefined
+      })
+    })
+    const json = await res.json()
+    if (!json.success) return showToast('入库失败：'+json.message)
+    showToast(json.message); closeKitAssemblyModal(); await Promise.all([loadMaterials(),loadInventory()])
   } catch { showToast('网络错误') }
 }
 
@@ -1383,7 +1585,9 @@ function renderMatDrawer(m, logs, bindings) {
   const al   = m.alertLevel || 'OK'
   const info = MAT_ALERT[al] || MAT_ALERT.OK
   const MAT_TYPE_MAP = {
-    purchase_in:'📥 采购入库', order_consumed:'🚚 订单消耗',
+    purchase_in:'📥 采购入库',
+    preparation_consumed:'📤 分装使用', preparation_produced:'📦 分装完成',
+    kit_assembly_consumed:'🧰 材料包组装使用',
     production_defect:'💥 生产报损', manual_adjustment:'🔧 人工调减',
     opening_stock:'🗂 期初录入'
   }
@@ -1413,11 +1617,10 @@ function renderMatDrawer(m, logs, bindings) {
           <div style="font-size:11px;color:var(--gray3);font-weight:700;">${esc(b.skuSpec)}</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-weight:800;font-size:12px;">每出1件扣 ${b.qtyPerUnit} ${esc(m.unit)}</span>
-          <button class="btn btn-red btn-xs" onclick="removeBinding('${m.id}','${b.skuId}')">解绑</button>
+          <span style="font-weight:800;font-size:12px;">每组装1套使用 ${b.qtyPerUnit} ${esc(m.unit)}</span>
         </div>
       </div>`).join('')
-    : '<div style="font-size:12px;color:var(--gray3);font-weight:700;padding:10px 0;">暂无绑定SKU，发货时不会自动扣减</div>'
+    : '<div style="font-size:12px;color:var(--gray3);font-weight:700;padding:10px 0;">暂未被任何 SKU 的材料清单使用</div>'
 
   document.getElementById('matDrawerBody').innerHTML = `
     <!-- 库存状态 -->
@@ -1438,12 +1641,12 @@ function renderMatDrawer(m, logs, bindings) {
       </div>
     </div>
 
-    <!-- 绑定 SKU -->
+    <!-- 使用该零件的 SKU（只读，修改入口在款式管理） -->
     <div class="drawer-section">
-      <div class="drawer-section-title">绑定 SKU（发货自动扣减）</div>
+      <div class="drawer-section-title">用于哪些 SKU</div>
       <div>${bindHtml}</div>
       <div style="margin-top:10px;">
-        <button class="btn btn-ghost btn-sm" onclick="openBindSkuDialog('${m.id}')">＋ 添加绑定 SKU</button>
+        <a class="btn btn-ghost btn-sm" href="admin-models.html">前往款式管理设置材料清单</a>
       </div>
     </div>
 

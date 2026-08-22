@@ -306,6 +306,68 @@ export default async function machineModelRoutes(fastify) {
     return reply.code(201).send({ success: true, data: sku })
   })
 
+  // SKU 材料清单（BOM）：零件只能在库存页建立，这里仅选择并设置每套用量。
+  fastify.get('/skus/:skuId/bom', { preHandler: requireAdmin }, async (req, reply) => {
+    const { skuId } = req.params
+    const sku = await fastify.prisma.machineModelSku.findUnique({ where: { id: skuId } })
+    if (!sku) return reply.code(404).send({ success: false, message: 'SKU不存在' })
+
+    const bindings = await fastify.prisma.materialSkuBinding.findMany({
+      where: { skuId }, orderBy: { createdAt: 'asc' }
+    })
+    const materialIds = bindings.map(item => item.materialId)
+    const materials = await fastify.prisma.materialItem.findMany({ where: { id: { in: materialIds } } })
+    const materialMap = Object.fromEntries(materials.map(item => [item.id, item]))
+
+    return reply.send({
+      success: true,
+      data: {
+        skuId,
+        version: sku.bomVersion || 0,
+        items: bindings.map(binding => ({ ...binding, material: materialMap[binding.materialId] || null }))
+      }
+    })
+  })
+
+  fastify.put('/skus/:skuId/bom', { preHandler: requireAdmin }, async (req, reply) => {
+    const { skuId } = req.params
+    const items = Array.isArray(req.body?.items) ? req.body.items : null
+    if (!items) return reply.code(400).send({ success: false, message: '材料清单格式无效' })
+
+    const sku = await fastify.prisma.machineModelSku.findUnique({ where: { id: skuId } })
+    if (!sku) return reply.code(404).send({ success: false, message: 'SKU不存在' })
+
+    const normalized = []
+    const seen = new Set()
+    for (const item of items) {
+      const materialId = String(item.materialId || '')
+      const qtyPerUnit = Number(item.qtyPerUnit)
+      if (!materialId || seen.has(materialId))
+        return reply.code(400).send({ success: false, message: '材料清单包含空项或重复零件' })
+      if (!Number.isInteger(qtyPerUnit) || qtyPerUnit <= 0)
+        return reply.code(400).send({ success: false, message: '每套用量必须为正整数' })
+      seen.add(materialId)
+      normalized.push({ materialId, skuId, qtyPerUnit })
+    }
+
+    if (normalized.length) {
+      const activeCount = await fastify.prisma.materialItem.count({
+        where: { id: { in: normalized.map(item => item.materialId) }, isActive: true }
+      })
+      if (activeCount !== normalized.length)
+        return reply.code(400).send({ success: false, message: '材料清单中存在已停用或不存在的零件' })
+    }
+
+    const nextVersion = (sku.bomVersion || 0) + 1
+    await fastify.prisma.$transaction(async tx => {
+      await tx.materialSkuBinding.deleteMany({ where: { skuId } })
+      if (normalized.length) await tx.materialSkuBinding.createMany({ data: normalized })
+      await tx.machineModelSku.update({ where: { id: skuId }, data: { bomVersion: nextVersion } })
+    })
+
+    return reply.send({ success: true, message: '材料清单已保存', data: { skuId, version: nextVersion, items: normalized } })
+  })
+
   // ─────────────────────────────────────────────
   // SKU 示例物料（exampleMedia）
   // ─────────────────────────────────────────────

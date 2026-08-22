@@ -24,6 +24,7 @@
 13. `docs/TROUBLESHOOTING.md`：本地开发已经发生过的故障、识别方法和修复边界。
 14. 对应业务规划：`PRODUCTION.md`、`REVENUE.md`、`docs/USER_SCENARIOS.md` 等。
 15. `docs/ANIMATION_ORDER_PRODUCTION_FRAMEWORK.md`：动画资产、版本、订单商品、单件生产和材料追踪的已确认目标框架。
+16. `docs/STANDARD_KIT_INVENTORY.md`：零件实收、分装、SKU材料清单、标准材料包入库、误差和箱码的当前实现。
 
 ## 文档分层
 

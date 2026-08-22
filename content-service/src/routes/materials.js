@@ -1,8 +1,14 @@
 // src/routes/materials.js
-// 材料包物品管理（辅助耗材，独立于机型SKU体系）
+// 零件与分装管理：采购实收、散装零件分装及 SKU 材料清单的基础数据。
 // role >= 2 （管理员）
 
 export default async function materialsRoutes(fastify) {
+
+  const makeNo = prefix => {
+    const now = new Date()
+    const date = now.toISOString().slice(0, 10).replaceAll('-', '')
+    return `${prefix}-${date}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`
+  }
 
   // ─────────────────────────────────────────────
   // GET /api/materials
@@ -19,7 +25,7 @@ export default async function materialsRoutes(fastify) {
     const consumed = await fastify.prisma.materialLog.groupBy({
       by: ['materialId'],
       where: {
-        type: 'order_consumed',
+        type: { in: ['preparation_consumed', 'kit_assembly_consumed'] },
         createdAt: { gte: thirtyDaysAgo }
       },
       _sum: { quantity: true }
@@ -33,6 +39,7 @@ export default async function materialsRoutes(fastify) {
     })
     const bindingMap = Object.fromEntries(bindings.map(b => [b.materialId, b._count.skuId]))
 
+    const itemMap = Object.fromEntries(items.map(item => [item.id, item]))
     const result = items.map(item => {
       const consumed30d    = consumedMap[item.id] || 0
       const dailyConsumption = consumed30d / 30
@@ -55,7 +62,8 @@ export default async function materialsRoutes(fastify) {
         dailyConsumption: Math.round(dailyConsumption * 10) / 10,
         availableDays:    availableDays !== null ? Math.round(availableDays) : null,
         alertLevel,
-        boundSkuCount: bindingMap[item.id] || 0
+        boundSkuCount: bindingMap[item.id] || 0,
+        sourceMaterialName: item.sourceMaterialId ? itemMap[item.sourceMaterialId]?.name ?? null : null
       }
     })
 
@@ -65,21 +73,30 @@ export default async function materialsRoutes(fastify) {
   // ─────────────────────────────────────────────
   // POST /api/materials
   // 新建物品
-  // Body: { name, unit?, safetyStock?, leadTime?, note? }
+  // Body: { name, itemCode?, itemType?, specification?, unit?, sourceMaterialId?, sourceQtyPerUnit?, ... }
   // ─────────────────────────────────────────────
   fastify.post('/', { preHandler: requireAdmin }, async (req, reply) => {
-    const { name, unit, safetyStock, leadTime, note } = req.body
+    const { name, itemCode, itemType = 'RAW', specification, unit, safetyStock, leadTime, note, sourceMaterialId, sourceQtyPerUnit } = req.body
     const operatorId = req.user.userId
 
     if (!name?.trim()) return reply.code(400).send({ success: false, message: '物品名称不能为空' })
+    if (!['RAW', 'PACKED', 'CONSUMABLE'].includes(itemType))
+      return reply.code(400).send({ success: false, message: '零件类型无效' })
+    if (itemType === 'PACKED' && (!sourceMaterialId || !Number.isInteger(Number(sourceQtyPerUnit)) || Number(sourceQtyPerUnit) <= 0))
+      return reply.code(400).send({ success: false, message: '已分装零件必须选择来源零件并填写每包用量' })
 
     const item = await fastify.prisma.materialItem.create({
       data: {
         name: name.trim(),
+        itemCode:      itemCode?.trim() || makeNo('MAT'),
+        itemType,
+        specification: specification?.trim() || null,
         unit:         unit         ?? '个',
         safetyStock:  safetyStock  ?? 10,
         leadTime:     leadTime     ?? 7,
         note:         note         ?? null,
+        sourceMaterialId: itemType === 'PACKED' ? sourceMaterialId : null,
+        sourceQtyPerUnit: itemType === 'PACKED' ? Number(sourceQtyPerUnit) : null,
         createdBy:    operatorId
       }
     })
@@ -92,17 +109,37 @@ export default async function materialsRoutes(fastify) {
   // ─────────────────────────────────────────────
   fastify.put('/:id', { preHandler: requireAdmin }, async (req, reply) => {
     const { id } = req.params
-    const { name, unit, safetyStock, leadTime, note } = req.body
+    const { name, itemCode, itemType, specification, unit, safetyStock, leadTime, note, sourceMaterialId, sourceQtyPerUnit } = req.body
 
     const item = await fastify.prisma.materialItem.findUnique({ where: { id } })
     if (!item || !item.isActive) return reply.code(404).send({ success: false, message: '物品不存在' })
 
     const data = {}
     if (name        !== undefined) data.name        = name.trim()
+    if (itemCode    !== undefined) data.itemCode    = itemCode?.trim() || null
+    if (itemType    !== undefined) {
+      if (!['RAW', 'PACKED', 'CONSUMABLE'].includes(itemType))
+        return reply.code(400).send({ success: false, message: '零件类型无效' })
+      data.itemType = itemType
+    }
+    if (specification !== undefined) data.specification = specification?.trim() || null
     if (unit        !== undefined) data.unit        = unit
     if (safetyStock !== undefined) data.safetyStock = safetyStock
     if (leadTime    !== undefined) data.leadTime    = leadTime
     if (note        !== undefined) data.note        = note
+    const nextType = itemType ?? item.itemType
+    if (nextType === 'PACKED') {
+      const nextSource = sourceMaterialId ?? item.sourceMaterialId
+      const nextQty = sourceQtyPerUnit ?? item.sourceQtyPerUnit
+      if (!nextSource || !Number.isInteger(Number(nextQty)) || Number(nextQty) <= 0)
+        return reply.code(400).send({ success: false, message: '已分装零件必须选择来源零件并填写每包用量' })
+      if (nextSource === id) return reply.code(400).send({ success: false, message: '零件不能把自己设为分装来源' })
+      data.sourceMaterialId = nextSource
+      data.sourceQtyPerUnit = Number(nextQty)
+    } else {
+      data.sourceMaterialId = null
+      data.sourceQtyPerUnit = null
+    }
 
     const updated = await fastify.prisma.materialItem.update({ where: { id }, data })
     return reply.send({ success: true, data: updated })
@@ -145,14 +182,25 @@ export default async function materialsRoutes(fastify) {
   // ─────────────────────────────────────────────
   // POST /api/materials/:id/restock
   // 入库（purchase_in 采购入库 / opening_stock 期初录入）
-  // Body: { quantity, type?, note? }
+  // 采购以现场清点为准。orderedSpec 只记录订购描述，不参与库存换算。
+  // Body: { quantity? (兼容旧页面), actualQty?, acceptedQty?, rejectedQty?, orderedSpec?, supplierName?, supplierLotNo?, type?, note? }
   // ─────────────────────────────────────────────
   fastify.post('/:id/restock', { preHandler: requireAdmin }, async (req, reply) => {
     const { id }         = req.params
-    const { quantity, type = 'purchase_in', note } = req.body
+    const {
+      quantity, actualQty, acceptedQty, rejectedQty = 0,
+      orderedSpec, supplierName, supplierLotNo,
+      type = 'purchase_in', note
+    } = req.body
     const operatorId     = req.user.userId
+    const accepted = Number(acceptedQty ?? quantity)
+    const rejected = Number(rejectedQty || 0)
+    const actual = Number(actualQty ?? (accepted + rejected))
 
-    if (!quantity || quantity <= 0) return reply.code(400).send({ success: false, message: '数量必须大于0' })
+    if (!Number.isInteger(accepted) || accepted <= 0) return reply.code(400).send({ success: false, message: '合格入库数量必须为正整数' })
+    if (!Number.isInteger(rejected) || rejected < 0) return reply.code(400).send({ success: false, message: '次品数量不能为负数' })
+    if (!Number.isInteger(actual) || actual !== accepted + rejected)
+      return reply.code(400).send({ success: false, message: '实际清点数量必须等于合格数量加次品数量' })
     if (!['purchase_in', 'opening_stock'].includes(type))
       return reply.code(400).send({ success: false, message: '入库类型无效' })
 
@@ -160,7 +208,8 @@ export default async function materialsRoutes(fastify) {
     if (!item || !item.isActive) return reply.code(404).send({ success: false, message: '物品不存在' })
 
     const beforeQty = item.currentStock
-    const afterQty  = beforeQty + quantity
+    const afterQty  = beforeQty + accepted
+    const receiptNo = makeNo(type === 'opening_stock' ? 'OPEN' : 'RCV')
 
     await fastify.prisma.$transaction([
       fastify.prisma.materialItem.update({
@@ -168,14 +217,87 @@ export default async function materialsRoutes(fastify) {
         data:  { currentStock: afterQty }
       }),
       fastify.prisma.materialLog.create({
-        data: { materialId: id, type, quantity, beforeQty, afterQty, operatorId, note: note || null }
+        data: { materialId: id, type, quantity: accepted, beforeQty, afterQty, operatorId, referenceNo: receiptNo, note: note || null }
+      }),
+      fastify.prisma.materialReceipt.create({
+        data: {
+          receiptNo, materialId: id, orderedSpec: orderedSpec?.trim() || null,
+          actualQty: actual, acceptedQty: accepted, rejectedQty: rejected,
+          supplierName: supplierName?.trim() || null,
+          supplierLotNo: supplierLotNo?.trim() || null,
+          operatorId, note: note?.trim() || null
+        }
       })
     ])
 
     return reply.send({
       success: true,
-      message: `✓ 已入库 ${quantity} ${item.unit}，当前库存 ${afterQty}`,
-      data: { currentStock: afterQty }
+      message: `✓ 合格入库 ${accepted} ${item.unit}${rejected ? `，另记录次品 ${rejected} ${item.unit}` : ''}，当前库存 ${afterQty}`,
+      data: { currentStock: afterQty, receiptNo }
+    })
+  })
+
+  // POST /api/materials/:id/prepare
+  // 将来源散装零件分装成当前零件；损耗单独记录，但与正常用量一起扣减来源库存。
+  fastify.post('/:id/prepare', { preHandler: requireAdmin }, async (req, reply) => {
+    const { id } = req.params
+    const { outputQty, lossQty = 0, note } = req.body
+    const operatorId = req.user.userId
+    const output = Number(outputQty)
+    const loss = Number(lossQty || 0)
+
+    if (!Number.isInteger(output) || output <= 0)
+      return reply.code(400).send({ success: false, message: '分装成品数量必须为正整数' })
+    if (!Number.isInteger(loss) || loss < 0)
+      return reply.code(400).send({ success: false, message: '分装损耗不能为负数' })
+
+    const packed = await fastify.prisma.materialItem.findUnique({ where: { id } })
+    if (!packed || !packed.isActive) return reply.code(404).send({ success: false, message: '已分装零件不存在' })
+    if (packed.itemType !== 'PACKED' || !packed.sourceMaterialId || !packed.sourceQtyPerUnit)
+      return reply.code(400).send({ success: false, message: '该零件没有配置分装来源和每包用量' })
+
+    const source = await fastify.prisma.materialItem.findUnique({ where: { id: packed.sourceMaterialId } })
+    if (!source || !source.isActive) return reply.code(400).send({ success: false, message: '分装来源零件不存在或已停用' })
+
+    const usedQty = output * packed.sourceQtyPerUnit
+    const totalDeduct = usedQty + loss
+    if (source.currentStock < totalDeduct)
+      return reply.code(400).send({ success: false, message: `来源库存不足，需要 ${totalDeduct} ${source.unit}，当前 ${source.currentStock} ${source.unit}` })
+
+    const batchNo = makeNo('PREP')
+    await fastify.prisma.$transaction(async tx => {
+      const deducted = await tx.materialItem.updateMany({
+        where: { id: source.id, currentStock: { gte: totalDeduct } },
+        data: { currentStock: { decrement: totalDeduct } }
+      })
+      if (deducted.count !== 1) throw new Error('来源库存刚刚发生变化，请刷新后重试')
+      const sourceAfter = await tx.materialItem.findUnique({ where: { id: source.id } })
+      const packedAfter = await tx.materialItem.update({ where: { id }, data: { currentStock: { increment: output } } })
+      const batch = await tx.materialPreparationBatch.create({
+        data: { batchNo, outputMaterialId: id, outputQty: output, operatorId, note: note?.trim() || null }
+      })
+      await tx.materialPreparationInput.create({
+        data: { prepBatchId: batch.id, materialId: source.id, usedQty, lossQty: loss }
+      })
+      await tx.materialLog.createMany({ data: [
+        {
+          materialId: source.id, type: 'preparation_consumed', quantity: totalDeduct,
+          beforeQty: sourceAfter.currentStock + totalDeduct, afterQty: sourceAfter.currentStock,
+          operatorId, referenceNo: batchNo,
+          note: `分装为${packed.name} ${output}${packed.unit}；正常使用${usedQty}${source.unit}，损耗${loss}${source.unit}`
+        },
+        {
+          materialId: id, type: 'preparation_produced', quantity: output,
+          beforeQty: packedAfter.currentStock - output, afterQty: packedAfter.currentStock,
+          operatorId, referenceNo: batchNo, note: note?.trim() || null
+        }
+      ] })
+    })
+
+    return reply.send({
+      success: true,
+      message: `✓ 已分装 ${output} ${packed.unit}，使用 ${usedQty} ${source.unit}${loss ? `，另记录损耗 ${loss} ${source.unit}` : ''}`,
+      data: { batchNo, outputQty: output, usedQty, lossQty: loss }
     })
   })
 
@@ -286,20 +408,7 @@ export default async function materialsRoutes(fastify) {
   // Body: { skuId, qtyPerUnit? }
   // ─────────────────────────────────────────────
   fastify.post('/:id/bindings', { preHandler: requireAdmin }, async (req, reply) => {
-    const { id }                        = req.params
-    const { skuId, qtyPerUnit = 1 }     = req.body
-
-    if (!skuId) return reply.code(400).send({ success: false, message: '缺少 skuId' })
-
-    const existing = await fastify.prisma.materialSkuBinding.findUnique({
-      where: { materialId_skuId: { materialId: id, skuId } }
-    })
-    if (existing) return reply.code(409).send({ success: false, message: '该 SKU 已绑定' })
-
-    const binding = await fastify.prisma.materialSkuBinding.create({
-      data: { materialId: id, skuId, qtyPerUnit }
-    })
-    return reply.send({ success: true, data: binding })
+    return reply.code(409).send({ success: false, message: '请到款式管理页面编辑该 SKU 的完整材料清单' })
   })
 
   // ─────────────────────────────────────────────
@@ -307,41 +416,7 @@ export default async function materialsRoutes(fastify) {
   // 删除绑定
   // ─────────────────────────────────────────────
   fastify.delete('/:id/bindings/:skuId', { preHandler: requireAdmin }, async (req, reply) => {
-    const { id, skuId } = req.params
-    await fastify.prisma.materialSkuBinding.deleteMany({
-      where: { materialId: id, skuId }
-    })
-    return reply.send({ success: true })
-  })
-
-  // ─────────────────────────────────────────────
-  // 内部：发货后自动扣减（由 inventory.js /ship 调用）
-  // ─────────────────────────────────────────────
-  fastify.decorate('deductMaterialsForSku', async (skuId, orderId, operatorId) => {
-    const bindings = await fastify.prisma.materialSkuBinding.findMany({
-      where: { materialId: { not: undefined }, skuId }
-    })
-    if (!bindings.length) return
-
-    for (const binding of bindings) {
-      const item = await fastify.prisma.materialItem.findUnique({ where: { id: binding.materialId } })
-      if (!item || !item.isActive) continue
-
-      const deduct    = binding.qtyPerUnit
-      const beforeQty = item.currentStock
-      const afterQty  = Math.max(0, beforeQty - deduct)
-
-      await fastify.prisma.$transaction([
-        fastify.prisma.materialItem.update({ where: { id: item.id }, data: { currentStock: afterQty } }),
-        fastify.prisma.materialLog.create({
-          data: {
-            materialId: item.id, type: 'order_consumed',
-            quantity: deduct, beforeQty, afterQty,
-            operatorId, orderId, note: `发货自动扣减：订单 ${orderId}`
-          }
-        })
-      ])
-    }
+    return reply.code(409).send({ success: false, message: '请到款式管理页面编辑该 SKU 的完整材料清单' })
   })
 
   // ─────────────────────────────────────────────
