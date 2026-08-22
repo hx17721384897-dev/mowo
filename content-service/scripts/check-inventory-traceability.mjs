@@ -65,6 +65,8 @@ try {
     }
   }
   assert(html.includes('panelPacked') && html.includes('panelRaw') && html.includes('panelReturns'), '库存页面明确分为分装小包、基础零件和退回检查')
+  assert(!html.includes('零件只能在库存页维护；款式页只能选择使用'), '新增零件弹窗不显示内部维护说明')
+  assert(!html.includes('id="matModalCode"') && html.includes('id="matNameOptions"') && html.includes('id="matUnitOptions"'), '编码自动生成，名称和单位使用可新增的下拉建议')
 
   const phone = `194${runId}`
   const user = await prisma.user.create({data:{phone,role:3,staffRole:'OWNER',privacyAgreedAt:new Date(),privacyPolicyVersion:'inventory-trace-test',profile:{create:{nickname:`trace-${runId}`}},creditScore:{create:{score:100}}}})

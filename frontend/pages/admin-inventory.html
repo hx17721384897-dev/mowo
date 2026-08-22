@@ -525,25 +525,12 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
 <div class="modal-overlay" id="matModal">
   <div class="modal">
     <div class="modal-title" id="matModalTitle">新增零件</div>
-    <div class="modal-sub">零件只能在库存页维护；款式页只能选择使用</div>
     <input type="hidden" id="matModalId">
+    <input type="hidden" id="matModalType" value="RAW">
     <div class="form-group">
       <label class="form-label">零件名称 *</label>
-      <input class="form-input" id="matModalName" placeholder="如：5.5cm铁丝、12根铁丝包、润滑蜡小包">
-    </div>
-    <div class="form-grid-2">
-      <div class="form-group">
-        <label class="form-label">零件编码</label>
-        <input class="form-input" id="matModalCode" placeholder="留空自动生成">
-      </div>
-      <div class="form-group">
-        <label class="form-label">零件类型</label>
-        <select class="form-input" id="matModalType" onchange="togglePackedFields()">
-          <option value="RAW">散装/基础零件</option>
-          <option value="PACKED">已分装零件</option>
-          <option value="CONSUMABLE">直接耗材</option>
-        </select>
-      </div>
+      <input class="form-input" id="matModalName" list="matNameOptions" autocomplete="off" placeholder="选择已有名称或输入新名称">
+      <datalist id="matNameOptions"></datalist>
     </div>
     <div class="form-group">
       <label class="form-label">规格</label>
@@ -564,7 +551,8 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
     <div class="form-grid-2">
       <div class="form-group">
         <label class="form-label">单位</label>
-        <input class="form-input" id="matModalUnit" placeholder="个 / 张 / 包 / 套" value="个">
+        <input class="form-input" id="matModalUnit" list="matUnitOptions" autocomplete="off" placeholder="选择或输入单位" value="个">
+        <datalist id="matUnitOptions"></datalist>
       </div>
       <div class="form-group">
         <label class="form-label">安全库存线</label>
@@ -1490,15 +1478,15 @@ async function doMatDefect(id, qty, note) {
 // 新增物品弹窗
 function openMatNewModal(type='RAW') {
   document.getElementById('matModalId').value    = ''
-  document.getElementById('matModalTitle').textContent = '新增零件'
+  document.getElementById('matModalTitle').textContent = type === 'PACKED' ? '新增分装小包' : '新增基础零件'
   document.getElementById('matModalName').value  = ''
-  document.getElementById('matModalCode').value  = ''
   document.getElementById('matModalType').value  = type
   document.getElementById('matModalSpec').value  = ''
   document.getElementById('matModalUnit').value  = '个'
   document.getElementById('matModalSafety').value = '10'
   document.getElementById('matModalLead').value  = '7'
   document.getElementById('matModalNote').value  = ''
+  fillMaterialDatalists(type)
   fillSourceMaterialOptions()
   document.getElementById('matModalSourceQty').value = ''
   togglePackedFields()
@@ -1509,15 +1497,15 @@ function openMatEditModal(id) {
   const m = _allMat.find(x => x.id === id)
   if (!m) return
   document.getElementById('matModalId').value    = m.id
-  document.getElementById('matModalTitle').textContent = '编辑物品'
+  document.getElementById('matModalTitle').textContent = m.itemType === 'PACKED' ? '编辑分装小包' : '编辑基础零件'
   document.getElementById('matModalName').value  = m.name
-  document.getElementById('matModalCode').value  = m.itemCode || ''
   document.getElementById('matModalType').value  = m.itemType || 'RAW'
   document.getElementById('matModalSpec').value  = m.specification || ''
   document.getElementById('matModalUnit').value  = m.unit
   document.getElementById('matModalSafety').value = m.safetyStock
   document.getElementById('matModalLead').value  = m.leadTime
   document.getElementById('matModalNote').value  = m.note || ''
+  fillMaterialDatalists(m.itemType || 'RAW')
   fillSourceMaterialOptions(m.id)
   document.getElementById('matModalSource').value = m.sourceMaterialId || ''
   document.getElementById('matModalSourceQty').value = m.sourceQtyPerUnit || ''
@@ -1533,7 +1521,6 @@ async function submitMatModal() {
   const id      = document.getElementById('matModalId').value
   const name    = document.getElementById('matModalName').value.trim()
   const unit    = document.getElementById('matModalUnit').value.trim() || '个'
-  const itemCode = document.getElementById('matModalCode').value.trim() || undefined
   const itemType = document.getElementById('matModalType').value
   const specification = document.getElementById('matModalSpec').value.trim() || undefined
   const safety  = parseInt(document.getElementById('matModalSafety').value) || 10
@@ -1548,7 +1535,7 @@ async function submitMatModal() {
     const res  = await fetch(url, {
       method, headers: { ...authHeader(), 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        name, itemCode, itemType, specification, unit, safetyStock: safety, leadTime: lead, note,
+        name, itemType, specification, unit, safetyStock: safety, leadTime: lead, note,
         sourceMaterialId:itemType==='PACKED'?document.getElementById('matModalSource').value:undefined,
         sourceQtyPerUnit:itemType==='PACKED'?Number(document.getElementById('matModalSourceQty').value):undefined
       })
@@ -1559,6 +1546,20 @@ async function submitMatModal() {
       closeMatModal(); await loadMaterials()
     } else { showToast('保存失败：' + json.message) }
   } catch { showToast('网络错误') }
+}
+
+function fillMaterialDatalists(type) {
+  const defaultNames = type === 'PACKED'
+    ? ['铁丝包','双面胶包','润滑蜡小包']
+    : ['铁丝','双面胶','润滑蜡','木板','手机支架','说明书']
+  const existingNames = _allMat
+    .filter(item => type === 'PACKED' ? item.itemType === 'PACKED' : item.itemType !== 'PACKED')
+    .map(item => item.name)
+  const names = [...new Set([...existingNames, ...defaultNames])]
+  document.getElementById('matNameOptions').innerHTML = names.map(name => `<option value="${esc(name)}"></option>`).join('')
+
+  const units = [...new Set([..._allMat.map(item => item.unit), '个','根','张','克','包','套','块','份','卷'].filter(Boolean))]
+  document.getElementById('matUnitOptions').innerHTML = units.map(unit => `<option value="${esc(unit)}"></option>`).join('')
 }
 
 function fillSourceMaterialOptions(excludeId='') {
