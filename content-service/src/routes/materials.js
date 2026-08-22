@@ -2,6 +2,12 @@
 // 零件与分装管理：采购实收、散装零件分装及 SKU 材料清单的基础数据。
 // role >= 2 （管理员）
 
+import {
+  consumeMaterialAllocations,
+  previewMaterialAllocation,
+  presentAllocation
+} from '../lib/inventory-lots.js'
+
 export default async function materialsRoutes(fastify) {
 
   const makeNo = prefix => {
@@ -68,6 +74,38 @@ export default async function materialsRoutes(fastify) {
     })
 
     return reply.send({ success: true, data: result })
+  })
+
+  // 可点击查看的真实批次。基础零件读取到货批次，已分装小包读取分装批次。
+  fastify.get('/lots', { preHandler: requireAdmin }, async (req, reply) => {
+    const { materialId } = req.query
+    const material = await fastify.prisma.materialItem.findUnique({ where: { id: materialId } })
+    if (!material) return reply.code(404).send({ success: false, message: '物品不存在' })
+    const lots = material.itemType === 'PACKED'
+      ? await fastify.prisma.materialPreparationBatch.findMany({
+          where: { outputMaterialId: materialId }, orderBy: { createdAt: 'desc' }, include: { inputs: true }
+        })
+      : await fastify.prisma.materialReceipt.findMany({
+          where: { materialId }, orderBy: { createdAt: 'desc' }
+        })
+    return reply.send({ success: true, data: { material, lots } })
+  })
+
+  fastify.get('/lots/:type/:id', { preHandler: requireAdmin }, async (req, reply) => {
+    const { type, id } = req.params
+    let row = type === 'PREPARATION'
+      ? await fastify.prisma.materialPreparationBatch.findUnique({ where: { id }, include: { inputs: true } })
+      : await fastify.prisma.materialReceipt.findUnique({ where: { id } })
+    if (!row) return reply.code(404).send({ success: false, message: '批次不存在' })
+    if (type === 'PREPARATION' && row.inputs.length) {
+      const receipts = await fastify.prisma.materialReceipt.findMany({
+        where: { id: { in: row.inputs.map(input => input.sourceReceiptId).filter(Boolean) } },
+        select: { id: true, receiptNo: true }
+      })
+      const receiptMap = Object.fromEntries(receipts.map(item => [item.id, item.receiptNo]))
+      row = { ...row, inputs: row.inputs.map(input => ({ ...input, sourceBatchNo: receiptMap[input.sourceReceiptId] || null })) }
+    }
+    return reply.send({ success: true, data: row })
   })
 
   // ─────────────────────────────────────────────
@@ -189,7 +227,7 @@ export default async function materialsRoutes(fastify) {
     const { id }         = req.params
     const {
       quantity, actualQty, acceptedQty, rejectedQty = 0,
-      orderedSpec, supplierName, supplierLotNo,
+      orderedSpec, supplierName, supplierLotNo, location,
       type = 'purchase_in', note
     } = req.body
     const operatorId     = req.user.userId
@@ -206,6 +244,9 @@ export default async function materialsRoutes(fastify) {
 
     const item = await fastify.prisma.materialItem.findUnique({ where: { id } })
     if (!item || !item.isActive) return reply.code(404).send({ success: false, message: '物品不存在' })
+    if (item.itemType === 'PACKED') {
+      return reply.code(400).send({ success: false, message: '自制分装小包不能直接入库，请使用“分装”并由系统扣除来源零件' })
+    }
 
     const beforeQty = item.currentStock
     const afterQty  = beforeQty + accepted
@@ -222,9 +263,10 @@ export default async function materialsRoutes(fastify) {
       fastify.prisma.materialReceipt.create({
         data: {
           receiptNo, materialId: id, orderedSpec: orderedSpec?.trim() || null,
-          actualQty: actual, acceptedQty: accepted, rejectedQty: rejected,
+          actualQty: actual, acceptedQty: accepted, availableQty: accepted, rejectedQty: rejected,
           supplierName: supplierName?.trim() || null,
           supplierLotNo: supplierLotNo?.trim() || null,
+          location: location?.trim() || null,
           operatorId, note: note?.trim() || null
         }
       })
@@ -237,11 +279,31 @@ export default async function materialsRoutes(fastify) {
     })
   })
 
+  fastify.post('/:id/prepare-preview', { preHandler: requireAdmin }, async (req, reply) => {
+    const { id } = req.params
+    const { outputQty, lossQty = 0, allocations } = req.body || {}
+    const output = Number(outputQty)
+    const loss = Number(lossQty || 0)
+    const packed = await fastify.prisma.materialItem.findUnique({ where: { id } })
+    if (!packed || packed.itemType !== 'PACKED' || !packed.sourceMaterialId || !packed.sourceQtyPerUnit)
+      return reply.code(400).send({ success: false, message: '该小包没有配置正确的分装来源' })
+    if (!Number.isInteger(output) || output <= 0 || !Number.isInteger(loss) || loss < 0)
+      return reply.code(400).send({ success: false, message: '分装数量或损耗数量无效' })
+    const source = await fastify.prisma.materialItem.findUnique({ where: { id: packed.sourceMaterialId } })
+    const requiredQty = output * packed.sourceQtyPerUnit + loss
+    try {
+      const selected = await previewMaterialAllocation(fastify.prisma, source, requiredQty, allocations)
+      return reply.send({ success: true, data: { requiredQty, outputQty: output, lossQty: loss, ...presentAllocation(source, selected) } })
+    } catch (error) {
+      return reply.code(400).send({ success: false, message: error.message })
+    }
+  })
+
   // POST /api/materials/:id/prepare
   // 将来源散装零件分装成当前零件；损耗单独记录，但与正常用量一起扣减来源库存。
   fastify.post('/:id/prepare', { preHandler: requireAdmin }, async (req, reply) => {
     const { id } = req.params
-    const { outputQty, lossQty = 0, note } = req.body
+    const { outputQty, lossQty = 0, note, location, allocations } = req.body
     const operatorId = req.user.userId
     const output = Number(outputQty)
     const loss = Number(lossQty || 0)
@@ -261,11 +323,16 @@ export default async function materialsRoutes(fastify) {
 
     const usedQty = output * packed.sourceQtyPerUnit
     const totalDeduct = usedQty + loss
-    if (source.currentStock < totalDeduct)
-      return reply.code(400).send({ success: false, message: `来源库存不足，需要 ${totalDeduct} ${source.unit}，当前 ${source.currentStock} ${source.unit}` })
+    let selectedLots
+    try {
+      selectedLots = await previewMaterialAllocation(fastify.prisma, source, totalDeduct, allocations)
+    } catch (error) {
+      return reply.code(400).send({ success: false, message: `${source.name}：${error.message}` })
+    }
 
     const batchNo = makeNo('PREP')
     await fastify.prisma.$transaction(async tx => {
+      await consumeMaterialAllocations(tx, source, selectedLots)
       const deducted = await tx.materialItem.updateMany({
         where: { id: source.id, currentStock: { gte: totalDeduct } },
         data: { currentStock: { decrement: totalDeduct } }
@@ -274,11 +341,17 @@ export default async function materialsRoutes(fastify) {
       const sourceAfter = await tx.materialItem.findUnique({ where: { id: source.id } })
       const packedAfter = await tx.materialItem.update({ where: { id }, data: { currentStock: { increment: output } } })
       const batch = await tx.materialPreparationBatch.create({
-        data: { batchNo, outputMaterialId: id, outputQty: output, operatorId, note: note?.trim() || null }
+        data: { batchNo, outputMaterialId: id, outputQty: output, availableQty: output, location: location?.trim() || null, operatorId, note: note?.trim() || null }
       })
-      await tx.materialPreparationInput.create({
-        data: { prepBatchId: batch.id, materialId: source.id, usedQty, lossQty: loss }
-      })
+      let remainingUsed = usedQty
+      await tx.materialPreparationInput.createMany({ data: selectedLots.map(lot => {
+        const normalQty = Math.min(lot.quantity, remainingUsed)
+        remainingUsed -= normalQty
+        return {
+          prepBatchId: batch.id, materialId: source.id, sourceReceiptId: lot.id,
+          usedQty: normalQty, lossQty: lot.quantity - normalQty
+        }
+      }) })
       await tx.materialLog.createMany({ data: [
         {
           materialId: source.id, type: 'preparation_consumed', quantity: totalDeduct,
@@ -297,7 +370,7 @@ export default async function materialsRoutes(fastify) {
     return reply.send({
       success: true,
       message: `✓ 已分装 ${output} ${packed.unit}，使用 ${usedQty} ${source.unit}${loss ? `，另记录损耗 ${loss} ${source.unit}` : ''}`,
-      data: { batchNo, outputQty: output, usedQty, lossQty: loss }
+      data: { batchNo, outputQty: output, usedQty, lossQty: loss, allocations: presentAllocation(source, selectedLots).allocations }
     })
   })
 
@@ -319,13 +392,17 @@ export default async function materialsRoutes(fastify) {
 
     const beforeQty = item.currentStock
     const afterQty  = beforeQty - quantity
+    let selectedLots
+    try { selectedLots = await previewMaterialAllocation(fastify.prisma, item, Number(quantity)) }
+    catch (error) { return reply.code(400).send({ success: false, message: error.message }) }
 
-    await fastify.prisma.$transaction([
-      fastify.prisma.materialItem.update({ where: { id }, data: { currentStock: afterQty } }),
-      fastify.prisma.materialLog.create({
+    await fastify.prisma.$transaction(async tx => {
+      await consumeMaterialAllocations(tx, item, selectedLots)
+      await tx.materialItem.update({ where: { id }, data: { currentStock: afterQty } })
+      await tx.materialLog.create({
         data: { materialId: id, type: 'production_defect', quantity, beforeQty, afterQty, operatorId, note: note || null }
       })
-    ])
+    })
 
     return reply.send({
       success: true,
@@ -354,17 +431,36 @@ export default async function materialsRoutes(fastify) {
     if (afterQty < 0) return reply.code(400).send({ success: false, message: `调减数量超出库存（当前：${item.currentStock}）` })
 
     const beforeQty = item.currentStock
+    let selectedLots = []
+    if (delta < 0) {
+      try { selectedLots = await previewMaterialAllocation(fastify.prisma, item, Math.abs(delta)) }
+      catch (error) { return reply.code(400).send({ success: false, message: error.message }) }
+    }
 
-    await fastify.prisma.$transaction([
-      fastify.prisma.materialItem.update({ where: { id }, data: { currentStock: afterQty } }),
-      fastify.prisma.materialLog.create({
+    await fastify.prisma.$transaction(async tx => {
+      if (delta < 0) await consumeMaterialAllocations(tx, item, selectedLots)
+      if (delta > 0) {
+        if (item.itemType === 'PACKED') {
+          await tx.materialPreparationBatch.create({ data: {
+            batchNo: makeNo('ADJ-PREP'), outputMaterialId: id, outputQty: delta, availableQty: delta,
+            operatorId, note: `盘点增加：${note.trim()}`
+          } })
+        } else {
+          await tx.materialReceipt.create({ data: {
+            receiptNo: makeNo('ADJ'), materialId: id, orderedSpec: '盘点增加', actualQty: delta,
+            acceptedQty: delta, availableQty: delta, operatorId, note: note.trim()
+          } })
+        }
+      }
+      await tx.materialItem.update({ where: { id }, data: { currentStock: afterQty } })
+      await tx.materialLog.create({
         data: {
           materialId: id, type: 'manual_adjustment',
           quantity: Math.abs(delta), beforeQty, afterQty,
           operatorId, note: note.trim()
         }
       })
-    ])
+    })
 
     return reply.send({
       success: true,

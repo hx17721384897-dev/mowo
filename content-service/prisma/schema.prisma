@@ -633,39 +633,41 @@ model MachineModelSku {
 }
 
 model CustomizeOrder {
-  id               String    @id @default(uuid())
-  orderNo          String    @unique
-  userId           String    @map("user_id")
-  modelId          String    @map("model_id")
-  modelName        String    @map("model_name")
-  frameCount       Int       @map("frame_count")
-  size             String
-  material         String
-  color            String
-  colorName        String    @map("color_name")
-  skuId            String    @map("sku_id")
-  ossPath          String    @map("oss_path")
-  frameUrls        String    @map("frame_urls") // JSON数组
-  status           String    @default("pending")
+  id                 String    @id @default(uuid())
+  orderNo            String    @unique
+  userId             String    @map("user_id")
+  modelId            String    @map("model_id")
+  modelName          String    @map("model_name")
+  frameCount         Int       @map("frame_count")
+  size               String
+  material           String
+  color              String
+  colorName          String    @map("color_name")
+  skuId              String    @map("sku_id")
+  ossPath            String    @map("oss_path")
+  frameUrls          String    @map("frame_urls") // JSON数组
+  status             String    @default("pending")
   // pending→paid→locked→processing→producing→shipped→received→aftersale/cancelled
-  inventoryStatus  String    @default("normal") @map("inventory_status") @db.VarChar(20)
-  sourceType       String    @default("custom") @map("source_type")
-  collabWorkId     String?   @map("collab_work_id")
-  crmebOrderId     String?   @map("crmeb_order_id")
-  assignedTo       String?   @map("assigned_to")
-  receiverName     String?   @map("receiver_name")
-  receiverPhone    String?   @map("receiver_phone")
-  receiverAddress  String?   @map("receiver_address")
-  receiverCity     String?   @map("receiver_city")
-  trackingNo       String?   @map("tracking_no")
-  trackingCompany  String?   @map("tracking_company")
-  shippedAt        DateTime? @map("shipped_at")
-  receivedAt       DateTime? @map("received_at")
-  aftersaleCount   Int       @default(0) @map("aftersale_count") // 售后申请次数（防刷上限3次）
-  batchId          String?   @map("batch_id")
-  seqNo            Int?      @map("seq_no")
-  salesOrderItemId String?   @map("sales_order_item_id")
-  unitIndex        Int?      @map("unit_index")
+  inventoryStatus    String    @default("normal") @map("inventory_status") @db.VarChar(20)
+  sourceType         String    @default("custom") @map("source_type")
+  collabWorkId       String?   @map("collab_work_id")
+  crmebOrderId       String?   @map("crmeb_order_id")
+  assignedTo         String?   @map("assigned_to")
+  receiverName       String?   @map("receiver_name")
+  receiverPhone      String?   @map("receiver_phone")
+  receiverAddress    String?   @map("receiver_address")
+  receiverCity       String?   @map("receiver_city")
+  trackingNo         String?   @map("tracking_no")
+  trackingCompany    String?   @map("tracking_company")
+  shippedAt          DateTime? @map("shipped_at")
+  receivedAt         DateTime? @map("received_at")
+  aftersaleCount     Int       @default(0) @map("aftersale_count") // 售后申请次数（防刷上限3次）
+  batchId            String?   @map("batch_id")
+  seqNo              Int?      @map("seq_no")
+  salesOrderItemId   String?   @map("sales_order_item_id")
+  unitIndex          Int?      @map("unit_index")
+  replacementForId   String?   @map("replacement_for_id")
+  aftersaleRequestId String?   @map("aftersale_request_id")
 
   // v2 新增：多平台来源 + 锁单机制
   platform        String  @default("SELF") @map("platform") @db.VarChar(20)
@@ -688,6 +690,8 @@ model CustomizeOrder {
   @@unique([platform, externalOrderId], name: "platform_external_order_unique")
   @@unique([salesOrderItemId, unitIndex])
   @@index([salesOrderItemId])
+  @@index([replacementForId])
+  @@index([aftersaleRequestId])
   @@map("customize_orders")
 }
 
@@ -903,6 +907,7 @@ model SkuInventory {
   id            String @id @default(uuid())
   skuId         String @unique @map("sku_id")
   currentStock  Int    @default(0) @map("current_stock") // 等同 total_qty
+  serviceStock  Int    @default(0) @map("service_stock")
   reservedStock Int    @default(0) @map("reserved_stock") // 等同 locked_qty（已下单待生产）
   safetyStock   Int    @default(10) @map("safety_stock")
   maxOrderLimit Int    @default(100) @map("max_order_limit")
@@ -1922,22 +1927,23 @@ model ContentQuota {
 
 // 材料物品清单
 model MaterialItem {
-  id           String   @id @default(uuid())
-  itemCode     String?  @unique @map("item_code") @db.VarChar(50)
-  name         String   @db.VarChar(100)
-  itemType     String   @default("RAW") @map("item_type") @db.VarChar(20) // RAW / PACKED / CONSUMABLE
-  specification String? @db.VarChar(200)
-  unit         String   @default("个") @db.VarChar(20)
-  currentStock Int      @default(0) @map("current_stock")
-  safetyStock  Int      @default(10) @map("safety_stock")
-  leadTime     Int      @default(7) @map("lead_time") // 采购周期（天）
-  note         String?  @db.VarChar(200)
-  sourceMaterialId String? @map("source_material_id")
-  sourceQtyPerUnit Int?    @map("source_qty_per_unit")
-  isActive     Boolean  @default(true) @map("is_active")
-  createdBy    String   @map("created_by")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id               String   @id @default(uuid())
+  itemCode         String?  @unique @map("item_code") @db.VarChar(50)
+  name             String   @db.VarChar(100)
+  itemType         String   @default("RAW") @map("item_type") @db.VarChar(20) // RAW / PACKED / CONSUMABLE
+  specification    String?  @db.VarChar(200)
+  unit             String   @default("个") @db.VarChar(20)
+  currentStock     Int      @default(0) @map("current_stock")
+  serviceStock     Int      @default(0) @map("service_stock")
+  safetyStock      Int      @default(10) @map("safety_stock")
+  leadTime         Int      @default(7) @map("lead_time") // 采购周期（天）
+  note             String?  @db.VarChar(200)
+  sourceMaterialId String?  @map("source_material_id")
+  sourceQtyPerUnit Int?     @map("source_qty_per_unit")
+  isActive         Boolean  @default(true) @map("is_active")
+  createdBy        String   @map("created_by")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
   logs        MaterialLog[]
   skuBindings MaterialSkuBinding[]
@@ -1948,18 +1954,18 @@ model MaterialItem {
 
 // 材料操作日志
 model MaterialLog {
-  id         String   @id @default(uuid())
-  materialId String   @map("material_id")
+  id          String   @id @default(uuid())
+  materialId  String   @map("material_id")
   // purchase_in / order_consumed / production_defect / manual_adjustment / opening_stock
-  type       String   @db.VarChar(30)
-  quantity   Int
-  beforeQty  Int      @map("before_qty")
-  afterQty   Int      @map("after_qty")
-  operatorId String   @map("operator_id")
-  note       String?  @db.VarChar(200)
-  orderId    String?  @map("order_id")
-  referenceNo String? @map("reference_no") @db.VarChar(50)
-  createdAt  DateTime @default(now()) @map("created_at")
+  type        String   @db.VarChar(30)
+  quantity    Int
+  beforeQty   Int      @map("before_qty")
+  afterQty    Int      @map("after_qty")
+  operatorId  String   @map("operator_id")
+  note        String?  @db.VarChar(200)
+  orderId     String?  @map("order_id")
+  referenceNo String?  @map("reference_no") @db.VarChar(50)
+  createdAt   DateTime @default(now()) @map("created_at")
 
   material MaterialItem @relation(fields: [materialId], references: [id])
 
@@ -1983,18 +1989,23 @@ model MaterialSkuBinding {
 }
 
 model MaterialReceipt {
-  id              String   @id @default(uuid())
-  receiptNo       String   @unique @map("receipt_no") @db.VarChar(50)
-  materialId      String   @map("material_id")
-  orderedSpec     String?  @map("ordered_spec") @db.VarChar(200)
-  actualQty       Int      @map("actual_qty")
-  acceptedQty     Int      @map("accepted_qty")
-  rejectedQty     Int      @default(0) @map("rejected_qty")
-  supplierName    String?  @map("supplier_name") @db.VarChar(100)
-  supplierLotNo   String?  @map("supplier_lot_no") @db.VarChar(100)
-  operatorId      String   @map("operator_id")
-  note            String?  @db.VarChar(300)
-  createdAt       DateTime @default(now()) @map("created_at")
+  id                    String   @id @default(uuid())
+  receiptNo             String   @unique @map("receipt_no") @db.VarChar(50)
+  materialId            String   @map("material_id")
+  orderedSpec           String?  @map("ordered_spec") @db.VarChar(200)
+  actualQty             Int      @map("actual_qty")
+  acceptedQty           Int      @map("accepted_qty")
+  availableQty          Int      @default(0) @map("available_qty")
+  rejectedQty           Int      @default(0) @map("rejected_qty")
+  supplierName          String?  @map("supplier_name") @db.VarChar(100)
+  supplierLotNo         String?  @map("supplier_lot_no") @db.VarChar(100)
+  location              String?  @db.VarChar(100)
+  status                String   @default("AVAILABLE") @db.VarChar(20)
+  stockClass            String   @default("NEW") @map("stock_class") @db.VarChar(20)
+  sourceReturnReceiptId String?  @map("source_return_receipt_id")
+  operatorId            String   @map("operator_id")
+  note                  String?  @db.VarChar(300)
+  createdAt             DateTime @default(now()) @map("created_at")
 
   material MaterialItem @relation(fields: [materialId], references: [id])
 
@@ -2003,13 +2014,18 @@ model MaterialReceipt {
 }
 
 model MaterialPreparationBatch {
-  id               String   @id @default(uuid())
-  batchNo          String   @unique @map("batch_no") @db.VarChar(50)
-  outputMaterialId String   @map("output_material_id")
-  outputQty        Int      @map("output_qty")
-  operatorId       String   @map("operator_id")
-  note             String?  @db.VarChar(300)
-  createdAt        DateTime @default(now()) @map("created_at")
+  id                    String   @id @default(uuid())
+  batchNo               String   @unique @map("batch_no") @db.VarChar(50)
+  outputMaterialId      String   @map("output_material_id")
+  outputQty             Int      @map("output_qty")
+  availableQty          Int      @default(0) @map("available_qty")
+  location              String?  @db.VarChar(100)
+  status                String   @default("AVAILABLE") @db.VarChar(20)
+  stockClass            String   @default("NEW") @map("stock_class") @db.VarChar(20)
+  sourceReturnReceiptId String?  @map("source_return_receipt_id")
+  operatorId            String   @map("operator_id")
+  note                  String?  @db.VarChar(300)
+  createdAt             DateTime @default(now()) @map("created_at")
 
   inputs MaterialPreparationInput[]
 
@@ -2018,11 +2034,12 @@ model MaterialPreparationBatch {
 }
 
 model MaterialPreparationInput {
-  id          String @id @default(uuid())
-  prepBatchId String @map("prep_batch_id")
-  materialId  String @map("material_id")
-  usedQty     Int    @map("used_qty")
-  lossQty     Int    @default(0) @map("loss_qty")
+  id              String  @id @default(uuid())
+  prepBatchId     String  @map("prep_batch_id")
+  materialId      String  @map("material_id")
+  usedQty         Int     @map("used_qty")
+  lossQty         Int     @default(0) @map("loss_qty")
+  sourceReceiptId String? @map("source_receipt_id")
 
   batch MaterialPreparationBatch @relation(fields: [prepBatchId], references: [id], onDelete: Cascade)
 
@@ -2047,22 +2064,86 @@ model KitContainer {
 }
 
 model KitAssemblyBatch {
-  id           String   @id @default(uuid())
-  batchNo      String   @unique @map("batch_no") @db.VarChar(50)
-  skuId        String   @map("sku_id")
-  quantity     Int
-  bomVersion   Int      @map("bom_version")
-  bomSnapshot  String   @map("bom_snapshot")
-  containerId  String?  @map("container_id")
-  operatorId   String   @map("operator_id")
-  note         String?  @db.VarChar(300)
-  createdAt    DateTime @default(now()) @map("created_at")
+  id                    String   @id @default(uuid())
+  batchNo               String   @unique @map("batch_no") @db.VarChar(50)
+  skuId                 String   @map("sku_id")
+  quantity              Int
+  availableQty          Int      @default(0) @map("available_qty")
+  status                String   @default("AVAILABLE") @db.VarChar(20)
+  stockClass            String   @default("NEW") @map("stock_class") @db.VarChar(20)
+  batchType             String   @default("ASSEMBLED") @map("batch_type") @db.VarChar(30)
+  sourceReturnReceiptId String?  @map("source_return_receipt_id")
+  bomVersion            Int      @map("bom_version")
+  bomSnapshot           String   @map("bom_snapshot")
+  containerId           String?  @map("container_id")
+  operatorId            String   @map("operator_id")
+  note                  String?  @db.VarChar(300)
+  createdAt             DateTime @default(now()) @map("created_at")
 
-  container KitContainer? @relation(fields: [containerId], references: [id])
+  container    KitContainer?            @relation(fields: [containerId], references: [id])
+  consumptions KitAssemblyConsumption[]
 
   @@index([skuId, createdAt])
   @@index([containerId])
   @@map("kit_assembly_batches")
+}
+
+model KitAssemblyConsumption {
+  id                 String   @id @default(uuid())
+  kitAssemblyBatchId String   @map("kit_assembly_batch_id")
+  materialId         String   @map("material_id")
+  sourceType         String   @map("source_type") @db.VarChar(20)
+  sourceBatchId      String   @map("source_batch_id")
+  quantity           Int
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  batch KitAssemblyBatch @relation(fields: [kitAssemblyBatchId], references: [id], onDelete: Cascade)
+
+  @@index([kitAssemblyBatchId])
+  @@index([sourceType, sourceBatchId])
+  @@map("kit_assembly_consumptions")
+}
+
+model InventoryReturnReceipt {
+  id                 String    @id @default(uuid())
+  returnNo           String    @unique @map("return_no") @db.VarChar(50)
+  aftersaleRequestId String    @map("aftersale_request_id")
+  orderId            String    @map("order_id")
+  trackingNo         String?   @map("tracking_no") @db.VarChar(100)
+  trackingCompany    String?   @map("tracking_company") @db.VarChar(100)
+  status             String    @default("QUARANTINED") @db.VarChar(30)
+  receivedBy         String    @map("received_by")
+  receivedAt         DateTime  @default(now()) @map("received_at")
+  inspectedBy        String?   @map("inspected_by")
+  inspectedAt        DateTime? @map("inspected_at")
+  note               String?   @db.VarChar(500)
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  items InventoryReturnInspectionItem[]
+
+  @@index([status, receivedAt])
+  @@index([aftersaleRequestId])
+  @@map("inventory_return_receipts")
+}
+
+model InventoryReturnInspectionItem {
+  id              String   @id @default(uuid())
+  returnReceiptId String   @map("return_receipt_id")
+  inventoryLevel  String   @map("inventory_level") @db.VarChar(30)
+  materialId      String?  @map("material_id")
+  skuId           String?  @map("sku_id")
+  receivedQty     Int      @map("received_qty")
+  disposition     String   @db.VarChar(30)
+  resultBatchType String?  @map("result_batch_type") @db.VarChar(30)
+  resultBatchId   String?  @map("result_batch_id")
+  note            String?  @db.VarChar(300)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  returnReceipt InventoryReturnReceipt @relation(fields: [returnReceiptId], references: [id], onDelete: Cascade)
+
+  @@index([returnReceiptId])
+  @@map("inventory_return_inspection_items")
 }
 
 // ================================================================

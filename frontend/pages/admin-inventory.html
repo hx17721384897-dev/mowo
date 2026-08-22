@@ -359,8 +359,10 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
 
     <!-- 主 Tab -->
     <div class="main-tabs">
-      <button class="main-tab active" id="tabBtnStock"   onclick="switchTab('stock')">📦 SKU 库存</button>
-      <button class="main-tab"        id="tabBtnMat"     onclick="switchTab('mat')">🧩 零件与分装</button>
+      <button class="main-tab active" id="tabBtnStock"   onclick="switchTab('stock')">📦 标准材料包</button>
+      <button class="main-tab"        id="tabBtnPacked"  onclick="switchTab('packed')">🧺 已分装小包</button>
+      <button class="main-tab"        id="tabBtnRaw"     onclick="switchTab('raw')">🧩 基础零件</button>
+      <button class="main-tab"        id="tabBtnReturns" onclick="switchTab('returns')">↩ 退回检查</button>
       <button class="main-tab"        id="tabBtnLogs"    onclick="switchTab('logs')">📋 变动记录</button>
       <button class="main-tab"        id="tabBtnQuota"   onclick="switchTab('quota')">📡 渠道配额</button>
       <button class="main-tab"        id="tabBtnFrame"   onclick="switchTab('frame')">🎞 帧包库存</button>
@@ -396,8 +398,8 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
       </div>
     </div>
 
-    <!-- ═══ Tab: 零件与分装 ═══ -->
-    <div class="tab-panel" id="panelMat">
+    <!-- ═══ Tab: 已分装小包 ═══ -->
+    <div class="tab-panel" id="panelPacked">
       <div class="toolbar">
         <div class="filter-tabs">
           <button class="filter-tab active" id="mftAll"      onclick="setMatFilter('')">全部</button>
@@ -406,11 +408,28 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
           <button class="filter-tab"        id="mftOk"       onclick="setMatFilter('OK')">✅ 充足</button>
         </div>
         <div style="display:flex;gap:8px;">
-          <button class="btn btn-ghost btn-sm" onclick="openKitAssemblyModal()">材料包入库</button>
-          <button class="btn btn-black btn-sm" onclick="openMatNewModal()">＋ 新增零件</button>
+          <button class="btn btn-black btn-sm" onclick="openMatNewModal('PACKED')">＋ 新增分装小包</button>
         </div>
       </div>
-      <div class="mat-grid" id="matGrid"><div class="loading-row">加载中…</div></div>
+      <div class="mat-grid" id="packedGrid"><div class="loading-row">加载中…</div></div>
+    </div>
+
+    <!-- ═══ Tab: 基础零件 ═══ -->
+    <div class="tab-panel" id="panelRaw">
+      <div class="toolbar">
+        <div style="font-size:12px;color:var(--gray3);font-weight:700;line-height:1.6;">采购到货先在这里清点合格数量；每个到货批次独立保存，分装时由系统优先使用最早批次。</div>
+        <button class="btn btn-black btn-sm" onclick="openMatNewModal('RAW')">＋ 新增基础零件</button>
+      </div>
+      <div class="mat-grid" id="rawGrid"><div class="loading-row">加载中…</div></div>
+    </div>
+
+    <!-- ═══ Tab: 退回检查 ═══ -->
+    <div class="tab-panel" id="panelReturns">
+      <div class="toolbar">
+        <div style="font-size:12px;color:var(--gray3);font-weight:700;line-height:1.6;">退回件先登记收货并隔离，检查后才能进入新品库存、维修备用或报废。发出退货快递不会自动增加库存。</div>
+        <button class="btn btn-black btn-sm" onclick="openReturnReceiveModal()">＋ 登记退回收货</button>
+      </div>
+      <div id="returnsList"><div class="loading-row">加载中…</div></div>
     </div>
 
     <!-- ═══ Tab: 变动记录 ═══ -->
@@ -568,6 +587,58 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
   </div>
 </div>
 
+<!-- 批次详情 -->
+<div class="modal-overlay" id="lotDetailModal">
+  <div class="modal" style="max-width:600px;">
+    <div class="modal-title" id="lotDetailTitle">批次详情</div>
+    <div id="lotDetailBody" style="font-size:13px;line-height:1.9;"></div>
+    <div class="modal-actions"><button class="btn btn-black" onclick="document.getElementById('lotDetailModal').classList.remove('show')">关闭</button></div>
+  </div>
+</div>
+
+<!-- 特殊情况改选来源批次 -->
+<div class="modal-overlay" id="allocationModal">
+  <div class="modal" style="max-width:620px;">
+    <div class="modal-title">更换来源批次</div>
+    <div class="modal-sub" id="allocationLabel"></div>
+    <div id="allocationRows"></div>
+    <div id="allocationTotal" style="font-size:12px;font-weight:800;margin:10px 0;"></div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeAllocationModal()">取消</button><button class="btn btn-black" onclick="confirmAllocationOverride()">确认改选</button></div>
+  </div>
+</div>
+
+<!-- 退回收货 -->
+<div class="modal-overlay" id="returnReceiveModal">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-title">登记退回收货</div>
+    <div class="modal-sub">请先在订单后台同意售后，再填写该售后申请编号。收货后物品先进入隔离区。</div>
+    <div class="form-group"><label class="form-label">售后申请 ID *</label><input class="form-input" id="returnAftersaleId"></div>
+    <div class="form-grid-2">
+      <div class="form-group"><label class="form-label">快递公司</label><input class="form-input" id="returnCarrier"></div>
+      <div class="form-group"><label class="form-label">退回快递单号</label><input class="form-input" id="returnTracking"></div>
+    </div>
+    <div class="form-group"><label class="form-label">收货备注</label><input class="form-input" id="returnReceiveNote"></div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeReturnReceiveModal()">取消</button><button class="btn btn-black" onclick="submitReturnReceive()">确认收货并隔离</button></div>
+  </div>
+</div>
+
+<!-- 退回检查 -->
+<div class="modal-overlay" id="returnInspectModal">
+  <div class="modal" style="max-width:620px;">
+    <div class="modal-title">退回件检查</div>
+    <div class="modal-sub" id="returnInspectLabel"></div>
+    <div class="form-group"><label class="form-label">包装与使用情况 *</label><select class="form-input" id="returnCondition" onchange="toggleReturnInspectionFields()"><option value="UNOPENED_INTACT">未拆封、完整且检查合格</option><option value="OPENED">已拆封或使用过</option></select></div>
+    <div class="form-group"><label class="form-label">数量 *</label><input class="form-input" id="returnQty" type="number" min="1" value="1"></div>
+    <div id="returnOpenedFields" style="display:none;background:var(--cream);padding:14px;border-radius:8px;margin-bottom:14px;">
+      <div style="font-size:12px;font-weight:800;margin-bottom:10px;">已拆封的胶、蜡、铁丝不能回到新品库存。可复用木板或支架可登记到维修备用库存。</div>
+      <div class="form-group"><label class="form-label">可复用基础零件（可选）</label><select class="form-input" id="returnMaterialId"></select></div>
+      <div class="form-grid-2"><div class="form-group"><label class="form-label">零件数量</label><input class="form-input" id="returnMaterialQty" type="number" min="1" value="1"></div><div class="form-group"><label class="form-label">处理方式</label><select class="form-input" id="returnDisposition"><option value="SERVICE_ONLY">维修备用</option><option value="SCRAP">报废</option><option value="MISSING">缺失</option><option value="PRIVATE_DESTROY">私人帧素材销毁</option></select></div></div>
+    </div>
+    <div class="form-group"><label class="form-label">检查备注</label><input class="form-input" id="returnInspectNote"></div>
+    <div class="modal-actions"><button class="btn btn-ghost" onclick="closeReturnInspectModal()">取消</button><button class="btn btn-black" onclick="submitReturnInspection()">确认检查结论</button></div>
+  </div>
+</div>
+
 <!-- 零件采购实收入库 -->
 <div class="modal-overlay" id="matReceiptModal">
   <div class="modal" style="max-width:520px;">
@@ -582,6 +653,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
       <div class="form-group"><label class="form-label">供应商</label><input class="form-input" id="matReceiptSupplier"></div>
       <div class="form-group"><label class="form-label">供应商批号</label><input class="form-input" id="matReceiptLot"></div>
     </div>
+    <div class="form-group"><label class="form-label">存放位置</label><input class="form-input" id="matReceiptLocation" placeholder="如 A区-01箱"></div>
     <div class="form-group"><label class="form-label">备注</label><input class="form-input" id="matReceiptNote" placeholder="清点情况、质量问题等"></div>
     <div class="modal-actions"><button class="btn btn-ghost" onclick="closeMatReceiptModal()">取消</button><button class="btn btn-black" onclick="submitMatReceipt()">确认入库</button></div>
   </div>
@@ -597,6 +669,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
       <div class="form-group"><label class="form-label">本次额外损耗</label><input class="form-input" id="matPrepareLoss" type="number" min="0" step="1" value="0" oninput="updatePreparePreview()"></div>
     </div>
     <div id="matPreparePreview" style="background:var(--cream);padding:12px;border-radius:8px;font-size:12px;font-weight:700;line-height:1.7;margin-bottom:14px;"></div>
+    <div class="form-group"><label class="form-label">成品小包存放位置</label><input class="form-input" id="matPrepareLocation" placeholder="如 B区-03箱"></div>
     <div class="form-group"><label class="form-label">备注</label><input class="form-input" id="matPrepareNote" placeholder="异常或分装说明"></div>
     <div class="modal-actions"><button class="btn btn-ghost" onclick="closeMatPrepareModal()">取消</button><button class="btn btn-black" onclick="submitMatPrepare()">确认分装</button></div>
   </div>
@@ -607,12 +680,13 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
   <div class="modal" style="max-width:560px;">
     <div class="modal-title">材料包入库</div>
     <div class="modal-sub">选择 SKU 和数量，系统按材料清单同步扣除零件</div>
-    <div class="form-group"><label class="form-label">材料包 SKU *</label><select class="form-input" id="kitAssemblySku"></select></div>
+    <div class="form-group"><label class="form-label">材料包 SKU *</label><select class="form-input" id="kitAssemblySku" onchange="updateKitAssemblyPreview()"></select></div>
     <div class="form-grid-2">
-      <div class="form-group"><label class="form-label">入库套数 *</label><input class="form-input" id="kitAssemblyQty" type="number" min="1" step="1"></div>
+      <div class="form-group"><label class="form-label">入库套数 *</label><input class="form-input" id="kitAssemblyQty" type="number" min="1" step="1" oninput="updateKitAssemblyPreview()"></div>
       <div class="form-group"><label class="form-label">箱码（选填，可重复使用）</label><input class="form-input" id="kitAssemblyBox" placeholder="如 BX-008"></div>
     </div>
     <div class="form-group"><label class="form-label">库位（选填）</label><input class="form-input" id="kitAssemblyLocation" placeholder="如 A区-02架"></div>
+    <div id="kitAssemblyPreview" style="background:var(--cream);padding:12px;border-radius:8px;font-size:12px;font-weight:700;line-height:1.7;margin-bottom:14px;">选择 SKU 和数量后显示系统推荐批次</div>
     <div class="form-group"><label class="form-label">备注</label><input class="form-input" id="kitAssemblyNote"></div>
     <div class="modal-actions"><button class="btn btn-ghost" onclick="closeKitAssemblyModal()">取消</button><button class="btn btn-black" onclick="submitKitAssembly()">确认材料包入库</button></div>
   </div>
@@ -784,11 +858,14 @@ window.addEventListener('DOMContentLoaded', async () => {
   } catch { location.href = 'index.html'; return }
 
   await loadInventory()
+  const requestedTab = new URLSearchParams(location.search).get('tab')
+  if (requestedTab === 'returns') switchTab('returns')
 })
 
 function refreshCurrent() {
   if (_curTab === 'stock')  loadInventory()
-  if (_curTab === 'mat')    loadMaterials()
+  if (['raw','packed'].includes(_curTab)) loadMaterials()
+  if (_curTab === 'returns') loadReturns()
   if (_curTab === 'logs')   loadLogs(1)
   if (_curTab === 'quota')  loadQuotas()
   if (_curTab === 'frame')  loadFramePacks()
@@ -797,11 +874,12 @@ function refreshCurrent() {
 // ── Tab 切换 ──
 function switchTab(tab) {
   _curTab = tab
-  ;['stock','mat','logs','quota','frame'].forEach(t => {
+  ;['stock','packed','raw','returns','logs','quota','frame'].forEach(t => {
     document.getElementById(`tabBtn${t.charAt(0).toUpperCase()+t.slice(1)}`).classList.toggle('active', t === tab)
     document.getElementById(`panel${t.charAt(0).toUpperCase()+t.slice(1)}`).classList.toggle('active', t === tab)
   })
-  if (tab === 'mat'   && !_allMat.length) loadMaterials()
+  if (['raw','packed'].includes(tab) && !_allMat.length) loadMaterials()
+  if (tab === 'returns') loadReturns()
   if (tab === 'logs')  loadLogs(1)
   if (tab === 'quota') loadQuotas()
   if (tab === 'frame') loadFramePacks()
@@ -1258,7 +1336,8 @@ function closeDrawer() {
 // ════════════════════════════════════════════════
 
 async function loadMaterials() {
-  document.getElementById('matGrid').innerHTML = '<div class="loading-row">加载中…</div>'
+  document.getElementById('rawGrid').innerHTML = '<div class="loading-row">加载中…</div>'
+  document.getElementById('packedGrid').innerHTML = '<div class="loading-row">加载中…</div>'
   try {
     const res  = await fetch(`${API}/api/materials`, { headers: authHeader() })
     const json = await res.json()
@@ -1266,7 +1345,7 @@ async function loadMaterials() {
     _allMat = json.data
     applyMatFilter()
   } catch {
-    document.getElementById('matGrid').innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><div class="empty-text">加载失败</div></div>'
+    document.getElementById('rawGrid').innerHTML = document.getElementById('packedGrid').innerHTML = '<div class="empty-state"><div class="empty-text">加载失败</div></div>'
   }
 }
 
@@ -1295,12 +1374,18 @@ const MAT_ALERT = {
 }
 
 function renderMatGrid() {
-  const grid = document.getElementById('matGrid')
-  if (!_filtMat.length) {
+  renderMaterialLayer('raw', 'rawGrid')
+  renderMaterialLayer('packed', 'packedGrid')
+}
+
+function renderMaterialLayer(layer, gridId) {
+  const grid = document.getElementById(gridId)
+  const rows = _filtMat.filter(m => layer === 'packed' ? m.itemType === 'PACKED' : m.itemType !== 'PACKED')
+  if (!rows.length) {
     grid.innerHTML = '<div class="empty-state"><div class="empty-icon">🧩</div><div class="empty-text">暂无物品</div></div>'
     return
   }
-  grid.innerHTML = _filtMat.map(m => {
+  grid.innerHTML = rows.map(m => {
     const al    = m.alertLevel || 'OK'
     const info  = MAT_ALERT[al] || MAT_ALERT.OK
     const days  = m.availableDays !== null ? `约${m.availableDays}天可用` : '无消耗数据'
@@ -1328,9 +1413,11 @@ function renderMatGrid() {
         日均消耗 ${m.dailyConsumption || 0} ${esc(m.unit)}，${days}
       </div>
       <div class="mat-card-actions">
-        <button class="btn btn-green btn-xs" onclick="openMatRestockModal('${m.id}')">＋ 入库</button>
-        ${m.itemType==='PACKED'?`<button class="btn btn-ghost btn-xs" onclick="openMatPrepareModal('${m.id}')">分装</button>`:''}
+        ${m.itemType==='PACKED'
+          ? `<button class="btn btn-green btn-xs" onclick="openMatPrepareModal('${m.id}')">分装</button>`
+          : `<button class="btn btn-green btn-xs" onclick="openMatRestockModal('${m.id}')">采购入库</button>`}
         <button class="btn btn-red btn-xs"   onclick="openMatDefectModal('${m.id}')">报损</button>
+        <button class="btn btn-ghost btn-xs" onclick="openMaterialLots('${m.id}')">批次</button>
         <button class="btn btn-ghost btn-xs" onclick="openMatDrawer('${m.id}')">详情</button>
         <button class="btn btn-ghost btn-xs" onclick="openMatEditModal('${m.id}')">编辑</button>
       </div>
@@ -1345,7 +1432,7 @@ function openMatRestockModal(id) {
   const m = _allMat.find(x => x.id === id)
   if (!m) return
   document.getElementById('matReceiptLabel').textContent = `${m.name} · 库存单位：${m.unit}`
-  ;['matReceiptOrdered','matReceiptAccepted','matReceiptSupplier','matReceiptLot','matReceiptNote'].forEach(id => document.getElementById(id).value='')
+  ;['matReceiptOrdered','matReceiptAccepted','matReceiptSupplier','matReceiptLot','matReceiptLocation','matReceiptNote'].forEach(id => document.getElementById(id).value='')
   document.getElementById('matReceiptRejected').value='0'
   document.getElementById('matReceiptModal').classList.add('show')
 }
@@ -1362,6 +1449,7 @@ async function submitMatReceipt() {
     orderedSpec:document.getElementById('matReceiptOrdered').value.trim()||undefined,
     supplierName:document.getElementById('matReceiptSupplier').value.trim()||undefined,
     supplierLotNo:document.getElementById('matReceiptLot').value.trim()||undefined,
+    location:document.getElementById('matReceiptLocation').value.trim()||undefined,
     note:document.getElementById('matReceiptNote').value.trim()||undefined
   }
   try {
@@ -1400,12 +1488,12 @@ async function doMatDefect(id, qty, note) {
 }
 
 // 新增物品弹窗
-function openMatNewModal() {
+function openMatNewModal(type='RAW') {
   document.getElementById('matModalId').value    = ''
   document.getElementById('matModalTitle').textContent = '新增零件'
   document.getElementById('matModalName').value  = ''
   document.getElementById('matModalCode').value  = ''
-  document.getElementById('matModalType').value  = 'RAW'
+  document.getElementById('matModalType').value  = type
   document.getElementById('matModalSpec').value  = ''
   document.getElementById('matModalUnit').value  = '个'
   document.getElementById('matModalSafety').value = '10'
@@ -1485,6 +1573,8 @@ function togglePackedFields() {
 }
 
 let _prepareMaterialId = null
+let _preparePlan = null
+let _prepareOverride = null
 function openMatPrepareModal(id) {
   const item = _allMat.find(row => row.id === id)
   if (!item) return
@@ -1492,29 +1582,58 @@ function openMatPrepareModal(id) {
   document.getElementById('matPrepareLabel').textContent = `${item.name}：每${item.unit}使用 ${item.sourceQtyPerUnit} ${item.sourceMaterialName || '来源零件'}`
   document.getElementById('matPrepareOutput').value = ''
   document.getElementById('matPrepareLoss').value = '0'
+  document.getElementById('matPrepareLocation').value = ''
   document.getElementById('matPrepareNote').value = ''
   updatePreparePreview()
   document.getElementById('matPrepareModal').classList.add('show')
 }
 function closeMatPrepareModal(){ document.getElementById('matPrepareModal').classList.remove('show'); _prepareMaterialId=null }
+let _preparePreviewTimer = null
 function updatePreparePreview() {
+  _prepareOverride = null
+  clearTimeout(_preparePreviewTimer)
+  _preparePreviewTimer = setTimeout(loadPreparePreview, 180)
+}
+async function loadPreparePreview() {
   const item = _allMat.find(row => row.id === _prepareMaterialId)
   if (!item) return
   const output = Number(document.getElementById('matPrepareOutput').value || 0)
   const loss = Number(document.getElementById('matPrepareLoss').value || 0)
   const source = _allMat.find(row => row.id === item.sourceMaterialId)
   const normal = output * Number(item.sourceQtyPerUnit || 0)
-  document.getElementById('matPreparePreview').textContent = `预计扣除 ${normal + loss} ${source?.unit || ''} ${source?.name || '来源零件'}（正常使用 ${normal}，损耗 ${loss}），增加 ${output} ${item.unit} ${item.name}`
+  const box = document.getElementById('matPreparePreview')
+  _preparePlan = null
+  if (!Number.isInteger(output) || output <= 0) {
+    box.textContent = `填写分装数量后，系统会按先进先出推荐具体的 ${source?.name || '来源零件'} 批次。`
+    return
+  }
+  box.textContent = '正在计算推荐批次…'
+  try {
+    const res = await fetch(`${API}/api/materials/${_prepareMaterialId}/prepare-preview`, {
+      method:'POST', headers:{...authHeader(),'Content-Type':'application/json'}, body:JSON.stringify({outputQty:output,lossQty:loss,allocations:_prepareOverride||undefined})
+    })
+    const json = await res.json()
+    if (!json.success) { box.textContent = json.message; return }
+    _preparePlan = json.data
+    box.innerHTML = `扣除 ${normal + loss} ${esc(source?.unit || '')} ${esc(source?.name || '来源零件')}，增加 ${output} ${esc(item.unit)} ${esc(item.name)}<br>` +
+      json.data.allocations.map(lot => `<button class="btn btn-ghost btn-xs" onclick="openLotDetail('${lot.sourceType}','${lot.sourceBatchId}')">${esc(lot.batchNo)}：${lot.quantity}${esc(source?.unit || '')}${lot.location?' · '+esc(lot.location):''}</button>`).join(' ') +
+      `<br><button class="btn btn-ghost btn-xs" style="margin-top:8px" onclick="openAllocationPicker('prepare','${source.id}',${normal+loss})">特殊情况更换批次</button>`
+  } catch { box.textContent = '批次计算失败，请检查服务是否运行' }
 }
 async function submitMatPrepare() {
   const outputQty = Number(document.getElementById('matPrepareOutput').value)
   const lossQty = Number(document.getElementById('matPrepareLoss').value || 0)
   if (!Number.isInteger(outputQty) || outputQty <= 0) return showToast('请填写分装成品数量')
   if (!Number.isInteger(lossQty) || lossQty < 0) return showToast('损耗数量不能为负数')
+  if (!_preparePlan) return showToast('请等待系统完成批次推荐')
   try {
     const res = await fetch(`${API}/api/materials/${_prepareMaterialId}/prepare`, {
       method:'POST', headers:{...authHeader(),'Content-Type':'application/json'},
-      body:JSON.stringify({outputQty,lossQty,note:document.getElementById('matPrepareNote').value.trim()||undefined})
+      body:JSON.stringify({
+        outputQty,lossQty,location:document.getElementById('matPrepareLocation').value.trim()||undefined,
+        note:document.getElementById('matPrepareNote').value.trim()||undefined,
+        allocations:_preparePlan.allocations.map(row => ({sourceBatchId:row.sourceBatchId,quantity:row.quantity}))
+      })
     })
     const json = await res.json()
     if (!json.success) return showToast('分装失败：'+json.message)
@@ -1531,14 +1650,42 @@ async function openKitAssemblyModal(preselectedSkuId='') {
   }).join('')
   select.value = preselectedSkuId
   ;['kitAssemblyQty','kitAssemblyBox','kitAssemblyLocation','kitAssemblyNote'].forEach(id => document.getElementById(id).value='')
+  _kitAssemblyPlan = null
+  _kitOverrides = {}
+  document.getElementById('kitAssemblyPreview').textContent = '选择 SKU 和数量后显示系统推荐批次'
   document.getElementById('kitAssemblyModal').classList.add('show')
 }
 function closeKitAssemblyModal(){ document.getElementById('kitAssemblyModal').classList.remove('show') }
+let _kitAssemblyPlan = null
+let _kitOverrides = {}
+let _kitPreviewTimer = null
+function updateKitAssemblyPreview() {
+  _kitOverrides = {}
+  clearTimeout(_kitPreviewTimer)
+  _kitPreviewTimer = setTimeout(loadKitAssemblyPreview, 180)
+}
+async function loadKitAssemblyPreview() {
+  const skuId = document.getElementById('kitAssemblySku').value
+  const quantity = Number(document.getElementById('kitAssemblyQty').value)
+  const box = document.getElementById('kitAssemblyPreview')
+  _kitAssemblyPlan = null
+  if (!skuId || !Number.isInteger(quantity) || quantity <= 0) { box.textContent = '选择 SKU 和数量后显示系统推荐批次'; return }
+  box.textContent = '正在计算材料和推荐批次…'
+  try {
+    const overridePayload = Object.entries(_kitOverrides).map(([materialId,allocations]) => ({materialId,allocations}))
+    const res = await fetch(`${API}/api/inventory/kits/assemble-preview`, {method:'POST',headers:{...authHeader(),'Content-Type':'application/json'},body:JSON.stringify({skuId,quantity,allocations:overridePayload})})
+    const json = await res.json()
+    if (!json.success) { box.textContent = json.message; return }
+    _kitAssemblyPlan = json.data
+    box.innerHTML = json.data.plan.map(row => `<div style="margin-bottom:8px;"><b>${esc(row.materialName)}</b>：需要 ${row.requiredQty}${esc(row.unit)}<br>${row.allocations.map(lot => `<button class="btn btn-ghost btn-xs" onclick="openLotDetail('${lot.sourceType}','${lot.sourceBatchId}')">${esc(lot.batchNo)}：${lot.quantity}${esc(row.unit)}${lot.location?' · '+esc(lot.location):''}</button>`).join(' ')}<br><button class="btn btn-ghost btn-xs" style="margin-top:6px" onclick="openAllocationPicker('kit','${row.materialId}',${row.requiredQty})">特殊情况更换批次</button></div>`).join('')
+  } catch { box.textContent = '批次计算失败，请检查服务是否运行' }
+}
 async function submitKitAssembly() {
   const skuId = document.getElementById('kitAssemblySku').value
   const quantity = Number(document.getElementById('kitAssemblyQty').value)
   if (!skuId) return showToast('请选择材料包 SKU')
   if (!Number.isInteger(quantity) || quantity <= 0) return showToast('请填写入库套数')
+  if (!_kitAssemblyPlan) return showToast('请等待系统完成批次推荐')
   const sku = _allSku.find(row => row.skuId === skuId)
   const label = sku ? `${sku.modelName} · ${sku.skuName}` : '所选 SKU'
   if (!confirm(`确认入库 ${quantity} 套「${label}」？\n系统会按照材料清单同步扣除零件。`)) return
@@ -1549,7 +1696,8 @@ async function submitKitAssembly() {
         skuId,quantity,
         boxCode:document.getElementById('kitAssemblyBox').value.trim()||undefined,
         location:document.getElementById('kitAssemblyLocation').value.trim()||undefined,
-        note:document.getElementById('kitAssemblyNote').value.trim()||undefined
+        note:document.getElementById('kitAssemblyNote').value.trim()||undefined,
+        allocations:_kitAssemblyPlan.plan.map(row => ({materialId:row.materialId,allocations:row.allocations.map(lot => ({sourceBatchId:lot.sourceBatchId,quantity:lot.quantity}))}))
       })
     })
     const json = await res.json()
@@ -2232,6 +2380,171 @@ async function submitFpAdjust() {
     showToast(json.message || '✓ 调整成功')
     loadFramePacks()
   } catch { showToast('网络错误') }
+}
+
+// ══ 批次与退回检查 ══
+async function openMaterialLots(materialId) {
+  try {
+    const res = await fetch(`${API}/api/materials/lots?materialId=${encodeURIComponent(materialId)}`, {headers:authHeader()})
+    const json = await res.json()
+    if (!json.success) return showToast(json.message || '批次加载失败')
+    const {material,lots} = json.data
+    document.getElementById('lotDetailTitle').textContent = `${material.name} · 批次列表`
+    document.getElementById('lotDetailBody').innerHTML = lots.length ? lots.map(lot => {
+      const batchNo = lot.batchNo || lot.receiptNo
+      const type = material.itemType === 'PACKED' ? 'PREPARATION' : 'RECEIPT'
+      return `<button class="btn btn-ghost" style="width:100%;justify-content:space-between;margin-bottom:8px;" onclick="openLotDetail('${type}','${lot.id}')"><span>${esc(batchNo)}</span><span>剩余 ${lot.availableQty} ${esc(material.unit)} · ${esc(lot.status)}</span></button>`
+    }).join('') : '<div class="loading-row">暂无批次记录</div>'
+    document.getElementById('lotDetailModal').classList.add('show')
+  } catch { showToast('批次加载失败') }
+}
+
+async function openLotDetail(type, id) {
+  try {
+    const res = await fetch(`${API}/api/materials/lots/${type}/${id}`, {headers:authHeader()})
+    const json = await res.json()
+    if (!json.success) return showToast(json.message || '批次不存在')
+    const row = json.data
+    const batchNo = row.batchNo || row.receiptNo
+    document.getElementById('lotDetailTitle').textContent = `批次 ${batchNo}`
+    const inputText = row.inputs?.length ? `<div><b>来源：</b>${row.inputs.map(input => `${input.sourceBatchNo || input.sourceReceiptId || '旧记录未标明批次'}（使用${input.usedQty}，损耗${input.lossQty}）`).join('；')}</div>` : ''
+    document.getElementById('lotDetailBody').innerHTML = `
+      <div><b>状态：</b>${esc(row.status || '历史记录')}</div>
+      <div><b>原始/产出数量：</b>${row.outputQty ?? row.acceptedQty ?? '—'}</div>
+      <div><b>当前剩余：</b>${row.availableQty ?? '—'}</div>
+      <div><b>存放位置：</b>${esc(row.location || '未填写')}</div>
+      ${row.supplierName ? `<div><b>供应商：</b>${esc(row.supplierName)}</div>` : ''}
+      ${row.supplierLotNo ? `<div><b>供应商批号：</b>${esc(row.supplierLotNo)}</div>` : ''}
+      ${inputText}
+      <div><b>建立时间：</b>${row.createdAt ? new Date(row.createdAt).toLocaleString('zh-CN') : '—'}</div>
+      <div><b>备注：</b>${esc(row.note || '无')}</div>`
+    document.getElementById('lotDetailModal').classList.add('show')
+  } catch { showToast('批次详情加载失败') }
+}
+
+let _allocationContext = null
+async function openAllocationPicker(mode, materialId, requiredQty) {
+  try {
+    const res = await fetch(`${API}/api/materials/lots?materialId=${encodeURIComponent(materialId)}`, {headers:authHeader()})
+    const json = await res.json()
+    if (!json.success) return showToast(json.message || '批次加载失败')
+    const {material} = json.data
+    const lots = json.data.lots.filter(lot => lot.status === 'AVAILABLE' && Number(lot.availableQty) > 0)
+    const current = mode === 'prepare'
+      ? (_preparePlan?.allocations || [])
+      : (_kitAssemblyPlan?.plan.find(row => row.materialId === materialId)?.allocations || [])
+    const selectedMap = Object.fromEntries(current.map(row => [row.sourceBatchId, row.quantity]))
+    _allocationContext = {mode,materialId,requiredQty,itemType:material.itemType}
+    document.getElementById('allocationLabel').textContent = `${material.name}：本次合计需要 ${requiredQty} ${material.unit}。系统默认先进先出，仅在实物批次不适用时改选。`
+    document.getElementById('allocationRows').innerHTML = lots.length ? lots.map(lot => {
+      const batchNo = lot.batchNo || lot.receiptNo
+      const type = material.itemType === 'PACKED' ? 'PREPARATION' : 'RECEIPT'
+      return `<div style="display:grid;grid-template-columns:minmax(150px,1fr) 120px 130px;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--gray1);">
+        <button class="btn btn-ghost btn-xs" onclick="openLotDetail('${type}','${lot.id}')">${esc(batchNo)}</button>
+        <span style="font-size:12px;font-weight:700;">剩余 ${lot.availableQty}${esc(material.unit)}${lot.location?' · '+esc(lot.location):''}</span>
+        <input class="form-input allocation-input" style="padding:8px 10px;" type="number" min="0" max="${lot.availableQty}" step="1" data-lot-id="${lot.id}" value="${selectedMap[lot.id] || 0}" oninput="updateAllocationTotal()">
+      </div>`
+    }).join('') : '<div class="loading-row">没有可用批次</div>'
+    updateAllocationTotal()
+    document.getElementById('allocationModal').classList.add('show')
+  } catch { showToast('批次加载失败') }
+}
+function updateAllocationTotal() {
+  const total = [...document.querySelectorAll('.allocation-input')].reduce((sum,input)=>sum+Number(input.value||0),0)
+  const required = _allocationContext?.requiredQty || 0
+  const el = document.getElementById('allocationTotal')
+  el.textContent = `已选择 ${total} / 需要 ${required}`
+  el.style.color = total === required ? '#2E7D32' : 'var(--red)'
+}
+function closeAllocationModal(){ document.getElementById('allocationModal').classList.remove('show'); _allocationContext=null }
+async function confirmAllocationOverride() {
+  if (!_allocationContext) return
+  const allocations = [...document.querySelectorAll('.allocation-input')].map(input=>({sourceBatchId:input.dataset.lotId,quantity:Number(input.value||0)})).filter(row=>row.quantity>0)
+  const total = allocations.reduce((sum,row)=>sum+row.quantity,0)
+  if (total !== _allocationContext.requiredQty) return showToast(`所选批次数量合计必须为 ${_allocationContext.requiredQty}`)
+  const {mode,materialId} = _allocationContext
+  closeAllocationModal()
+  if (mode === 'prepare') {
+    _prepareOverride = allocations
+    await loadPreparePreview()
+  } else {
+    _kitOverrides[materialId] = allocations
+    await loadKitAssemblyPreview()
+  }
+}
+
+function openReturnReceiveModal() {
+  const params = new URLSearchParams(location.search)
+  document.getElementById('returnAftersaleId').value = params.get('aftersaleId') || ''
+  ;['returnCarrier','returnTracking','returnReceiveNote'].forEach(id => document.getElementById(id).value='')
+  document.getElementById('returnReceiveModal').classList.add('show')
+}
+function closeReturnReceiveModal(){ document.getElementById('returnReceiveModal').classList.remove('show') }
+async function submitReturnReceive() {
+  const aftersaleRequestId = document.getElementById('returnAftersaleId').value.trim()
+  if (!aftersaleRequestId) return showToast('请填写售后申请 ID')
+  const res = await fetch(`${API}/api/inventory/returns/receive`, {method:'POST',headers:{...authHeader(),'Content-Type':'application/json'},body:JSON.stringify({
+    aftersaleRequestId, trackingCompany:document.getElementById('returnCarrier').value.trim(),
+    trackingNo:document.getElementById('returnTracking').value.trim(), note:document.getElementById('returnReceiveNote').value.trim()
+  })})
+  const json = await res.json()
+  if (!json.success) return showToast(json.message || '登记失败')
+  showToast(json.message); closeReturnReceiveModal(); loadReturns()
+}
+
+async function loadReturns() {
+  const box = document.getElementById('returnsList')
+  box.innerHTML = '<div class="loading-row">加载中…</div>'
+  try {
+    const res = await fetch(`${API}/api/inventory/returns`, {headers:authHeader()})
+    const json = await res.json()
+    if (!json.success) throw new Error(json.message)
+    box.innerHTML = json.data.length ? json.data.map(row => {
+      const order = row.aftersale?.order || {}
+      const status = row.status === 'QUARANTINED' ? '待检查（隔离中）' : '已检查'
+      return `<div class="mat-card" style="margin-bottom:12px;">
+        <div class="mat-card-top"><div><div class="mat-card-name">${esc(row.returnNo)}</div><div class="mat-card-unit">原生产任务 ${esc(order.orderNo || row.orderId)} · 售后 ${esc(row.aftersaleRequestId)}</div></div><span class="stock-badge ${row.status==='QUARANTINED'?'badge-warning':'badge-ok'}">${status}</span></div>
+        <div style="font-size:12px;font-weight:700;color:var(--gray3);margin:8px 0;">${row.trackingCompany?esc(row.trackingCompany)+' · ':''}${esc(row.trackingNo || '未填写快递单号')} · ${new Date(row.receivedAt).toLocaleString('zh-CN')}</div>
+        <div class="mat-card-actions">${row.status==='QUARANTINED'?`<button class="btn btn-black btn-xs" onclick="openReturnInspectModal('${row.id}','${esc(row.returnNo)}')">开始检查</button>`:''}<button class="btn btn-ghost btn-xs" onclick="createReplacement('${row.id}')">创建补发任务</button></div>
+      </div>`
+    }).join('') : '<div class="empty-state"><div class="empty-text">暂无退回收货记录</div></div>'
+  } catch(e) { box.innerHTML = `<div class="loading-row">加载失败：${esc(e.message)}</div>` }
+}
+
+let _returnInspectId = null
+async function openReturnInspectModal(id, returnNo) {
+  _returnInspectId = id
+  if (!_allMat.length) await loadMaterials()
+  document.getElementById('returnInspectLabel').textContent = `${returnNo}：检查前仍属于隔离库存`
+  document.getElementById('returnCondition').value = 'UNOPENED_INTACT'
+  document.getElementById('returnQty').value = '1'
+  document.getElementById('returnInspectNote').value = ''
+  document.getElementById('returnMaterialId').innerHTML = '<option value="">请选择基础零件</option>' + _allMat.filter(m => m.itemType !== 'PACKED').map(m => `<option value="${m.id}">${esc(m.name)} · ${esc(m.specification || '')}</option>`).join('')
+  toggleReturnInspectionFields()
+  document.getElementById('returnInspectModal').classList.add('show')
+}
+function closeReturnInspectModal(){ document.getElementById('returnInspectModal').classList.remove('show'); _returnInspectId=null }
+function toggleReturnInspectionFields(){ document.getElementById('returnOpenedFields').style.display = document.getElementById('returnCondition').value === 'OPENED' ? 'block' : 'none' }
+async function submitReturnInspection() {
+  const packageCondition = document.getElementById('returnCondition').value
+  const receivedQty = Number(document.getElementById('returnQty').value)
+  const items = packageCondition === 'OPENED' ? [{
+    inventoryLevel:document.getElementById('returnDisposition').value==='PRIVATE_DESTROY'?'PRIVATE_FRAME':'BASE',
+    materialId:document.getElementById('returnMaterialId').value || undefined,
+    receivedQty:Number(document.getElementById('returnMaterialQty').value),
+    disposition:document.getElementById('returnDisposition').value
+  }] : []
+  if (!confirm(packageCondition === 'UNOPENED_INTACT' ? '确认该完整材料包未拆封且检查合格，并以新的回收批次进入新品库存？' : '确认按当前检查结论处理？')) return
+  const res = await fetch(`${API}/api/inventory/returns/${_returnInspectId}/inspect`, {method:'POST',headers:{...authHeader(),'Content-Type':'application/json'},body:JSON.stringify({packageCondition,receivedQty,items,note:document.getElementById('returnInspectNote').value.trim()})})
+  const json = await res.json()
+  if (!json.success) return showToast(json.message || '检查登记失败')
+  showToast(json.message); closeReturnInspectModal(); await Promise.all([loadReturns(),loadInventory(),loadMaterials()])
+}
+async function createReplacement(id) {
+  if (!confirm('确认创建一个新的补发生产任务？原生产任务不会被重新打开。')) return
+  const res = await fetch(`${API}/api/inventory/returns/${id}/replacement`, {method:'POST',headers:{...authHeader(),'Content-Type':'application/json'},body:JSON.stringify({})})
+  const json = await res.json()
+  showToast(json.success ? json.message : (json.message || '创建失败'))
 }
 </script>
 <script>
