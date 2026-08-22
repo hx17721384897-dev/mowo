@@ -1926,6 +1926,19 @@ model ContentQuota {
 // ================================================================
 
 // 材料物品清单
+model InventoryFormOption {
+  id        String   @id @default(uuid())
+  category  String   @db.VarChar(20) // NAME / UNIT
+  scope     String   @db.VarChar(20) // RAW / PACKED / ALL
+  value     String   @db.VarChar(100)
+  createdBy String   @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([category, scope, value])
+  @@index([category, scope])
+  @@map("inventory_form_options")
+}
+
 model MaterialItem {
   id               String   @id @default(uuid())
   itemCode         String?  @unique @map("item_code") @db.VarChar(50)

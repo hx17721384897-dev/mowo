@@ -76,6 +76,47 @@ export default async function materialsRoutes(fastify) {
     return reply.send({ success: true, data: result })
   })
 
+  fastify.get('/form-options', { preHandler: requireAdmin }, async (req, reply) => {
+    const scope = req.query.scope === 'PACKED' ? 'PACKED' : 'RAW'
+    const rows = await fastify.prisma.inventoryFormOption.findMany({
+      where: { OR: [{ category: 'NAME', scope }, { category: 'UNIT', scope: 'ALL' }] },
+      orderBy: [{ category: 'asc' }, { createdAt: 'asc' }]
+    })
+    return reply.send({
+      success: true,
+      data: {
+        names: rows.filter(row => row.category === 'NAME'),
+        units: rows.filter(row => row.category === 'UNIT')
+      }
+    })
+  })
+
+  fastify.post('/form-options', { preHandler: requireAdmin }, async (req, reply) => {
+    const category = String(req.body?.category || '').toUpperCase()
+    const value = String(req.body?.value || '').trim()
+    const scope = category === 'UNIT' ? 'ALL' : (req.body?.scope === 'PACKED' ? 'PACKED' : 'RAW')
+    if (!['NAME', 'UNIT'].includes(category))
+      return reply.code(400).send({ success: false, message: '选项类别无效' })
+    if (!value || value.length > 100)
+      return reply.code(400).send({ success: false, message: '选项内容应为 1 至 100 个字符' })
+    try {
+      const row = await fastify.prisma.inventoryFormOption.create({
+        data: { category, scope, value, createdBy: req.user.userId }
+      })
+      return reply.send({ success: true, data: row })
+    } catch (error) {
+      if (error.code === 'P2002') return reply.code(409).send({ success: false, message: '该选项已经存在' })
+      throw error
+    }
+  })
+
+  fastify.delete('/form-options/:optionId', { preHandler: requireAdmin }, async (req, reply) => {
+    const row = await fastify.prisma.inventoryFormOption.findUnique({ where: { id: req.params.optionId } })
+    if (!row) return reply.code(404).send({ success: false, message: '选项不存在或已删除' })
+    await fastify.prisma.inventoryFormOption.delete({ where: { id: row.id } })
+    return reply.send({ success: true, message: '选项已从下拉列表删除；已有零件和库存不受影响' })
+  })
+
   // 可点击查看的真实批次。基础零件读取到货批次，已分装小包读取分装批次。
   fastify.get('/lots', { preHandler: requireAdmin }, async (req, reply) => {
     const { materialId } = req.query

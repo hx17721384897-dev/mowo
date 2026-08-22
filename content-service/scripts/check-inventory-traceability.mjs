@@ -45,6 +45,7 @@ async function cleanup() {
   }
   if (modelId) await prisma.machineModel.deleteMany({where:{id:modelId}})
   if (userId) {
+    await prisma.inventoryFormOption.deleteMany({where:{createdBy:userId}})
     await prisma.operationLog.deleteMany({where:{userId}})
     await prisma.auditLog.deleteMany({where:{userId}})
     await prisma.smsCode.deleteMany({where:{userId}})
@@ -66,7 +67,7 @@ try {
   }
   assert(html.includes('panelPacked') && html.includes('panelRaw') && html.includes('panelReturns'), '库存页面明确分为分装小包、基础零件和退回检查')
   assert(!html.includes('零件只能在库存页维护；款式页只能选择使用'), '新增零件弹窗不显示内部维护说明')
-  assert(!html.includes('id="matModalCode"') && html.includes('id="matNameOptions"') && html.includes('id="matUnitOptions"'), '编码自动生成，名称和单位使用可新增的下拉建议')
+  assert(!html.includes('id="matModalCode"') && html.includes('id="matNameSelect"') && html.includes('id="matUnitSelect"'), '编码自动生成，名称和单位使用可管理的下拉列表')
 
   const phone = `194${runId}`
   const user = await prisma.user.create({data:{phone,role:3,staffRole:'OWNER',privacyAgreedAt:new Date(),privacyPolicyVersion:'inventory-trace-test',profile:{create:{nickname:`trace-${runId}`}},creditScore:{create:{score:100}}}})
@@ -74,6 +75,15 @@ try {
   await prisma.smsCode.create({data:{userId,phone,code:'123456',purpose:'LOGIN',expiresAt:new Date(Date.now()+300000)}})
   const login = await api('/api/v1/auth/sms/verify',null,{method:'POST',body:JSON.stringify({phone,code:'123456',mode:'LOGIN'})})
   const token = (await login.json()).data.accessToken
+
+  const optionValue = `测试名称-${runId}`
+  const addOption = await api('/api/materials/form-options',token,{method:'POST',body:JSON.stringify({category:'NAME',scope:'RAW',value:optionValue})})
+  const optionRow = (await addOption.json()).data
+  assert(addOption.ok && optionRow.value===optionValue,'可以新增基础零件名称选项并保存到数据库')
+  const optionList = await api('/api/materials/form-options?scope=RAW',token)
+  assert((await optionList.json()).data.names.some(row=>row.id===optionRow.id),'重新读取时仍能看到新增名称选项')
+  const deleteOption = await api(`/api/materials/form-options/${optionRow.id}`,token,{method:'DELETE'})
+  assert(deleteOption.ok,'点击删除只移除下拉选项')
 
   const model = await prisma.machineModel.create({data:{name:`追溯测试-${runId}`,description:'自动测试',ratios:'[]',frameOptions:'[]',sizes:'[]'}})
   modelId=model.id
