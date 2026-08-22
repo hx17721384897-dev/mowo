@@ -47,7 +47,7 @@ export async function createAnimationAssetNo(prisma) {
 export async function createAnimationAssetVersion(tx, input) {
   const sourceKey = String(input.sourceKey || '').trim()
   const frameKeys = Array.isArray(input.frameKeys)
-    ? [...new Set(input.frameKeys.filter(key => typeof key === 'string' && key.startsWith('private/')))]
+    ? input.frameKeys.filter(key => typeof key === 'string' && key.startsWith('private/'))
     : []
   if (!sourceKey || frameKeys.length === 0 || frameKeys.length > 50) {
     throw new Error('动画版本来源或帧图无效')
@@ -61,14 +61,15 @@ export async function createAnimationAssetVersion(tx, input) {
     return { asset: existing.asset, version: existing, reused: true }
   }
 
+  const uniqueFrameKeys = [...new Set(frameKeys)]
   const files = await tx.privateFile.findMany({
     where: {
-      objectKey: { in: frameKeys }, ownerUserId: input.ownerUserId,
+      objectKey: { in: uniqueFrameKeys }, ownerUserId: input.ownerUserId,
       status: 'READY', deletedAt: null
     },
     select: { objectKey: true, sha256: true }
   })
-  if (files.length !== frameKeys.length) throw new Error('动画核心帧不完整或不属于当前用户')
+  if (files.length !== uniqueFrameKeys.length) throw new Error('动画核心帧不完整或不属于当前用户')
   const fileMap = new Map(files.map(file => [file.objectKey, file]))
   const manifest = frameKeys.map(key => ({ key, sha256: fileMap.get(key)?.sha256 || null }))
   const manifestHash = crypto.createHash('sha256')

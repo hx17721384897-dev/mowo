@@ -313,7 +313,56 @@ try {
     method: 'POST', body: JSON.stringify({ itemType: 'CUSTOM', contentId: reusedPurchase.customProductId, hardwareSkuId: skuId })
   })).status, 201)
   console.log('PASS reuse creates a new DZ purchase record while keeping the same ANM version')
+
+  const editedFrameKey = await upload(customer, 'CUSTOMIZATION_FRAME', `asset-v2-${runId}.png`)
+  const versionPayload = {
+    baseVersionId: manualAsset.versions[0].id,
+    clientVersionKey: `asset-version-${runId}-owner`,
+    frameKeys: [editedFrameKey],
+    editorData: { recipeVersion: 1, operation: 'automated-v2-test' }
+  }
+  assertStatus('other customer cannot create an animation version', (await request(`/api/animation-assets/${manualAsset.id}/versions`, other.token, {
+    method: 'POST', body: JSON.stringify({ ...versionPayload, clientVersionKey: `asset-version-${runId}-other` })
+  })).status, 404)
+  const versionResponse = await request(`/api/animation-assets/${manualAsset.id}/versions`, customer.token, {
+    method: 'POST', body: JSON.stringify(versionPayload)
+  })
+  assertStatus('owner saves animation changes as V2', versionResponse.status, 201)
+  const versionBody = await versionResponse.json()
+  const versionV2 = versionBody.data.version
+  if (versionV2.versionNo !== 2 || versionV2.sourceType !== 'USER_EDITED') {
+    throw new Error('animation edit did not append USER_EDITED V2')
+  }
+  const versionsAfterEdit = await prisma.animationAssetVersion.findMany({
+    where: { assetId: manualAsset.id }, orderBy: { versionNo: 'asc' }
+  })
+  const productAfterEdit = await prisma.customProduct.findUnique({ where: { id: reusedPurchase.customProductId } })
+  if (
+    versionsAfterEdit.length !== 2 ||
+    versionsAfterEdit[0].id !== manualAsset.versions[0].id ||
+    versionsAfterEdit[1].id !== versionV2.id ||
+    productAfterEdit?.animationVersionId !== manualAsset.versions[0].id
+  ) {
+    throw new Error('V2 creation overwrote V1 or changed an existing purchase version')
+  }
+  const versionRetry = await request(`/api/animation-assets/${manualAsset.id}/versions`, customer.token, {
+    method: 'POST', body: JSON.stringify(versionPayload)
+  })
+  assertStatus('animation V2 retry is idempotent', versionRetry.status, 200)
+  if (!(await versionRetry.json()).reused) throw new Error('animation V2 retry was not marked as reused')
+  assertStatus('stale animation edit cannot overwrite the current version', (await request(`/api/animation-assets/${manualAsset.id}/versions`, customer.token, {
+    method: 'POST', body: JSON.stringify({ ...versionPayload, clientVersionKey: `asset-version-${runId}-stale` })
+  })).status, 409)
+  console.log('PASS animation edits append V2 while V1 and old purchases remain unchanged')
+
   await prisma.animationAsset.update({ where: { id: manualAsset.id }, data: { assetType: 'COLLAB', collabStatus: 'AUTHORIZED' } })
+  assertStatus('authorized collab animation cannot be edited directly', (await request(`/api/animation-assets/${manualAsset.id}/versions`, customer.token, {
+    method: 'POST', body: JSON.stringify({
+      ...versionPayload,
+      baseVersionId: versionV2.id,
+      clientVersionKey: `asset-version-${runId}-collab`
+    })
+  })).status, 409)
   assertStatus('authorized collab animation cannot be deleted', (await request(`/api/animation-assets/${manualAsset.id}`, customer.token, {
     method: 'DELETE'
   })).status, 409)

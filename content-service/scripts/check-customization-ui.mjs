@@ -162,8 +162,8 @@ try {
   if (!await assetCard.getByText(/动画资产/).count() || !await assetCard.getByText(/V1/).count()) {
     throw new Error('我的动画没有把已确认内容显示为带版本的正式动画资产')
   }
-  if (!await assetCard.getByRole('button', { name: /重命名/ }).count() || !await assetCard.getByRole('link', { name: /选择新款式/ }).count()) {
-    throw new Error('我的动画没有提供清晰的重命名和再次制作入口')
+  if (!await assetCard.getByRole('button', { name: /重命名/ }).count() || !await assetCard.getByRole('link', { name: /修改动画/ }).count() || !await assetCard.getByRole('link', { name: /选择新款式/ }).count()) {
+    throw new Error('我的动画没有提供清晰的重命名、修改动画和再次制作入口')
   }
   await assetCard.getByRole('button', { name: /重命名/ }).click()
   await page.locator('#renameInput').fill('浏览器复购测试动画')
@@ -185,6 +185,17 @@ try {
   })
   console.log('PASS customer renames and reuses an animation asset for a new SKU in browser')
   console.log('PASS my animations separates reusable assets from temporary drafts')
+
+  await page.goto(`${webBase}/my-animations.html`, { waitUntil:'networkidle' })
+  const editableAssetCard = page.locator('.anim-card').filter({ hasText:'浏览器复购测试动画' }).first()
+  await editableAssetCard.getByRole('link', { name:/修改动画/ }).click()
+  await page.waitForURL(/customize-editor\.html\?assetId=/, { timeout:10000 })
+  await page.locator('#stateEditor.active').waitFor({ timeout:10000 })
+  await page.getByRole('button', { name:/保存为 V2/ }).click()
+  await page.waitForURL(/my-animations\.html\?.*version=2/, { timeout:20000 })
+  const v2Card = page.locator('.anim-card').filter({ hasText:'浏览器复购测试动画' }).first()
+  await v2Card.getByText(/V2/).waitFor({ timeout:10000 })
+  console.log('PASS customer edits the current animation and saves an immutable V2 in browser')
 
   await page.goto(`${webBase}/customize-editor.html?modelId=${encodeURIComponent(modelId)}`, { waitUntil:'networkidle' })
   await page.evaluate(meta => {

@@ -1,4 +1,6 @@
+import crypto from 'crypto'
 import { createCustomizationRequestNo } from '../lib/customization-request.js'
+import { createAnimationAssetVersion } from '../lib/animation-assets.js'
 
 function pageNumber(value, fallback) {
   const parsed = Number(value)
@@ -94,6 +96,132 @@ export default async function animationAssetRoutes(fastify) {
     }
     const updated = await prisma.animationAsset.update({ where: { id: asset.id }, data: { title } })
     return reply.send({ success: true, data: updated })
+  })
+
+  // 用户从当前版本继续编辑。旧版本不可覆盖，成功后只追加 V2/V3。
+  fastify.post('/:id/versions', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const userId = request.user.userId
+    const body = request.body || {}
+    const baseVersionId = String(body.baseVersionId || '').trim()
+    const clientVersionKey = String(body.clientVersionKey || '').trim()
+    const sourceKey = `ANIMATION_ASSET_EDIT:${request.params.id}:${clientVersionKey}`
+    if (!baseVersionId || !/^[a-zA-Z0-9_-]{16,80}$/.test(clientVersionKey)) {
+      return reply.code(400).send({ success: false, message: '动画修改标识无效，请刷新后重试' })
+    }
+    const frameKeys = Array.isArray(body.frameKeys)
+      ? body.frameKeys.filter(key => typeof key === 'string' && key.startsWith('private/'))
+      : []
+    if (!frameKeys.length || frameKeys.length > 50 || frameKeys.length !== (body.frameKeys || []).length) {
+      return reply.code(400).send({ success: false, message: '修改后的动画需要包含 1 至 50 帧有效图片' })
+    }
+
+    const previous = await prisma.animationAssetVersion.findUnique({
+      where: { sourceKey }, include: { asset: true }
+    })
+    if (previous) {
+      if (previous.assetId !== request.params.id || previous.asset.ownerUserId !== userId) {
+        return reply.code(409).send({ success: false, message: '动画修改标识冲突，请刷新后重试' })
+      }
+      return reply.send({ success: true, reused: true, data: { asset: previous.asset, version: previous } })
+    }
+
+    const asset = await prisma.animationAsset.findUnique({
+      where: { id: request.params.id },
+      include: { versions: { where: { id: baseVersionId }, take: 1 } }
+    })
+    if (!asset || asset.ownerUserId !== userId || asset.status !== 'ACTIVE' || asset.frontDeletedAt) {
+      return reply.code(404).send({ success: false, message: '动画资产不存在或已从动画库删除' })
+    }
+    if (asset.assetType === 'COLLAB' || !['NONE', 'STOPPED'].includes(asset.collabStatus)) {
+      return reply.code(409).send({ success: false, message: '联名动画不能直接修改，请通过联名内容变更流程处理' })
+    }
+    if (!asset.versions[0] || asset.currentVersionNo !== asset.versions[0].versionNo) {
+      return reply.code(409).send({ success: false, message: '动画已有更新，请返回“我的动画”重新进入最新版本' })
+    }
+
+    const compatibleSku = await prisma.machineModelSku.findFirst({
+      where: { isActive: true, frameCount: { gte: frameKeys.length }, model: { isActive: true } },
+      select: { frameCount: true }
+    })
+    if (!compatibleSku) {
+      return reply.code(400).send({ success: false, message: `修改后的 ${frameKeys.length} 帧暂时没有可制作的在售规格` })
+    }
+    const activeSkuFrames = await prisma.machineModelSku.findMany({
+      where: { isActive: true, model: { isActive: true } }, select: { frameCount: true }, distinct: ['frameCount']
+    })
+    if (!activeSkuFrames.some(sku => sku.frameCount && sku.frameCount % frameKeys.length === 0)) {
+      return reply.code(400).send({ success: false, message: `修改后的 ${frameKeys.length} 帧不能整除任何在售规格的目标帧数` })
+    }
+
+    const uniqueKeys = [...new Set(frameKeys)]
+    const files = await prisma.privateFile.findMany({ where: {
+      objectKey: { in: uniqueKeys }, ownerUserId: userId, status: 'READY', deletedAt: null
+    } })
+    if (files.length !== uniqueKeys.length) {
+      return reply.code(400).send({ success: false, message: '修改后的动画帧不存在、尚未上传完成或不属于当前账号' })
+    }
+
+    try {
+      const created = await prisma.$transaction(async tx => {
+        const current = await tx.animationAsset.findUnique({
+          where: { id: asset.id },
+          include: { versions: { where: { id: baseVersionId }, take: 1 } }
+        })
+        if (!current || !current.versions[0] || current.currentVersionNo !== current.versions[0].versionNo) {
+          const stale = new Error('动画已有更新，请返回“我的动画”重新进入最新版本')
+          stale.code = 'STALE_ANIMATION_VERSION'
+          throw stale
+        }
+        const animation = await createAnimationAssetVersion(tx, {
+          ownerUserId: userId,
+          title: current.title,
+          sourceType: 'USER_EDITED',
+          sourceKey,
+          createdByUserId: userId,
+          frameKeys,
+          editorData: {
+            ...(body.editorData && typeof body.editorData === 'object' ? body.editorData : {}),
+            baseVersionId,
+            baseVersionNo: current.currentVersionNo
+          },
+          animationAssetId: current.id
+        })
+        const unlinked = files.filter(file => !file.linkedResourceId)
+        if (unlinked.length) {
+          await tx.privateFile.updateMany({
+            where: { id: { in: unlinked.map(file => file.id) }, linkedResourceId: null },
+            data: { linkedResourceType: 'ANIMATION_ASSET_VERSION', linkedResourceId: animation.version.id }
+          })
+        }
+        await tx.auditLog.create({ data: {
+          userId,
+          action: 'ANIMATION_VERSION_CREATED',
+          targetId: current.id,
+          detail: {
+            baseVersionId,
+            animationVersionId: animation.version.id,
+            versionNo: animation.version.versionNo,
+            frameCount: animation.version.baseFrameCount,
+            requestHash: crypto.createHash('sha256').update(clientVersionKey).digest('hex')
+          },
+          ip: request.ip
+        } })
+        return animation
+      })
+      return reply.code(201).send({ success: true, data: created })
+    } catch (error) {
+      if (error.code === 'STALE_ANIMATION_VERSION') {
+        return reply.code(409).send({ success: false, message: error.message })
+      }
+      if (error.code === 'P2002') {
+        const retry = await prisma.animationAssetVersion.findUnique({ where: { sourceKey }, include: { asset: true } })
+        if (retry?.assetId === asset.id && retry.asset.ownerUserId === userId) {
+          return reply.send({ success: true, reused: true, data: { asset: retry.asset, version: retry } })
+        }
+        return reply.code(409).send({ success: false, message: '动画版本已变化，请重新进入最新版本' })
+      }
+      throw error
+    }
   })
 
   // 使用已确认的动画版本创建新的购买记录，不复制帧文件，也不生成新动画版本。
