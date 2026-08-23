@@ -18,6 +18,7 @@
     "check:sales-order-structure": "node scripts/check-sales-order-structure.mjs",
     "check:standard-kit-inventory": "node scripts/check-standard-kit-inventory.mjs",
     "check:inventory-traceability": "node scripts/check-inventory-traceability.mjs",
+    "check:production-batches": "node scripts/check-production-batches.mjs",
     "assets:backfill": "node scripts/backfill-animation-assets.mjs",
     "check:launch-safety": "node scripts/check-launch-safety.mjs",
     "test-user:create": "node scripts/create-test-user.mjs",

@@ -996,18 +996,68 @@ model PlatformSkuMapping {
   @@map("platform_sku_mappings")
 }
 
-// 生产批次主表（id 格式：YYYYMMDD_HHMMSS，与现有 batchId 字符串兼容）
+// 生产批次主表（新批次号格式：PB-YYYYMMDD-XXXXXX；旧编号继续只读兼容）
 model ProductionBatch {
-  id          String   @id // 例：20260414_143022
-  operatorId  String   @map("operator_id")
-  status      String   @default("Open") @db.VarChar(20)
-  // Open / Locked / Processing / Completed
-  maxCapacity Int?     @map("max_capacity") // 迭代预留，初期 NULL 不限制
-  createdAt   DateTime @default(now()) @map("created_at")
+  id                  String   @id // 例：20260414_143022
+  operatorId          String   @map("operator_id")
+  status              String   @default("READY") @db.VarChar(20)
+  // READY / IN_PROGRESS / COMPLETED / ARCHIVED；旧值继续只读兼容
+  maxCapacity         Int?     @map("max_capacity") // 迭代预留，初期 NULL 不限制
+  warningSnapshot     Json?    @map("warning_snapshot")
+  salesOrderCount     Int      @default(0) @map("sales_order_count")
+  productionUnitCount Int      @default(0) @map("production_unit_count")
+  skuCount            Int      @default(0) @map("sku_count")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
 
   batchItems BatchItem[]
+  orders     ProductionBatchOrder[]
+  units      ProductionBatchUnit[]
 
   @@map("production_batches")
+}
+
+// 正式生产批次与用户总订单的冻结关系。一个总订单必须整体加入批次。
+model ProductionBatchOrder {
+  id              String   @id @default(uuid())
+  batchId         String   @map("batch_id")
+  salesOrderId    String   @map("sales_order_id")
+  orderNoSnapshot String   @map("order_no_snapshot") @db.VarChar(40)
+  status          String   @default("WAITING") @db.VarChar(20)
+  warningSnapshot Json?    @map("warning_snapshot")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  batch      ProductionBatch @relation(fields: [batchId], references: [id], onDelete: Restrict)
+  salesOrder SalesOrder      @relation(fields: [salesOrderId], references: [id], onDelete: Restrict)
+
+  @@unique([batchId, salesOrderId])
+  @@index([salesOrderId, status])
+  @@map("production_batch_orders")
+}
+
+// 批次中的单件生产任务，并行记录帧包、领料、配对和打包四条进度。
+model ProductionBatchUnit {
+  id                   String   @id @default(uuid())
+  batchId              String   @map("batch_id")
+  productionUnitId     String   @map("production_unit_id")
+  salesOrderId         String   @map("sales_order_id")
+  skuId                String   @map("sku_id")
+  productionNoSnapshot String   @map("production_no_snapshot") @db.VarChar(40)
+  frameStatus          String   @default("WAITING") @map("frame_status") @db.VarChar(20)
+  materialStatus       String   @default("WAITING") @map("material_status") @db.VarChar(20)
+  pairingStatus        String   @default("WAITING") @map("pairing_status") @db.VarChar(20)
+  packageStatus        String   @default("WAITING") @map("package_status") @db.VarChar(20)
+  exceptionStatus      String   @default("NORMAL") @map("exception_status") @db.VarChar(20)
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  batch ProductionBatch @relation(fields: [batchId], references: [id], onDelete: Restrict)
+
+  @@unique([batchId, productionUnitId])
+  @@index([productionUnitId])
+  @@index([batchId, skuId])
+  @@index([salesOrderId, packageStatus])
+  @@map("production_batch_units")
 }
 
 // 批次内各 SKU 计划/实产/报废聚合（生产看板数据源）
@@ -1846,9 +1896,10 @@ model SalesOrder {
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
-  user     User             @relation(fields: [userId], references: [id])
-  preOrder PreOrder         @relation(fields: [preOrderId], references: [id], onDelete: Restrict)
-  items    SalesOrderItem[]
+  user                  User                   @relation(fields: [userId], references: [id])
+  preOrder              PreOrder               @relation(fields: [preOrderId], references: [id], onDelete: Restrict)
+  items                 SalesOrderItem[]
+  productionBatchOrders ProductionBatchOrder[]
 
   @@index([userId, status, createdAt])
   @@map("sales_orders")

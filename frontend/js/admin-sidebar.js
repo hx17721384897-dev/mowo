@@ -9,6 +9,7 @@
     {
       key: 'production', label: '生产', icon: '📦',
       items: [
+        { href: 'admin-production-batches.html',       icon: '▦', label: '生产批次' },
         { href: 'admin-orders.html?view=all',        icon: '📋', label: '全部订单' },
         { href: 'admin-orders.html?view=paid',       icon: '📬', label: '待处理' },
         { href: 'admin-orders.html?view=locked',     icon: '⏳', label: '处理中' },

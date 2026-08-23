@@ -1,6 +1,8 @@
 # 管理后台、生产批次与外部订单导入
 
-> 调查基准：2026-08-12。本文记录当前代码事实，不把 `PRODUCTION.md` 中的规划自动视为已实现。本文只做调查记录，本批没有修改业务代码。
+> 调查基准：2026-08-12；实现更新：2026-08-23。本文保留最初调查事实，并在对应位置追加后续实现状态，不把 `PRODUCTION.md` 中的规划自动视为已实现。
+
+> 目标流程更新：2026-08-23 已确认材料包款生产批次和并行作业规则，见 `../PRODUCTION_BATCH_WORKFLOW.md`。本文继续作为旧代码调查记录；两者冲突时，代码事实以本文为准，后续业务目标以新流程文档为准。
 
 ## 调查范围与完成度
 
@@ -114,6 +116,20 @@ index.js
 
 现有 migration SQL 能找到 `auth_codes` 和旧 `shipping_batches`，但找不到 `production_batches`、`batch_items`、`frame_instances`、`order_item_bindings` 的建表语句。仅执行历史迁移创建的新数据库可能缺表。当前无真实用户正是补迁移、做空库重建演练的低成本窗口，但补迁移前仍需先确认哪些批次模型保留。
 
+### 2026-08-23 生产批次骨架更新
+
+上述段落保留的是改造前调查事实。当前已新增独立迁移，补齐 `production_batches`、批次总订单关系和批次单件生产任务关系；`ProductionBatchOrder` 冻结完整 `SO`，`ProductionBatchUnit` 冻结每个 `PU` 及帧素材、材料、配对、打包四条进度。旧导出链路和旧生产模型仍保留，尚未迁入新批次作业，不应与新批次接口混用推进状态。
+
+新增实现包括：
+
+- `/api/admin/production-batches/candidates`：查看可入批总订单、硬性阻断和库存提醒；
+- `/api/admin/production-batches`：列出或显式创建生产批次；
+- `/api/admin/production-batches/:batchId`：读取冻结订单、全部 `PU`、材料需求和进度；
+- `admin-production-batches.html`：生产批次列表、创建和详情页；
+- `check:production-batches`：验证整单入批、提醒确认、事务锁定、重复拦截和页面展示。
+
+详细业务规则、已完成边界和后续阶段见 `docs/PRODUCTION_BATCH_WORKFLOW.md`。
+
 ## 当前主流程（代码事实）
 
 1. 管理员读取 paid 订单并导出地址。服务端生成秒级 batchId，逐单写 seqNo、batchId、locked。
@@ -188,6 +204,8 @@ index.js
 
 在最终流程确认前，用户资料最小可见、电话和地址按岗位展示、原图短时授权与访问留痕、状态纠错审计等作为安全检查项保留，但不据此推定具体生产操作方式。
 
+2026-08-23 更新：生产批次已经确认按“管理员主动选择完整总订单并创建”划分，批次创建与文件下载分离；该项不再待确认。当前仍待确认的是打印裁切配置、每个岗位的领料/配对扫码动作、异常返工和最终打包发货规则。
+
 ## 相关文档
 
 - `PRODUCTION.md`：生产系统原规划
@@ -196,4 +214,5 @@ index.js
 - `docs/DOC_CODE_DIFFERENCES.md`：差异与风险编号
 - `docs/OPEN_QUESTIONS.md`：需要产品确认的决策
 - `docs/ANIMATION_ORDER_PRODUCTION_FRAMEWORK.md`：已确认的跨模块目标编号与生产关系
+- `docs/PRODUCTION_BATCH_WORKFLOW.md`：材料包款生产批次、并行作业、阶段边界与验收结果
 - `docs/DATABASE.md`、`docs/API.md`、`docs/FRONTEND.md`：旧版横向说明

@@ -45,6 +45,7 @@ import customizationRequestRoutes from './routes/customization-requests.js'
 import adminCustomizationRequestRoutes from './routes/admin-customization-requests.js'
 import materialsRoutes    from './routes/materials.js'
 import framePacksRoutes  from './routes/frame-packs.js'
+import productionBatchRoutes from './routes/production-batches.js'
 import accountRoutes     from './routes/account.js'
 import { startScheduler }     from './lib/scheduler.js'
 import { startBullScheduler } from './lib/bull-scheduler.js'
@@ -215,6 +216,7 @@ async function start() {
     await fastify.register(orderRoutes,          { prefix: '/api/orders' })
     await fastify.register(materialsRoutes,      { prefix: '/api/materials' })
     await fastify.register(framePacksRoutes,    { prefix: '/api/frame-packs' })
+    await fastify.register(productionBatchRoutes, { prefix: '/api/admin/production-batches' })
 
     await fastify.listen({ port: config.port, host: config.host })
     startScheduler(fastify)

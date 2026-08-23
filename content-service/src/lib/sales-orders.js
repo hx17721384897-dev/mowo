@@ -19,6 +19,10 @@ export function createProductionUnitNo() {
   return `PU-${dayStamp()}-${randomCode(8)}`
 }
 
+export function createProductionBatchNo() {
+  return `PB-${dayStamp()}-${randomCode(6)}`
+}
+
 export function createSalesOrderItemNo(orderNo, index) {
   return `${orderNo}-${String(index).padStart(2, '0')}`
 }
