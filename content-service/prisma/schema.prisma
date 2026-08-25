@@ -123,6 +123,7 @@ model User {
   assignedCustomizationRequests CustomizationRequest[]        @relation("CustomizationAssignee")
   customizationFrameSelections  CustomizationFrameSelection[] @relation("CustomizationFrameSelectionStaff")
   animationAssetsOwned          AnimationAsset[]              @relation("AnimationAssetOwner")
+  animationAssetsCreated        AnimationAsset[]              @relation("AnimationAssetCreator")
   animationVersionsCreated      AnimationAssetVersion[]       @relation("AnimationVersionCreator")
   salesOrders                   SalesOrder[]
 
@@ -809,14 +810,20 @@ model CollabWork {
   changeLog         String?   @map("change_log") @db.Text // JSON diff: {title:{old,new},...}
   hoverGifUrl       String?   @map("hover_gif_url") // 卡片 hover 用小 GIF OSS 路径
   creatorMarkups    String?   @map("creator_markups") // JSON: {"skuId": decimalAmount}
+  animationAssetId  String?   @map("animation_asset_id")
+  animationVersionId String?  @map("animation_version_id")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
   framePacks   CollabFramePack[]
   collabOrders CollabOrder[]
+  animationAsset   AnimationAsset?        @relation(fields: [animationAssetId], references: [id], onDelete: SetNull)
+  animationVersion AnimationAssetVersion? @relation(fields: [animationVersionId], references: [id], onDelete: SetNull)
 
   @@index([submissionBatchId])
   @@index([originalWorkId])
+  @@index([animationAssetId])
+  @@index([animationVersionId])
   @@map("collab_works")
 }
 
@@ -1754,26 +1761,63 @@ model CustomProduct {
 model AnimationAsset {
   id               String    @id @default(uuid())
   assetNo          String    @unique @map("asset_no") @db.VarChar(32)
-  ownerUserId      String    @map("owner_user_id")
+  ownerUserId      String?   @map("owner_user_id")
   title            String    @default("未命名动画") @db.VarChar(200)
   sourceType       String    @map("source_type") @db.VarChar(30) // SELF_SCREENED | STAFF_SCREENED | STAFF_CREATED
+  sourceChannel    String    @default("WEB_CUSTOM") @map("source_channel") @db.VarChar(30) // WEB_CUSTOM | OFFLINE_CUSTOM | CREATOR_SUBMISSION | INTERNAL_CREATED
+  usageType        String    @default("PRIVATE_CUSTOM") @map("usage_type") @db.VarChar(30) // PRIVATE_CUSTOM | COLLAB_SALE | COMPANY_PRODUCT | INTERNAL_TEST | UNDECIDED
   assetType        String    @default("PRIVATE") @map("asset_type") @db.VarChar(20) // PRIVATE | COLLAB
   status           String    @default("ACTIVE") @db.VarChar(30) // ACTIVE | USER_DELETED | ARCHIVED
   collabStatus     String    @default("NONE") @map("collab_status") @db.VarChar(30) // NONE | PENDING | AUTHORIZED | STOPPED
+  rightsHolderType String    @default("USER") @map("rights_holder_type") @db.VarChar(30) // USER | OFFLINE_CUSTOMER | CREATOR | COMPANY | UNCONFIRMED
+  rightsHolderName String?   @map("rights_holder_name") @db.VarChar(120)
+  rightsHolderContact String? @map("rights_holder_contact") @db.VarChar(200)
+  authorizationStatus String @default("PRIVATE_ONLY") @map("authorization_status") @db.VarChar(30) // PRIVATE_ONLY | PENDING | AUTHORIZED
+  internalNotes    String?   @map("internal_notes") @db.Text
+  createdByStaffId String?   @map("created_by_staff_id")
   currentVersionNo Int       @default(0) @map("current_version_no")
   frontDeletedAt   DateTime? @map("front_deleted_at")
+  archivedAt       DateTime? @map("archived_at")
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
 
-  owner                 User                    @relation("AnimationAssetOwner", fields: [ownerUserId], references: [id])
+  owner                 User?                   @relation("AnimationAssetOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  createdByStaff        User?                   @relation("AnimationAssetCreator", fields: [createdByStaffId], references: [id], onDelete: SetNull)
   versions              AnimationAssetVersion[]
   customProducts        CustomProduct[]
   customizationRequests CustomizationRequest[]
   salesOrderItems       SalesOrderItem[]
+  collabWorks           CollabWork[]
+  tags                  AnimationAssetTag[]
 
   @@index([ownerUserId, status, updatedAt])
   @@index([assetType, collabStatus])
+  @@index([sourceChannel, usageType, status])
+  @@index([createdByStaffId, createdAt])
   @@map("animation_assets")
+}
+
+model AnimationTag {
+  id        String              @id @default(uuid())
+  name      String              @unique @db.VarChar(40)
+  color     String?             @db.VarChar(20)
+  createdAt DateTime            @default(now()) @map("created_at")
+  updatedAt DateTime            @updatedAt @map("updated_at")
+  assets    AnimationAssetTag[]
+
+  @@map("animation_tags")
+}
+
+model AnimationAssetTag {
+  assetId   String         @map("asset_id")
+  tagId     String         @map("tag_id")
+  createdAt DateTime       @default(now()) @map("created_at")
+  asset     AnimationAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  tag       AnimationTag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([assetId, tagId])
+  @@index([tagId, assetId])
+  @@map("animation_asset_tags")
 }
 
 // 一旦确认便不可覆盖的核心帧版本。重新编辑必须新增 versionNo。
@@ -1801,6 +1845,7 @@ model AnimationAssetVersion {
   customProducts       CustomProduct[]              @relation("CustomProductAnimationVersion")
   acceptedRequests     CustomizationRequest[]       @relation("CustomizationAcceptedAnimationVersion")
   salesOrderItems      SalesOrderItem[]
+  collabWorks          CollabWork[]
 
   @@unique([assetId, versionNo])
   @@index([assetId, createdAt])

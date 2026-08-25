@@ -242,6 +242,8 @@ export default async function creatorRoutes(fastify) {
         isRevision:       true,
         originalWorkId:   work.id,
         changeLog,
+        animationAssetId: work.animationAssetId,
+        animationVersionId: work.animationVersionId,
         status:           'pending',
         isNewbieWork:     false,
         isExclusiveWork:  false,

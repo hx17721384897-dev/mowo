@@ -28,6 +28,12 @@
       ]
     },
     {
+      key: 'assets', label: '素材', icon: '🖼',
+      items: [
+        { href: 'admin-frame-library.html', icon: '▦', label: '帧图资产库' }
+      ]
+    },
+    {
       key: 'product', label: '商品', icon: '🎯',
       items: [
         { href: 'admin-models.html',    icon: '🧩', label: '款式管理' },
@@ -80,10 +86,10 @@
   ];
 
   const STAFF_GROUPS = {
-    OWNER: ['production', 'customization', 'product', 'collab', 'creator', 'ops', 'users', 'system'],
+    OWNER: ['production', 'assets', 'customization', 'product', 'collab', 'creator', 'ops', 'users', 'system'],
     CUSTOMER_SERVICE: ['production', 'customization', 'product', 'ops', 'users'],
-    PRODUCTION: ['production', 'customization', 'product'],
-    COLLAB_OPS: ['collab', 'creator']
+    PRODUCTION: ['production', 'assets', 'customization', 'product'],
+    COLLAB_OPS: ['assets', 'collab', 'creator']
   };
 
   const STAFF_HIDDEN_ITEMS = {

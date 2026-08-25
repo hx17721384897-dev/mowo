@@ -2,6 +2,7 @@
 // 公开接口 + 创作者申请
 
 import { calcRevenueRate } from '../lib/revenue.js'
+import { linkCollabWorkToAnimation } from '../lib/collab-animation-asset.js'
 import { generateCoverThumb } from '../lib/thumbnail.js'
 
 export default async function collabRoutes(fastify) {
@@ -285,6 +286,7 @@ export default async function collabRoutes(fastify) {
       if (!animationId && !orderNo) { errors.push(`第 ${i+1} 款：缺少动画来源`); continue }
 
       let animationFramesJson, coverKey, orderNoForRecord = null
+      let sourceAnimationAssetId = null, sourceAnimationVersionId = null
 
       if (animationId) {
         const cp = await prisma.customProduct.findFirst({
@@ -292,6 +294,8 @@ export default async function collabRoutes(fastify) {
         })
         if (!cp) { errors.push(`第 ${i+1} 款：动画作品不存在或不属于你`); continue }
         animationFramesJson = cp.animationFrames
+        sourceAnimationAssetId = cp.animationAssetId
+        sourceAnimationVersionId = cp.animationVersionId
 
         // 重复检测：同一动画 + 完全相同的 SKU 集合 = 重复
         const skuKey = JSON.stringify([...supportedSkus].sort())
@@ -347,8 +351,8 @@ export default async function collabRoutes(fastify) {
       const isNewbieWork = (workIndexOffset + i) < newbieWorksLimit
 
       try {
-        const work = await prisma.collabWork.create({
-          data: {
+        const work = await prisma.$transaction(async tx => {
+          const created = await tx.collabWork.create({ data: {
             creatorId:         userId,
             orderNo:           orderNoForRecord,
             title:             title.trim(),
@@ -364,7 +368,12 @@ export default async function collabRoutes(fastify) {
             agreementSignedAt: now,
             revenueRate:       0,
             submissionBatchId,
-          },
+          } })
+          await linkCollabWorkToAnimation(tx, created, {
+            animationAssetId: sourceAnimationAssetId,
+            animationVersionId: sourceAnimationVersionId
+          })
+          return tx.collabWork.findUnique({ where: { id: created.id } })
         })
         createdWorks.push({ id: work.id, title: work.title, status: 'pending' })
       } catch(e) {

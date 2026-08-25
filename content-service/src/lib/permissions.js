@@ -18,7 +18,8 @@ export const PERMISSION = Object.freeze({
   ACCOUNT_DELETIONS_MANAGE: 'ACCOUNT_DELETIONS_MANAGE',
   STAFF_MANAGE: 'STAFF_MANAGE',
   SECURITY_LOGS: 'SECURITY_LOGS',
-  CUSTOMIZATION_REVIEW: 'CUSTOMIZATION_REVIEW'
+  CUSTOMIZATION_REVIEW: 'CUSTOMIZATION_REVIEW',
+  FRAME_LIBRARY: 'FRAME_LIBRARY'
 })
 
 const ROLE_PERMISSIONS = Object.freeze({
@@ -32,8 +33,8 @@ const ROLE_PERMISSIONS = Object.freeze({
     PERMISSION.ACCOUNT_DELETIONS_READ,
     PERMISSION.CUSTOMIZATION_REVIEW
   ]),
-  [STAFF_ROLE.PRODUCTION]: new Set([PERMISSION.PRODUCTION, PERMISSION.CUSTOMIZATION_REVIEW]),
-  [STAFF_ROLE.COLLAB_OPS]: new Set([PERMISSION.COLLAB])
+  [STAFF_ROLE.PRODUCTION]: new Set([PERMISSION.PRODUCTION, PERMISSION.CUSTOMIZATION_REVIEW, PERMISSION.FRAME_LIBRARY]),
+  [STAFF_ROLE.COLLAB_OPS]: new Set([PERMISSION.COLLAB, PERMISSION.FRAME_LIBRARY])
 })
 
 export function effectiveStaffRole(user) {
@@ -68,6 +69,7 @@ export function requiredPermissionForRequest(method, rawUrl) {
   if (path === '/api/admin/users') return PERMISSION.USERS_READ
   if (path.startsWith('/api/admin/contact')) return PERMISSION.CONTACT
   if (path.startsWith('/api/admin/customization-requests')) return PERMISSION.CUSTOMIZATION_REVIEW
+  if (path.startsWith('/api/admin/frame-library')) return PERMISSION.FRAME_LIBRARY
   if (path.startsWith('/api/admin/print-production')) return PERMISSION.PRODUCTION_CONFIG
 
   if (

@@ -3,6 +3,7 @@
 
 import { calcRevenueRate, buildRevenueConfig } from '../lib/revenue.js'
 import { generateAndUploadHoverGif } from '../lib/gif-generator.js'
+import { updateCollabAssetStatus } from '../lib/collab-animation-asset.js'
 
 export default async function adminCollabRoutes(fastify) {
   const { prisma } = fastify
@@ -120,9 +121,13 @@ export default async function adminCollabRoutes(fastify) {
     if (action === 'reject') {
       if (!rejectReason) return reply.code(400).send({ success: false, message: '拒绝时必须填写原因' })
 
-      const updated = await prisma.collabWork.update({
-        where: { id: req.params.id },
-        data: { status: 'rejected', rejectReason, approvedAt: null, approvedBy: null },
+      const updated = await prisma.$transaction(async tx => {
+        const rejected = await tx.collabWork.update({
+          where: { id: req.params.id },
+          data: { status: 'rejected', rejectReason, approvedAt: null, approvedBy: null },
+        })
+        await updateCollabAssetStatus(tx, rejected, 'rejected')
+        return rejected
       })
 
       const notifType = work.isRevision ? 'revision_rejected' : 'rejected'
@@ -177,9 +182,10 @@ export default async function adminCollabRoutes(fastify) {
         })
       : { rate: 0, breakdown: [] }
 
-    const updated = await prisma.collabWork.update({
-      where: { id: req.params.id },
-      data: {
+    const updated = await prisma.$transaction(async tx => {
+      const approved = await tx.collabWork.update({
+        where: { id: req.params.id },
+        data: {
         status: 'approved',
         approvedAt: now,
         approvedBy: adminId,
@@ -189,7 +195,10 @@ export default async function adminCollabRoutes(fastify) {
         revenueRate: rate,
         isOnShelf: true,
         shelfAt: now,
-      },
+        },
+      })
+      await updateCollabAssetStatus(tx, approved, 'approved')
+      return approved
     })
 
     // 修改版通过时：将变更字段覆写回原作品

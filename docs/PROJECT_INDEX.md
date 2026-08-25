@@ -4,7 +4,7 @@
 >
 > 调查基准：2026-08-13，进度更新：2026-08-25。本文档区分“已核对代码事实”“原规划”“待确认”，不把规划自动视为已实现。
 
-> 当前进度：账号与文件安全已完成；Web 定制、动画资产复购/V2、聚合订单 `SO` 与单件生产任务 `PU` 已建立。库存已实现散装零件、分装小包、标准材料包、FIFO 批次和退回隔离。生产批次可按完整 `SO` 创建；打印裁切采用“打印组 + 真实 SKU”两级结构，支持拖拽排序、同尺寸 SKU 快速加入、未配置生产预警和批次顺序快照。下一阶段优先实现材料领料任务、帧素材作业状态和逐件配对；真实打印文件、异常返工和打包发货仍需分阶段完成。公开上线前的正式 OSS、恶意文件扫描、法律文本、备份恢复、监控与压测仍未完成。
+> 当前进度：账号与文件安全已完成；Web 定制、动画资产复购/V2、聚合订单 `SO` 与单件生产任务 `PU` 已建立。后台帧图资产总库已统一收纳网站、线下、联名和内部动画，具备 ANM/Vn、来源与用途隔离、线下客户账号后绑定、权限、归档和受限删除。库存已实现散装零件、分装小包、标准材料包、FIFO 批次和退回隔离。生产批次可按完整 `SO` 创建；打印裁切采用“打印组 + 真实 SKU”两级结构，支持拖拽排序、同尺寸 SKU 快速加入、未配置生产预警和批次顺序快照。下一阶段优先实现材料领料任务、帧素材作业状态和逐件配对；真实打印文件、异常返工和打包发货仍需分阶段完成。公开上线前的正式 OSS、恶意文件扫描、法律文本、备份恢复、监控与压测仍未完成。
 
 ## 建议阅读顺序
 
@@ -15,7 +15,7 @@
 5. `CLAUDE.md`：开发约束、合规边界、角色规则和协作规范；其中历史进度或旧架构描述不覆盖 `RELEASE_SCOPE.md`。
 6. `docs/LAUNCH_READINESS.md`：B/C/D 阶段门槛、R0-R4 工程就绪等级、复杂度和责任域。
 7. `docs/modules/README.md`：按代码模块进入详细说明。
-   员工岗位与安全记录见 `docs/modules/staff-permissions-audit.md`；本地/OSS私有上传与文件权限见 `docs/modules/private-file-security.md`；Web 定制首批事实见 `docs/modules/web-customization.md`。
+   员工岗位与安全记录见 `docs/modules/staff-permissions-audit.md`；本地/OSS私有上传与文件权限见 `docs/modules/private-file-security.md`；Web 定制首批事实见 `docs/modules/web-customization.md`；后台统一帧图资料见 `docs/modules/frame-asset-library.md`。
 8. `docs/DOC_CODE_DIFFERENCES.md`：文档与代码不一致、风险和过渡状态。
 9. `docs/OPEN_QUESTIONS.md`：待确认问题，以及已从问题台账收敛出的阶段性产品决策。
 10. `docs/ACCOUNT_DELETION_POLICY.md`：账号注销的法规参考、建议规则和数据处理边界。
@@ -80,9 +80,9 @@
 
 ## 数据库规模（已核对）
 
-`content-service/prisma/schema.prisma` 当前定义（2026-08-25 打印排产完成后）：
+`content-service/prisma/schema.prisma` 当前定义（2026-08-26 帧图总库完成后）：
 
-- 95 个 Prisma `model`。
+- 97 个 Prisma `model`。
 - 4 个 Prisma `enum`：`UserStatus`、`SmsPurpose`、`ActionType`、`StaffRole`。
 - 数据表覆盖用户、内容社交、动画/商品、定制订单、联名、库存生产、结算、牛量、合同链接、账户安全、购物车地址和材料等领域。
 
