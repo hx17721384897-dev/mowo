@@ -90,7 +90,12 @@ export async function cleanupAbandonedCustomizationFiles(fastify, options = {}) 
   const retryBefore = new Date(now.getTime() - retryMinutes * MINUTE_MS)
   const candidates = await fastify.prisma.privateFile.findMany({
     where: {
-      purpose: { in: [FILE_PURPOSE.CUSTOMIZATION_SOURCE, FILE_PURPOSE.CUSTOMIZATION_FRAME] },
+      purpose: { in: [
+        FILE_PURPOSE.CUSTOMIZATION_SOURCE,
+        FILE_PURPOSE.CUSTOMIZATION_FRAME,
+        FILE_PURPOSE.LIBRARY_SOURCE,
+        FILE_PURPOSE.LIBRARY_FRAME
+      ] },
       linkedResourceType: null,
       linkedResourceId: null,
       deletedAt: null,

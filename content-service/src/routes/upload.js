@@ -40,7 +40,7 @@ async function createPendingFile(fastify, request, input) {
   const error = validateUploadRequest({ ...input, purpose })
   if (error) return { error }
 
-  if (purpose === FILE_PURPOSE.LIBRARY_FRAME && !request.user?.staffRole) {
+  if ([FILE_PURPOSE.LIBRARY_SOURCE, FILE_PURPOSE.LIBRARY_FRAME].includes(purpose) && !['OWNER', 'PRODUCTION'].includes(request.user?.staffRole)) {
     return { error: '只有工作人员可以上传帧图资产库素材' }
   }
 

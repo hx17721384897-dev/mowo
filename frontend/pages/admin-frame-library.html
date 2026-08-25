@@ -15,7 +15,7 @@
 <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
 <aside class="sidebar" id="sidebar"></aside>
 <main class="main" id="main">
-  <header class="topbar"><div style="display:flex;align-items:center;gap:10px"><button class="btn menu-btn" onclick="openSidebar()">☰</button><h1>帧图资产库</h1></div><div class="top-actions"><button class="btn" onclick="loadAll()">刷新</button><button class="btn btn-black" id="createAssetBtn" onclick="openCreate()" hidden>新增帧图</button></div></header>
+  <header class="topbar"><div style="display:flex;align-items:center;gap:10px"><button class="btn menu-btn" onclick="openSidebar()">☰</button><h1>帧图资产库</h1></div><div class="top-actions"><button class="btn" onclick="loadAll()">刷新</button><button class="btn btn-black" id="createAssetBtn" onclick="location.href='admin-frame-making.html'" hidden>制作新帧图</button></div></header>
   <div class="content">
     <section class="summary" id="summary"></section>
     <section class="workspace">
@@ -52,7 +52,7 @@ const categories=[['all','全部帧图'],['private','私人定制'],['collab','�
 let currentUser=null,stats={},assets=[],activeId=null,active=null,page=1,category='all',total=0,listView=false,playTimer=null,frameData=[]
 function auth(){return{Authorization:`Bearer ${token}`}}function esc(v){const d=document.createElement('div');d.textContent=v??'';return d.innerHTML}function toast(m){const e=document.getElementById('toast');e.textContent=m;e.style.display='block';clearTimeout(e._t);e._t=setTimeout(()=>e.style.display='none',2800)}function fmt(v){return v?new Date(v).toLocaleString('zh-CN'):'-'}function tags(v){return String(v||'').split(/[，,]/).map(x=>x.trim()).filter(Boolean)}
 async function api(path,options={}){const r=await fetch(`${API}${path}`,{...options,headers:{...auth(),...(options.body?{'Content-Type':'application/json'}:{}),...(options.headers||{})}});let j;try{j=await r.json()}catch{j={success:false,message:'服务器返回内容异常'}}if(!r.ok||!j.success)throw new Error(j.message||'操作失败');return j.data}
-async function init(){try{currentUser=await fetchCurrentUser();if(!currentUser?.staffRole){location.href='index.html';return}document.getElementById('createAssetBtn').hidden=currentUser.staffRole!=='OWNER';await loadAll()}catch(e){toast(e.message);setTimeout(()=>location.href='index.html',1000)}}
+async function init(){try{currentUser=await fetchCurrentUser();if(!currentUser?.staffRole){location.href='index.html';return}document.getElementById('createAssetBtn').hidden=currentUser.staffRole!=='OWNER';document.getElementById('keyword').value=new URLSearchParams(location.search).get('keyword')||'';await loadAll()}catch(e){toast(e.message);setTimeout(()=>location.href='index.html',1000)}}
 async function loadAll(){await Promise.all([loadStats(),loadAssets()])}
 async function loadStats(){stats=await api('/api/admin/frame-library/stats');renderSummary();renderFilters();const s=document.getElementById('tagFilter'),old=s.value;s.innerHTML='<option value="">全部标签</option>'+(stats.tags||[]).map(t=>`<option value="${esc(t.name)}">${esc(t.name)} (${t._count.assets})</option>`).join('');s.value=old}
 function countFor(k){return k==='all'?stats.all:k==='private'?stats.private:k==='collab'?stats.collab:k==='company'?stats.company:k==='internal'?stats.internal:k==='incomplete'?stats.incomplete:k==='user_deleted'?stats.userDeleted:stats.archived}

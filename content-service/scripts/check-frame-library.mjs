@@ -142,7 +142,7 @@ try {
   await page.addInitScript(value => localStorage.setItem('mowo_token', value), owner.token)
   await page.goto(`${webBase}/admin-frame-library.html`, { waitUntil: 'networkidle' })
   await page.getByText(offline.payload.data.assetNo).waitFor()
-  assert(await page.getByRole('button', { name: '新增帧图' }).count() === 1, '负责人页面显示新增入口')
+  assert(await page.getByRole('button', { name: '制作新帧图' }).count() === 1, '负责人页面显示后台制作入口')
   await page.getByText(offline.payload.data.assetNo).first().click()
   await page.getByText('不可覆盖版本').waitFor()
   assert(await page.getByText(`线下客户-${runId}`).count() >= 1, '详情页展示客户、版本和业务关系')

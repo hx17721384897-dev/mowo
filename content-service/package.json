@@ -21,6 +21,7 @@
     "check:production-batches": "node scripts/check-production-batches.mjs",
     "check:print-production": "node scripts/check-print-production.mjs",
     "check:frame-library": "node scripts/check-frame-library.mjs",
+    "check:frame-making": "node scripts/check-frame-making.mjs",
     "assets:backfill": "node scripts/backfill-animation-assets.mjs",
     "assets:backfill-collab": "node scripts/backfill-collab-animation-assets.mjs",
     "check:launch-safety": "node scripts/check-launch-safety.mjs",

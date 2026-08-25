@@ -125,6 +125,9 @@ model User {
   animationAssetsOwned          AnimationAsset[]              @relation("AnimationAssetOwner")
   animationAssetsCreated        AnimationAsset[]              @relation("AnimationAssetCreator")
   animationVersionsCreated      AnimationAssetVersion[]       @relation("AnimationVersionCreator")
+  frameAssetDraftsCreated       FrameAssetDraft[]              @relation("FrameAssetDraftCreator")
+  frameAssetDraftsEdited        FrameAssetDraft[]              @relation("FrameAssetDraftEditor")
+  frameAssetDraftsOwned         FrameAssetDraft[]              @relation("FrameAssetDraftOwner")
   salesOrders                   SalesOrder[]
 
   @@map("users")
@@ -1789,6 +1792,7 @@ model AnimationAsset {
   salesOrderItems       SalesOrderItem[]
   collabWorks           CollabWork[]
   tags                  AnimationAssetTag[]
+  sourceDraft           FrameAssetDraft?
 
   @@index([ownerUserId, status, updatedAt])
   @@index([assetType, collabStatus])
@@ -1818,6 +1822,45 @@ model AnimationAssetTag {
   @@id([assetId, tagId])
   @@index([tagId, assetId])
   @@map("animation_asset_tags")
+}
+
+// 后台把视频/GIF/图片组制作成正式 ANM 前的可恢复工作草稿。
+model FrameAssetDraft {
+  id                  String    @id @default(uuid())
+  draftNo             String    @unique @map("draft_no") @db.VarChar(32)
+  status              String    @default("DRAFT") @db.VarChar(20) // DRAFT | PUBLISHED | ABANDONED
+  createdByStaffId    String    @map("created_by_staff_id")
+  lastEditedByStaffId String    @map("last_edited_by_staff_id")
+  sourceKeys          Json      @map("source_keys")
+  sourceType          String    @map("source_type") @db.VarChar(20) // VIDEO | GIF | IMAGES
+  sourceMetadata      Json?     @map("source_metadata")
+  editorData          Json?     @map("editor_data")
+  title               String    @default("未命名动画") @db.VarChar(200)
+  targetRatio         String    @default("1:1") @map("target_ratio") @db.VarChar(20)
+  sourceChannel       String    @default("INTERNAL_CREATED") @map("source_channel") @db.VarChar(30)
+  usageType           String    @default("INTERNAL_TEST") @map("usage_type") @db.VarChar(30)
+  rightsHolderType    String    @default("COMPANY") @map("rights_holder_type") @db.VarChar(30)
+  rightsHolderName    String?   @map("rights_holder_name") @db.VarChar(120)
+  rightsHolderContact String?   @map("rights_holder_contact") @db.VarChar(200)
+  authorizationStatus String    @default("PRIVATE_ONLY") @map("authorization_status") @db.VarChar(30)
+  ownerUserId         String?   @map("owner_user_id")
+  tags                Json?
+  internalNotes       String?   @map("internal_notes") @db.Text
+  revision            Int       @default(1)
+  animationAssetId    String?   @unique @map("animation_asset_id")
+  publishedAt         DateTime? @map("published_at")
+  abandonedAt         DateTime? @map("abandoned_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  createdByStaff User            @relation("FrameAssetDraftCreator", fields: [createdByStaffId], references: [id], onDelete: Restrict)
+  lastEditedBy   User            @relation("FrameAssetDraftEditor", fields: [lastEditedByStaffId], references: [id], onDelete: Restrict)
+  owner          User?           @relation("FrameAssetDraftOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  animationAsset AnimationAsset? @relation(fields: [animationAssetId], references: [id], onDelete: SetNull)
+
+  @@index([status, updatedAt])
+  @@index([createdByStaffId, status])
+  @@map("frame_asset_drafts")
 }
 
 // 一旦确认便不可覆盖的核心帧版本。重新编辑必须新增 versionNo。

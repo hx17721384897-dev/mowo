@@ -30,7 +30,8 @@
     {
       key: 'assets', label: '素材', icon: '🖼',
       items: [
-        { href: 'admin-frame-library.html', icon: '▦', label: '帧图资产库' }
+        { href: 'admin-frame-library.html', icon: '▦', label: '帧图资产库' },
+        { href: 'admin-frame-making.html', icon: '✂', label: '帧图制作' }
       ]
     },
     {
@@ -95,7 +96,7 @@
   const STAFF_HIDDEN_ITEMS = {
     CUSTOMER_SERVICE: new Set(['admin-import.html', 'admin-inventory.html', 'admin-print-production.html']),
     PRODUCTION: new Set(['admin-models.html', 'admin-print-production.html']),
-    COLLAB_OPS: new Set(['admin-collab-policy.html'])
+    COLLAB_OPS: new Set(['admin-collab-policy.html', 'admin-frame-making.html'])
   };
 
   const CSS = `

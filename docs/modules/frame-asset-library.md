@@ -1,6 +1,6 @@
 # 后台帧图资产总库
 
-> 首版实施日期：2026-08-26。本文件记录当前已经实现的后台总库、权限、来源与授权边界。用户侧动画资产和 V1/V2 规则见 `animation-assets.md`，跨订单及生产关系见 `../ANIMATION_ORDER_PRODUCTION_FRAMEWORK.md`。
+> 首版实施日期：2026-08-26，同日补充后台“帧图制作”工作台。本文件记录当前已经实现的后台总库、制作草稿、权限、来源与授权边界。用户侧动画资产和 V1/V2 规则见 `animation-assets.md`，跨订单及生产关系见 `../ANIMATION_ORDER_PRODUCTION_FRAMEWORK.md`。
 
 ## 简单说明
 
@@ -11,12 +11,15 @@
 ## 页面与代码入口
 
 - 后台页面：`frontend/pages/admin-frame-library.html`
-- 后台导航：`frontend/js/admin-sidebar.js` 的“素材 -> 帧图资产库”
+- 后台制作页面：`frontend/pages/admin-frame-making.html` 和 `frontend/js/admin-frame-making.js`
+- 后台导航：`frontend/js/admin-sidebar.js` 的“素材 -> 帧图资产库 / 帧图制作”
 - 后台接口：`content-service/src/routes/frame-library.js`，前缀 `/api/admin/frame-library`
+- 后台制作接口：`content-service/src/routes/frame-making.js`，前缀 `/api/admin/frame-making`
 - 联名关联：`content-service/src/lib/collab-animation-asset.js`
 - 文件用途：`LIBRARY_FRAME`，规则位于 `content-service/src/lib/private-files.js`
 - 数据结构：`AnimationAsset`、`AnimationAssetVersion`、`AnimationTag`、`AnimationAssetTag`，以及 `CollabWork.animationAssetId/animationVersionId`
-- 数据迁移：`prisma/migrations/20260825193000_add_frame_asset_library/migration.sql`
+- 制作草稿数据：`FrameAssetDraft`，使用 `FD-YYYYMMDD-XXXXXX` 编号
+- 数据迁移：`prisma/migrations/20260825193000_add_frame_asset_library/migration.sql` 和 `20260826120000_add_frame_asset_drafts/migration.sql`
 
 本地数据库已通过 `prisma db execute` 应用该增量 SQL。由于项目早期没有建立完整 Prisma 迁移账本，`prisma migrate status` 仍会把本次和多项历史迁移列为“未登记”；不能在现有本地库直接重跑全部旧迁移，应先完成迁移基线整理。接口与自动测试已经直接确认本次表和字段可用。
 
@@ -59,12 +62,28 @@
 - 详情展示当前用途、权利主体、授权状态、绑定账号、标签、全部版本，以及定制、联名和订单关联。
 - 负责人可以人工导入 1 至 50 张帧图，按文件名自然顺序生成 ANM 和 V1，也可以编辑资料、归档、恢复和在极严格条件下永久删除。
 
+## 后台帧图制作流程
+
+“帧图制作”是后台内部工作台，不复用用户定制页面跳转，也不建立 `DZ`、购物车、`SO` 或生产任务。员工从进入到发布一直留在后台左侧菜单框架中。
+
+1. 负责人或生产人员导入一个视频、一个 GIF，或最多 50 张图片；合计不超过 200MB。
+2. 上传完成后生成独立 `FD` 制作草稿。原素材使用 `LIBRARY_SOURCE` 私有用途并绑定该草稿，不会被当成正式帧图。
+3. 视频可选取最多 8 秒片段并提取最多 150 个候选帧；GIF 在浏览器支持时逐帧解析；图片组按文件名自然排序。
+4. 员工可以选择、去重、复制和拖动最终帧顺序，并调节预览速度。筛选结果和入库资料会保存到草稿，重新进入后可恢复。
+5. 草稿使用 `revision` 防止两名员工同时保存时静默覆盖；发生冲突时要求刷新后继续。
+6. 生产人员可以建立和编辑草稿，但不能正式发布。只有负责人确认来源、用途、权利人和授权状态后，才能生成正式 `ANM + V1`。
+7. 正式帧图使用 `LIBRARY_FRAME` 私有用途；最终动画限制为 1 至 50 帧。重复确认同一草稿不会生成第二套动画。
+8. 发布后的 `FD` 仍保留，并关联生成的 `ANM`，因此以后可以追查原素材、编辑记录和正式版本之间的关系。
+9. 草稿建立者或负责人可以放弃未完成草稿。放弃是工作状态，不等于立即永久删除原素材；公司的内部原素材按当前决策长期保留，未来统一纳入留存策略。
+
+`FD` 只代表一次后台制作工作，`ANM` 才代表一套可被版本、订单和生产引用的动画资产，两者不能合并为一个编号。
+
 ## 权限与文件安全
 
 | 岗位 | 总库权限 |
 |---|---|
 | `OWNER` 负责人 | 查看、建立、编辑、绑定账号、归档、恢复和受限永久删除 |
-| `PRODUCTION` 生产人员 | 只读查看帧图与关联信息 |
+| `PRODUCTION` 生产人员 | 只读查看正式总库；可以建立、筛选和编辑制作草稿，但不能正式发布 |
 | `COLLAB_OPS` 联名运营 | 只读查看帧图与关联信息 |
 | `CUSTOMER_SERVICE` 客服 | 不能浏览总库；只能按具体客服/售后业务查看其已有权限的附件 |
 | 普通用户 | 不能进入后台总库，只能通过用户侧接口访问自己的可见动画 |
@@ -97,9 +116,11 @@
 
 `npm run check:frame-library` 会建立临时岗位账号和测试资料，验证岗位隔离、ANM/V1、线下客户无账号入库、后绑定账号、未授权禁止转联名、私人资料禁止永久删除、内部无关联测试资料删除、归档恢复、搜索、短期预览地址和真实后台页面；结束后自动清理测试数据。
 
+`npm run check:frame-making` 验证制作岗位隔离、FD 草稿、原素材绑定、短期读取地址、生产人员保存、并发覆盖保护、负责人发布、ANM/V1 追溯、重复提交幂等、无定制/订单副作用、放弃草稿、桌面后台入口和窄屏菜单；结束后自动清理测试数据。
+
 ## 后续阶段
 
-- 增加从总库建立 V2 的负责人受控编辑入口；当前 V2 仍主要从用户侧动画编辑器产生。
+- 增加从总库建立 V2 的负责人受控编辑入口；当前“帧图制作”只建立新的 ANM/V1，V2 仍主要从用户侧动画编辑器产生。
 - 在生产领料、帧素材包和返工完成后，把这些关系直接展示在总库详情中。
 - 正式上线前接入真实 OSS、恶意文件扫描、备份恢复、留存期限和批量容量测试。
 - 授权证明、合同与销售范围以后应形成独立授权记录；当前 `authorizationStatus` 是首版业务闸门，不替代合同台账。
