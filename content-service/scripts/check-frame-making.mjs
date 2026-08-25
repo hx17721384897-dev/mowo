@@ -137,6 +137,21 @@ try {
   })
   assert(conflict.status === 409, '多人同时编辑时会拦截旧版本覆盖')
 
+  const submitReview = await request(`/api/admin/frame-making/drafts/${created.data.id}/submit-review`, production.token, {
+    method: 'POST', body: JSON.stringify({ revision: saved.data.revision })
+  })
+  const submitted = await submitReview.json()
+  assert(submitReview.status === 200 && submitted.data.status === 'READY_FOR_REVIEW', '生产人员完成筛帧后会提交负责人确认')
+  const productionEditAfterSubmit = await request(`/api/admin/frame-making/drafts/${created.data.id}`, production.token, {
+    method: 'PATCH', body: JSON.stringify({ revision: submitted.data.revision, title: '不应被修改' })
+  })
+  assert(productionEditAfterSubmit.status === 409, '待负责人确认后生产人员不能继续修改')
+  const ownerReviewSave = await request(`/api/admin/frame-making/drafts/${created.data.id}`, owner.token, {
+    method: 'PATCH', body: JSON.stringify({ revision: submitted.data.revision, tags: ['制作验收'] })
+  })
+  const ownerReviewed = await ownerReviewSave.json()
+  assert(ownerReviewSave.status === 200 && ownerReviewed.data.revision === submitted.data.revision + 1, '负责人可以在确认阶段补充资料')
+
   const productionPublish = await request(`/api/admin/frame-making/drafts/${created.data.id}/publish`, production.token, {
     method: 'POST', body: JSON.stringify({ frameKeys: [] })
   })
@@ -187,17 +202,17 @@ try {
     name: 'browser-frame.png', mimeType: 'image/png',
     buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2nKsAAAAASUVORK5CYII=', 'base64')
   })
-  await page.locator('#startBtn').click()
-  await page.locator('#editorView.active .candidate').first().waitFor()
-  assert(await page.locator('#selectedCount').textContent() === '1 帧', '浏览器真实上传图片后会进入筛选并选中候选帧')
+  await Promise.all([
+    page.waitForURL(/customize-editor\.html\?frameDraftId=/),
+    page.locator('#startBtn').click()
+  ])
+  await page.locator('#stateEditor.active .thumb-item').first().waitFor()
+  assert(await page.locator('#ebarSel').textContent() === '1 帧', '浏览器真实上传图片后会进入完整筛帧器并选中候选帧')
+  assert(await page.locator('#btnFirst, #btnDedup, #btnSample, #btnUndo, #btnFilterSel').count() === 5, '后台复用完整的播放、去重、抽帧、撤销和筛选功能')
+  assert(await page.locator('#mowo-nav').isHidden(), '后台筛帧期间不会跳回用户前台导航')
   await page.getByRole('button', { name: '填写入库资料' }).click()
-  await page.locator('#publishBtn').click()
-  await page.waitForFunction(() => document.getElementById('toast')?.classList.contains('show'))
-  const publishMessage = await page.locator('#toast').textContent()
-  if (!publishMessage.startsWith('已生成 ANM-')) {
-    const state = await page.locator('#saveState').textContent()
-    throw new Error(`浏览器发布失败：${publishMessage || state || '未知原因'}`)
-  }
+  await page.locator('#frameMetadataDialog').waitFor({ state: 'visible' })
+  await page.locator('#frameMetaPublish').click()
   await page.waitForURL(/admin-frame-library\.html\?keyword=ANM-/)
   await page.locator('.asset-card').first().waitFor()
   assert(await page.getByText(`浏览器制作验收-${runId}`).count() >= 1, '负责人可以从浏览器完整发布并在总库定位新动画')

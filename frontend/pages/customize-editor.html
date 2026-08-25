@@ -588,6 +588,17 @@ a { text-decoration:none; color:inherit; }
 }
 
 </style>
+<script>
+if (new URLSearchParams(location.search).has('frameDraftId')) {
+  document.documentElement.classList.add('admin-frame-mode');
+}
+</script>
+<style>
+html.admin-frame-mode { --nav-h: 0px; }
+html.admin-frame-mode #mowo-nav,
+html.admin-frame-mode #mowo-mobile-menu,
+html.admin-frame-mode #mowo-mobile-overlay { display: none !important; }
+</style>
 </head>
 <body>
 
@@ -1945,7 +1956,7 @@ function updatePreview() {
 /* ── 状态栏 ── */
 function updateStatus() {
   const cnt = checkedIdx().length;
-  const isAssetEdit = Boolean(_assetEditContext || new URLSearchParams(location.search).get('assetId'));
+  const isAssetEdit = Boolean(_assetEditContext || new URLSearchParams(location.search).get('assetId') || new URLSearchParams(location.search).get('frameDraftId'));
   document.getElementById('selCount').textContent  = cnt;
   document.getElementById('totCount').textContent  = frames.length;
   document.getElementById('ebarSel').textContent   = cnt + ' 帧';
@@ -2336,7 +2347,7 @@ document.getElementById('btnNextStep').addEventListener('click', async ()=>{
   const cl = checkedIdx();
   const cnt = cl.length;
   const pageParams = new URLSearchParams(location.search);
-  const isAssetEdit = Boolean(pageParams.get('assetId'));
+  const isAssetEdit = Boolean(pageParams.get('assetId') || pageParams.get('frameDraftId'));
   /* 整除验证 */
   const validTargets = isAssetEdit
     ? (cnt > 0 ? [cnt] : [])
@@ -2601,7 +2612,7 @@ if (window.matchMedia('(pointer:fine)').matches) {
   });
 }
 </script>
-<script src="../js/customization-review-editor.js?v=20260821"></script>
+<script src="../js/customization-review-editor.js?v=20260826"></script>
 <script src="../js/auth.js"></script>
 </body>
 </html>

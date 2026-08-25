@@ -108,7 +108,7 @@ async function loadDrafts(status = 'DRAFT', button = null) {
     list.innerHTML = rows.length ? rows.map(row => `<article class="draft-row" onclick="openDraft('${row.id}')">
       <div><strong>${esc(row.title)}</strong><span class="sub">${esc(row.draftNo)} · ${row.sourceType === 'IMAGES' ? `${row.sourceCount} 张图片` : row.sourceType}</span></div>
       <span class="badge">${esc(row.targetRatio)}</span><span class="sub">${esc(row.editorName)}<br>${formatTime(row.updatedAt)}</span>
-      <button class="btn">${row.status === 'DRAFT' ? '继续' : row.status === 'PUBLISHED' ? '查看资产' : '查看'}</button>
+      <button class="btn">${row.status === 'DRAFT' ? '继续' : row.status === 'READY_FOR_REVIEW' ? '负责人确认' : row.status === 'PUBLISHED' ? '查看资产' : '查看'}</button>
     </article>`).join('') : '<div class="empty">这里暂时没有记录</div>'
   } catch (error) {
     list.innerHTML = `<div class="empty">${esc(error.message)}</div>`
@@ -229,8 +229,7 @@ async function createDraft() {
       title: document.getElementById('importTitle').value || '未命名动画',
       sourceMetadata: { ...dimensions, count: sourceFiles.length, totalBytes: sourceFiles.reduce((sum, file) => sum + file.size, 0) }
     }) })
-    history.replaceState({}, '', `admin-frame-making.html?draftId=${encodeURIComponent(created.id)}`)
-    await openDraft(created.id, true)
+    location.href = `customize-editor.html?frameDraftId=${encodeURIComponent(created.id)}`
   } catch (error) {
     toast(error.message)
   } finally {
@@ -246,15 +245,8 @@ async function openDraft(id, keepLocal = false) {
       location.href = `admin-frame-library.html?keyword=${encodeURIComponent(draft.animationAsset.assetNo)}`
       return
     }
-    if (draft.status !== 'DRAFT') return toast('该草稿已经放弃，不能继续编辑')
-    currentDraft = draft
-    if (!keepLocal) localSourceFiles = []
-    setDraftHeader()
-    setSaveState('已加载草稿')
-    history.replaceState({}, '', `admin-frame-making.html?draftId=${encodeURIComponent(id)}`)
-    if (draft.sourceType === 'VIDEO') return openVideoTrim()
-    if (draft.sourceType === 'GIF') return decodeGif()
-    return loadImageSources()
+    if (!['DRAFT', 'READY_FOR_REVIEW'].includes(draft.status)) return toast('该草稿已经放弃，不能继续编辑')
+    location.href = `customize-editor.html?frameDraftId=${encodeURIComponent(id)}`
   } catch (error) {
     toast(error.message)
   }

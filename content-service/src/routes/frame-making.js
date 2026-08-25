@@ -158,7 +158,8 @@ export default async function frameMakingRoutes(fastify) {
     const body = request.body || {}
     const draft = await prisma.frameAssetDraft.findUnique({ where: { id: request.params.id } })
     if (!draft) return reply.code(404).send({ success: false, message: '制作草稿不存在' })
-    if (draft.status !== 'DRAFT') return reply.code(409).send({ success: false, message: '只有制作中的草稿可以修改' })
+    const canEdit = draft.status === 'DRAFT' || (draft.status === 'READY_FOR_REVIEW' && isOwner(request))
+    if (!canEdit) return reply.code(409).send({ success: false, message: '当前草稿状态不能修改' })
     const expectedRevision = Number(body.revision)
     if (Number.isInteger(expectedRevision) && expectedRevision !== draft.revision) {
       return reply.code(409).send({ success: false, message: '草稿已被其他工作人员更新，请刷新后继续', code: 'DRAFT_REVISION_CONFLICT' })
@@ -198,11 +199,34 @@ export default async function frameMakingRoutes(fastify) {
     if (!isOwner(request) && draft.createdByStaffId !== request.user.userId) {
       return reply.code(403).send({ success: false, message: '只能放弃自己建立的草稿' })
     }
-    if (draft.status !== 'DRAFT') return reply.code(409).send({ success: false, message: '该草稿不能放弃' })
+    if (!['DRAFT', 'READY_FOR_REVIEW'].includes(draft.status)) return reply.code(409).send({ success: false, message: '该草稿不能放弃' })
     await prisma.frameAssetDraft.update({ where: { id: draft.id }, data: {
       status: 'ABANDONED', abandonedAt: new Date(), lastEditedByStaffId: request.user.userId, revision: { increment: 1 }
     } })
     return reply.send({ success: true })
+  })
+
+  fastify.post('/drafts/:id/submit-review', async (request, reply) => {
+    const body = request.body || {}
+    const draft = await prisma.frameAssetDraft.findUnique({ where: { id: request.params.id } })
+    if (!draft) return reply.code(404).send({ success: false, message: '制作草稿不存在' })
+    if (draft.status === 'READY_FOR_REVIEW') return reply.send({ success: true, data: { status: draft.status } })
+    if (draft.status !== 'DRAFT') return reply.code(409).send({ success: false, message: '当前草稿不能提交确认' })
+    const expectedRevision = Number(body.revision)
+    if (Number.isInteger(expectedRevision) && expectedRevision !== draft.revision) {
+      return reply.code(409).send({ success: false, message: '草稿已被其他工作人员更新，请刷新后继续', code: 'DRAFT_REVISION_CONFLICT' })
+    }
+    const updated = await prisma.$transaction(async tx => {
+      const row = await tx.frameAssetDraft.update({ where: { id: draft.id }, data: {
+        status: 'READY_FOR_REVIEW', lastEditedByStaffId: request.user.userId, revision: { increment: 1 }
+      } })
+      await tx.auditLog.create({ data: {
+        userId: request.user.userId, action: 'FRAME_MAKING_DRAFT_SUBMITTED', targetId: draft.id,
+        detail: { draftNo: draft.draftNo }, ip: request.ip
+      } })
+      return row
+    })
+    return reply.send({ success: true, data: { status: updated.status, revision: updated.revision, updatedAt: updated.updatedAt } })
   })
 
   fastify.post('/drafts/:id/publish', async (request, reply) => {
@@ -213,7 +237,7 @@ export default async function frameMakingRoutes(fastify) {
     if (draft.status === 'PUBLISHED' && draft.animationAsset) {
       return reply.send({ success: true, data: { id: draft.animationAsset.id, assetNo: draft.animationAsset.assetNo, versionNo: 1 } })
     }
-    if (draft.status !== 'DRAFT') return reply.code(409).send({ success: false, message: '该草稿不能入库' })
+    if (!['DRAFT', 'READY_FOR_REVIEW'].includes(draft.status)) return reply.code(409).send({ success: false, message: '该草稿不能入库' })
     const keys = orderedKeys(body.frameKeys).filter(key => key.startsWith('private/'))
     if (!keys.length || keys.length !== (Array.isArray(body.frameKeys) ? body.frameKeys.length : 0)) {
       return reply.code(400).send({ success: false, message: '请选择 1 至 50 张最终帧图' })
@@ -234,7 +258,7 @@ export default async function frameMakingRoutes(fastify) {
     const result = await prisma.$transaction(async tx => {
       const current = await tx.frameAssetDraft.findUnique({ where: { id: draft.id }, include: { animationAsset: true } })
       if (current.status === 'PUBLISHED' && current.animationAsset) return current.animationAsset
-      if (current.status !== 'DRAFT') throw Object.assign(new Error('草稿状态已经改变'), { statusCode: 409 })
+      if (!['DRAFT', 'READY_FOR_REVIEW'].includes(current.status)) throw Object.assign(new Error('草稿状态已经改变'), { statusCode: 409 })
       const asset = await tx.animationAsset.create({ data: {
         assetNo: await createAnimationAssetNo(tx), ownerUserId: draft.ownerUserId, title: draft.title,
         sourceType: 'STAFF_CREATED', sourceChannel: draft.sourceChannel, usageType: draft.usageType,
