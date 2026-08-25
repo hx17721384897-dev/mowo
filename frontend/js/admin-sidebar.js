@@ -10,6 +10,7 @@
       key: 'production', label: '生产', icon: '📦',
       items: [
         { href: 'admin-production-batches.html',       icon: '▦', label: '生产批次' },
+        { href: 'admin-print-production.html',         icon: '↕', label: '打印与裁切设置' },
         { href: 'admin-orders.html?view=all',        icon: '📋', label: '全部订单' },
         { href: 'admin-orders.html?view=paid',       icon: '📬', label: '待处理' },
         { href: 'admin-orders.html?view=locked',     icon: '⏳', label: '处理中' },
@@ -81,8 +82,8 @@
   };
 
   const STAFF_HIDDEN_ITEMS = {
-    CUSTOMER_SERVICE: new Set(['admin-import.html', 'admin-inventory.html']),
-    PRODUCTION: new Set(['admin-models.html']),
+    CUSTOMER_SERVICE: new Set(['admin-import.html', 'admin-inventory.html', 'admin-print-production.html']),
+    PRODUCTION: new Set(['admin-models.html', 'admin-print-production.html']),
     COLLAB_OPS: new Set(['admin-collab-policy.html'])
   };
 

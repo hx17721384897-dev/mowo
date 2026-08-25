@@ -5,7 +5,8 @@ const prisma = new PrismaClient()
 const apiBase = process.env.TEST_API_BASE || 'http://127.0.0.1:3001'
 const webBase = process.env.TEST_WEB_BASE || 'http://127.0.0.1:5500/mowo/frontend/pages'
 const runId = String(Date.now()).slice(-8)
-let adminId, customerId, modelId, skuId, salesOrderId, preOrderId, batchId, browser
+const testSize = `${runId.slice(-4)}x5cm`
+let adminId, customerId, modelId, skuId, salesOrderId, preOrderId, batchId, printGroupId, browser
 
 function assert(condition, message) {
   if (!condition) throw new Error(message)
@@ -56,6 +57,10 @@ async function cleanup() {
   if (preOrderId) await prisma.preOrder.deleteMany({ where: { id: preOrderId } })
   if (skuId) await prisma.machineModelSku.deleteMany({ where: { id: skuId } })
   if (modelId) await prisma.machineModel.deleteMany({ where: { id: modelId } })
+  if (printGroupId) {
+    await prisma.printCutRule.deleteMany({ where: { groupId: printGroupId } })
+    await prisma.printCutGroup.deleteMany({ where: { id: printGroupId } })
+  }
   await deleteUser(customerId)
   await deleteUser(adminId)
 }
@@ -87,12 +92,19 @@ try {
   assert(login.status === 200, '生产批次测试管理员可以登录')
   const token = (await login.json()).data.accessToken
 
+  const printGroup = await prisma.printCutGroup.create({ data: {
+    code: `PCG-TEST-${runId}`, name: `批次测试版式-${runId}`, size: testSize,
+    framesPerSheet: 12, sortOrder: 9999, createdBy: adminId
+  } })
+  printGroupId = printGroup.id
+  await prisma.printCutRule.create({ data: { groupId: printGroupId, size: testSize, frameCount: 12, pagesPerUnit: 1 } })
+
   const model = await prisma.machineModel.create({ data: {
-    name: `生产批次测试款-${runId}`, ratios: '["1:1"]', frameOptions: '[12]', sizes: '["5x5cm"]'
+    name: `生产批次测试款-${runId}`, ratios: '["1:1"]', frameOptions: '[12]', sizes: JSON.stringify([testSize])
   } })
   modelId = model.id
   const sku = await prisma.machineModelSku.create({ data: {
-    modelId, size: '5x5cm', material: '椴木板', frameCount: 12, colorName: `测试原色-${runId}`, colorHex: '#DDCC99', skuCode: `PBTEST-${runId}`
+    modelId, size: testSize, material: '椴木板', frameCount: 12, colorName: `测试原色-${runId}`, colorHex: '#DDCC99', skuCode: `PBTEST-${runId}`
   } })
   skuId = sku.id
 
@@ -119,7 +131,7 @@ try {
   } })
   const tasks = await Promise.all([1, 2].map(unitIndex => prisma.customizeOrder.create({ data: {
     orderNo: `PU-20990101-${runId.slice(-6)}${unitIndex}`, userId: customerId, skuId, modelId, modelName: model.name,
-    frameCount: 12, size: '5x5cm', material: '椴木板', color: '#DDCC99', colorName: '原色', ossPath: '',
+    frameCount: 12, size: testSize, material: '椴木板', color: '#DDCC99', colorName: '原色', ossPath: '',
     frameUrls: JSON.stringify([`private/test/${runId}/${unitIndex}.png`]), status: 'paid', sourceType: 'custom',
     receiverName: order.receiverName, receiverPhone: order.receiverPhone, receiverAddress: order.receiverAddress,
     receiverCity: order.receiverCity, salesOrderItemId: item.id, unitIndex
@@ -145,6 +157,8 @@ try {
   const membership = await prisma.productionBatchOrder.findFirst({ where: { batchId, salesOrderId } })
   assert(Boolean(membership), '批次保存完整总订单冻结关系')
   assert(await prisma.productionBatchUnit.count({ where: { batchId } }) === 2, '批次保存两个单件生产任务及并行进度')
+  const printUnits = await prisma.productionBatchUnit.findMany({ where: { batchId }, orderBy: { printSequence: 'asc' } })
+  assert(printUnits.every((unit, index) => unit.printGroupId === printGroupId && unit.printSequence === index + 1 && unit.printPageCount === 1), '批次冻结打印裁切组、页数和生产顺序')
   const claimed = await prisma.customizeOrder.findMany({ where: { id: { in: tasks.map(task => task.id) } } })
   assert(claimed.every(task => task.batchId === batchId && task.lockStatus === 'LOCKED'), '所有 PU 原子写入同一批次并锁定')
 
@@ -156,6 +170,7 @@ try {
   const detail = (await detailResponse.json()).data
   assert(detail.orders.length === 1 && detail.orders[0].items[0].productionUnits.length === 2, '批次详情返回总订单、商品和全部 PU')
   assert(detail.materialDemand[0].required === 2 && detail.progress.total === 2, '批次详情正确汇总领料需求和并行进度')
+  assert(detail.printQueue.length === 2 && detail.printQueue[0].groupName === printGroup.name, '批次详情返回冻结的帧素材打印队列')
 
   browser = await chromium.launch({ headless: true, executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe' })
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
@@ -163,9 +178,9 @@ try {
   await page.addInitScript(value => localStorage.setItem('mowo_token', value), token)
   await page.goto(`${webBase}/admin-production-batches.html`, { waitUntil: 'networkidle' })
   await page.getByText(batchId).first().click()
-  await page.getByText(tasks[0].orderNo).waitFor({ timeout: 10000 })
+  await page.getByText(tasks[0].orderNo, { exact: true }).first().waitFor({ timeout: 10000 })
   assert(await page.getByText(order.orderNo).count() >= 1, '生产批次页面展示用户总订单')
-  assert(await page.getByText(tasks[0].orderNo).count() === 1 && await page.getByText(tasks[1].orderNo).count() === 1, '生产批次页面展示每个 PU 的四条进度')
+  assert(await page.getByText(tasks[0].orderNo).count() >= 2 && await page.getByText(tasks[1].orderNo).count() >= 2, '生产批次页面同时在打印队列和订单进度中展示每个 PU')
   await context.close()
 
   console.log('Production batch checks passed')

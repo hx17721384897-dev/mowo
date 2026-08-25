@@ -632,6 +632,47 @@ model MachineModelSku {
   @@map("machine_model_skus")
 }
 
+// 帧素材共用的打印与裁切方式，不按商品款式拆分。
+model PrintCutGroup {
+  id             String   @id @default(uuid())
+  code           String   @unique @db.VarChar(40)
+  name           String   @db.VarChar(80)
+  size           String   @db.VarChar(20)
+  paperSize      String   @default("A4") @map("paper_size") @db.VarChar(20)
+  framesPerSheet Int      @map("frames_per_sheet")
+  cuttingTool    String?  @map("cutting_tool") @db.VarChar(80)
+  templateKey    String?  @map("template_key") @db.VarChar(120)
+  sortOrder      Int      @default(0) @map("sort_order")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdBy      String   @map("created_by")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  rules PrintCutRule[]
+
+  @@index([isActive, sortOrder])
+  @@map("print_cut_groups")
+}
+
+// 尺寸与成品帧数映射到一个打印裁切组；款式不参与匹配。
+model PrintCutRule {
+  id           String   @id @default(uuid())
+  groupId      String   @map("group_id")
+  size         String   @db.VarChar(20)
+  frameCount   Int      @map("frame_count")
+  pagesPerUnit Int      @map("pages_per_unit")
+  sortOrder    Int      @default(0) @map("sort_order")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  group PrintCutGroup @relation(fields: [groupId], references: [id], onDelete: Restrict)
+
+  @@unique([size, frameCount])
+  @@index([groupId, isActive, sortOrder])
+  @@map("print_cut_rules")
+}
+
 model CustomizeOrder {
   id                 String    @id @default(uuid())
   orderNo            String    @unique
@@ -1007,6 +1048,7 @@ model ProductionBatch {
   salesOrderCount     Int      @default(0) @map("sales_order_count")
   productionUnitCount Int      @default(0) @map("production_unit_count")
   skuCount            Int      @default(0) @map("sku_count")
+  printPlanSnapshot   Json?    @map("print_plan_snapshot")
   createdAt           DateTime @default(now()) @map("created_at")
   updatedAt           DateTime @updatedAt @map("updated_at")
 
@@ -1043,6 +1085,13 @@ model ProductionBatchUnit {
   salesOrderId         String   @map("sales_order_id")
   skuId                String   @map("sku_id")
   productionNoSnapshot String   @map("production_no_snapshot") @db.VarChar(40)
+  printGroupId         String?  @map("print_group_id")
+  printGroupCode       String?  @map("print_group_code") @db.VarChar(40)
+  printGroupName       String?  @map("print_group_name") @db.VarChar(80)
+  printRuleId          String?  @map("print_rule_id")
+  printSequence        Int?     @map("print_sequence")
+  printPageCount       Int?     @map("print_page_count")
+  printRuleSnapshot    Json?    @map("print_rule_snapshot")
   frameStatus          String   @default("WAITING") @map("frame_status") @db.VarChar(20)
   materialStatus       String   @default("WAITING") @map("material_status") @db.VarChar(20)
   pairingStatus        String   @default("WAITING") @map("pairing_status") @db.VarChar(20)
@@ -1056,6 +1105,7 @@ model ProductionBatchUnit {
   @@unique([batchId, productionUnitId])
   @@index([productionUnitId])
   @@index([batchId, skuId])
+  @@index([batchId, printSequence])
   @@index([salesOrderId, packageStatus])
   @@map("production_batch_units")
 }

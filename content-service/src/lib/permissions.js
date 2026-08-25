@@ -10,6 +10,7 @@ export const PERMISSION = Object.freeze({
   CONTACT: 'CONTACT',
   CATALOG: 'CATALOG',
   PRODUCTION: 'PRODUCTION',
+  PRODUCTION_CONFIG: 'PRODUCTION_CONFIG',
   COLLAB: 'COLLAB',
   USERS_READ: 'USERS_READ',
   USERS_BAN: 'USERS_BAN',
@@ -67,6 +68,7 @@ export function requiredPermissionForRequest(method, rawUrl) {
   if (path === '/api/admin/users') return PERMISSION.USERS_READ
   if (path.startsWith('/api/admin/contact')) return PERMISSION.CONTACT
   if (path.startsWith('/api/admin/customization-requests')) return PERMISSION.CUSTOMIZATION_REVIEW
+  if (path.startsWith('/api/admin/print-production')) return PERMISSION.PRODUCTION_CONFIG
 
   if (
     path.startsWith('/api/admin/collab') ||

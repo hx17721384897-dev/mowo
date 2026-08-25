@@ -206,6 +206,8 @@ index.js
 
 2026-08-23 更新：生产批次已经确认按“管理员主动选择完整总订单并创建”划分，批次创建与文件下载分离；该项不再待确认。当前仍待确认的是打印裁切配置、每个岗位的领料/配对扫码动作、异常返工和最终打包发货规则。
 
+2026-08-25 更新：打印裁切配置和批次生产顺序已经实现。新增 `PrintCutGroup`、`PrintCutRule`、`/api/admin/print-production` 和 `admin-print-production.html`；候选订单支持按支付日期、款式、SKU、尺寸、帧数、打印组和来源筛选。创建批次时保存每个 `PU` 的打印组、页数和顺序快照。真实打印文件、标签、岗位完成操作和异常返工仍未实现，详见 `docs/PRINT_PRODUCTION_PLANNING.md`。
+
 ## 相关文档
 
 - `PRODUCTION.md`：生产系统原规划
@@ -215,4 +217,5 @@ index.js
 - `docs/OPEN_QUESTIONS.md`：需要产品确认的决策
 - `docs/ANIMATION_ORDER_PRODUCTION_FRAMEWORK.md`：已确认的跨模块目标编号与生产关系
 - `docs/PRODUCTION_BATCH_WORKFLOW.md`：材料包款生产批次、并行作业、阶段边界与验收结果
+- `docs/PRINT_PRODUCTION_PLANNING.md`：打印裁切组、候选筛选、生产顺序和批次快照
 - `docs/DATABASE.md`、`docs/API.md`、`docs/FRONTEND.md`：旧版横向说明

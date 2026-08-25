@@ -1,6 +1,7 @@
 // 显式生产批次：完整总订单入批、生产前检查和批次详情。
 
 import { createProductionBatchNo } from '../lib/sales-orders.js'
+import { buildPrintRuleMap, loadPrintCutConfig, printSpecKey, snapshotPrintRule } from '../lib/print-production.js'
 
 const ORDER_INCLUDE = {
   items: {
@@ -21,7 +22,7 @@ function parseFrames(value) {
 }
 
 function flattenTasks(order) {
-  return order.items.flatMap(item => item.productionTasks.map(task => ({ ...task, item })))
+  return order.items.flatMap(item => item.productionTasks.map(task => ({ ...task, item, order })))
 }
 
 async function getKitAvailability(prisma, skuIds) {
@@ -39,7 +40,9 @@ async function getKitAvailability(prisma, skuIds) {
   return new Map(rows.map(row => [row.skuId, row._sum.availableQty || 0]))
 }
 
-async function assessOrders(prisma, orders) {
+async function assessOrders(prisma, orders, printGroups = null) {
+  const configuredGroups = printGroups || await loadPrintCutConfig(prisma)
+  const printRuleMap = buildPrintRuleMap(configuredGroups)
   const tasks = orders.flatMap(flattenTasks)
   const skuIds = [...new Set(tasks.map(task => task.skuId).filter(Boolean))]
   const orderIds = orders.map(order => order.id)
@@ -92,6 +95,9 @@ async function assessOrders(prisma, orders) {
       if (!parseFrames(task.frameUrls).length) {
         hardBlocks.push({ code: 'FRAME_FILE_MISSING', message: `生产任务 ${task.orderNo} 缺少已锁定帧图` })
       }
+      if (!printRuleMap.has(printSpecKey(task.size, task.frameCount))) {
+        hardBlocks.push({ code: 'PRINT_RULE_MISSING', message: `${task.size} ${task.frameCount}帧尚未设置打印与裁切方式` })
+      }
       if (task.skuId) requirements.set(task.skuId, (requirements.get(task.skuId) || 0) + 1)
     }
 
@@ -110,9 +116,12 @@ async function assessOrders(prisma, orders) {
       id: order.id,
       orderNo: order.orderNo,
       createdAt: order.createdAt,
+      paidAt: order.paidAt,
+      platform: order.platform,
       receiverName: order.receiverName,
       itemCount: order.items.length,
       productionUnitCount: orderTasks.length,
+      estimatedPrintPages: orderTasks.reduce((sum, task) => sum + (printRuleMap.get(printSpecKey(task.size, task.frameCount))?.rule.pagesPerUnit || 0), 0),
       hardBlocks,
       warnings,
       ready: hardBlocks.length === 0,
@@ -122,10 +131,58 @@ async function assessOrders(prisma, orders) {
         skuId: item.skuId,
         skuCode: item.skuCode,
         quantity: item.quantity,
-        productionNos: item.productionTasks.map(task => task.orderNo)
+        productionNos: item.productionTasks.map(task => task.orderNo),
+        productionSpecs: item.productionTasks.map(task => ({
+          skuId: task.skuId,
+          modelId: task.modelId,
+          modelName: task.modelName,
+          size: task.size,
+          frameCount: task.frameCount,
+          printGroupId: printRuleMap.get(printSpecKey(task.size, task.frameCount))?.group.id || null
+        }))
       }))
     }
   })
+}
+
+function candidateFilters(query = {}) {
+  const number = value => value === undefined || value === '' ? null : Number(value)
+  return {
+    paidFrom: String(query.paidFrom || '').trim(),
+    paidTo: String(query.paidTo || '').trim(),
+    orderNo: String(query.orderNo || '').trim(),
+    platform: String(query.platform || '').trim(),
+    modelId: String(query.modelId || '').trim(),
+    skuId: String(query.skuId || '').trim(),
+    size: String(query.size || '').trim(),
+    frameCount: number(query.frameCount),
+    printGroupId: String(query.printGroupId || '').trim(),
+    readyOnly: String(query.readyOnly || '') === 'true',
+    kitAvailableOnly: String(query.kitAvailableOnly || '') === 'true'
+  }
+}
+
+function taskMatches(task, filters, printRuleMap) {
+  if (filters.modelId && task.modelId !== filters.modelId) return false
+  if (filters.skuId && task.skuId !== filters.skuId) return false
+  if (filters.size && task.size !== filters.size) return false
+  if (filters.frameCount && task.frameCount !== filters.frameCount) return false
+  if (filters.printGroupId && printRuleMap.get(printSpecKey(task.size, task.frameCount))?.group.id !== filters.printGroupId) return false
+  return true
+}
+
+function buildPrintPlan(tasks, printRuleMap, modelSortMap) {
+  const planned = tasks.map(task => ({ task, entry: printRuleMap.get(printSpecKey(task.size, task.frameCount)) }))
+  planned.sort((a, b) => {
+    const aSnapshot = snapshotPrintRule(a.entry)
+    const bSnapshot = snapshotPrintRule(b.entry)
+    return (aSnapshot.groupOrder - bSnapshot.groupOrder)
+      || (aSnapshot.ruleOrder - bSnapshot.ruleOrder)
+      || ((modelSortMap.get(a.task.modelId) ?? 999999) - (modelSortMap.get(b.task.modelId) ?? 999999))
+      || (new Date(a.task.order.paidAt || 0) - new Date(b.task.order.paidAt || 0))
+      || String(a.task.orderNo).localeCompare(String(b.task.orderNo))
+  })
+  return planned.map((row, index) => ({ ...row, sequence: index + 1, snapshot: snapshotPrintRule(row.entry) }))
 }
 
 function summarizeUnits(units) {
@@ -144,14 +201,58 @@ export default async function productionBatchRoutes(fastify) {
   const requireAdmin = fastify.requireRole(2)
 
   fastify.get('/candidates', { preHandler: requireAdmin }, async (req, reply) => {
+    const filters = candidateFilters(req.query)
+    const paidAt = {}
+    if (filters.paidFrom) paidAt.gte = new Date(`${filters.paidFrom}T00:00:00+08:00`)
+    if (filters.paidTo) paidAt.lte = new Date(`${filters.paidTo}T23:59:59.999+08:00`)
+    if ([paidAt.gte, paidAt.lte].some(value => value && Number.isNaN(value.getTime()))) {
+      return reply.code(400).send({ success: false, message: '支付日期格式不正确' })
+    }
+    if (paidAt.gte && paidAt.lte && paidAt.gte > paidAt.lte) {
+      return reply.code(400).send({ success: false, message: '支付开始日期不能晚于结束日期' })
+    }
     const orders = await fastify.prisma.salesOrder.findMany({
-      where: { status: 'paid' },
+      where: {
+        status: 'paid',
+        ...(Object.keys(paidAt).length ? { paidAt } : {}),
+        ...(filters.orderNo ? { orderNo: { contains: filters.orderNo, mode: 'insensitive' } } : {}),
+        ...(filters.platform ? { platform: filters.platform } : {})
+      },
       include: ORDER_INCLUDE,
       orderBy: { paidAt: 'asc' },
-      take: 100
+      take: 500
     })
-    const assessed = await assessOrders(fastify.prisma, orders)
-    return reply.send({ success: true, data: assessed })
+    const printGroups = await loadPrintCutConfig(fastify.prisma)
+    const printRuleMap = buildPrintRuleMap(printGroups)
+    const hasProductionFilter = Boolean(filters.modelId || filters.skuId || filters.size || filters.frameCount || filters.printGroupId)
+    let assessed = await assessOrders(fastify.prisma, orders, printGroups)
+    assessed = assessed.map((row, index) => {
+      const tasks = flattenTasks(orders[index])
+      const matchedUnitCount = hasProductionFilter ? tasks.filter(task => taskMatches(task, filters, printRuleMap)).length : tasks.length
+      return {
+        ...row,
+        matchedUnitCount,
+        extraUnitCount: Math.max(0, tasks.length - matchedUnitCount),
+        includesUnmatchedItems: hasProductionFilter && matchedUnitCount > 0 && matchedUnitCount < tasks.length
+      }
+    }).filter(row => !hasProductionFilter || row.matchedUnitCount > 0)
+    if (filters.readyOnly) assessed = assessed.filter(row => row.ready)
+    if (filters.kitAvailableOnly) assessed = assessed.filter(row => !row.warnings.some(warning => warning.code === 'KIT_SHORTAGE'))
+
+    const optionSkus = await fastify.prisma.machineModelSku.findMany({
+      where: { isActive: true, model: { isActive: true } },
+      select: { id: true, skuCode: true, size: true, frameCount: true, modelId: true, model: { select: { name: true, sortOrder: true } } },
+      orderBy: [{ model: { sortOrder: 'asc' } }, { sortOrder: 'asc' }]
+    })
+    return reply.send({ success: true, data: assessed, meta: {
+      totalOrders: assessed.length,
+      totalUnits: assessed.reduce((sum, order) => sum + order.productionUnitCount, 0),
+      models: [...new Map(optionSkus.map(sku => [sku.modelId, { id: sku.modelId, name: sku.model.name }])).values()],
+      skus: optionSkus.map(sku => ({ id: sku.id, code: sku.skuCode, modelId: sku.modelId, modelName: sku.model.name, size: sku.size, frameCount: sku.frameCount })),
+      sizes: [...new Set(optionSkus.map(sku => sku.size))],
+      frameCounts: [...new Set(optionSkus.map(sku => sku.frameCount))].sort((a, b) => a - b),
+      printGroups: printGroups.map(group => ({ id: group.id, name: group.name, size: group.size }))
+    } })
   })
 
   fastify.get('/', { preHandler: requireAdmin }, async (req, reply) => {
@@ -179,7 +280,7 @@ export default async function productionBatchRoutes(fastify) {
   fastify.get('/:batchId', { preHandler: requireAdmin }, async (req, reply) => {
     const batch = await fastify.prisma.productionBatch.findUnique({
       where: { id: req.params.batchId },
-      include: { orders: true, units: true, batchItems: true }
+      include: { orders: true, units: { orderBy: { printSequence: 'asc' } }, batchItems: true }
     })
     if (!batch) return reply.code(404).send({ success: false, message: '生产批次不存在' })
 
@@ -229,6 +330,15 @@ export default async function productionBatchRoutes(fastify) {
       },
       progress: summarizeUnits(batch.units),
       materialDemand,
+      printQueue: batch.units.map(unit => ({
+        productionUnitId: unit.productionUnitId,
+        productionNo: unit.productionNoSnapshot,
+        sequence: unit.printSequence,
+        groupCode: unit.printGroupCode,
+        groupName: unit.printGroupName,
+        pageCount: unit.printPageCount,
+        rule: unit.printRuleSnapshot
+      })),
       orders,
       legacy: batch.orders.length === 0
     } })
@@ -244,13 +354,20 @@ export default async function productionBatchRoutes(fastify) {
       where: { id: { in: salesOrderIds } }, include: ORDER_INCLUDE
     })
     if (orders.length !== salesOrderIds.length) return reply.code(400).send({ success: false, message: '部分总订单不存在' })
-    const assessments = await assessOrders(fastify.prisma, orders)
+    const printGroups = await loadPrintCutConfig(fastify.prisma)
+    const printRuleMap = buildPrintRuleMap(printGroups)
+    const assessments = await assessOrders(fastify.prisma, orders, printGroups)
     const blocked = assessments.filter(order => order.hardBlocks.length)
     if (blocked.length) {
       return reply.code(409).send({ success: false, code: 'BATCH_NOT_READY', message: '有订单不具备生产条件', data: blocked })
     }
 
     const allTasks = orders.flatMap(flattenTasks)
+    const modelIds = [...new Set(allTasks.map(task => task.modelId).filter(Boolean))]
+    const modelRows = modelIds.length ? await fastify.prisma.machineModel.findMany({
+      where: { id: { in: modelIds } }, select: { id: true, sortOrder: true }
+    }) : []
+    const printPlan = buildPrintPlan(allTasks, printRuleMap, new Map(modelRows.map(model => [model.id, model.sortOrder])))
     const skuRequirements = new Map()
     for (const task of allTasks) skuRequirements.set(task.skuId, (skuRequirements.get(task.skuId) || 0) + 1)
     const availability = await getKitAvailability(fastify.prisma, [...skuRequirements.keys()])
@@ -278,7 +395,15 @@ export default async function productionBatchRoutes(fastify) {
           warningSnapshot: batchWarnings,
           salesOrderCount: orders.length,
           productionUnitCount: allTasks.length,
-          skuCount: skuRequirements.size
+          skuCount: skuRequirements.size,
+          printPlanSnapshot: printPlan.map(row => ({
+            productionUnitId: row.task.id,
+            productionNo: row.task.orderNo,
+            sequence: row.sequence,
+            modelId: row.task.modelId,
+            modelName: row.task.modelName,
+            ...row.snapshot
+          }))
         } })
         await tx.productionBatchOrder.createMany({ data: orders.map(order => ({
           batchId,
@@ -286,12 +411,19 @@ export default async function productionBatchRoutes(fastify) {
           orderNoSnapshot: order.orderNo,
           warningSnapshot: assessments.find(row => row.id === order.id)?.warnings || []
         })) })
-        await tx.productionBatchUnit.createMany({ data: allTasks.map(task => ({
+        await tx.productionBatchUnit.createMany({ data: printPlan.map(row => ({
           batchId,
-          productionUnitId: task.id,
-          salesOrderId: task.item.salesOrderId,
-          skuId: task.skuId,
-          productionNoSnapshot: task.orderNo
+          productionUnitId: row.task.id,
+          salesOrderId: row.task.item.salesOrderId,
+          skuId: row.task.skuId,
+          productionNoSnapshot: row.task.orderNo,
+          printGroupId: row.entry.group.id,
+          printGroupCode: row.entry.group.code,
+          printGroupName: row.entry.group.name,
+          printRuleId: row.entry.rule.id,
+          printSequence: row.sequence,
+          printPageCount: row.entry.rule.pagesPerUnit,
+          printRuleSnapshot: row.snapshot
         })) })
         const skus = await tx.machineModelSku.findMany({
           where: { id: { in: [...skuRequirements.keys()] } }, select: { id: true, skuCode: true }
