@@ -1,7 +1,7 @@
 // 显式生产批次：完整总订单入批、生产前检查和批次详情。
 
 import { createProductionBatchNo } from '../lib/sales-orders.js'
-import { buildPrintRuleMap, loadPrintCutConfig, printSpecKey, snapshotPrintRule } from '../lib/print-production.js'
+import { buildPrintRuleMap, loadPrintCutConfig, snapshotPrintRule, snapshotUnconfiguredSku } from '../lib/print-production.js'
 
 const ORDER_INCLUDE = {
   items: {
@@ -95,8 +95,13 @@ async function assessOrders(prisma, orders, printGroups = null) {
       if (!parseFrames(task.frameUrls).length) {
         hardBlocks.push({ code: 'FRAME_FILE_MISSING', message: `生产任务 ${task.orderNo} 缺少已锁定帧图` })
       }
-      if (!printRuleMap.has(printSpecKey(task.size, task.frameCount))) {
-        hardBlocks.push({ code: 'PRINT_RULE_MISSING', message: `${task.size} ${task.frameCount}帧尚未设置打印与裁切方式` })
+      if (!printRuleMap.has(task.skuId)) {
+        warnings.push({
+          code: 'PRINT_SKU_UNCONFIRMED',
+          skuId: task.skuId,
+          productionNo: task.orderNo,
+          message: `${sku?.model?.name || task.modelName} · ${sku?.skuCode || task.skuId} 尚未确认打印与裁切组，将排在批次末尾等待现场确认`
+        })
       }
       if (task.skuId) requirements.set(task.skuId, (requirements.get(task.skuId) || 0) + 1)
     }
@@ -121,7 +126,8 @@ async function assessOrders(prisma, orders, printGroups = null) {
       receiverName: order.receiverName,
       itemCount: order.items.length,
       productionUnitCount: orderTasks.length,
-      estimatedPrintPages: orderTasks.reduce((sum, task) => sum + (printRuleMap.get(printSpecKey(task.size, task.frameCount))?.rule.pagesPerUnit || 0), 0),
+      estimatedPrintPages: orderTasks.reduce((sum, task) => sum + (printRuleMap.get(task.skuId)?.rule.pagesPerUnit || 0), 0),
+      unconfiguredPrintUnitCount: orderTasks.filter(task => !printRuleMap.has(task.skuId)).length,
       hardBlocks,
       warnings,
       ready: hardBlocks.length === 0,
@@ -138,7 +144,7 @@ async function assessOrders(prisma, orders, printGroups = null) {
           modelName: task.modelName,
           size: task.size,
           frameCount: task.frameCount,
-          printGroupId: printRuleMap.get(printSpecKey(task.size, task.frameCount))?.group.id || null
+          printGroupId: printRuleMap.get(task.skuId)?.group.id || null
         }))
       }))
     }
@@ -167,22 +173,25 @@ function taskMatches(task, filters, printRuleMap) {
   if (filters.skuId && task.skuId !== filters.skuId) return false
   if (filters.size && task.size !== filters.size) return false
   if (filters.frameCount && task.frameCount !== filters.frameCount) return false
-  if (filters.printGroupId && printRuleMap.get(printSpecKey(task.size, task.frameCount))?.group.id !== filters.printGroupId) return false
+  if (filters.printGroupId && printRuleMap.get(task.skuId)?.group.id !== filters.printGroupId) return false
   return true
 }
 
-function buildPrintPlan(tasks, printRuleMap, modelSortMap) {
-  const planned = tasks.map(task => ({ task, entry: printRuleMap.get(printSpecKey(task.size, task.frameCount)) }))
+function buildPrintPlan(tasks, printRuleMap) {
+  const planned = tasks.map(task => ({ task, entry: printRuleMap.get(task.skuId) || null }))
   planned.sort((a, b) => {
-    const aSnapshot = snapshotPrintRule(a.entry)
-    const bSnapshot = snapshotPrintRule(b.entry)
+    const aSnapshot = snapshotPrintRule(a.entry) || snapshotUnconfiguredSku(a.task)
+    const bSnapshot = snapshotPrintRule(b.entry) || snapshotUnconfiguredSku(b.task)
     return (aSnapshot.groupOrder - bSnapshot.groupOrder)
       || (aSnapshot.ruleOrder - bSnapshot.ruleOrder)
-      || ((modelSortMap.get(a.task.modelId) ?? 999999) - (modelSortMap.get(b.task.modelId) ?? 999999))
       || (new Date(a.task.order.paidAt || 0) - new Date(b.task.order.paidAt || 0))
       || String(a.task.orderNo).localeCompare(String(b.task.orderNo))
   })
-  return planned.map((row, index) => ({ ...row, sequence: index + 1, snapshot: snapshotPrintRule(row.entry) }))
+  return planned.map((row, index) => ({
+    ...row,
+    sequence: index + 1,
+    snapshot: snapshotPrintRule(row.entry) || snapshotUnconfiguredSku(row.task)
+  }))
 }
 
 function summarizeUnits(units) {
@@ -363,21 +372,19 @@ export default async function productionBatchRoutes(fastify) {
     }
 
     const allTasks = orders.flatMap(flattenTasks)
-    const modelIds = [...new Set(allTasks.map(task => task.modelId).filter(Boolean))]
-    const modelRows = modelIds.length ? await fastify.prisma.machineModel.findMany({
-      where: { id: { in: modelIds } }, select: { id: true, sortOrder: true }
-    }) : []
-    const printPlan = buildPrintPlan(allTasks, printRuleMap, new Map(modelRows.map(model => [model.id, model.sortOrder])))
+    const printPlan = buildPrintPlan(allTasks, printRuleMap)
     const skuRequirements = new Map()
     for (const task of allTasks) skuRequirements.set(task.skuId, (skuRequirements.get(task.skuId) || 0) + 1)
     const availability = await getKitAvailability(fastify.prisma, [...skuRequirements.keys()])
-    const batchWarnings = [...skuRequirements].flatMap(([skuId, required]) => {
+    const kitWarnings = [...skuRequirements].flatMap(([skuId, required]) => {
       const available = availability.get(skuId) || 0
       return available < required ? [{ code: 'KIT_SHORTAGE', skuId, required, available, shortage: required - available,
         message: `SKU ${skuId} 需要 ${required} 套标准材料包，当前可用 ${available} 套` }] : []
     })
+    const printWarnings = assessments.flatMap(order => order.warnings.filter(warning => warning.code === 'PRINT_SKU_UNCONFIRMED'))
+    const batchWarnings = [...printWarnings, ...kitWarnings]
     if (batchWarnings.length && !acknowledgeWarnings) {
-      return reply.code(409).send({ success: false, code: 'BATCH_WARNINGS_REQUIRE_ACK', message: '材料包存在缺口，请确认后继续', data: batchWarnings })
+      return reply.code(409).send({ success: false, code: 'BATCH_WARNINGS_REQUIRE_ACK', message: '存在生产风险，请确认后继续', data: batchWarnings })
     }
 
     const batchId = createProductionBatchNo()
@@ -417,12 +424,12 @@ export default async function productionBatchRoutes(fastify) {
           salesOrderId: row.task.item.salesOrderId,
           skuId: row.task.skuId,
           productionNoSnapshot: row.task.orderNo,
-          printGroupId: row.entry.group.id,
-          printGroupCode: row.entry.group.code,
-          printGroupName: row.entry.group.name,
-          printRuleId: row.entry.rule.id,
+          printGroupId: row.entry?.group.id || null,
+          printGroupCode: row.entry?.group.code || null,
+          printGroupName: row.entry?.group.name || '未配置 SKU，待现场确认',
+          printRuleId: row.entry?.rule.id || null,
           printSequence: row.sequence,
-          printPageCount: row.entry.rule.pagesPerUnit,
+          printPageCount: row.entry?.rule.pagesPerUnit || null,
           printRuleSnapshot: row.snapshot
         })) })
         const skus = await tx.machineModelSku.findMany({

@@ -208,6 +208,8 @@ index.js
 
 2026-08-25 更新：打印裁切配置和批次生产顺序已经实现。新增 `PrintCutGroup`、`PrintCutRule`、`/api/admin/print-production` 和 `admin-print-production.html`；候选订单支持按支付日期、款式、SKU、尺寸、帧数、打印组和来源筛选。创建批次时保存每个 `PU` 的打印组、页数和顺序快照。真实打印文件、标签、岗位完成操作和异常返工仍未实现，详见 `docs/PRINT_PRODUCTION_PLANNING.md`。
 
+2026-08-25 逐 SKU 修订：`PrintCutRule` 不再用“尺寸 + 帧数”汇总匹配，而是一条记录绑定一个 `MachineModelSku`。打印组和组内 SKU 均支持拖拽；尚未配置区展示来自款式管理的图片、款式、编码、尺寸、帧数、材质、颜色和状态，可拖入同尺寸打印组。未配置 SKU 入批前要求确认风险，确认后排在打印队列末尾并保存待现场确认快照。
+
 ## 相关文档
 
 - `PRODUCTION.md`：生产系统原规划

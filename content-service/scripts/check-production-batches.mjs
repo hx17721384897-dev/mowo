@@ -97,8 +97,6 @@ try {
     framesPerSheet: 12, sortOrder: 9999, createdBy: adminId
   } })
   printGroupId = printGroup.id
-  await prisma.printCutRule.create({ data: { groupId: printGroupId, size: testSize, frameCount: 12, pagesPerUnit: 1 } })
-
   const model = await prisma.machineModel.create({ data: {
     name: `生产批次测试款-${runId}`, ratios: '["1:1"]', frameOptions: '[12]', sizes: JSON.stringify([testSize])
   } })
@@ -107,6 +105,7 @@ try {
     modelId, size: testSize, material: '椴木板', frameCount: 12, colorName: `测试原色-${runId}`, colorHex: '#DDCC99', skuCode: `PBTEST-${runId}`
   } })
   skuId = sku.id
+  await prisma.printCutRule.create({ data: { groupId: printGroupId, skuId, pagesPerUnit: 1 } })
 
   const customerPhone = `198${runId.slice(-8)}`
   const customer = await prisma.user.create({ data: {

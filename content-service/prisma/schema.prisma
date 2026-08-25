@@ -627,6 +627,7 @@ model MachineModelSku {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   model MachineModel @relation(fields: [modelId], references: [id])
+  printCutRule PrintCutRule?
 
   @@unique([modelId, size, material, frameCount, colorName])
   @@map("machine_model_skus")
@@ -654,12 +655,13 @@ model PrintCutGroup {
   @@map("print_cut_groups")
 }
 
-// 尺寸与成品帧数映射到一个打印裁切组；款式不参与匹配。
+// 一个真实 SKU 只能归入一个打印裁切组，避免生产时出现两种执行方式。
 model PrintCutRule {
   id           String   @id @default(uuid())
   groupId      String   @map("group_id")
-  size         String   @db.VarChar(20)
-  frameCount   Int      @map("frame_count")
+  skuId        String?  @unique @map("sku_id")
+  legacySize   String?  @map("size") @db.VarChar(20)
+  legacyFrameCount Int? @map("frame_count")
   pagesPerUnit Int      @map("pages_per_unit")
   sortOrder    Int      @default(0) @map("sort_order")
   isActive     Boolean  @default(true) @map("is_active")
@@ -667,8 +669,8 @@ model PrintCutRule {
   updatedAt    DateTime @updatedAt @map("updated_at")
 
   group PrintCutGroup @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  sku   MachineModelSku? @relation(fields: [skuId], references: [id], onDelete: Cascade)
 
-  @@unique([size, frameCount])
   @@index([groupId, isActive, sortOrder])
   @@map("print_cut_rules")
 }
