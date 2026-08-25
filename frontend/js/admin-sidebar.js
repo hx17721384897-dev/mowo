@@ -4,21 +4,26 @@
 
 (function () {
   // 菜单定义：按类别分组，每组一个可展开按钮
-  // 默认入口仍是 admin-orders.html（生产 > 定制订单）
+  // 默认入口仍是 admin-orders.html（生产 > 全部订单 > 订单总览）
   const MENU = [
     {
       key: 'production', label: '生产', icon: '📦',
       items: [
+        {
+          key: 'orders', icon: '📋', label: '全部订单',
+          children: [
+            { href: 'admin-orders.html?view=all',        icon: '▦', label: '订单总览' },
+            { href: 'admin-orders.html?view=paid',       icon: '📬', label: '待处理' },
+            { href: 'admin-orders.html?view=locked',     icon: '⏳', label: '处理中' },
+            { href: 'admin-orders.html?view=processing', icon: '🔧', label: '待生产' },
+            { href: 'admin-orders.html?view=producing',  icon: '⚙️', label: '生产中' },
+            { href: 'admin-orders.html?view=shipped',    icon: '🚚', label: '已发货' },
+            { href: 'admin-orders.html?view=received',   icon: '✅', label: '已收货' },
+            { href: 'admin-orders.html?view=aftersale',  icon: '🔴', label: '售后' }
+          ]
+        },
         { href: 'admin-production-batches.html',       icon: '▦', label: '生产批次' },
         { href: 'admin-print-production.html',         icon: '↕', label: '打印与裁切设置' },
-        { href: 'admin-orders.html?view=all',        icon: '📋', label: '全部订单' },
-        { href: 'admin-orders.html?view=paid',       icon: '📬', label: '待处理' },
-        { href: 'admin-orders.html?view=locked',     icon: '⏳', label: '处理中' },
-        { href: 'admin-orders.html?view=processing', icon: '🔧', label: '待生产' },
-        { href: 'admin-orders.html?view=producing',  icon: '⚙️', label: '生产中' },
-        { href: 'admin-orders.html?view=shipped',    icon: '🚚', label: '已发货' },
-        { href: 'admin-orders.html?view=received',   icon: '✅', label: '已收货' },
-        { href: 'admin-orders.html?view=aftersale',  icon: '🔴', label: '售后' },
         { href: 'admin-import.html',                 icon: '📥', label: '定制导入' }
       ]
     },
@@ -110,13 +115,27 @@
 .nav-group-header.open .nav-group-arrow{transform:rotate(180deg);opacity:1;}
 .sidebar.collapsed .nav-group-arrow{opacity:0;}
 .nav-sub{max-height:0;overflow:hidden;transition:max-height .3s ease;}
-.nav-sub.open{max-height:500px;}
+.nav-sub.open{max-height:720px;}
 .sidebar.collapsed .nav-sub{max-height:0;}
 .nav-sub-item{display:flex;align-items:center;gap:8px;padding:8px 20px 8px 44px;cursor:pointer;transition:background .15s;white-space:nowrap;overflow:hidden;color:var(--gray3,#787874);font-weight:700;font-size:12.5px;text-decoration:none;position:relative;}
 .nav-sub-item:hover{background:rgba(255,255,255,.06);color:var(--white,#fff);}
 .sidebar .nav-sub-item.active{color:var(--accent-y,#F5E642) !important;background:rgba(245,230,66,.12) !important;font-weight:800;}
 .sidebar .nav-sub-item.active::before{content:'' !important;position:absolute !important;left:0 !important;top:0 !important;bottom:0 !important;width:3px !important;height:auto !important;transform:none !important;background:var(--accent-y,#F5E642) !important;border-radius:0 2px 2px 0 !important;}
 .nav-sub-item .nav-icon{font-size:13px;width:16px;}
+.nav-sub-parent{display:flex;align-items:center;gap:8px;width:100%;padding:8px 20px 8px 44px;border:0;background:transparent;cursor:pointer;color:var(--gray3,#787874);font:inherit;font-weight:700;font-size:12.5px;text-align:left;white-space:nowrap;overflow:hidden;transition:background .15s,color .15s;}
+.nav-sub-parent:hover{background:rgba(255,255,255,.06);color:var(--white,#fff);}
+.nav-sub-parent.active-parent{color:var(--accent-y,#F5E642);}
+.nav-sub-parent .nav-icon{font-size:13px;width:16px;}
+.nav-third-arrow{margin-left:auto;font-size:9px;opacity:.6;transition:transform .2s;}
+.nav-sub-parent.open .nav-third-arrow{transform:rotate(180deg);opacity:1;}
+.nav-third{max-height:0;overflow:hidden;transition:max-height .25s ease;background:rgba(255,255,255,.018);}
+.nav-third.open{max-height:420px;}
+.sidebar.collapsed .nav-third{max-height:0;}
+.nav-third-item{display:flex;align-items:center;gap:8px;padding:7px 18px 7px 64px;color:var(--gray3,#787874);font-weight:700;font-size:11.5px;text-decoration:none;white-space:nowrap;overflow:hidden;position:relative;transition:background .15s,color .15s;}
+.nav-third-item:hover{background:rgba(255,255,255,.06);color:var(--white,#fff);}
+.nav-third-item .nav-icon{width:14px;font-size:11px;}
+.sidebar .nav-third-item.active{color:var(--accent-y,#F5E642);background:rgba(245,230,66,.12);font-weight:800;}
+.sidebar .nav-third-item.active::before{content:'';position:absolute;left:28px;top:10px;width:5px;height:5px;border-radius:50%;background:var(--accent-y,#F5E642);}
 .sidebar-back{display:flex;align-items:center;gap:10px;padding:12px 20px;border-top:1px solid rgba(255,255,255,.08);color:var(--gray3,#787874);font-weight:800;font-size:13px;text-decoration:none;white-space:nowrap;overflow:hidden;transition:background .15s,color .15s;flex-shrink:0;}
 .sidebar-back:hover{background:rgba(255,255,255,.06);color:var(--white,#fff);}
 .sidebar.collapsed .sidebar-back .nav-label{opacity:0;}
@@ -137,16 +156,55 @@
     return combined;
   }
 
+  function itemIsActive(item, target) {
+    if (item.href && item.href.toLowerCase() === target) return true;
+    return Array.isArray(item.children) && item.children.some(child => itemIsActive(child, target));
+  }
+
+  function filterVisibleItem(item, hiddenItems, features) {
+    if (Array.isArray(item.children)) {
+      const children = item.children
+        .map(child => filterVisibleItem(child, hiddenItems, features))
+        .filter(Boolean);
+      return children.length ? { ...item, children } : null;
+    }
+    if (!item.href || hiddenItems.has(item.href.split('?')[0])) return null;
+    if (item.feature && !features[item.feature]) return null;
+    return item;
+  }
+
+  function nestedOpenKey(groupKey, itemKey) {
+    return `${groupKey}:${itemKey}`;
+  }
+
   // 供页面调用：切换视图后更新侧边栏高亮，避免整页刷新
   window.__adminSidebarSetActive = function(href) {
     const target = href.toLowerCase();
-    document.querySelectorAll('.nav-sub-item').forEach(el => {
+    document.querySelectorAll('.nav-sub-item, .nav-third-item').forEach(el => {
       el.classList.toggle('active', (el.getAttribute('href') || '').toLowerCase() === target);
     });
     // 同步父组标题高亮
     document.querySelectorAll('.nav-group').forEach(g => {
-      const hasActive = g.querySelector('.nav-sub-item.active');
+      const hasActive = g.querySelector('.nav-sub-item.active, .nav-third-item.active');
       g.querySelector('.nav-group-header')?.classList.toggle('active-group', !!hasActive);
+      if (hasActive) {
+        g.querySelector('.nav-group-header')?.classList.add('open');
+        g.querySelector('.nav-sub')?.classList.add('open');
+      }
+    });
+    document.querySelectorAll('.nav-sub-parent').forEach(parent => {
+      const wrapper = parent.closest('.nav-nested');
+      const hasActive = !!wrapper?.querySelector('.nav-third-item.active');
+      parent.classList.toggle('active-parent', hasActive);
+      if (hasActive) {
+        parent.classList.add('open');
+        wrapper.querySelector('.nav-third')?.classList.add('open');
+        const set = getOpenSet() || new Set();
+        set.add(parent.dataset.openKey);
+        const groupKey = parent.closest('.nav-group')?.dataset.key;
+        if (groupKey) set.add(groupKey);
+        saveOpenSet(set);
+      }
     });
   };
 
@@ -225,9 +283,9 @@
       .filter(group => allowedGroups.has(group.key))
       .map(group => ({
         ...group,
-        items: group.items.filter(item =>
-          !hiddenItems.has(item.href.split('?')[0]) && (!item.feature || features[item.feature])
-        )
+        items: group.items
+          .map(item => filterVisibleItem(item, hiddenItems, features))
+          .filter(Boolean)
       }))
       .filter(group => group.items.length > 0);
     const curFile = currentFile();
@@ -236,20 +294,26 @@
     if (!openSet) {
       openSet = new Set();
       visibleMenu.forEach(g => {
-        if (g.items.some(it => it.href.toLowerCase() === curFile)) openSet.add(g.key);
+        if (g.items.some(it => itemIsActive(it, curFile))) openSet.add(g.key);
+        g.items.forEach(it => {
+          if (it.children?.some(child => itemIsActive(child, curFile))) openSet.add(nestedOpenKey(g.key, it.key));
+        });
       });
       saveOpenSet(openSet);
     } else {
       // 保证当前页所在组始终展开（否则用户看不到高亮的子项）
       visibleMenu.forEach(g => {
-        if (g.items.some(it => it.href.toLowerCase() === curFile)) openSet.add(g.key);
+        if (g.items.some(it => itemIsActive(it, curFile))) openSet.add(g.key);
+        g.items.forEach(it => {
+          if (it.children?.some(child => itemIsActive(child, curFile))) openSet.add(nestedOpenKey(g.key, it.key));
+        });
       });
     }
 
     // 构建 HTML
     let nav = '';
     visibleMenu.forEach(group => {
-      const activeInGroup = group.items.some(it => it.href.toLowerCase() === curFile);
+      const activeInGroup = group.items.some(it => itemIsActive(it, curFile));
       const isOpen = openSet.has(group.key);
       const openCls = (isOpen ? ' open' : '') + (activeInGroup ? ' active-group' : '');
       const subOpen = isOpen ? ' open' : '';
@@ -262,6 +326,22 @@
   </div>
   <div class="nav-sub${subOpen}" data-sub="${group.key}">
     ${group.items.map(it => {
+      if (Array.isArray(it.children)) {
+        const childActive = it.children.some(child => itemIsActive(child, curFile));
+        const openKey = nestedOpenKey(group.key, it.key);
+        const nestedOpen = openSet.has(openKey);
+        return `<div class="nav-nested" data-nested="${openKey}">
+          <button class="nav-sub-parent${nestedOpen ? ' open' : ''}${childActive ? ' active-parent' : ''}" type="button" data-open-key="${openKey}" onclick="__adminSidebarToggleNested('${openKey}')">
+            <span class="nav-icon">${it.icon}</span><span class="nav-label">${it.label}</span><span class="nav-third-arrow">▾</span>
+          </button>
+          <div class="nav-third${nestedOpen ? ' open' : ''}">
+            ${it.children.map(child => {
+              const active = child.href.toLowerCase() === curFile ? ' active' : '';
+              return `<a class="nav-third-item${active}" href="${child.href}"><span class="nav-icon">${child.icon}</span><span class="nav-label">${child.label}</span></a>`;
+            }).join('')}
+          </div>
+        </div>`;
+      }
       const active = it.href.toLowerCase() === curFile ? ' active' : '';
       return `<a class="nav-sub-item${active}" href="${it.href}"><span class="nav-icon">${it.icon}</span><span class="nav-label">${it.label}</span></a>`;
     }).join('')}
@@ -338,6 +418,21 @@
     const nowOpen = !targetSub.classList.contains('open');
     targetHeader.classList.toggle('open', nowOpen);
     targetSub.classList.toggle('open', nowOpen);
+    const set = getOpenSet() || new Set();
+    if (nowOpen) set.add(key); else set.delete(key);
+    saveOpenSet(set);
+  };
+
+  window.__adminSidebarToggleNested = function (key) {
+    const root = document.getElementById('sidebar');
+    if (!root) return;
+    const wrapper = root.querySelector(`.nav-nested[data-nested="${key}"]`);
+    const parent = wrapper?.querySelector('.nav-sub-parent');
+    const children = wrapper?.querySelector('.nav-third');
+    if (!parent || !children) return;
+    const nowOpen = !children.classList.contains('open');
+    parent.classList.toggle('open', nowOpen);
+    children.classList.toggle('open', nowOpen);
     const set = getOpenSet() || new Set();
     if (nowOpen) set.add(key); else set.delete(key);
     saveOpenSet(set);
