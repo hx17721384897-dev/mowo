@@ -35,13 +35,15 @@ assert(parseFrameSizeMm('5×5cm').width === 50 && parseFrameSizeMm('16*9cm').hei
 
 const frames = ['#cc3344', '#278a55', '#2867b2', '#8c42a1'].map(coloredPng)
 const output = buildProductionDocx(template, frames, 24, {
-  framesPerSheet: 12, frameWidthMm: 50, frameHeightMm: 50
+  size: '5x5cm', framesPerSheet: 12, frameWidthMm: null, frameHeightMm: null
 })
 const zip = new AdmZip(output)
 const xml = zip.getEntry('word/document.xml').getData().toString('utf8')
 const media = zip.getEntries().filter(entry => entry.entryName.startsWith('word/media/mowo-production-'))
 assert(media.length === 24, '24 帧文件会自动复制一页模板并插入 24 张图片')
 assert((xml.match(/rIdMowoProduction/g) || []).length === 24, '每个帧位均绑定独立图片关系')
+assert(xml.includes('xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"') && xml.includes('xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"'), '生成文件声明完整的 Word 图片命名空间')
+assert(xml.includes('<wp:extent cx="1800000" cy="1800000"/>'), '旧打印组宽高为空时会从 5x5cm 推算实际显示尺寸')
 assert(media[0].getData().equals(frames[0]) && media[4].getData().equals(frames[0]), '4 张编辑帧按 1、2、3、4 循环插入')
 console.log('Production artifact checks passed')
 
@@ -143,7 +145,7 @@ try {
   assert((await page.getByText('生产文件', { exact: true }).count()) >= 1, '资产详情包含独立生产文件模块')
   await page.getByRole('button', { name: '新增文件版本' }).click()
   await page.locator('#productionTargetFrames').fill('24')
-  assert((await page.locator('#productionTemplate option').count()) === 1, '新增文件时只列出倍数和整页规则兼容的模板')
+  assert((await page.locator(`#productionTemplate option[value="${uploadPayload.data.id}"]`).count()) === 1, '新增文件时会列出本次验证通过的兼容模板')
   await context.close()
   console.log('Production artifact integration checks passed')
 } finally {

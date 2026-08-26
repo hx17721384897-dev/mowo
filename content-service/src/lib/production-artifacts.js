@@ -90,18 +90,38 @@ function drawingXml(relId, widthEmu, heightEmu, docPrId) {
   return `<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${widthEmu}" cy="${heightEmu}"/><wp:docPr id="${docPrId}" name="Production frame ${docPrId}"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${docPrId}" name="frame-${docPrId}.png"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${relId}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${widthEmu}" cy="${heightEmu}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`
 }
 
+function ensureDrawingNamespaces(document) {
+  const namespaces = {
+    r: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships',
+    wp: 'http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing',
+    a: 'http://schemas.openxmlformats.org/drawingml/2006/main',
+    pic: 'http://schemas.openxmlformats.org/drawingml/2006/picture'
+  }
+  return document.replace(/<w:document\b[^>]*>/, root => {
+    let updated = root
+    for (const [prefix, uri] of Object.entries(namespaces)) {
+      if (!new RegExp(`\\sxmlns:${prefix}=`).test(updated)) {
+        updated = updated.replace(/>$/, ` xmlns:${prefix}="${uri}">`)
+      }
+    }
+    return updated
+  })
+}
+
 export function buildProductionDocx(templateBuffer, renderedBuffers, targetFrameCount, group) {
   const zip = new AdmZip(templateBuffer)
   const documentEntry = zip.getEntry('word/document.xml')
-  let document = documentEntry.getData().toString('utf8')
+  let document = ensureDrawingNamespaces(documentEntry.getData().toString('utf8'))
   const bodyMatch = document.match(/<w:body>([\s\S]*?)<\/w:body>/)
   if (!bodyMatch) throw new Error('无法读取 Word 模板正文')
   const sectionMatch = bodyMatch[1].match(/<w:sectPr[\s\S]*?<\/w:sectPr>/)
   const section = sectionMatch?.[0] || ''
   const pageTemplate = bodyMatch[1].replace(section, '')
   const pages = targetFrameCount / group.framesPerSheet
-  const widthEmu = Math.round(group.frameWidthMm * 36000)
-  const heightEmu = Math.round(group.frameHeightMm * 36000)
+  const frameSize = parseFrameSizeMm(group.size, group.frameWidthMm, group.frameHeightMm)
+  if (!frameSize) throw new Error('打印组没有有效的成品宽高')
+  const widthEmu = Math.round(frameSize.width * 36000)
+  const heightEmu = Math.round(frameSize.height * 36000)
   const relationships = []
   let imageNumber = 0
   const pageXml = []
