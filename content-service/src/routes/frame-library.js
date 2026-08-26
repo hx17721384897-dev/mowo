@@ -1,6 +1,7 @@
 import crypto from 'crypto'
 import { createAnimationAssetNo } from '../lib/animation-assets.js'
 import { FILE_PURPOSE } from '../lib/private-files.js'
+import { generateProductionFile } from '../lib/production-artifacts.js'
 
 const SOURCE_CHANNELS = new Set(['WEB_CUSTOM', 'OFFLINE_CUSTOM', 'CREATOR_SUBMISSION', 'INTERNAL_CREATED'])
 const USAGE_TYPES = new Set(['PRIVATE_CUSTOM', 'COLLAB_SALE', 'COMPANY_PRODUCT', 'INTERNAL_TEST', 'UNDECIDED'])
@@ -136,6 +137,8 @@ export default async function frameLibraryRoutes(fastify) {
           owner: { select: { phone: true, profile: { select: { nickname: true } } } },
           tags: { include: { tag: true } },
           collabWorks: { select: { id: true, status: true, shelfStatus: true } },
+          productionFiles: { where: { status: 'READY' }, orderBy: { createdAt: 'desc' }, take: 6,
+            include: { templateVersion: { include: { group: { select: { name: true } } } } } },
           _count: { select: { versions: true, customizationRequests: true, salesOrderItems: true, collabWorks: true } }
         }
       }),
@@ -163,6 +166,10 @@ export default async function frameLibraryRoutes(fastify) {
           coverUrl: signedUrl(fastify, coverKey, 900), createdAt: asset.createdAt, updatedAt: asset.updatedAt,
           owner: asset.owner ? { nickname: asset.owner.profile?.nickname || '未设置昵称', phone: maskedPhone(asset.owner.phone) } : null,
           tags: asset.tags.map(link => ({ name: link.tag.name, color: link.tag.color })), counts: asset._count,
+          productionFiles: asset.productionFiles.map(file => ({
+            id: file.id, displayName: file.displayName, createdAt: file.createdAt,
+            downloadUrl: signedUrl(fastify, file.objectKey, 900)
+          })),
           canDelete: request.user.staffRole === 'OWNER'
         }
       }),
@@ -200,6 +207,10 @@ export default async function frameLibraryRoutes(fastify) {
         customizationRequests: { orderBy: { createdAt: 'desc' }, take: 20, select: { id: true, requestNo: true, mode: true, status: true, createdAt: true } },
         salesOrderItems: { orderBy: { createdAt: 'desc' }, take: 20, select: { id: true, itemNo: true, skuCode: true, quantity: true, salesOrder: { select: { orderNo: true, status: true } } } },
         collabWorks: { orderBy: { createdAt: 'desc' }, take: 20, select: { id: true, title: true, status: true, shelfStatus: true, createdAt: true } },
+        productionFiles: { orderBy: [{ createdAt: 'desc' }], include: {
+          animationVersion: { select: { versionNo: true, baseFrameCount: true } },
+          templateVersion: { include: { group: true } }
+        } },
         _count: { select: { customProducts: true, versions: true, customizationRequests: true, salesOrderItems: true, collabWorks: true } }
       }
     })
@@ -211,8 +222,58 @@ export default async function frameLibraryRoutes(fastify) {
       rightsHolderContactMasked: maskedContact(asset.rightsHolderContact),
       tags: asset.tags.map(link => ({ id: link.tag.id, name: link.tag.name, color: link.tag.color })),
       createdByStaffName: asset.createdByStaff?.profile?.nickname || null,
+      productionFiles: asset.productionFiles.map(file => ({
+        id: file.id, displayName: file.displayName, targetFrameCount: file.targetFrameCount,
+        fileVersionNo: file.fileVersionNo, sourceType: file.sourceType, productionBatchId: file.productionBatchId,
+        status: file.status, createdAt: file.createdAt, animationVersionNo: file.animationVersion.versionNo,
+        groupName: file.templateVersion.group.name, templateVersionNo: file.templateVersion.versionNo,
+        downloadUrl: signedUrl(fastify, file.objectKey, 900)
+      })),
       createdByStaff: undefined
     } })
+  })
+
+  fastify.get('/:id/production-options', async (request, reply) => {
+    const asset = await prisma.animationAsset.findUnique({
+      where: { id: request.params.id },
+      include: { versions: { orderBy: { versionNo: 'desc' } } }
+    })
+    if (!asset) return reply.code(404).send({ success: false, message: '帧图资产不存在' })
+    const groups = await prisma.printCutGroup.findMany({
+      where: { isActive: true, templates: { some: { status: 'ACTIVE' } } },
+      include: { templates: { where: { status: 'ACTIVE' }, orderBy: { versionNo: 'desc' }, take: 1 } },
+      orderBy: { sortOrder: 'asc' }
+    })
+    return reply.send({ success: true, data: {
+      versions: asset.versions.map(version => ({ id: version.id, versionNo: version.versionNo, baseFrameCount: version.baseFrameCount })),
+      templates: groups.map(group => ({
+        id: group.templates[0].id, templateVersionNo: group.templates[0].versionNo, groupId: group.id,
+        groupName: group.name, size: group.size, paperSize: group.paperSize, paperType: group.paperType,
+        orientation: group.orientation, framesPerSheet: group.framesPerSheet, renderDpi: group.renderDpi
+      }))
+    } })
+  })
+
+  fastify.post('/:id/production-files', async (request, reply) => {
+    if (!['OWNER', 'PRODUCTION'].includes(request.user.staffRole)) {
+      return reply.code(403).send({ success: false, message: '只有负责人或生产人员可以生成生产文件' })
+    }
+    try {
+      const file = await generateProductionFile(fastify, {
+        assetId: request.params.id,
+        animationVersionId: clean(request.body?.animationVersionId, 50),
+        templateVersionId: clean(request.body?.templateVersionId, 50),
+        targetFrameCount: Number(request.body?.targetFrameCount),
+        markerEnabled: request.body?.markerEnabled !== false,
+        createdBy: request.user.userId,
+        sourceType: 'MANUAL'
+      })
+      return reply.code(201).send({ success: true, message: '生产文件已经生成', data: {
+        id: file.id, displayName: file.displayName, downloadUrl: signedUrl(fastify, file.objectKey, 900)
+      } })
+    } catch (error) {
+      return reply.code(400).send({ success: false, message: error.message })
+    }
   })
 
   fastify.post('/', async (request, reply) => {
@@ -350,8 +411,8 @@ export default async function frameLibraryRoutes(fastify) {
   fastify.delete('/:id', async (request, reply) => {
     if (!ownerOnly(request, reply)) return
     const asset = await prisma.animationAsset.findUnique({ where: { id: request.params.id }, include: {
-      versions: { select: { id: true, frameKeys: true } },
-      _count: { select: { customProducts: true, customizationRequests: true, salesOrderItems: true, collabWorks: true } }
+      versions: { select: { id: true, frameKeys: true, _count: { select: { productionRenders: true } } } },
+      _count: { select: { customProducts: true, customizationRequests: true, salesOrderItems: true, collabWorks: true, productionFiles: true } }
     } })
     if (!asset) return reply.code(404).send({ success: false, message: '帧图资产不存在' })
     const blockers = []
@@ -359,6 +420,7 @@ export default async function frameLibraryRoutes(fastify) {
     if (asset._count.customProducts || asset._count.customizationRequests) blockers.push('存在定制或编辑记录')
     if (asset._count.salesOrderItems) blockers.push('存在订单或生产关系')
     if (asset._count.collabWorks || asset.assetType === 'COLLAB') blockers.push('存在联名关系')
+    if (asset._count.productionFiles || asset.versions.some(version => version._count.productionRenders)) blockers.push('存在生产文件或已拼接帧')
     if (asset.versions.length > 1) blockers.push('存在历史版本')
     if (blockers.length) return reply.code(409).send({ success: false, message: '该素材不能永久删除', data: { blockers } })
     const keys = [...new Set(asset.versions.flatMap(version => Array.isArray(version.frameKeys) ? version.frameKeys : []).filter(key => typeof key === 'string' && key.startsWith('private/')))]

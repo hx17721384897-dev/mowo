@@ -3,7 +3,7 @@
 > 确认日期：2026-08-21。
 > 本文是跨越 Web 定制、动画资产、交易、库存和生产的目标设计，不表示当前代码已经全部实现。代码现状和差异仍分别以 `docs/modules/` 下的调查文档为准。
 
-> 实施进度：2026-08-26 已完成动画资产、复购、V2 追加、后台统一帧图总库，以及 `SalesOrder -> SalesOrderItem -> CustomizeOrder` 聚合订单基础。一次支付现为一个 `SO` 用户订单，商品锁定动画版本和 SKU，并按数量展开 `PU` 单件生产任务。总库已区分网站、线下、联名和内部来源，线下客户可先不绑定账号且未经授权只能私人使用。打印版本和完整生产结构仍在分批实现，代码事实见 `docs/modules/animation-assets.md`、`docs/modules/frame-asset-library.md` 与 `docs/modules/commerce-orders-inventory.md`。
+> 实施进度：2026-08-26 已完成动画资产、复购、V2 追加、后台统一帧图总库，以及 `SalesOrder -> SalesOrderItem -> CustomizeOrder` 聚合订单基础。一次支付现为一个 `SO` 用户订单，商品锁定动画版本和 SKU，并按数量展开 `PU` 单件生产任务。Word 模板版本、按尺寸复用的无损拼接帧、手动/入批生成生产文件和资产库下载入口已经建立；PDF、标签和实体帧素材包绑定仍在分批实现。代码事实见 `docs/modules/animation-assets.md`、`docs/modules/frame-asset-library.md`、`docs/modules/commerce-orders-inventory.md` 与 `docs/PRINT_PRODUCTION_PLANNING.md`。
 
 > 2026-08-23 已确认材料包款的生产批次、帧图与领料并行、整单齐套和批次详情规则。后续生产开发以 `PRODUCTION_BATCH_WORKFLOW.md` 为直接业务依据；裁切顺序、标签格式和异常重做仍按该文档列出的阶段继续确认。
 
@@ -187,7 +187,8 @@
 | 用户订单 | `SalesOrder` | 已实现一次支付一个 `SO`；真实支付和退款资金状态机仍待接入 |
 | 订单商品 | `SalesOrderItem` | 已锁定动画版本、SKU、数量、单价和规格快照；打印模板快照仍待接入 |
 | 单件生产任务 | `CustomizeOrder` | 已按商品数量展开并使用 `PU` 编号；现有生产后台继续处理这些任务 |
-| 打印版本/帧素材包 | `FrameInstance`、`FramePackWork/Variant` | 与订单、动画版本和实体帧包的边界不清楚 |
+| 打印生产文件 | `PrintTemplateVersion`、`ProductionFrameRender`、`ProductionPrintFile` | 已绑定动画版本、尺寸、模板版本和目标帧数；PDF与批次合并打印待完善 |
+| 实体帧素材包 | `FrameInstance`、`FramePackWork/Variant` | 旧占位结构尚未迁移到正式生产文件，实体装袋和单件任务绑定仍待实现 |
 | 标准材料包 | `MachineModelSku`、`MaterialItem`、`MaterialSkuBinding`、`KitAssemblyBatch`、`KitContainer` | 零件、分装、材料清单和组装入库已分层；生产任务领料和采购批次精确分配待完成 |
 | 实物绑定 | `OrderItemBinding` | 现有字段不足且当前代码未形成可靠写入闭环 |
 
@@ -196,7 +197,7 @@
 1. **已完成：**建立动画资产和不可变版本，迁移/兼容现有 `CustomProduct`、人工筛帧结果与“我的动画”。
 2. **部分完成：**已完成动画资产重命名、再次购买和修改当前版本生成 V2；统一“我的创作”导航、历史版本查看和联名受控改版仍待实施。
 3. **已完成基础：**建立正式用户订单、订单商品和单件生产任务，修复一次支付显示多个订单及数量未展开问题；后续补齐退款、拆分售后和包裹关系。
-4. 建立动画版本到目标 SKU 的兼容规则和冻结打印版本。
+4. **部分完成：**已实现核心帧倍数、模板单页整除校验、冻结模板版本和 Word 生产文件；SKU 可制作范围、PDF 与跨生产件合并拼版仍待完善。
 5. **部分完成：**已建立零件实收、分装、SKU 材料清单、材料包组装记录、配方快照、可复用箱码和原子库存日志；领料、退回、移箱和采购批次精确分配待完成。
 6. 建立私人帧素材包单件绑定，以及联名帧素材库存/按单生产分配。
 7. 重做生产看板、扫码校验、质检、返工、包裹和售后追踪。

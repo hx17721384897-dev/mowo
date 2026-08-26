@@ -2,6 +2,7 @@ export async function loadPrintCutConfig(prisma, { activeOnly = true } = {}) {
   return prisma.printCutGroup.findMany({
     where: activeOnly ? { isActive: true } : {},
     include: {
+      templates: { orderBy: { versionNo: 'desc' } },
       rules: {
         where: activeOnly ? { isActive: true, skuId: { not: null } } : { skuId: { not: null } },
         include: {
@@ -46,6 +47,12 @@ export function snapshotPrintRule(entry) {
     pagesPerUnit: rule.pagesPerUnit,
     ruleOrder: rule.sortOrder,
     paperSize: group.paperSize,
+    paperType: group.paperType,
+    orientation: group.orientation,
+    frameWidthMm: group.frameWidthMm,
+    frameHeightMm: group.frameHeightMm,
+    renderDpi: group.renderDpi,
+    separatorMicrons: group.separatorMicrons,
     cuttingTool: group.cuttingTool,
     templateKey: group.templateKey
   }

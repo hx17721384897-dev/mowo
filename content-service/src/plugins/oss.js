@@ -43,6 +43,10 @@ export default fp(async function storagePlugin(fastify) {
       method: 'PUT', expires: seconds, 'Content-Type': contentType
     }))
     fastify.decorate('storageHead', key => client.head(key))
+    fastify.decorate('storageGetBuffer', async key => {
+      const result = await client.get(key)
+      return Buffer.from(result.content)
+    })
     fastify.decorate('storageReadHeader', async key => {
       const result = await client.getStream(key, { headers: { Range: 'bytes=0-63' } })
       const chunks = []
@@ -73,6 +77,7 @@ export default fp(async function storagePlugin(fastify) {
     const stat = await fs.promises.stat(safeObjectPath(root, key))
     return { res: { headers: { 'content-length': String(stat.size) } }, size: stat.size }
   })
+  fastify.decorate('storageGetBuffer', key => fs.promises.readFile(safeObjectPath(root, key)))
   fastify.decorate('storageReadHeader', async key => {
     const handle = await fs.promises.open(safeObjectPath(root, key), 'r')
     try {

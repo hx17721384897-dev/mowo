@@ -1,4 +1,6 @@
+import crypto from 'crypto'
 import { loadPrintCutConfig } from '../lib/print-production.js'
+import { inspectDocxTemplate, parseFrameSizeMm } from '../lib/production-artifacts.js'
 
 function text(value, max = 120) {
   return String(value || '').trim().slice(0, max)
@@ -7,6 +9,23 @@ function text(value, max = 120) {
 function positiveInt(value) {
   const number = Number(value)
   return Number.isInteger(number) && number > 0 ? number : null
+}
+
+function groupFields(body, current = {}) {
+  const size = text(body?.size ?? current.size, 20)
+  const parsed = parseFrameSizeMm(size, positiveInt(body?.frameWidthMm ?? current.frameWidthMm), positiveInt(body?.frameHeightMm ?? current.frameHeightMm))
+  return {
+    size,
+    paperSize: text(body?.paperSize ?? current.paperSize, 20) || 'A4',
+    paperType: text(body?.paperType ?? current.paperType, 40) || '普通打印纸',
+    orientation: ['PORTRAIT', 'LANDSCAPE'].includes(body?.orientation ?? current.orientation) ? (body?.orientation ?? current.orientation) : 'LANDSCAPE',
+    frameWidthMm: parsed?.width || null,
+    frameHeightMm: parsed?.height || null,
+    framesPerSheet: positiveInt(body?.framesPerSheet ?? current.framesPerSheet),
+    renderDpi: positiveInt(body?.renderDpi ?? current.renderDpi) || 600,
+    separatorMicrons: positiveInt(body?.separatorMicrons ?? current.separatorMicrons) || 460,
+    cuttingTool: text(body?.cuttingTool ?? current.cuttingTool, 80) || null
+  }
 }
 
 function createGroupCode() {
@@ -48,17 +67,14 @@ export default async function printProductionRoutes(fastify) {
 
   fastify.post('/groups', { preHandler: requireAdmin }, async (req, reply) => {
     const name = text(req.body?.name, 80)
-    const size = text(req.body?.size, 20)
-    const framesPerSheet = positiveInt(req.body?.framesPerSheet)
-    if (!name || !size || !framesPerSheet) {
+    const fields = groupFields(req.body)
+    if (!name || !fields.size || !fields.framesPerSheet || !fields.frameWidthMm || !fields.frameHeightMm) {
       return reply.code(400).send({ success: false, message: '请填写组名、尺寸和每页帧数' })
     }
     const last = await fastify.prisma.printCutGroup.findFirst({ orderBy: { sortOrder: 'desc' }, select: { sortOrder: true } })
     const group = await fastify.prisma.printCutGroup.create({ data: {
-      code: createGroupCode(), name, size,
-      paperSize: text(req.body?.paperSize, 20) || 'A4', framesPerSheet,
-      cuttingTool: text(req.body?.cuttingTool, 80) || null,
-      templateKey: text(req.body?.templateKey, 120) || null,
+      code: createGroupCode(), name, ...fields,
+      templateKey: null,
       sortOrder: (last?.sortOrder ?? -1) + 1, createdBy: req.user.userId
     } })
     return reply.code(201).send({ success: true, data: group })
@@ -77,24 +93,20 @@ export default async function printProductionRoutes(fastify) {
     const group = await fastify.prisma.printCutGroup.findUnique({ where: { id: req.params.groupId }, include: { rules: true } })
     if (!group) return reply.code(404).send({ success: false, message: '打印裁切组不存在' })
     const name = text(req.body?.name ?? group.name, 80)
-    const size = text(req.body?.size ?? group.size, 20)
-    const framesPerSheet = positiveInt(req.body?.framesPerSheet ?? group.framesPerSheet)
-    if (!name || !size || !framesPerSheet) return reply.code(400).send({ success: false, message: '组名、尺寸和每页帧数不能为空' })
-    if (size !== group.size && group.rules.length) {
+    const fields = groupFields(req.body, group)
+    if (!name || !fields.size || !fields.framesPerSheet || !fields.frameWidthMm || !fields.frameHeightMm) return reply.code(400).send({ success: false, message: '组名、尺寸、宽高和每页帧数不能为空' })
+    if (fields.size !== group.size && group.rules.length) {
       return reply.code(409).send({ success: false, message: '该组已有 SKU，请先移出后再修改尺寸' })
     }
     const updated = await fastify.prisma.$transaction(async tx => {
       const saved = await tx.printCutGroup.update({ where: { id: group.id }, data: {
-        name, size, framesPerSheet,
-        paperSize: text(req.body?.paperSize ?? group.paperSize, 20) || 'A4',
-        cuttingTool: text(req.body?.cuttingTool, 80) || null,
-        templateKey: text(req.body?.templateKey, 120) || null,
+        name, ...fields,
         isActive: typeof req.body?.isActive === 'boolean' ? req.body.isActive : group.isActive
       } })
-      if (framesPerSheet !== group.framesPerSheet && group.rules.length) {
+      if (fields.framesPerSheet !== group.framesPerSheet && group.rules.length) {
         const rules = await tx.printCutRule.findMany({ where: { groupId: group.id }, include: { sku: { select: { frameCount: true } } } })
         for (const rule of rules) {
-          await tx.printCutRule.update({ where: { id: rule.id }, data: { pagesPerUnit: Math.ceil(rule.sku.frameCount / framesPerSheet) } })
+          await tx.printCutRule.update({ where: { id: rule.id }, data: { pagesPerUnit: Math.ceil(rule.sku.frameCount / fields.framesPerSheet) } })
         }
       }
       return saved
@@ -155,5 +167,35 @@ export default async function printProductionRoutes(fastify) {
     if (!rule) return reply.code(404).send({ success: false, message: 'SKU打印配置不存在' })
     await fastify.prisma.printCutRule.delete({ where: { id: rule.id } })
     return reply.send({ success: true, message: 'SKU已移回尚未配置区；已有批次不受影响' })
+  })
+
+  fastify.post('/groups/:groupId/templates', { preHandler: requireAdmin }, async (req, reply) => {
+    const group = await fastify.prisma.printCutGroup.findUnique({ where: { id: req.params.groupId } })
+    if (!group) return reply.code(404).send({ success: false, message: '打印裁切组不存在' })
+    const part = await req.file()
+    if (!part) return reply.code(400).send({ success: false, message: '请选择 Word 模板' })
+    if (!String(part.filename || '').toLowerCase().endsWith('.docx')) return reply.code(400).send({ success: false, message: '模板必须是 .docx 文件' })
+    const buffer = await part.toBuffer()
+    if (!buffer.length || buffer.length > 5 * 1024 * 1024) return reply.code(400).send({ success: false, message: '模板不能超过 5MB' })
+    let inspection
+    try { inspection = inspectDocxTemplate(buffer) } catch (error) { return reply.code(400).send({ success: false, message: error.message }) }
+    if (inspection.cellCount !== group.framesPerSheet) {
+      return reply.code(409).send({ success: false, message: `模板共有 ${inspection.cellCount} 个单元格，但该组要求单页 ${group.framesPerSheet} 帧` })
+    }
+    const latest = await fastify.prisma.printTemplateVersion.findFirst({ where: { groupId: group.id }, orderBy: { versionNo: 'desc' } })
+    const versionNo = (latest?.versionNo || 0) + 1
+    const objectKey = `private/print-templates/${group.id}/${crypto.randomUUID()}.docx`
+    await fastify.storagePut(objectKey, buffer, { headers: { 'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' } })
+    const saved = await fastify.prisma.$transaction(async tx => {
+      await tx.printTemplateVersion.updateMany({ where: { groupId: group.id, status: 'ACTIVE' }, data: { status: 'RETIRED' } })
+      const template = await tx.printTemplateVersion.create({ data: {
+        groupId: group.id, versionNo, originalName: text(part.filename, 255), objectKey,
+        sha256: crypto.createHash('sha256').update(buffer).digest('hex'), sizeBytes: buffer.length,
+        cellCount: inspection.cellCount, createdBy: req.user.userId
+      } })
+      await tx.printCutGroup.update({ where: { id: group.id }, data: { templateKey: objectKey } })
+      return template
+    })
+    return reply.code(201).send({ success: true, data: saved, message: `模板 V${versionNo} 已启用` })
   })
 }

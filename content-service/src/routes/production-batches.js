@@ -2,6 +2,7 @@
 
 import { createProductionBatchNo } from '../lib/sales-orders.js'
 import { buildPrintRuleMap, loadPrintCutConfig, snapshotPrintRule, snapshotUnconfiguredSku } from '../lib/print-production.js'
+import { generateProductionFile } from '../lib/production-artifacts.js'
 
 const ORDER_INCLUDE = {
   items: {
@@ -465,6 +466,32 @@ export default async function productionBatchRoutes(fastify) {
       ip: req.ip || null
     } }).catch(() => {})
 
-    return reply.code(201).send({ success: true, message: '生产批次已创建', data: { batchId, warnings: batchWarnings } })
+    // 初期批量不大，入批后立即生成并冻结文件；生成失败不撤销已经建立的生产批次。
+    const artifactErrors = []
+    const generatedSpecs = new Set()
+    for (const row of printPlan) {
+      const animationVersionId = row.task.item?.animationVersionId
+      const assetId = row.task.item?.animationAssetId
+      const template = row.entry?.group?.templates?.find(item => item.status === 'ACTIVE')
+      if (!assetId || !animationVersionId || !template) continue
+      const key = `${animationVersionId}:${template.id}:${row.task.frameCount}`
+      if (generatedSpecs.has(key)) continue
+      generatedSpecs.add(key)
+      try {
+        await generateProductionFile(fastify, {
+          assetId, animationVersionId, templateVersionId: template.id,
+          targetFrameCount: row.task.frameCount, createdBy: req.user.userId,
+          sourceType: 'ORDER', productionBatchId: batchId
+        })
+      } catch (error) {
+        artifactErrors.push({ productionNo: row.task.orderNo, message: error.message })
+      }
+    }
+
+    return reply.code(201).send({
+      success: true,
+      message: artifactErrors.length ? '生产批次已创建，部分打印文件生成失败，请在帧图资产库处理' : '生产批次已创建',
+      data: { batchId, warnings: batchWarnings, artifactErrors }
+    })
   })
 }

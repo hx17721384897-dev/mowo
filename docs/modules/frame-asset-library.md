@@ -1,6 +1,6 @@
 # 后台帧图资产总库
 
-> 首版实施日期：2026-08-26，同日补充后台“帧图制作”工作台。本文件记录当前已经实现的后台总库、制作草稿、权限、来源与授权边界。用户侧动画资产和 V1/V2 规则见 `animation-assets.md`，跨订单及生产关系见 `../ANIMATION_ORDER_PRODUCTION_FRAMEWORK.md`。
+> 首版实施日期：2026-08-26，同日补充后台“帧图制作”工作台和生产文件模块。本文件记录当前已经实现的后台总库、制作草稿、生产文件、权限、来源与授权边界。用户侧动画资产和 V1/V2 规则见 `animation-assets.md`，打印细节见 `../PRINT_PRODUCTION_PLANNING.md`。
 
 ## 简单说明
 
@@ -17,7 +17,7 @@
 - 后台制作接口：`content-service/src/routes/frame-making.js`，前缀 `/api/admin/frame-making`
 - 联名关联：`content-service/src/lib/collab-animation-asset.js`
 - 文件用途：`LIBRARY_FRAME`，规则位于 `content-service/src/lib/private-files.js`
-- 数据结构：`AnimationAsset`、`AnimationAssetVersion`、`AnimationTag`、`AnimationAssetTag`，以及 `CollabWork.animationAssetId/animationVersionId`
+- 数据结构：`AnimationAsset`、`AnimationAssetVersion`、`AnimationTag`、`AnimationAssetTag`、`ProductionFrameRender`、`ProductionPrintFile`，以及 `CollabWork.animationAssetId/animationVersionId`
 - 制作草稿数据：`FrameAssetDraft`，使用 `FD-YYYYMMDD-XXXXXX` 编号
 - 数据迁移：`prisma/migrations/20260825193000_add_frame_asset_library/migration.sql` 和 `20260826120000_add_frame_asset_drafts/migration.sql`
 
@@ -60,6 +60,8 @@
 - 支持按 `ANM`、标题、权利人、账号、`DZ`、`SO` 和标签搜索。
 - 卡片只加载当前版本首帧；点击详情后才取得短期预览地址并加载完整帧序列，避免一次返回整个总库原图。
 - 详情展示当前用途、权利主体、授权状态、绑定账号、标签、全部版本，以及定制、联名和订单关联。
+- 卡片和详情直接列出按尺寸、目标帧数、纸张容量和文件版本命名的 Word 生产文件；没有文件时显示“生产文件：尚未生成”。点击文件名使用短期签名地址下载。
+- 负责人和生产人员可以在详情点击“新增文件版本”，选择动画 Vn、目标商品帧数和兼容模板。核心帧只拼接一轮，目标帧通过循环插入；相同动画版本和尺寸复用无损拼接 PNG。
 - 负责人可以人工导入 1 至 50 张帧图，按文件名自然顺序生成 ANM 和 V1，也可以编辑资料、归档、恢复和在极严格条件下永久删除。
 
 ## 后台帧图制作流程
@@ -84,7 +86,7 @@
 | 岗位 | 总库权限 |
 |---|---|
 | `OWNER` 负责人 | 查看、建立、编辑、绑定账号、归档、恢复和受限永久删除 |
-| `PRODUCTION` 生产人员 | 只读查看正式总库；可以建立、筛选和编辑制作草稿，但不能正式发布 |
+| `PRODUCTION` 生产人员 | 查看正式总库、生成生产文件；可以建立、筛选和编辑制作草稿，但不能正式发布或更换全局 Word 模板 |
 | `COLLAB_OPS` 联名运营 | 只读查看帧图与关联信息 |
 | `CUSTOMER_SERVICE` 客服 | 不能浏览总库；只能按具体客服/售后业务查看其已有权限的附件 |
 | 普通用户 | 不能进入后台总库，只能通过用户侧接口访问自己的可见动画 |
@@ -108,7 +110,7 @@
 1. 来源必须是 `INTERNAL_CREATED`；
 2. 用途必须是 `INTERNAL_TEST`；
 3. 只有最初 V1，没有 V2 等历史版本；
-4. 没有 `CustomProduct`、定制申请、订单商品或联名作品关联；
+4. 没有 `CustomProduct`、定制申请、订单商品、联名作品、已拼接帧或生产文件关联；
 5. 通过数据库事务删除记录后再清理物理文件，并写入审计日志。
 
 私人用户素材、线下客户素材和联名素材无论当前是否有订单，都不能从本页面永久删除，只能归档。生产任务通过订单商品锁定动画版本，因此存在订单商品时删除一定会被拦截。
@@ -118,6 +120,8 @@
 `npm run check:frame-library` 会建立临时岗位账号和测试资料，验证岗位隔离、ANM/V1、线下客户无账号入库、后绑定账号、未授权禁止转联名、私人资料禁止永久删除、内部无关联测试资料删除、归档恢复、搜索、短期预览地址和真实后台页面；结束后自动清理测试数据。
 
 `npm run check:frame-making` 验证制作岗位隔离、FD 草稿、原素材绑定、短期读取地址、生产人员保存并提交负责人、确认后禁止生产人员改写、并发覆盖保护、负责人发布、ANM/V1 追溯、重复提交幂等、无定制/订单副作用，以及浏览器真实上传后进入完整编辑器并显示播放/去重/抽帧/撤销/筛选控件；结束后自动清理测试数据。
+
+`npm run check:production-artifacts` 不依赖业务数据，验证一页 12 格 Word 模板、24 帧自动扩页、图片关系和核心帧循环插入。数据库接口与真实页面验收需要先应用 `20260826190000_add_print_templates_and_artifacts` 迁移。
 
 ## 后续阶段
 

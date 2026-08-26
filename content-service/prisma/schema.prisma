@@ -125,9 +125,9 @@ model User {
   animationAssetsOwned          AnimationAsset[]              @relation("AnimationAssetOwner")
   animationAssetsCreated        AnimationAsset[]              @relation("AnimationAssetCreator")
   animationVersionsCreated      AnimationAssetVersion[]       @relation("AnimationVersionCreator")
-  frameAssetDraftsCreated       FrameAssetDraft[]              @relation("FrameAssetDraftCreator")
-  frameAssetDraftsEdited        FrameAssetDraft[]              @relation("FrameAssetDraftEditor")
-  frameAssetDraftsOwned         FrameAssetDraft[]              @relation("FrameAssetDraftOwner")
+  frameAssetDraftsCreated       FrameAssetDraft[]             @relation("FrameAssetDraftCreator")
+  frameAssetDraftsEdited        FrameAssetDraft[]             @relation("FrameAssetDraftEditor")
+  frameAssetDraftsOwned         FrameAssetDraft[]             @relation("FrameAssetDraftOwner")
   salesOrders                   SalesOrder[]
 
   @@map("users")
@@ -630,7 +630,7 @@ model MachineModelSku {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  model MachineModel @relation(fields: [modelId], references: [id])
+  model        MachineModel  @relation(fields: [modelId], references: [id])
   printCutRule PrintCutRule?
 
   @@unique([modelId, size, material, frameCount, colorName])
@@ -639,40 +639,69 @@ model MachineModelSku {
 
 // 帧素材共用的打印与裁切方式，不按商品款式拆分。
 model PrintCutGroup {
-  id             String   @id @default(uuid())
-  code           String   @unique @db.VarChar(40)
-  name           String   @db.VarChar(80)
-  size           String   @db.VarChar(20)
-  paperSize      String   @default("A4") @map("paper_size") @db.VarChar(20)
-  framesPerSheet Int      @map("frames_per_sheet")
-  cuttingTool    String?  @map("cutting_tool") @db.VarChar(80)
-  templateKey    String?  @map("template_key") @db.VarChar(120)
-  sortOrder      Int      @default(0) @map("sort_order")
-  isActive       Boolean  @default(true) @map("is_active")
-  createdBy      String   @map("created_by")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id               String   @id @default(uuid())
+  code             String   @unique @db.VarChar(40)
+  name             String   @db.VarChar(80)
+  size             String   @db.VarChar(20)
+  paperSize        String   @default("A4") @map("paper_size") @db.VarChar(20)
+  paperType        String   @default("普通打印纸") @map("paper_type") @db.VarChar(40)
+  orientation      String   @default("LANDSCAPE") @db.VarChar(20)
+  frameWidthMm     Int?     @map("frame_width_mm")
+  frameHeightMm    Int?     @map("frame_height_mm")
+  framesPerSheet   Int      @map("frames_per_sheet")
+  renderDpi        Int      @default(600) @map("render_dpi")
+  separatorMicrons Int      @default(460) @map("separator_microns")
+  cuttingTool      String?  @map("cutting_tool") @db.VarChar(80)
+  templateKey      String?  @map("template_key") @db.VarChar(120)
+  sortOrder        Int      @default(0) @map("sort_order")
+  isActive         Boolean  @default(true) @map("is_active")
+  createdBy        String   @map("created_by")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
-  rules PrintCutRule[]
+  rules     PrintCutRule[]
+  templates PrintTemplateVersion[]
 
   @@index([isActive, sortOrder])
   @@map("print_cut_groups")
 }
 
-// 一个真实 SKU 只能归入一个打印裁切组，避免生产时出现两种执行方式。
-model PrintCutRule {
+// Word 排版模板不可覆盖；换模板必须新增版本，历史生产文件继续指向旧版本。
+model PrintTemplateVersion {
   id           String   @id @default(uuid())
   groupId      String   @map("group_id")
-  skuId        String?  @unique @map("sku_id")
-  legacySize   String?  @map("size") @db.VarChar(20)
-  legacyFrameCount Int? @map("frame_count")
-  pagesPerUnit Int      @map("pages_per_unit")
-  sortOrder    Int      @default(0) @map("sort_order")
-  isActive     Boolean  @default(true) @map("is_active")
+  versionNo    Int      @map("version_no")
+  originalName String   @map("original_name") @db.VarChar(255)
+  objectKey    String   @unique @map("object_key") @db.VarChar(500)
+  sha256       String   @db.VarChar(64)
+  sizeBytes    Int      @map("size_bytes")
+  cellCount    Int      @map("cell_count")
+  status       String   @default("ACTIVE") @db.VarChar(20)
+  createdBy    String   @map("created_by")
   createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
 
-  group PrintCutGroup @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  group PrintCutGroup         @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  files ProductionPrintFile[]
+
+  @@unique([groupId, versionNo])
+  @@index([groupId, status, versionNo])
+  @@map("print_template_versions")
+}
+
+// 一个真实 SKU 只能归入一个打印裁切组，避免生产时出现两种执行方式。
+model PrintCutRule {
+  id               String   @id @default(uuid())
+  groupId          String   @map("group_id")
+  skuId            String?  @unique @map("sku_id")
+  legacySize       String?  @map("size") @db.VarChar(20)
+  legacyFrameCount Int?     @map("frame_count")
+  pagesPerUnit     Int      @map("pages_per_unit")
+  sortOrder        Int      @default(0) @map("sort_order")
+  isActive         Boolean  @default(true) @map("is_active")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  group PrintCutGroup    @relation(fields: [groupId], references: [id], onDelete: Restrict)
   sku   MachineModelSku? @relation(fields: [skuId], references: [id], onDelete: Cascade)
 
   @@index([groupId, isActive, sortOrder])
@@ -773,53 +802,53 @@ model AftersaleRequest {
 // ================================================================
 
 model CollabWork {
-  id                String    @id @default(uuid())
-  creatorId         String    @map("creator_id")
-  orderNo           String?   @map("order_no") // 可选：动画直接提交时为 null
-  title             String
-  description       String?
-  coverUrl          String?   @map("cover_url")
-  animationFrames   String    @map("animation_frames") // JSON数组 OSS objectKey
-  supportedSkus     String    @map("supported_skus") // JSON数组 SKU ID
-  sizes             String?   @db.Text // JSON数组 如["5x5cm","8x8cm"]
-  framePackOssPath  String?   @map("frame_pack_oss_path") @db.VarChar(500)
-  isNewbieWork      Boolean   @default(false) @map("is_newbie_work")
-  newbieExpiredAt   DateTime? @map("newbie_expired_at") // 审核通过后 +30天
-  activityId        String?   @map("activity_id")
-  isExclusiveWork   Boolean   @default(false) @map("is_exclusive_work")
-  status            String    @default("pending")
+  id                 String    @id @default(uuid())
+  creatorId          String    @map("creator_id")
+  orderNo            String?   @map("order_no") // 可选：动画直接提交时为 null
+  title              String
+  description        String?
+  coverUrl           String?   @map("cover_url")
+  animationFrames    String    @map("animation_frames") // JSON数组 OSS objectKey
+  supportedSkus      String    @map("supported_skus") // JSON数组 SKU ID
+  sizes              String?   @db.Text // JSON数组 如["5x5cm","8x8cm"]
+  framePackOssPath   String?   @map("frame_pack_oss_path") @db.VarChar(500)
+  isNewbieWork       Boolean   @default(false) @map("is_newbie_work")
+  newbieExpiredAt    DateTime? @map("newbie_expired_at") // 审核通过后 +30天
+  activityId         String?   @map("activity_id")
+  isExclusiveWork    Boolean   @default(false) @map("is_exclusive_work")
+  status             String    @default("pending")
   // pending / approved / rejected
-  rejectReason      String?   @map("reject_reason")
-  agreementSignedAt DateTime  @map("agreement_signed_at")
-  approvedAt        DateTime? @map("approved_at")
-  approvedBy        String?   @map("approved_by")
-  revenueRate       Float     @default(0) @map("revenue_rate") // 审核时快照
-  isOnShelf         Boolean   @default(false) @map("is_on_shelf")
-  shelfAt           DateTime? @map("shelf_at")
-  shelfStatus       String    @default("on_sale") @map("shelf_status")
+  rejectReason       String?   @map("reject_reason")
+  agreementSignedAt  DateTime  @map("agreement_signed_at")
+  approvedAt         DateTime? @map("approved_at")
+  approvedBy         String?   @map("approved_by")
+  revenueRate        Float     @default(0) @map("revenue_rate") // 审核时快照
+  isOnShelf          Boolean   @default(false) @map("is_on_shelf")
+  shelfAt            DateTime? @map("shelf_at")
+  shelfStatus        String    @default("on_sale") @map("shelf_status")
   // on_sale / suspended / pending_delist / off_shelf
-  suspendedAt       DateTime? @map("suspended_at")
-  suspendedBy       String?   @map("suspended_by")
-  offShelfAt        DateTime? @map("off_shelf_at")
-  offShelfType      String?   @map("off_shelf_type") // platform_force / creator_request
-  offShelfReason    String?   @map("off_shelf_reason") @db.Text // 内部备注
-  offShelfNotice    String?   @map("off_shelf_notice") @db.Text // 发给创作者的通知
-  canResubmit       Boolean   @default(false) @map("can_resubmit")
-  delistRequestedAt DateTime? @map("delist_requested_at")
-  delistReason      String?   @map("delist_reason") @db.Text
-  submissionBatchId String?   @map("submission_batch_id") // 同批次提交的作品共享同一 batchId
-  isRevision        Boolean   @default(false) @map("is_revision") // 是否为修改版
-  originalWorkId    String?   @map("original_work_id") // 指向被修改的原作品 ID
-  changeLog         String?   @map("change_log") @db.Text // JSON diff: {title:{old,new},...}
-  hoverGifUrl       String?   @map("hover_gif_url") // 卡片 hover 用小 GIF OSS 路径
-  creatorMarkups    String?   @map("creator_markups") // JSON: {"skuId": decimalAmount}
-  animationAssetId  String?   @map("animation_asset_id")
-  animationVersionId String?  @map("animation_version_id")
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
+  suspendedAt        DateTime? @map("suspended_at")
+  suspendedBy        String?   @map("suspended_by")
+  offShelfAt         DateTime? @map("off_shelf_at")
+  offShelfType       String?   @map("off_shelf_type") // platform_force / creator_request
+  offShelfReason     String?   @map("off_shelf_reason") @db.Text // 内部备注
+  offShelfNotice     String?   @map("off_shelf_notice") @db.Text // 发给创作者的通知
+  canResubmit        Boolean   @default(false) @map("can_resubmit")
+  delistRequestedAt  DateTime? @map("delist_requested_at")
+  delistReason       String?   @map("delist_reason") @db.Text
+  submissionBatchId  String?   @map("submission_batch_id") // 同批次提交的作品共享同一 batchId
+  isRevision         Boolean   @default(false) @map("is_revision") // 是否为修改版
+  originalWorkId     String?   @map("original_work_id") // 指向被修改的原作品 ID
+  changeLog          String?   @map("change_log") @db.Text // JSON diff: {title:{old,new},...}
+  hoverGifUrl        String?   @map("hover_gif_url") // 卡片 hover 用小 GIF OSS 路径
+  creatorMarkups     String?   @map("creator_markups") // JSON: {"skuId": decimalAmount}
+  animationAssetId   String?   @map("animation_asset_id")
+  animationVersionId String?   @map("animation_version_id")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
 
-  framePacks   CollabFramePack[]
-  collabOrders CollabOrder[]
+  framePacks       CollabFramePack[]
+  collabOrders     CollabOrder[]
   animationAsset   AnimationAsset?        @relation(fields: [animationAssetId], references: [id], onDelete: SetNull)
   animationVersion AnimationAssetVersion? @relation(fields: [animationVersionId], references: [id], onDelete: SetNull)
 
@@ -1762,27 +1791,27 @@ model CustomProduct {
 
 // 可复购的动画主资产。它与一次定制申请、SKU 和订单相互独立。
 model AnimationAsset {
-  id               String    @id @default(uuid())
-  assetNo          String    @unique @map("asset_no") @db.VarChar(32)
-  ownerUserId      String?   @map("owner_user_id")
-  title            String    @default("未命名动画") @db.VarChar(200)
-  sourceType       String    @map("source_type") @db.VarChar(30) // SELF_SCREENED | STAFF_SCREENED | STAFF_CREATED
-  sourceChannel    String    @default("WEB_CUSTOM") @map("source_channel") @db.VarChar(30) // WEB_CUSTOM | OFFLINE_CUSTOM | CREATOR_SUBMISSION | INTERNAL_CREATED
-  usageType        String    @default("PRIVATE_CUSTOM") @map("usage_type") @db.VarChar(30) // PRIVATE_CUSTOM | COLLAB_SALE | COMPANY_PRODUCT | INTERNAL_TEST | UNDECIDED
-  assetType        String    @default("PRIVATE") @map("asset_type") @db.VarChar(20) // PRIVATE | COLLAB
-  status           String    @default("ACTIVE") @db.VarChar(30) // ACTIVE | USER_DELETED | ARCHIVED
-  collabStatus     String    @default("NONE") @map("collab_status") @db.VarChar(30) // NONE | PENDING | AUTHORIZED | STOPPED
-  rightsHolderType String    @default("USER") @map("rights_holder_type") @db.VarChar(30) // USER | OFFLINE_CUSTOMER | CREATOR | COMPANY | UNCONFIRMED
-  rightsHolderName String?   @map("rights_holder_name") @db.VarChar(120)
-  rightsHolderContact String? @map("rights_holder_contact") @db.VarChar(200)
-  authorizationStatus String @default("PRIVATE_ONLY") @map("authorization_status") @db.VarChar(30) // PRIVATE_ONLY | PENDING | AUTHORIZED
-  internalNotes    String?   @map("internal_notes") @db.Text
-  createdByStaffId String?   @map("created_by_staff_id")
-  currentVersionNo Int       @default(0) @map("current_version_no")
-  frontDeletedAt   DateTime? @map("front_deleted_at")
-  archivedAt       DateTime? @map("archived_at")
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
+  id                  String    @id @default(uuid())
+  assetNo             String    @unique @map("asset_no") @db.VarChar(32)
+  ownerUserId         String?   @map("owner_user_id")
+  title               String    @default("未命名动画") @db.VarChar(200)
+  sourceType          String    @map("source_type") @db.VarChar(30) // SELF_SCREENED | STAFF_SCREENED | STAFF_CREATED
+  sourceChannel       String    @default("WEB_CUSTOM") @map("source_channel") @db.VarChar(30) // WEB_CUSTOM | OFFLINE_CUSTOM | CREATOR_SUBMISSION | INTERNAL_CREATED
+  usageType           String    @default("PRIVATE_CUSTOM") @map("usage_type") @db.VarChar(30) // PRIVATE_CUSTOM | COLLAB_SALE | COMPANY_PRODUCT | INTERNAL_TEST | UNDECIDED
+  assetType           String    @default("PRIVATE") @map("asset_type") @db.VarChar(20) // PRIVATE | COLLAB
+  status              String    @default("ACTIVE") @db.VarChar(30) // ACTIVE | USER_DELETED | ARCHIVED
+  collabStatus        String    @default("NONE") @map("collab_status") @db.VarChar(30) // NONE | PENDING | AUTHORIZED | STOPPED
+  rightsHolderType    String    @default("USER") @map("rights_holder_type") @db.VarChar(30) // USER | OFFLINE_CUSTOMER | CREATOR | COMPANY | UNCONFIRMED
+  rightsHolderName    String?   @map("rights_holder_name") @db.VarChar(120)
+  rightsHolderContact String?   @map("rights_holder_contact") @db.VarChar(200)
+  authorizationStatus String    @default("PRIVATE_ONLY") @map("authorization_status") @db.VarChar(30) // PRIVATE_ONLY | PENDING | AUTHORIZED
+  internalNotes       String?   @map("internal_notes") @db.Text
+  createdByStaffId    String?   @map("created_by_staff_id")
+  currentVersionNo    Int       @default(0) @map("current_version_no")
+  frontDeletedAt      DateTime? @map("front_deleted_at")
+  archivedAt          DateTime? @map("archived_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
 
   owner                 User?                   @relation("AnimationAssetOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
   createdByStaff        User?                   @relation("AnimationAssetCreator", fields: [createdByStaffId], references: [id], onDelete: SetNull)
@@ -1793,6 +1822,7 @@ model AnimationAsset {
   collabWorks           CollabWork[]
   tags                  AnimationAssetTag[]
   sourceDraft           FrameAssetDraft?
+  productionFiles       ProductionPrintFile[]
 
   @@index([ownerUserId, status, updatedAt])
   @@index([assetType, collabStatus])
@@ -1889,12 +1919,67 @@ model AnimationAssetVersion {
   acceptedRequests     CustomizationRequest[]       @relation("CustomizationAcceptedAnimationVersion")
   salesOrderItems      SalesOrderItem[]
   collabWorks          CollabWork[]
+  productionRenders    ProductionFrameRender[]
+  productionFiles      ProductionPrintFile[]
 
   @@unique([assetId, versionNo])
   @@index([assetId, createdAt])
   @@index([sourceRequestId])
   @@index([sourceCustomProductId])
   @@map("animation_asset_versions")
+}
+
+// 同一个动画版本在同一尺寸下只拼接一次；目标帧数通过循环插入复用这些无损 PNG。
+model ProductionFrameRender {
+  id                 String   @id @default(uuid())
+  animationVersionId String   @map("animation_version_id")
+  size               String   @db.VarChar(20)
+  widthPx            Int      @map("width_px")
+  heightPx           Int      @map("height_px")
+  dpi                Int
+  separatorMicrons   Int      @map("separator_microns")
+  markerEnabled      Boolean  @default(true) @map("marker_enabled")
+  processorVersion   String   @map("processor_version") @db.VarChar(30)
+  frameKeys          Json     @map("frame_keys")
+  manifestHash       String   @map("manifest_hash") @db.VarChar(64)
+  status             String   @default("READY") @db.VarChar(20)
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  animationVersion AnimationAssetVersion @relation(fields: [animationVersionId], references: [id], onDelete: Restrict)
+  files            ProductionPrintFile[]
+
+  @@unique([animationVersionId, size, dpi, separatorMicrons, markerEnabled, processorVersion])
+  @@index([animationVersionId, createdAt])
+  @@map("production_frame_renders")
+}
+
+// 可下载的正式 Word 生产文件。相同规格重新生成时递增 fileVersionNo，不覆盖旧文件。
+model ProductionPrintFile {
+  id                 String   @id @default(uuid())
+  assetId            String   @map("asset_id")
+  animationVersionId String   @map("animation_version_id")
+  renderId           String   @map("render_id")
+  templateVersionId  String   @map("template_version_id")
+  targetFrameCount   Int      @map("target_frame_count")
+  fileVersionNo      Int      @map("file_version_no")
+  displayName        String   @map("display_name") @db.VarChar(255)
+  objectKey          String   @unique @map("object_key") @db.VarChar(500)
+  manifestHash       String   @map("manifest_hash") @db.VarChar(64)
+  sourceType         String   @default("MANUAL") @map("source_type") @db.VarChar(20)
+  productionBatchId  String?  @map("production_batch_id") @db.VarChar(40)
+  status             String   @default("READY") @db.VarChar(20)
+  createdBy          String   @map("created_by")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  asset            AnimationAsset        @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  animationVersion AnimationAssetVersion @relation(fields: [animationVersionId], references: [id], onDelete: Restrict)
+  render           ProductionFrameRender @relation(fields: [renderId], references: [id], onDelete: Restrict)
+  templateVersion  PrintTemplateVersion  @relation(fields: [templateVersionId], references: [id], onDelete: Restrict)
+
+  @@unique([animationVersionId, templateVersionId, targetFrameCount, fileVersionNo])
+  @@index([assetId, animationVersionId, createdAt])
+  @@index([productionBatchId])
+  @@map("production_print_files")
 }
 
 // 定制审核申请。与购物车、订单、生产任务分开，正式提交后生成 requestNo。
