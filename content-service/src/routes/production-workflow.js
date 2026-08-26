@@ -1,4 +1,5 @@
 import archiver from 'archiver'
+import { generateProductionFile } from '../lib/production-artifacts.js'
 
 const ACTIVE_BATCH_STATUSES = ['READY', 'IN_PROGRESS']
 
@@ -51,6 +52,46 @@ async function loadBatchContext(prisma, batchId) {
 
 function allTasks(orders) {
   return orders.flatMap(order => order.items.flatMap(item => item.productionTasks.map(task => ({ task, item, order }))))
+}
+
+async function ensureBatchPrintFiles(fastify, context, createdBy) {
+  let files = await fastify.prisma.productionPrintFile.findMany({
+    where: { productionBatchId: context.batch.id, status: 'READY' },
+    include: { asset: { select: { assetNo: true } } }, orderBy: { createdAt: 'asc' }
+  })
+  const rows = allTasks(context.orders)
+  const units = new Map(context.batch.units.map(unit => [unit.productionUnitId, unit]))
+  const groupIds = [...new Set(context.batch.units.map(unit => unit.printGroupId).filter(Boolean))]
+  const groups = groupIds.length ? await fastify.prisma.printCutGroup.findMany({
+    where: { id: { in: groupIds } },
+    include: { templates: { where: { status: 'ACTIVE' }, orderBy: { versionNo: 'desc' }, take: 1 } }
+  }) : []
+  const groupMap = new Map(groups.map(group => [group.id, group]))
+  const errors = []
+  for (const row of rows) {
+    const exists = files.some(file => file.animationVersionId === row.item.animationVersionId && file.targetFrameCount === row.task.frameCount)
+    if (exists) continue
+    const unit = units.get(row.task.id)
+    const template = groupMap.get(unit?.printGroupId)?.templates?.[0]
+    if (!row.item.animationAssetId || !row.item.animationVersionId || !template) {
+      errors.push({ productionNo: row.task.orderNo, specification: `${row.task.size} · ${row.task.frameCount}帧`, reason: !template ? '打印裁切组仍未上传有效 Word 模板' : '缺少动画资产或锁定版本' })
+      continue
+    }
+    try {
+      await generateProductionFile(fastify, {
+        assetId: row.item.animationAssetId, animationVersionId: row.item.animationVersionId,
+        templateVersionId: template.id, targetFrameCount: row.task.frameCount,
+        createdBy, sourceType: 'ORDER', productionBatchId: context.batch.id
+      })
+    } catch (error) {
+      errors.push({ productionNo: row.task.orderNo, specification: `${row.task.size} · ${row.task.frameCount}帧`, reason: error.message })
+    }
+  }
+  files = await fastify.prisma.productionPrintFile.findMany({
+    where: { productionBatchId: context.batch.id, status: 'READY' },
+    include: { asset: { select: { assetNo: true } } }, orderBy: { createdAt: 'asc' }
+  })
+  return { files, errors }
 }
 
 async function audit(fastify, req, action, targetId) {
@@ -145,16 +186,18 @@ export default async function productionWorkflowRoutes(fastify) {
     if (invalid.length) return reply.code(409).send({ success: false, message: '部分订单尚未绑定面单', data: invalid.map(o => o.orderNo) })
 
     const tasks = allTasks(context.orders)
-    const files = await fastify.prisma.productionPrintFile.findMany({
-      where: { productionBatchId: context.batch.id, status: 'READY' },
-      include: { asset: { select: { assetNo: true } } }, orderBy: { createdAt: 'asc' }
-    })
+    const ensured = await ensureBatchPrintFiles(fastify, context, req.user.userId)
+    const files = ensured.files
     const fileForTask = row => files.find(file =>
       file.animationVersionId === row.item.animationVersionId && file.targetFrameCount === row.task.frameCount)
     const missing = tasks.filter(row => !fileForTask(row)).map(row => ({
       productionNo: row.task.orderNo, specification: `${row.task.size} · ${row.task.frameCount}帧`
     }))
-    if (missing.length) return reply.code(409).send({ success: false, message: '部分产品缺少可打印 Word，请先补齐模板并生成文件', data: missing })
+    if (missing.length) return reply.code(409).send({
+      success: false,
+      message: '部分产品缺少可打印 Word，请先到“打印与裁切设置”补齐对应模板；再次导出时系统会自动补生成',
+      data: missing.map(item => ({ ...item, reason: ensured.errors.find(error => error.productionNo === item.productionNo)?.reason || '文件生成失败' }))
+    })
 
     await fastify.prisma.$transaction(async tx => {
       for (const row of tasks) {

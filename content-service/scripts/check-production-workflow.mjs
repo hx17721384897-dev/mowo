@@ -21,6 +21,7 @@ try {
   assert(schema.includes('model ProductionUnitPairing') && schema.includes('model ProductionPackingSession'), '数据库持久保存单件配对与整单装箱会话')
   assert(routes.includes('PENDING_ADDRESS_EXPORT') && routes.includes('WAITING_TRACKING') && routes.includes('READY_FOR_PRODUCTION'), '后端实现待处理、处理中和待生产阶段')
   assert(routes.includes('export-production') && routes.includes('framePackCode'), '首次生产资料导出会建立帧包身份并启动两条生产线')
+  assert(routes.includes('ensureBatchPrintFiles') && routes.includes('再次导出时系统会自动补生成'), '补上传模板后可以为旧批次自动补生成 Word')
   assert(routes.includes('kitAssemblyBatch.updateMany') && routes.includes('skuInventory.updateMany'), '材料包配对采用条件扣减并同步汇总库存')
   assert(routes.includes('refreshReadyToShip') && routes.includes("fulfillmentStatus: 'SHIPPED'"), '全部单件装箱完成后才允许发货')
   assert(oldAdmin.includes('正式 PB 批次必须走总订单地址导出'), '旧地址导出不能覆盖正式生产批次')
