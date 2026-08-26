@@ -121,6 +121,11 @@ try {
   const storedFile = await prisma.productionPrintFile.findUnique({ where: { id: generated.data.id }, include: { render: true } })
   physicalKeys.push(storedFile.objectKey, ...(Array.isArray(storedFile.render.frameKeys) ? storedFile.render.frameKeys : []))
   assert(storedFile.targetFrameCount === 24 && storedFile.render.frameKeys.length === 4, '24 帧文档只保存 4 张循环拼接帧')
+  assert(storedFile.render.frameKeys.every((key, index) => key.endsWith(`/frame-${String(index + 1).padStart(3, '0')}.png`)), '加工帧在独立任务目录内按 frame-001.png 顺序命名')
+
+  const renderFramesResponse = await request(`/api/admin/frame-library/${assetId}/production-files/${generated.data.id}/frames`, token)
+  const renderFrames = (await renderFramesResponse.json()).data
+  assert(renderFramesResponse.status === 200 && renderFrames.frames.length === 4 && renderFrames.frames[0].name === 'frame-001.png', '加工帧预览接口按顺序返回友好文件名和临时地址')
 
   const detailResponse = await request(`/api/admin/frame-library/${assetId}`, token)
   const detail = (await detailResponse.json()).data
@@ -143,10 +148,18 @@ try {
   await page.getByText(asset.assetNo).first().click()
   await page.getByRole('button', { name: '新增文件版本' }).waitFor()
   assert((await page.getByText('生产文件', { exact: true }).count()) >= 1, '资产详情包含独立生产文件模块')
+  assert((await page.getByRole('button', { name: '查看加工帧' }).count()) >= 1 && (await page.getByRole('button', { name: '删除' }).count()) >= 1, '未入批生产文件提供加工帧预览和负责人删除入口')
+  await page.getByRole('button', { name: '查看加工帧' }).first().click()
+  await page.locator('#renderFramesGrid img').first().waitFor()
+  assert((await page.locator('#renderFramesGrid img').count()) === 4 && (await page.getByText('frame-001.png').count()) === 1, '加工帧弹窗按序号展示全部编辑图片')
+  await page.getByRole('button', { name: '关闭' }).last().click()
   await page.getByRole('button', { name: '新增文件版本' }).click()
   await page.locator('#productionTargetFrames').fill('24')
   assert((await page.locator(`#productionTemplate option[value="${uploadPayload.data.id}"]`).count()) === 1, '新增文件时会列出本次验证通过的兼容模板')
   await context.close()
+
+  const deleteResponse = await request(`/api/admin/frame-library/${assetId}/production-files/${generated.data.id}`, token, { method: 'DELETE' })
+  assert(deleteResponse.status === 200 && !await prisma.productionPrintFile.findUnique({ where: { id: generated.data.id } }) && !fs.existsSync(path.resolve(storageRoot, ...storedFile.objectKey.split('/'))), '负责人可删除未入批的 Word 记录和物理文件')
   console.log('Production artifact integration checks passed')
 } finally {
   if (browser) await browser.close().catch(() => {})

@@ -209,7 +209,8 @@ export default async function frameLibraryRoutes(fastify) {
         collabWorks: { orderBy: { createdAt: 'desc' }, take: 20, select: { id: true, title: true, status: true, shelfStatus: true, createdAt: true } },
         productionFiles: { orderBy: [{ createdAt: 'desc' }], include: {
           animationVersion: { select: { versionNo: true, baseFrameCount: true } },
-          templateVersion: { include: { group: true } }
+          templateVersion: { include: { group: true } },
+          render: { select: { size: true, widthPx: true, heightPx: true, markerEnabled: true, frameKeys: true } }
         } },
         _count: { select: { customProducts: true, versions: true, customizationRequests: true, salesOrderItems: true, collabWorks: true } }
       }
@@ -227,6 +228,9 @@ export default async function frameLibraryRoutes(fastify) {
         fileVersionNo: file.fileVersionNo, sourceType: file.sourceType, productionBatchId: file.productionBatchId,
         status: file.status, createdAt: file.createdAt, animationVersionNo: file.animationVersion.versionNo,
         groupName: file.templateVersion.group.name, templateVersionNo: file.templateVersion.versionNo,
+        renderedFrameCount: Array.isArray(file.render.frameKeys) ? file.render.frameKeys.length : 0,
+        renderSize: file.render.size, canDelete: request.user.staffRole === 'OWNER' && !file.productionBatchId,
+        deleteBlockedReason: file.productionBatchId ? '已绑定生产批次，不能删除' : null,
         downloadUrl: signedUrl(fastify, file.objectKey, 900)
       })),
       createdByStaff: undefined
@@ -274,6 +278,52 @@ export default async function frameLibraryRoutes(fastify) {
     } catch (error) {
       return reply.code(400).send({ success: false, message: error.message })
     }
+  })
+
+  fastify.get('/:id/production-files/:fileId/frames', async (request, reply) => {
+    const file = await prisma.productionPrintFile.findFirst({
+      where: { id: request.params.fileId, assetId: request.params.id },
+      include: {
+        asset: { select: { assetNo: true } },
+        animationVersion: { select: { versionNo: true } },
+        render: true
+      }
+    })
+    if (!file) return reply.code(404).send({ success: false, message: '生产文件不存在' })
+    const keys = Array.isArray(file.render.frameKeys) ? file.render.frameKeys : []
+    await prisma.auditLog.create({ data: {
+      userId: request.user.userId, action: 'PRODUCTION_RENDER_FRAMES_VIEWED', targetId: file.id,
+      detail: { assetNo: file.asset.assetNo, animationVersionNo: file.animationVersion.versionNo, frameCount: keys.length }, ip: request.ip
+    } })
+    return reply.send({ success: true, data: {
+      fileId: file.id, displayName: file.displayName, animationVersionNo: file.animationVersion.versionNo,
+      size: file.render.size, widthPx: file.render.widthPx, heightPx: file.render.heightPx,
+      markerEnabled: file.render.markerEnabled,
+      frames: keys.map((key, index) => ({
+        index: index + 1, name: `frame-${String(index + 1).padStart(3, '0')}.png`, url: signedUrl(fastify, key, 900)
+      }))
+    } })
+  })
+
+  fastify.delete('/:id/production-files/:fileId', async (request, reply) => {
+    if (!ownerOnly(request, reply)) return
+    const file = await prisma.productionPrintFile.findFirst({
+      where: { id: request.params.fileId, assetId: request.params.id },
+      include: { asset: { select: { assetNo: true } } }
+    })
+    if (!file) return reply.code(404).send({ success: false, message: '生产文件不存在' })
+    if (file.productionBatchId) {
+      return reply.code(409).send({ success: false, message: '该文件已经绑定生产批次，不能删除；请在生产异常流程中处理' })
+    }
+    await prisma.$transaction(async tx => {
+      await tx.productionPrintFile.delete({ where: { id: file.id } })
+      await tx.auditLog.create({ data: {
+        userId: request.user.userId, action: 'PRODUCTION_PRINT_FILE_DELETED', targetId: file.id,
+        detail: { assetNo: file.asset.assetNo, displayName: file.displayName, objectKey: file.objectKey }, ip: request.ip
+      } })
+    })
+    await fastify.storageDelete(file.objectKey).catch(error => fastify.log.warn({ error, key: file.objectKey }, '生产文件物理清理失败'))
+    return reply.send({ success: true, message: '生产文件已删除' })
   })
 
   fastify.post('/', async (request, reply) => {

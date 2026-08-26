@@ -176,18 +176,20 @@ export async function ensureFrameRender(fastify, animationVersion, group, marker
   const sourceBuffers = await Promise.all(sourceKeys.map(key => fastify.storageGetBuffer(key)))
   const frameBuffers = []
   const outputKeys = []
+  const renderId = crypto.randomUUID()
   for (let index = 0; index < sourceBuffers.length; index++) {
     const output = await composeFrame(sourceBuffers[index], sourceBuffers[(index + 1) % sourceBuffers.length], {
       widthPx, heightPx, dpi: group.renderDpi, separatorMicrons: group.separatorMicrons, markerEnabled
     }, index + 1)
-    const key = `generated/production-renders/${animationVersion.id}/${crypto.randomUUID()}-${index + 1}.png`
+    const frameName = `frame-${String(index + 1).padStart(3, '0')}.png`
+    const key = `generated/production-renders/${animationVersion.id}/${renderId}/${frameName}`
     await fastify.storagePut(key, output, { headers: { 'Content-Type': 'image/png' } })
     frameBuffers.push(output)
     outputKeys.push(key)
   }
   const manifestHash = sha256(JSON.stringify({ source: animationVersion.manifestHash, output: outputKeys.map((_, index) => sha256(frameBuffers[index])), spec, widthPx, heightPx }))
   return fastify.prisma.productionFrameRender.create({ data: {
-    ...spec, widthPx, heightPx, frameKeys: outputKeys, manifestHash, status: 'READY'
+    id: renderId, ...spec, widthPx, heightPx, frameKeys: outputKeys, manifestHash, status: 'READY'
   } })
 }
 
