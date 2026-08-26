@@ -920,6 +920,21 @@ export default async function adminRoutes(fastify) {
     if (!selectedOrders.length)
       return reply.code(400).send({ success: false, message: '没有可导出的已付款订单' })
 
+    // 正式 PB 批次必须走总订单地址导出；旧接口不得覆盖 PU 的正式批次号。
+    const selectedItemIds = [...new Set(selectedOrders.map(order => order.salesOrderItemId).filter(Boolean))]
+    if (selectedItemIds.length) {
+      const items = await fastify.prisma.salesOrderItem.findMany({
+        where: { id: { in: selectedItemIds } }, select: { salesOrderId: true }
+      })
+      const membership = await fastify.prisma.productionBatchOrder.findFirst({
+        where: { salesOrderId: { in: [...new Set(items.map(item => item.salesOrderId))] }, batch: { status: { in: ['READY', 'IN_PROGRESS'] } } }
+      })
+      if (membership) return reply.code(409).send({
+        success: false,
+        message: `所选订单已经进入正式生产批次 ${membership.batchId}，请到“生产批次”页面按总订单导出地址`
+      })
+    }
+
     // 2. 查所有涉及的SKU和款式（计算 globalSort）
     const skuIds   = [...new Set(selectedOrders.map(o => o.skuId).filter(Boolean))]
     const skus     = await fastify.prisma.machineModelSku.findMany({
@@ -1079,6 +1094,22 @@ export default async function adminRoutes(fastify) {
     const { pairs } = req.body
     if (!Array.isArray(pairs) || !pairs.length)
       return reply.code(400).send({ success: false, message: 'pairs不能为空' })
+
+    const selected = await fastify.prisma.customizeOrder.findMany({
+      where: { orderNo: { in: pairs.map(pair => pair.orderNo).filter(Boolean) } },
+      select: { salesOrderItemId: true }
+    })
+    const itemIds = [...new Set(selected.map(order => order.salesOrderItemId).filter(Boolean))]
+    if (itemIds.length) {
+      const items = await fastify.prisma.salesOrderItem.findMany({ where: { id: { in: itemIds } }, select: { salesOrderId: true } })
+      const membership = await fastify.prisma.productionBatchOrder.findFirst({
+        where: { salesOrderId: { in: [...new Set(items.map(item => item.salesOrderId))] }, batch: { status: { in: ['READY', 'IN_PROGRESS'] } } }
+      })
+      if (membership) return reply.code(409).send({
+        success: false,
+        message: `所选订单属于正式生产批次 ${membership.batchId}，面单必须按总订单在“生产批次”页面绑定`
+      })
+    }
 
     const results = []
     const errors  = []

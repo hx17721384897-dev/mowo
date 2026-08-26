@@ -300,6 +300,17 @@ export default async function productionBatchRoutes(fastify) {
     }) : []
     const unitById = new Map(batch.units.map(unit => [unit.productionUnitId, unit]))
     const availability = await getKitAvailability(fastify.prisma, batch.batchItems.map(item => item.skuId))
+    const [productionFiles, framePacks, pairings] = await Promise.all([
+      fastify.prisma.productionPrintFile.findMany({
+        where: { productionBatchId: batch.id, status: 'READY' },
+        select: { id: true, displayName: true, targetFrameCount: true, animationVersionId: true, objectKey: true, createdAt: true },
+        orderBy: { createdAt: 'asc' }
+      }),
+      fastify.prisma.productionFramePack.findMany({ where: { batchId: batch.id, isActive: true } }),
+      fastify.prisma.productionUnitPairing.findMany({ where: { batchId: batch.id, status: { not: 'VOID' } } })
+    ])
+    const packByUnit = new Map(framePacks.map(pack => [pack.productionUnitId, pack]))
+    const pairingByUnit = new Map(pairings.map(pairing => [pairing.productionUnitId, pairing]))
 
     const orders = salesOrders.map(order => ({
       id: order.id,
@@ -308,6 +319,9 @@ export default async function productionBatchRoutes(fastify) {
       receiverPhone: order.receiverPhone,
       receiverCity: order.receiverCity,
       receiverAddress: order.receiverAddress,
+      fulfillmentStatus: order.fulfillmentStatus,
+      trackingNo: order.trackingNo,
+      trackingCompany: order.trackingCompany,
       warningSnapshot: batch.orders.find(row => row.salesOrderId === order.id)?.warningSnapshot || [],
       items: order.items.map(item => ({
         id: item.id,
@@ -319,7 +333,9 @@ export default async function productionBatchRoutes(fastify) {
           id: task.id,
           productionNo: task.orderNo,
           specification: `${task.modelName} · ${task.frameCount}帧 · ${task.size} · ${task.material} · ${task.colorName}`,
-          workflow: unitById.get(task.id) || null
+          workflow: unitById.get(task.id) || null,
+          framePack: packByUnit.get(task.id) || null,
+          pairing: pairingByUnit.get(task.id) || null
         }))
       }))
     }))
@@ -340,6 +356,10 @@ export default async function productionBatchRoutes(fastify) {
       },
       progress: summarizeUnits(batch.units),
       materialDemand,
+      productionFiles: await Promise.all(productionFiles.map(async file => ({
+        id: file.id, displayName: file.displayName, targetFrameCount: file.targetFrameCount,
+        createdAt: file.createdAt, downloadUrl: await fastify.storagePresignGet(file.objectKey, 900)
+      }))),
       printQueue: batch.units.map(unit => ({
         productionUnitId: unit.productionUnitId,
         productionNo: unit.productionNoSnapshot,
@@ -448,6 +468,10 @@ export default async function productionBatchRoutes(fastify) {
         if (claimed.count !== taskIds.length) {
           throw Object.assign(new Error('部分生产任务刚刚被其他批次领取，请刷新后重试'), { code: 'BATCH_RACE' })
         }
+        await tx.salesOrder.updateMany({
+          where: { id: { in: salesOrderIds } },
+          data: { fulfillmentStatus: 'PENDING_ADDRESS_EXPORT' }
+        })
       })
     } catch (error) {
       if (['ACTIVE_BATCH_EXISTS', 'BATCH_RACE'].includes(error.code)) {
@@ -473,7 +497,10 @@ export default async function productionBatchRoutes(fastify) {
       const animationVersionId = row.task.item?.animationVersionId
       const assetId = row.task.item?.animationAssetId
       const template = row.entry?.group?.templates?.find(item => item.status === 'ACTIVE')
-      if (!assetId || !animationVersionId || !template) continue
+      if (!assetId || !animationVersionId || !template) {
+        artifactErrors.push({ productionNo: row.task.orderNo, message: !template ? '打印裁切组尚未上传有效 Word 模板' : '订单缺少动画资产或锁定版本' })
+        continue
+      }
       const key = `${animationVersionId}:${template.id}:${row.task.frameCount}`
       if (generatedSpecs.has(key)) continue
       generatedSpecs.add(key)

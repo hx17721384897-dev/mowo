@@ -23,6 +23,7 @@
           ]
         },
         { href: 'admin-production-batches.html',       icon: '▦', label: '生产批次' },
+        { href: 'production-scan.html',                icon: '⌁', label: '扫码生产' },
         { href: 'admin-print-production.html',         icon: '↕', label: '打印与裁切设置' },
         { href: 'admin-import.html',                 icon: '📥', label: '定制导入' }
       ]

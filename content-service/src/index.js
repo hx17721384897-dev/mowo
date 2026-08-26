@@ -46,6 +46,7 @@ import adminCustomizationRequestRoutes from './routes/admin-customization-reques
 import materialsRoutes    from './routes/materials.js'
 import framePacksRoutes  from './routes/frame-packs.js'
 import productionBatchRoutes from './routes/production-batches.js'
+import productionWorkflowRoutes from './routes/production-workflow.js'
 import printProductionRoutes from './routes/print-production.js'
 import frameLibraryRoutes from './routes/frame-library.js'
 import frameMakingRoutes from './routes/frame-making.js'
@@ -220,6 +221,7 @@ async function start() {
     await fastify.register(materialsRoutes,      { prefix: '/api/materials' })
     await fastify.register(framePacksRoutes,    { prefix: '/api/frame-packs' })
     await fastify.register(productionBatchRoutes, { prefix: '/api/admin/production-batches' })
+    await fastify.register(productionWorkflowRoutes, { prefix: '/api/admin/production-workflow' })
     await fastify.register(printProductionRoutes, { prefix: '/api/admin/print-production' })
     await fastify.register(frameLibraryRoutes, { prefix: '/api/admin/frame-library' })
     await fastify.register(frameMakingRoutes, { prefix: '/api/admin/frame-making' })

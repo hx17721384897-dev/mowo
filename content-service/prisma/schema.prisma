@@ -2118,6 +2118,16 @@ model SalesOrder {
   paidAt          DateTime? @map("paid_at")
   cancelledAt     DateTime? @map("cancelled_at")
   receivedAt      DateTime? @map("received_at")
+  fulfillmentStatus String   @default("PAID") @map("fulfillment_status") @db.VarChar(30)
+  // PAID / PENDING_ADDRESS_EXPORT / WAITING_TRACKING / READY_FOR_PRODUCTION /
+  // PRODUCING / READY_TO_SHIP / SHIPPED
+  addressExportedAt DateTime? @map("address_exported_at")
+  trackingNo        String?   @map("tracking_no") @db.VarChar(100)
+  trackingCompany   String?   @map("tracking_company") @db.VarChar(100)
+  trackingBoundAt   DateTime? @map("tracking_bound_at")
+  productionStartedAt DateTime? @map("production_started_at")
+  readyToShipAt     DateTime? @map("ready_to_ship_at")
+  shippedAt         DateTime? @map("shipped_at")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
@@ -2128,6 +2138,90 @@ model SalesOrder {
 
   @@index([userId, status, createdAt])
   @@map("sales_orders")
+}
+
+// 私人定制帧素材包的单件身份。一个 PU 重做时递增 attemptNo，旧尝试保留为 VOID。
+model ProductionFramePack {
+  id                 String   @id @default(uuid())
+  code               String   @unique @db.VarChar(80)
+  productionUnitId   String   @map("production_unit_id")
+  salesOrderId       String   @map("sales_order_id")
+  batchId            String   @map("batch_id") @db.VarChar(40)
+  skuId              String   @map("sku_id")
+  animationVersionId String?  @map("animation_version_id")
+  targetFrameCount   Int      @map("target_frame_count")
+  size               String   @db.VarChar(30)
+  attemptNo          Int      @default(1) @map("attempt_no")
+  status             String   @default("CREATED") @db.VarChar(20)
+  // CREATED / IN_PROGRESS / PAIRED / PACKED / SHIPPED / VOID
+  isActive           Boolean  @default(true) @map("is_active")
+  createdBy          String   @map("created_by")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@unique([productionUnitId, attemptNo])
+  @@index([batchId, status])
+  @@index([salesOrderId, status])
+  @@map("production_frame_packs")
+}
+
+// 帧包与标准材料包批次的逐件配对记录。
+model ProductionUnitPairing {
+  id                 String    @id @default(uuid())
+  productionUnitId   String    @unique @map("production_unit_id")
+  salesOrderId       String    @map("sales_order_id")
+  batchId            String    @map("batch_id") @db.VarChar(40)
+  framePackId        String    @unique @map("frame_pack_id")
+  skuId              String    @map("sku_id")
+  kitAssemblyBatchId String    @map("kit_assembly_batch_id")
+  kitContainerId     String?   @map("kit_container_id")
+  status             String    @default("PAIRED") @db.VarChar(20)
+  // PAIRED / PACKED / SHIPPED / VOID
+  pairedBy           String    @map("paired_by")
+  pairedAt           DateTime  @default(now()) @map("paired_at")
+  packedAt           DateTime? @map("packed_at")
+  shippedAt          DateTime? @map("shipped_at")
+
+  @@index([batchId, status])
+  @@index([salesOrderId, status])
+  @@index([kitAssemblyBatchId])
+  @@map("production_unit_pairings")
+}
+
+// 一个总订单只有一个当前装箱会话；扫码结果保存在服务端，刷新页面不会丢失。
+model ProductionPackingSession {
+  id           String    @id @default(uuid())
+  salesOrderId String    @unique @map("sales_order_id")
+  batchId      String    @map("batch_id") @db.VarChar(40)
+  trackingNo   String    @map("tracking_no") @db.VarChar(100)
+  status       String    @default("OPEN") @db.VarChar(20)
+  // OPEN / COMPLETE / SHIPPED
+  startedBy    String    @map("started_by")
+  startedAt    DateTime  @default(now()) @map("started_at")
+  completedAt  DateTime? @map("completed_at")
+  shippedAt    DateTime? @map("shipped_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  scans ProductionPackingScan[]
+
+  @@index([trackingNo])
+  @@index([batchId, status])
+  @@map("production_packing_sessions")
+}
+
+model ProductionPackingScan {
+  id               String   @id @default(uuid())
+  sessionId        String   @map("session_id")
+  productionUnitId String   @map("production_unit_id")
+  framePackId      String   @map("frame_pack_id")
+  scannedBy        String   @map("scanned_by")
+  scannedAt        DateTime @default(now()) @map("scanned_at")
+
+  session ProductionPackingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, productionUnitId])
+  @@index([framePackId])
+  @@map("production_packing_scans")
 }
 
 // 用户订单中的一条商品，锁定成交时的动画版本、SKU、数量和价格快照。

@@ -1,5 +1,21 @@
 # API.md — 哞屋 MOWO 接口文档
 
+## 正式生产履约接口（2026-08-26）
+
+正式 `PB/SO/PU/FP` 流程使用 `/api/admin/production-workflow`，不再使用旧订单接口推进生产状态：
+
+- `POST /batches/:batchId/export-addresses`：每个 `SO` 导出一行地址，首次导出进入处理中。
+- `POST /batches/:batchId/tracking`：按 `SO` 绑定快递面单，进入待生产。
+- `POST /batches/:batchId/export-production`：下载 Word、帧包标签和材料清单；首次成功导出进入生产中并建立唯一 `FP`。
+- `GET /pairing/lookup/:code`：识别 `FP`、`KB` 或 `BX`。
+- `POST /pairing`：校验并记录 `FP + KB/BX` 配对，成功后扣减一套材料包。
+- `GET /packing/:trackingNo`：读取整笔总订单及服务端装箱进度。
+- `POST /packing/:trackingNo/scan`：扫描一个已配对的单件产品。
+- `GET /packing-sessions`：读取待齐套与可发货会话。
+- `POST /packing/:trackingNo/ship`：通过完整性检查后确认发货。
+
+旧 `/api/admin/orders/export-address`、`import-tracking` 和 `batch-export-frames` 只保留历史兼容；一旦订单属于正式活动批次，前两者会拒绝操作，不能覆盖正式批次编号。
+
 > 最后更新：2026-08-20（新增 Web 定制申请首批接口）
 > 后端服务：Node.js + Fastify，端口 **3001**
 > 本地地址：`http://localhost:3001`

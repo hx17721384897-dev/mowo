@@ -863,7 +863,7 @@ window.mowoClearLocalSession = clearLocalSession;
 /* ─────────────────────────────────────────
    页面初始化
 ───────────────────────────────────────── */
-(async function init() {
+async function init() {
   injectCSS();
   injectNavUser();
   injectAuthModal();
@@ -891,4 +891,11 @@ window.mowoClearLocalSession = clearLocalSession;
   if (new URLSearchParams(window.location.search).get('auth') === '1' && !user) {
     openAuthModal();
   }
-})();
+}
+
+// 部分后台页面在 <head> 中加载 auth.js；等待 body 建立后再注入弹窗。
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init, { once: true });
+} else {
+  init();
+}
