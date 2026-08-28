@@ -136,18 +136,19 @@ try {
     snapshotPrice: index === 0 ? '10.00' : '20.00',
     quantity: index === 0 ? 1 : 2
   } })))
-  const preOrder = await prisma.preOrder.create({ data: {
-    userId,
-    cartItemIds: JSON.stringify(cartItems.map(item => item.id)),
-    checkoutIdempotencyKey: `sales-order-test-${runId}`,
-    totalAmount: '50.00',
-    receiverName: '订单测试',
-    receiverPhone: phone,
-    receiverAddress: '测试地址 1 号',
-    receiverCity: '测试市',
-    expiresAt: new Date(Date.now() + 600000)
-  } })
+  const checkoutResponse = await request('/api/cart/checkout', token, {
+    method: 'POST', body: JSON.stringify({
+      cartItemIds: [cartItems[0].id, cartItems[1].id, cartItems[1].id],
+      receiverName: '订单测试', receiverPhone: phone,
+      receiverAddress: '测试地址 1 号', receiverCity: '测试市',
+      idempotencyKey: `sales-order-test-${runId}`
+    })
+  })
+  assert(checkoutResponse.status === 200, '结算接口接受数量合并后重复出现的购物车 ID')
+  const preOrder = (await checkoutResponse.json()).data
   preOrderId = preOrder.id
+  const savedPreOrder = await prisma.preOrder.findUnique({ where: { id: preOrder.id } })
+  assert(JSON.parse(savedPreOrder.cartItemIds).length === 2, '预订单只保存去重后的购物车条目，商品数量保留在条目中')
 
   const payResponses = await Promise.all([1, 2].map(() => request('/api/payment/callback', null, {
     method: 'POST', body: JSON.stringify({ preOrderId: preOrder.id, success: true })
@@ -168,6 +169,15 @@ try {
   assert(retry.status === 200, '重复支付通知安全返回')
   assert(await prisma.salesOrder.count({ where: { preOrderId: preOrder.id } }) === 1, '重复支付不会创建第二个用户订单')
   assert(await prisma.customizeOrder.count({ where: { salesOrderItem: { salesOrderId: order.id } } }) === 3, '重复支付不会创建额外生产任务')
+
+  const brokenPreOrder = await prisma.preOrder.create({ data: {
+    userId, cartItemIds: JSON.stringify(['missing-cart-item']),
+    checkoutIdempotencyKey: `sales-order-broken-${runId}`, totalAmount: '1.00',
+    expiresAt: new Date(Date.now() + 600000)
+  } })
+  const brokenMock = await request(`/api/payment/mock-pay/${brokenPreOrder.id}`, token, { method: 'POST' })
+  assert(brokenMock.status >= 400, '模拟支付在正式订单创建失败时向前端返回失败')
+  assert(await prisma.salesOrder.count({ where: { preOrderId: brokenPreOrder.id } }) === 0, '失败的模拟支付不会留下不完整正式订单')
 
   const listResponse = await request('/api/orders/mine?tab=all', token)
   const list = (await listResponse.json()).data.orders

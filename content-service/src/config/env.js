@@ -256,7 +256,8 @@ export function loadConfig(env = process.env) {
       smsIpDistinctPhonesHourly: 10,
       verifyFailuresPer15Minutes: 10,
       contactIpHourly: 5,
-      uploadAccountPer10Minutes: 60,
+      uploadAccountRequestsPer10Minutes: 30,
+      uploadAccountFilesPer10Minutes: 300,
       uploadAnonymousPerHour: 20
     }),
     storage: Object.freeze({

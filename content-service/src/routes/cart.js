@@ -471,10 +471,15 @@ export default async function cartRoutes(fastify) {
     if (!Array.isArray(cartItemIds) || cartItemIds.length === 0) {
       return reply.code(400).send({ success: false, message: '请选择要结算的商品' })
     }
+    // 相同定制配置会在购物车中合并数量，结算只传一次条目 ID。
+    const uniqueCartItemIds = [...new Set(cartItemIds.map(id => String(id || '').trim()).filter(Boolean))]
+    if (!uniqueCartItemIds.length) {
+      return reply.code(400).send({ success: false, message: '请选择要结算的商品' })
+    }
 
     // 幂等 key
     const checkoutKey = idempotencyKey || crypto.createHash('sha256')
-      .update(`${userId}_${cartItemIds.sort().join(',')}_${Date.now()}`)
+      .update(`${userId}_${[...uniqueCartItemIds].sort().join(',')}_${Date.now()}`)
       .digest('hex')
 
     // 幂等检查：相同 user + 相同 items 是否有 pending_payment 预订单
@@ -493,12 +498,12 @@ export default async function cartRoutes(fastify) {
     // 取出选定的购物车条目
     const items = await prisma.cartItem.findMany({
       where: {
-        id: { in: cartItemIds },
+        id: { in: uniqueCartItemIds },
         cart: { userId }
       }
     })
-    if (items.length === 0) {
-      return reply.code(400).send({ success: false, message: '购物车条目不存在' })
+    if (items.length !== uniqueCartItemIds.length) {
+      return reply.code(400).send({ success: false, message: '部分购物车条目不存在或不属于当前账号' })
     }
 
     // 全量校验
@@ -564,7 +569,7 @@ export default async function cartRoutes(fastify) {
     const preOrder = await prisma.preOrder.create({
       data: {
         userId,
-        cartItemIds: JSON.stringify(cartItemIds),
+        cartItemIds: JSON.stringify(uniqueCartItemIds),
         checkoutIdempotencyKey: checkoutKey,
         status: 'pending_payment',
         totalAmount: totalAmount.toFixed(2),

@@ -104,6 +104,26 @@ try {
   const userA = await createLogin('user-a', 5)
   const userB = await createLogin('user-b', 6)
 
+  const frameBatch = await request('/api/upload/presign-batch', userA.token, {
+    method: 'POST',
+    body: JSON.stringify({
+      purpose: 'CUSTOMIZATION_FRAME',
+      files: Array.from({ length: 24 }, (_, index) => ({
+        fileName: `frame-${index + 1}.png`, fileType: 'image/png', fileSize: PNG.length
+      }))
+    })
+  })
+  assertStatus('one 24-frame upload is accepted as one normal operation', frameBatch.status, 200)
+  const uploadBuckets = await prisma.rateLimitBucket.findMany({
+    where: { scope: { in: ['UPLOAD_ACCOUNT_REQUESTS_10_MINUTES', 'UPLOAD_ACCOUNT_FILES_10_MINUTES'] } },
+    orderBy: { updatedAt: 'desc' }, take: 2
+  })
+  if (!uploadBuckets.some(bucket => bucket.scope === 'UPLOAD_ACCOUNT_REQUESTS_10_MINUTES' && bucket.count === 1)
+    || !uploadBuckets.some(bucket => bucket.scope === 'UPLOAD_ACCOUNT_FILES_10_MINUTES' && bucket.count === 24)) {
+    throw new Error('account upload request and file budgets were not counted separately')
+  }
+  console.log('PASS upload abuse protection counts operations and file volume separately')
+
   const avatarKey = await uploadFile(userA, 'AVATAR', PNG, 'image/png', 'avatar.png')
   const avatarFile = await prisma.privateFile.findUnique({ where: { objectKey: avatarKey } })
   assertStatus('unadopted avatar is not public', (await request(`/api/upload/public/${avatarFile.id}`)).status, 404)

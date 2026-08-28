@@ -216,7 +216,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 从 sessionStorage 获取待结算的 CartItem IDs
   try {
     const stored = sessionStorage.getItem('mowo_checkout_items')
-    if (stored) cartItemIds = JSON.parse(stored)
+    if (stored) cartItemIds = [...new Set(JSON.parse(stored))]
   } catch {}
 
   if (!cartItemIds.length) {

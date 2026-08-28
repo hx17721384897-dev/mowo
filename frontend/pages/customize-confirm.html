@@ -1428,7 +1428,7 @@ async function goBuy() {
       });
       const cartJson = await cartRes.json();
       if (!cartJson.success) throw new Error(cartJson.message || '加入购物车失败');
-      cartItemIds.push(cartJson.data.id);
+      if (!cartItemIds.includes(cartJson.data.id)) cartItemIds.push(cartJson.data.id);
     }
 
     // 3. 跳转结算页

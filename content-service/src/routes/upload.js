@@ -115,20 +115,28 @@ export default async function uploadRoutes(fastify) {
     }
   }
 
-  async function allowUploadRegistration(request, reply, cost = 1) {
+  async function allowUploadRegistration(request, reply, fileCount = 1) {
     const ownerUserId = request.user?.userId || null
     const anonymousHash = ownerUserId ? null : anonymousOwnerHash(
       fastify.config.storage.signingSecret,
       request.headers['x-upload-session']
     )
-    return enforceRateLimit(fastify, request, reply, ownerUserId ? {
-      scope: 'UPLOAD_ACCOUNT_10_MINUTES', subject: ownerUserId,
-      windowMs: 10 * 60 * 1000, limit: fastify.config.rateLimits.uploadAccountPer10Minutes,
-      cost, message: '上传申请过于频繁，请10分钟后再试'
-    } : {
+    if (ownerUserId) {
+      if (!await enforceRateLimit(fastify, request, reply, {
+        scope: 'UPLOAD_ACCOUNT_REQUESTS_10_MINUTES', subject: ownerUserId,
+        windowMs: 10 * 60 * 1000, limit: fastify.config.rateLimits.uploadAccountRequestsPer10Minutes,
+        cost: 1, message: '上传操作过于频繁，请10分钟后再试'
+      })) return false
+      return enforceRateLimit(fastify, request, reply, {
+        scope: 'UPLOAD_ACCOUNT_FILES_10_MINUTES', subject: ownerUserId,
+        windowMs: 10 * 60 * 1000, limit: fastify.config.rateLimits.uploadAccountFilesPer10Minutes,
+        cost: fileCount, message: '10分钟内上传的文件数量过多，请稍后再试'
+      })
+    }
+    return enforceRateLimit(fastify, request, reply, {
       scope: 'UPLOAD_ANONYMOUS_HOURLY', subject: anonymousHash || request.ip,
       windowMs: 60 * 60 * 1000, limit: fastify.config.rateLimits.uploadAnonymousPerHour,
-      cost, message: '匿名上传申请过于频繁，请一小时后再试'
+      cost: fileCount, message: '匿名上传申请过于频繁，请一小时后再试'
     })
   }
 

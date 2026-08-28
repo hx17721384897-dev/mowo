@@ -34,7 +34,8 @@ export default async function paymentRoutes(fastify) {
     if (preOrder.status !== 'pending_payment') {
       // 幂等：已处理过直接返回 OK
       const salesOrder = await prisma.salesOrder.findUnique({ where: { preOrderId } })
-      return reply.send({ success: true, message: '已处理', data: salesOrder })
+      if (salesOrder) return reply.send({ success: true, message: '已处理', data: salesOrder })
+      return reply.code(409).send({ success: false, message: `预订单当前状态为 ${preOrder.status}，尚未生成正式订单` })
     }
 
     if (paySuccess === false || paySuccess === 'false') {
@@ -64,6 +65,7 @@ export default async function paymentRoutes(fastify) {
       // 取出 CartItem
       let cartItemIds = []
       try { cartItemIds = JSON.parse(preOrder.cartItemIds) } catch {}
+      cartItemIds = [...new Set(cartItemIds.map(id => String(id || '').trim()).filter(Boolean))]
 
       const items = await tx.cartItem.findMany({
         where: { id: { in: cartItemIds } }
@@ -245,11 +247,19 @@ export default async function paymentRoutes(fastify) {
       url: '/api/payment/callback',
       payload: { preOrderId, success: true }
     })
+    const callbackBody = callbackRes.json()
+    if (callbackRes.statusCode >= 400 || !callbackBody?.success || !callbackBody?.data?.id) {
+      return reply.code(callbackRes.statusCode >= 400 ? callbackRes.statusCode : 500).send({
+        success: false,
+        message: callbackBody?.message || '模拟支付未能创建正式订单'
+      })
+    }
 
     return reply.send({
       success: true,
       message: 'Mock 支付成功',
-      callbackStatus: callbackRes.statusCode
+      callbackStatus: callbackRes.statusCode,
+      data: callbackBody.data
     })
   })
 }
