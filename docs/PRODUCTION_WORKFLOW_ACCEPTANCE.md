@@ -56,4 +56,4 @@
 
 专项命令：`npm run check:production-workflow`、`npm run check:production-scan-ui`。
 
-负责人端到端手工测试使用 `PRODUCTION_MANUAL_TEST_PLAN.md`，其中固定了三类订单、虚拟地址、快递单号、现有材料批次码和 `FP` 记录表。
+当前负责人端到端手工测试使用 `PRODUCTION_MANUAL_TEST_PLAN_STANDARD_6SKU.md`，以四个总订单覆盖标准款 5x5cm、8x8cm 的 12/16/24 帧六种原色 SKU。旧三订单方案保留在 `PRODUCTION_MANUAL_TEST_PLAN.md` 作为历史记录。

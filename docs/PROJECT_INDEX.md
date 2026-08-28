@@ -28,7 +28,7 @@
 17. `docs/PRODUCTION_BATCH_WORKFLOW.md`：材料包款生产批次、帧素材与材料并行作业、阶段边界和验收记录。
 18. `docs/PRINT_PRODUCTION_PLANNING.md`：打印裁切组、Word 模板版本、无损拼接帧、生产文件、订单筛选和批次快照。
 19. `docs/PRODUCTION_WORKFLOW_ACCEPTANCE.md`：当前生产闭环的自动检查、人工验收范围和已知边界。
-20. `docs/PRODUCTION_MANUAL_TEST_PLAN.md`：负责人从三笔模拟订单开始，完成地址、面单、打印、领料、配对、装箱和发货的逐步测试数据与操作清单。
+20. `docs/PRODUCTION_MANUAL_TEST_PLAN_STANDARD_6SKU.md`：当前标准款六规格的正式端到端测试，使用四个订单覆盖地址、面单、多页打印、领料、配对、齐套装箱和发货；旧三订单方案保留在 `PRODUCTION_MANUAL_TEST_PLAN.md` 作为历史记录。
 
 ## 文档分层
 
