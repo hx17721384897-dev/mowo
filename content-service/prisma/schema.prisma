@@ -2155,6 +2155,11 @@ model ProductionFramePack {
   status             String   @default("CREATED") @db.VarChar(20)
   // CREATED / IN_PROGRESS / PAIRED / PACKED / SHIPPED / VOID
   isActive           Boolean  @default(true) @map("is_active")
+  printFileId        String?  @map("print_file_id")
+  requestedPages     Json?    @map("requested_pages")
+  voidReason         String?  @map("void_reason") @db.Text
+  voidedBy           String?  @map("voided_by")
+  voidedAt           DateTime? @map("voided_at")
   createdBy          String   @map("created_by")
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
@@ -2163,6 +2168,27 @@ model ProductionFramePack {
   @@index([batchId, status])
   @@index([salesOrderId, status])
   @@map("production_frame_packs")
+}
+
+// 单件帧素材包返工记录。每次返工都生成新 FP 尝试，旧码永久失效。
+model ProductionFrameReprint {
+  id                   String   @id @default(uuid())
+  productionUnitId     String   @map("production_unit_id")
+  salesOrderId         String   @map("sales_order_id")
+  batchId              String   @map("batch_id") @db.VarChar(40)
+  oldFramePackId       String   @map("old_frame_pack_id")
+  oldFramePackCode     String   @map("old_frame_pack_code") @db.VarChar(80)
+  newFramePackId       String   @map("new_frame_pack_id")
+  newFramePackCode     String   @map("new_frame_pack_code") @db.VarChar(80)
+  productionPrintFileId String  @map("production_print_file_id")
+  requestedPages       Json     @map("requested_pages")
+  reason               String   @db.Text
+  requestedBy          String   @map("requested_by")
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  @@index([productionUnitId, createdAt])
+  @@index([batchId, createdAt])
+  @@map("production_frame_reprints")
 }
 
 // 帧包与标准材料包批次的逐件配对记录。

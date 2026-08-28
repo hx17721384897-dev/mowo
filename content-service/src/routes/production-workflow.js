@@ -56,7 +56,7 @@ function allTasks(orders) {
 
 async function ensureBatchPrintFiles(fastify, context, createdBy) {
   let files = await fastify.prisma.productionPrintFile.findMany({
-    where: { productionBatchId: context.batch.id, status: 'READY' },
+    where: { productionBatchId: context.batch.id, status: 'READY', sourceType: { not: 'REPRINT' } },
     include: { asset: { select: { assetNo: true } } }, orderBy: { createdAt: 'asc' }
   })
   const rows = allTasks(context.orders)
@@ -88,7 +88,7 @@ async function ensureBatchPrintFiles(fastify, context, createdBy) {
     }
   }
   files = await fastify.prisma.productionPrintFile.findMany({
-    where: { productionBatchId: context.batch.id, status: 'READY' },
+    where: { productionBatchId: context.batch.id, status: 'READY', sourceType: { not: 'REPRINT' } },
     include: { asset: { select: { assetNo: true } } }, orderBy: { createdAt: 'asc' }
   })
   return { files, errors }
@@ -116,6 +116,82 @@ async function refreshReadyToShip(tx, salesOrderId) {
 export default async function productionWorkflowRoutes(fastify) {
   const requireAdmin = fastify.requireRole(2)
   const requireProduction = fastify.requireRole(1)
+
+  // 正式订单工作队列。后台各环节页和批次总览共用这一份数据。
+  fastify.get('/orders', { preHandler: requireAdmin }, async (req, reply) => {
+    const fulfillmentStatus = String(req.query?.status || '').trim()
+    const batchId = String(req.query?.batchId || '').trim()
+    const q = String(req.query?.q || '').trim()
+    const allowed = ['PAID', 'PENDING_ADDRESS_EXPORT', 'WAITING_TRACKING', 'READY_FOR_PRODUCTION', 'PRODUCING', 'READY_TO_SHIP', 'SHIPPED']
+    if (fulfillmentStatus && !allowed.includes(fulfillmentStatus)) {
+      return reply.code(400).send({ success: false, message: '订单环节参数无效' })
+    }
+    const where = {
+      ...(fulfillmentStatus ? { fulfillmentStatus } : {}),
+      ...(q ? { OR: [
+        { orderNo: { contains: q, mode: 'insensitive' } },
+        { receiverName: { contains: q, mode: 'insensitive' } },
+        { receiverPhone: { contains: q } },
+        { trackingNo: { contains: q, mode: 'insensitive' } }
+      ] } : {}),
+      ...(batchId ? { productionBatchOrders: { some: { batchId } } } : {})
+    }
+    const [orders, grouped] = await Promise.all([
+      fastify.prisma.salesOrder.findMany({
+        where,
+        include: {
+          productionBatchOrders: { orderBy: { createdAt: 'desc' }, include: { batch: { select: { id: true, status: true, createdAt: true } } } },
+          items: { include: { productionTasks: { orderBy: { unitIndex: 'asc' } } } }
+        },
+        orderBy: [{ paidAt: 'asc' }, { createdAt: 'asc' }],
+        take: 500
+      }),
+      fastify.prisma.salesOrder.groupBy({ by: ['fulfillmentStatus'], _count: { _all: true } })
+    ])
+    const unitIds = orders.flatMap(order => order.items.flatMap(item => item.productionTasks.map(task => task.id)))
+    const [units, packs, reprints] = unitIds.length ? await Promise.all([
+      fastify.prisma.productionBatchUnit.findMany({ where: { productionUnitId: { in: unitIds } } }),
+      fastify.prisma.productionFramePack.findMany({ where: { productionUnitId: { in: unitIds } }, orderBy: [{ productionUnitId: 'asc' }, { attemptNo: 'desc' }] }),
+      fastify.prisma.productionFrameReprint.findMany({ where: { productionUnitId: { in: unitIds } }, orderBy: { createdAt: 'desc' } })
+    ]) : [[], [], []]
+    const unitMap = new Map(units.map(unit => [unit.productionUnitId, unit]))
+    const packMap = new Map()
+    for (const pack of packs) {
+      const list = packMap.get(pack.productionUnitId) || []
+      list.push(pack)
+      packMap.set(pack.productionUnitId, list)
+    }
+    const reprintMap = new Map()
+    for (const reprint of reprints) {
+      const list = reprintMap.get(reprint.productionUnitId) || []
+      list.push(reprint)
+      reprintMap.set(reprint.productionUnitId, list)
+    }
+    return reply.send({ success: true, data: {
+      orders: orders.map(order => {
+        const membership = order.productionBatchOrders[0] || null
+        return {
+          id: order.id, orderNo: order.orderNo, fulfillmentStatus: order.fulfillmentStatus,
+          paidAt: order.paidAt, createdAt: order.createdAt, receiverName: order.receiverName,
+          receiverPhone: order.receiverPhone, receiverCity: order.receiverCity,
+          receiverAddress: order.receiverAddress, trackingNo: order.trackingNo,
+          trackingCompany: order.trackingCompany, batchId: membership?.batchId || null,
+          batchStatus: membership?.batch?.status || null,
+          itemCount: order.items.reduce((sum, item) => sum + item.quantity, 0),
+          units: order.items.flatMap(item => item.productionTasks.map(task => ({
+            id: task.id, productionNo: task.orderNo, skuId: task.skuId,
+            skuCode: item.skuCode, title: item.snapshotTitle,
+            specification: `${task.modelName} · ${task.size} · ${task.frameCount}帧 · ${task.material} · ${task.colorName}`,
+            printPageCount: unitMap.get(task.id)?.printPageCount || null,
+            workflow: unitMap.get(task.id) || null,
+            framePacks: packMap.get(task.id) || [],
+            reprints: reprintMap.get(task.id) || []
+          })))
+        }
+      }),
+      counts: Object.fromEntries(grouped.map(row => [row.fulfillmentStatus, row._count._all]))
+    } })
+  })
 
   // 每个总订单只导出一行；第一次导出后进入“处理中”。
   fastify.post('/batches/:batchId/export-addresses', { preHandler: requireAdmin }, async (req, reply) => {
@@ -250,6 +326,83 @@ export default async function productionWorkflowRoutes(fastify) {
     reply.header('Content-Type', 'application/zip')
     reply.header('Content-Disposition', `attachment; filename="${context.batch.id}_production.zip"`)
     return reply.send(zip)
+  })
+
+  // 一张打印坏了也必须换新 FP 码；文档只包含员工指定的页。
+  fastify.post('/units/:productionUnitId/reprint', { preHandler: requireAdmin }, async (req, reply) => {
+    const productionUnitId = String(req.params.productionUnitId || '').trim()
+    const reason = String(req.body?.reason || '').trim()
+    const requestedPages = [...new Set((Array.isArray(req.body?.pages) ? req.body.pages : []).map(Number))].sort((a, b) => a - b)
+    if (!reason) return reply.code(400).send({ success: false, message: '请填写返工原因' })
+    const workflowUnit = await fastify.prisma.productionBatchUnit.findFirst({ where: { productionUnitId } })
+    if (!workflowUnit) return reply.code(404).send({ success: false, message: '没有找到该生产件' })
+    const totalPages = Number(workflowUnit.printPageCount || 0)
+    if (!requestedPages.length || requestedPages.some(page => !Number.isInteger(page) || page < 1 || page > totalPages)) {
+      return reply.code(400).send({ success: false, message: `请选择 1-${totalPages} 之间的重印页码` })
+    }
+    const [task, activePack, pairing] = await Promise.all([
+      fastify.prisma.customizeOrder.findUnique({ where: { id: productionUnitId }, include: { salesOrderItem: true } }),
+      fastify.prisma.productionFramePack.findFirst({ where: { productionUnitId, isActive: true } }),
+      fastify.prisma.productionUnitPairing.findUnique({ where: { productionUnitId } })
+    ])
+    if (!task?.salesOrderItem || !activePack) return reply.code(409).send({ success: false, message: '生产件缺少正式订单或当前帧包记录' })
+    if (pairing && pairing.status !== 'VOID') return reply.code(409).send({ success: false, message: '该帧包已经领取材料并完成配对，请先走生产异常退回流程' })
+    if (!workflowUnit.printGroupId) return reply.code(409).send({ success: false, message: '该生产件没有冻结打印裁切组' })
+    const template = await fastify.prisma.printTemplateVersion.findFirst({
+      where: { groupId: workflowUnit.printGroupId, status: 'ACTIVE' }, orderBy: { versionNo: 'desc' }
+    })
+    if (!template) return reply.code(409).send({ success: false, message: '当前打印裁切组没有有效 Word 模板' })
+
+    let printFile
+    try {
+      printFile = await generateProductionFile(fastify, {
+        assetId: task.salesOrderItem.animationAssetId,
+        animationVersionId: task.salesOrderItem.animationVersionId,
+        templateVersionId: template.id,
+        targetFrameCount: task.frameCount,
+        requestedPages,
+        createdBy: req.user.userId,
+        sourceType: 'REPRINT',
+        productionBatchId: workflowUnit.batchId
+      })
+    } catch (error) {
+      return reply.code(409).send({ success: false, message: `返工文件生成失败：${error.message}` })
+    }
+
+    const attemptNo = activePack.attemptNo + 1
+    const newCode = framePackCode(task.orderNo, attemptNo)
+    const result = await fastify.prisma.$transaction(async tx => {
+      await tx.productionFramePack.update({ where: { id: activePack.id }, data: {
+        status: 'VOID', isActive: false, voidReason: reason,
+        voidedBy: req.user.userId, voidedAt: new Date()
+      } })
+      const newPack = await tx.productionFramePack.create({ data: {
+        code: newCode, productionUnitId, salesOrderId: workflowUnit.salesOrderId,
+        batchId: workflowUnit.batchId, skuId: task.skuId,
+        animationVersionId: task.salesOrderItem.animationVersionId,
+        targetFrameCount: task.frameCount, size: task.size, attemptNo,
+        status: 'IN_PROGRESS', isActive: true, printFileId: printFile.id,
+        requestedPages, createdBy: req.user.userId
+      } })
+      const reprint = await tx.productionFrameReprint.create({ data: {
+        productionUnitId, salesOrderId: workflowUnit.salesOrderId, batchId: workflowUnit.batchId,
+        oldFramePackId: activePack.id, oldFramePackCode: activePack.code,
+        newFramePackId: newPack.id, newFramePackCode: newPack.code,
+        productionPrintFileId: printFile.id, requestedPages, reason,
+        requestedBy: req.user.userId
+      } })
+      await tx.productionBatchUnit.update({ where: { id: workflowUnit.id }, data: {
+        frameStatus: 'IN_PROGRESS', exceptionStatus: 'NORMAL'
+      } })
+      return { newPack, reprint }
+    })
+    await audit(fastify, req, `${task.orderNo} 重印第 ${requestedPages.join('、')} 页；${activePack.code} 作废，启用 ${newCode}`, productionUnitId)
+    return reply.send({ success: true, message: `已生成 ${newCode}，旧码 ${activePack.code} 已失效`, data: {
+      framePackCode: newCode, oldFramePackCode: activePack.code,
+      pages: requestedPages, fileName: printFile.displayName,
+      downloadUrl: await fastify.storagePresignGet(printFile.objectKey, 900),
+      reprintId: result.reprint.id
+    } })
   })
 
   fastify.get('/pairing/lookup/:code', { preHandler: requireProduction }, async (req, reply) => {

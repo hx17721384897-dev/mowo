@@ -4,7 +4,7 @@
 
 ## 同一订单出现两个生产批次
 
-原因通常是先创建了正式 `PB-...`，随后又从旧订单页面导出地址；旧版会额外创建时间格式批次并覆盖单件任务的 `batchId`。2026-08-26 起，正式批次订单会被旧地址导出和旧面单录入接口拒绝。生产操作应统一回到“生产批次”页面。历史测试数据需要以 `ProductionBatchOrder` 和 `ProductionBatchUnit` 的正式关系为准修复，不能直接删除仍有关联的正式批次。
+原因通常是先创建了正式 `PB-...`，随后又从旧订单页面导出地址；旧版会额外创建时间格式批次并覆盖单件任务的 `batchId`。2026-08-28 起，正式批次订单会被旧地址、旧面单和旧帧包导出接口拒绝。生产操作统一在“订单生产”的对应环节完成，“生产批次”只负责创建、总览和跳转。历史测试数据需要以 `ProductionBatchOrder` 和 `ProductionBatchUnit` 的正式关系为准修复，不能直接删除仍有关联的正式批次。
 
 ## 头像为空且控制台显示 NotSameSite 302
 
@@ -112,3 +112,24 @@ npm run test-sms:reset -- 18800009101
 2. 地址应进入 `customize-confirm.html`，并包含非空的 `requestId`。
 3. 在开发者工具“应用程序”中的 Local Storage 检查，不应出现 `mowo_customize_frames`。
 4. 若仍显示旧行为，先在当前页面按 `Ctrl + F5`，再确认网页使用标准 `5500` 地址、后端 `3001` 正常运行。
+## 本地 5500 / 3001 端口判断与重启
+
+本项目本地运行需要两个服务同时存在，不能互相替代：
+
+- `http://127.0.0.1:5500/mowo/frontend/pages/index.html`：前端网页；
+- `http://127.0.0.1:3001/`：后端 API，应返回“哞屋 MOWO API 服务运行中”。
+
+遇到“端口被占用”时不要直接结束 5500，也不要把后端改到 5500。先在浏览器分别打开上面两个地址：
+
+1. 两个都能打开：服务已经运行，无需重启；再次执行 `npm start` 出现 `EADDRINUSE 3001` 只是因为重复启动。
+2. 5500 失败、3001 正常：只在 VS Code/Trae 中停止并重新启动 Live Server，仍使用 5500。
+3. 3001 失败、5500 正常：在 `content-service` 终端运行 `npm start`；只有确认 3001 上是失效的旧进程时，才结束该进程后重启。
+4. 两个都失败：分别启动 Live Server 和 `content-service` 的 `npm start`。
+
+PowerShell 只结束明确端口进程的命令：
+
+```powershell
+Stop-Process -Id (Get-NetTCPConnection -LocalPort 3001 -State Listen).OwningProcess -Force
+```
+
+将 `3001` 换成 `5500` 只适用于前端 Live Server 确实失效且需要重启的情况。停止前应先打开对应网址确认，避免结束仍在正常工作的服务。

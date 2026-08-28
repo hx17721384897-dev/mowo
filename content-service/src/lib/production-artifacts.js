@@ -108,7 +108,7 @@ function ensureDrawingNamespaces(document) {
   })
 }
 
-export function buildProductionDocx(templateBuffer, renderedBuffers, targetFrameCount, group) {
+export function buildProductionDocx(templateBuffer, renderedBuffers, targetFrameCount, group, requestedPages = null) {
   const zip = new AdmZip(templateBuffer)
   const documentEntry = zip.getEntry('word/document.xml')
   let document = ensureDrawingNamespaces(documentEntry.getData().toString('utf8'))
@@ -118,6 +118,12 @@ export function buildProductionDocx(templateBuffer, renderedBuffers, targetFrame
   const section = sectionMatch?.[0] || ''
   const pageTemplate = bodyMatch[1].replace(section, '')
   const pages = targetFrameCount / group.framesPerSheet
+  const selectedPages = Array.isArray(requestedPages) && requestedPages.length
+    ? [...new Set(requestedPages.map(Number))].sort((a, b) => a - b)
+    : Array.from({ length: pages }, (_, index) => index + 1)
+  if (selectedPages.some(page => !Number.isInteger(page) || page < 1 || page > pages)) {
+    throw new Error(`重印页码必须在 1-${pages} 页之间`)
+  }
   const frameSize = parseFrameSizeMm(group.size, group.frameWidthMm, group.frameHeightMm)
   if (!frameSize) throw new Error('打印组没有有效的成品宽高')
   const widthEmu = Math.round(frameSize.width * 36000)
@@ -125,7 +131,8 @@ export function buildProductionDocx(templateBuffer, renderedBuffers, targetFrame
   const relationships = []
   let imageNumber = 0
   const pageXml = []
-  for (let page = 0; page < pages; page++) {
+  for (const pageNumber of selectedPages) {
+    const page = pageNumber - 1
     let cellIndex = 0
     const filled = pageTemplate.replace(/<w:tc([\s\S]*?)<\/w:tc>/g, match => {
       if (cellIndex >= group.framesPerSheet) return match
@@ -142,7 +149,7 @@ export function buildProductionDocx(templateBuffer, renderedBuffers, targetFrame
     })
     if (cellIndex !== group.framesPerSheet) throw new Error(`模板可用单元格为 ${cellIndex} 个，与单页 ${group.framesPerSheet} 帧不一致`)
     pageXml.push(filled)
-    if (page < pages - 1) pageXml.push('<w:p><w:r><w:br w:type="page"/></w:r></w:p>')
+    if (pageNumber !== selectedPages.at(-1)) pageXml.push('<w:p><w:r><w:br w:type="page"/></w:r></w:p>')
   }
   document = document.replace(bodyMatch[0], `<w:body>${pageXml.join('')}${section}</w:body>`)
   zip.updateFile('word/document.xml', Buffer.from(document))
@@ -193,7 +200,7 @@ export async function ensureFrameRender(fastify, animationVersion, group, marker
   } })
 }
 
-export async function generateProductionFile(fastify, { assetId, animationVersionId, templateVersionId, targetFrameCount, markerEnabled = true, createdBy, sourceType = 'MANUAL', productionBatchId = null }) {
+export async function generateProductionFile(fastify, { assetId, animationVersionId, templateVersionId, targetFrameCount, markerEnabled = true, createdBy, sourceType = 'MANUAL', productionBatchId = null, requestedPages = null }) {
   const [asset, animationVersion, template] = await Promise.all([
     fastify.prisma.animationAsset.findUnique({ where: { id: assetId } }),
     fastify.prisma.animationAssetVersion.findUnique({ where: { id: animationVersionId } }),
@@ -208,16 +215,21 @@ export async function generateProductionFile(fastify, { assetId, animationVersio
   const render = await ensureFrameRender(fastify, animationVersion, template.group, markerEnabled)
   const renderedBuffers = await Promise.all(render.frameKeys.map(key => fastify.storageGetBuffer(key)))
   const templateBuffer = await fastify.storageGetBuffer(template.objectKey)
-  const output = buildProductionDocx(templateBuffer, renderedBuffers, target, template.group)
+  const totalPages = target / template.group.framesPerSheet
+  const selectedPages = Array.isArray(requestedPages) && requestedPages.length
+    ? [...new Set(requestedPages.map(Number))].sort((a, b) => a - b)
+    : null
+  const output = buildProductionDocx(templateBuffer, renderedBuffers, target, template.group, selectedPages)
   const latest = await fastify.prisma.productionPrintFile.findFirst({
     where: { animationVersionId, templateVersionId, targetFrameCount: target }, orderBy: { fileVersionNo: 'desc' }
   })
   const fileVersionNo = (latest?.fileVersionNo || 0) + 1
   const safeAssetNo = asset.assetNo.replace(/[^a-zA-Z0-9_-]/g, '')
-  const displayName = `${template.group.size} · ${target}帧 · ${template.group.paperSize}每页${template.group.framesPerSheet}帧 · V${fileVersionNo}.docx`
+  const pageLabel = selectedPages ? ` · 重印第${selectedPages.join('、')}页` : ''
+  const displayName = `${template.group.size} · ${target}帧 · ${template.group.paperSize}每页${template.group.framesPerSheet}帧${pageLabel} · V${fileVersionNo}.docx`
   const objectKey = `generated/production-files/${safeAssetNo}/${crypto.randomUUID()}.docx`
   await fastify.storagePut(objectKey, output, { headers: { 'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' } })
-  const manifestHash = sha256(Buffer.concat([output, Buffer.from(render.manifestHash), Buffer.from(template.sha256)]))
+  const manifestHash = sha256(Buffer.concat([output, Buffer.from(render.manifestHash), Buffer.from(template.sha256), Buffer.from(JSON.stringify({ selectedPages, totalPages }))]))
   return fastify.prisma.productionPrintFile.create({ data: {
     assetId, animationVersionId, renderId: render.id, templateVersionId, targetFrameCount: target,
     fileVersionNo, displayName, objectKey, manifestHash, sourceType, productionBatchId, createdBy, status: 'READY'

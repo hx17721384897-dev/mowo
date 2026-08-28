@@ -300,16 +300,29 @@ export default async function productionBatchRoutes(fastify) {
     }) : []
     const unitById = new Map(batch.units.map(unit => [unit.productionUnitId, unit]))
     const availability = await getKitAvailability(fastify.prisma, batch.batchItems.map(item => item.skuId))
-    const [productionFiles, framePacks, pairings] = await Promise.all([
+    const [productionFiles, framePacks, pairings, reprints] = await Promise.all([
       fastify.prisma.productionPrintFile.findMany({
         where: { productionBatchId: batch.id, status: 'READY' },
-        select: { id: true, displayName: true, targetFrameCount: true, animationVersionId: true, objectKey: true, createdAt: true },
+        select: { id: true, displayName: true, targetFrameCount: true, animationVersionId: true, objectKey: true, sourceType: true, createdAt: true },
         orderBy: { createdAt: 'asc' }
       }),
-      fastify.prisma.productionFramePack.findMany({ where: { batchId: batch.id, isActive: true } }),
-      fastify.prisma.productionUnitPairing.findMany({ where: { batchId: batch.id, status: { not: 'VOID' } } })
+      fastify.prisma.productionFramePack.findMany({ where: { batchId: batch.id }, orderBy: { attemptNo: 'desc' } }),
+      fastify.prisma.productionUnitPairing.findMany({ where: { batchId: batch.id, status: { not: 'VOID' } } }),
+      fastify.prisma.productionFrameReprint.findMany({ where: { batchId: batch.id }, orderBy: { createdAt: 'desc' } })
     ])
-    const packByUnit = new Map(framePacks.map(pack => [pack.productionUnitId, pack]))
+    const packByUnit = new Map(framePacks.filter(pack => pack.isActive).map(pack => [pack.productionUnitId, pack]))
+    const packHistoryByUnit = new Map()
+    for (const pack of framePacks) {
+      const rows = packHistoryByUnit.get(pack.productionUnitId) || []
+      rows.push(pack)
+      packHistoryByUnit.set(pack.productionUnitId, rows)
+    }
+    const reprintsByUnit = new Map()
+    for (const reprint of reprints) {
+      const rows = reprintsByUnit.get(reprint.productionUnitId) || []
+      rows.push(reprint)
+      reprintsByUnit.set(reprint.productionUnitId, rows)
+    }
     const pairingByUnit = new Map(pairings.map(pairing => [pairing.productionUnitId, pairing]))
 
     const orders = salesOrders.map(order => ({
@@ -333,9 +346,11 @@ export default async function productionBatchRoutes(fastify) {
           id: task.id,
           productionNo: task.orderNo,
           specification: `${task.modelName} · ${task.frameCount}帧 · ${task.size} · ${task.material} · ${task.colorName}`,
-          workflow: unitById.get(task.id) || null,
-          framePack: packByUnit.get(task.id) || null,
-          pairing: pairingByUnit.get(task.id) || null
+           workflow: unitById.get(task.id) || null,
+           framePack: packByUnit.get(task.id) || null,
+           framePackHistory: packHistoryByUnit.get(task.id) || [],
+           reprints: reprintsByUnit.get(task.id) || [],
+           pairing: pairingByUnit.get(task.id) || null
         }))
       }))
     }))
@@ -357,7 +372,7 @@ export default async function productionBatchRoutes(fastify) {
       progress: summarizeUnits(batch.units),
       materialDemand,
       productionFiles: await Promise.all(productionFiles.map(async file => ({
-        id: file.id, displayName: file.displayName, targetFrameCount: file.targetFrameCount,
+        id: file.id, displayName: file.displayName, targetFrameCount: file.targetFrameCount, sourceType: file.sourceType,
         createdAt: file.createdAt, downloadUrl: await fastify.storagePresignGet(file.objectKey, 900)
       }))),
       printQueue: batch.units.map(unit => ({

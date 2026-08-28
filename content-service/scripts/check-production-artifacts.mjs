@@ -45,6 +45,13 @@ assert((xml.match(/rIdMowoProduction/g) || []).length === 24, '每个帧位均�
 assert(xml.includes('xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"') && xml.includes('xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"'), '生成文件声明完整的 Word 图片命名空间')
 assert(xml.includes('<wp:extent cx="1800000" cy="1800000"/>'), '旧打印组宽高为空时会从 5x5cm 推算实际显示尺寸')
 assert(media[0].getData().equals(frames[0]) && media[4].getData().equals(frames[0]), '4 张编辑帧按 1、2、3、4 循环插入')
+const secondPageOnly = buildProductionDocx(template, frames, 24, {
+  size: '5x5cm', framesPerSheet: 12, frameWidthMm: null, frameHeightMm: null
+}, [2])
+const secondPageZip = new AdmZip(secondPageOnly)
+const secondPageXml = secondPageZip.getEntry('word/document.xml').getData().toString('utf8')
+const secondPageMedia = secondPageZip.getEntries().filter(entry => entry.entryName.startsWith('word/media/mowo-production-'))
+assert(secondPageMedia.length === 12 && (secondPageXml.match(/w:type="page"/g) || []).length === 0, '24 帧返工只选择第 2 页时只生成一页 12 个帧位')
 console.log('Production artifact checks passed')
 
 const prisma = new PrismaClient()
@@ -54,6 +61,7 @@ const storageRoot = path.resolve(process.cwd(), process.env.LOCAL_STORAGE_DIR ||
 const runId = String(Date.now()).slice(-9)
 const physicalKeys = []
 let userId, assetId, versionId, groupId, browser
+let reprintModelId, reprintSkuId, reprintPreOrderId, reprintOrderId, reprintItemId, reprintTaskId, reprintBatchId
 
 async function request(url, token, options = {}) {
   return fetch(`${apiBase}${url}`, { ...options, headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(options.headers || {}) } })
@@ -134,6 +142,80 @@ try {
   const downloaded = Buffer.from(await downloadResponse.arrayBuffer())
   assert(downloadResponse.status === 200 && inspectDocxTemplate(downloaded).cellCount === 24, '浏览器签名链接可以下载包含两页帧位的 Word 文件')
 
+  const reprintModel = await prisma.machineModel.create({ data: {
+    name: `返工测试款-${runId}`, ratios: '["1:1"]', frameOptions: '[24]', sizes: '["5×5cm"]'
+  } })
+  reprintModelId = reprintModel.id
+  const reprintSku = await prisma.machineModelSku.create({ data: {
+    modelId: reprintModelId, size: '5×5cm', material: '测试材料', frameCount: 24,
+    colorName: '测试色', colorHex: '#FFFFFF', skuCode: `REPRINT-${runId}`
+  } })
+  reprintSkuId = reprintSku.id
+  await prisma.printCutRule.create({ data: { groupId, skuId: reprintSkuId, pagesPerUnit: 2 } })
+  const preOrder = await prisma.preOrder.create({ data: {
+    userId, cartItemIds: '[]', checkoutIdempotencyKey: `reprint-${runId}`, status: 'paid',
+    totalAmount: '10.00', receiverName: '返工测试', receiverPhone: `196${runId.slice(-8)}`,
+    receiverAddress: '测试地址', receiverCity: '测试市', expiresAt: new Date(Date.now() + 600000)
+  } })
+  reprintPreOrderId = preOrder.id
+  const salesOrder = await prisma.salesOrder.create({ data: {
+    orderNo: `SO-REPRINT-${runId}`, userId, preOrderId: reprintPreOrderId, status: 'paid',
+    fulfillmentStatus: 'PRODUCING', totalAmount: '10.00', receiverName: '返工测试',
+    receiverPhone: `196${runId.slice(-8)}`, receiverAddress: '测试地址', receiverCity: '测试市', paidAt: new Date()
+  } })
+  reprintOrderId = salesOrder.id
+  const salesItem = await prisma.salesOrderItem.create({ data: {
+    itemNo: `SO-REPRINT-${runId}-01`, salesOrderId: reprintOrderId, itemType: 'CUSTOM', contentId: assetId,
+    animationAssetId: assetId, animationVersionId: versionId, skuId: reprintSkuId, skuCode: reprintSku.skuCode,
+    snapshotTitle: '返工测试商品', unitPrice: '10.00', quantity: 1, lineTotal: '10.00'
+  } })
+  reprintItemId = salesItem.id
+  const task = await prisma.customizeOrder.create({ data: {
+    orderNo: `PU-REPRINT-${runId}`, userId, modelId: reprintModelId, modelName: reprintModel.name,
+    frameCount: 24, size: '5×5cm', material: '测试材料', color: '#FFFFFF', colorName: '测试色',
+    skuId: reprintSkuId, ossPath: '', frameUrls: JSON.stringify(frameKeys), status: 'producing',
+    sourceType: 'custom', receiverName: '返工测试', receiverPhone: `196${runId.slice(-8)}`,
+    receiverAddress: '测试地址', receiverCity: '测试市', salesOrderItemId: reprintItemId, unitIndex: 1
+  } })
+  reprintTaskId = task.id
+  reprintBatchId = `PB-20990101-${runId.slice(-6).toUpperCase()}`
+  await prisma.productionBatch.create({ data: {
+    id: reprintBatchId, operatorId: userId, status: 'IN_PROGRESS', salesOrderCount: 1,
+    productionUnitCount: 1, skuCount: 1
+  } })
+  await prisma.productionBatchOrder.create({ data: {
+    batchId: reprintBatchId, salesOrderId: reprintOrderId, orderNoSnapshot: salesOrder.orderNo, status: 'PRODUCING'
+  } })
+  await prisma.productionBatchUnit.create({ data: {
+    batchId: reprintBatchId, productionUnitId: reprintTaskId, salesOrderId: reprintOrderId,
+    skuId: reprintSkuId, productionNoSnapshot: task.orderNo, printGroupId: groupId,
+    printGroupCode: group.code, printGroupName: group.name, printSequence: 1, printPageCount: 2,
+    frameStatus: 'IN_PROGRESS', materialStatus: 'IN_PROGRESS'
+  } })
+  const oldPack = await prisma.productionFramePack.create({ data: {
+    code: `FP-REPRINT-${runId}-01`, productionUnitId: reprintTaskId, salesOrderId: reprintOrderId,
+    batchId: reprintBatchId, skuId: reprintSkuId, animationVersionId: versionId,
+    targetFrameCount: 24, size: '5×5cm', status: 'IN_PROGRESS', createdBy: userId
+  } })
+  const reprintResponse = await request(`/api/admin/production-workflow/units/${reprintTaskId}/reprint`, token, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pages: [2], reason: '自动测试：第2页裁切损坏' })
+  })
+  const reprintPayload = await reprintResponse.json()
+  assert(reprintResponse.status === 200 && reprintPayload.data.pages.length === 1, '真实返工接口接受只重印 24 帧文件第 2 页')
+  const [oldPackAfter, activePack, reprintRecord] = await Promise.all([
+    prisma.productionFramePack.findUnique({ where: { id: oldPack.id } }),
+    prisma.productionFramePack.findFirst({ where: { productionUnitId: reprintTaskId, isActive: true } }),
+    prisma.productionFrameReprint.findFirst({ where: { productionUnitId: reprintTaskId } })
+  ])
+  assert(oldPackAfter.status === 'VOID' && !oldPackAfter.isActive && activePack.attemptNo === 2, '返工后 FP-01 作废且新的 FP-02 成为唯一有效码')
+  assert(reprintRecord.oldFramePackCode === oldPack.code && reprintRecord.newFramePackCode === activePack.code && reprintRecord.requestedPages[0] === 2, '返工记录保存新旧码、指定页和原因')
+  const reprintFile = await prisma.productionPrintFile.findUnique({ where: { id: reprintRecord.productionPrintFileId } })
+  physicalKeys.push(reprintFile.objectKey)
+  const reprintDownload = await fetch(reprintPayload.data.downloadUrl)
+  const reprintDocx = Buffer.from(await reprintDownload.arrayBuffer())
+  assert(inspectDocxTemplate(reprintDocx).cellCount === 12, '返工下载文件只包含指定的一页 12 个帧位')
+
   browser = await chromium.launch({ headless: true, executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe' })
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
   const page = await context.newPage()
@@ -163,6 +245,18 @@ try {
   console.log('Production artifact integration checks passed')
 } finally {
   if (browser) await browser.close().catch(() => {})
+  if (reprintTaskId) await prisma.productionFrameReprint.deleteMany({ where: { productionUnitId: reprintTaskId } }).catch(() => {})
+  if (reprintTaskId) await prisma.productionFramePack.deleteMany({ where: { productionUnitId: reprintTaskId } }).catch(() => {})
+  if (reprintBatchId) await prisma.productionBatchUnit.deleteMany({ where: { batchId: reprintBatchId } }).catch(() => {})
+  if (reprintBatchId) await prisma.productionBatchOrder.deleteMany({ where: { batchId: reprintBatchId } }).catch(() => {})
+  if (reprintBatchId) await prisma.productionBatch.deleteMany({ where: { id: reprintBatchId } }).catch(() => {})
+  if (reprintTaskId) await prisma.customizeOrder.deleteMany({ where: { id: reprintTaskId } }).catch(() => {})
+  if (reprintItemId) await prisma.salesOrderItem.deleteMany({ where: { id: reprintItemId } }).catch(() => {})
+  if (reprintOrderId) await prisma.salesOrder.deleteMany({ where: { id: reprintOrderId } }).catch(() => {})
+  if (reprintPreOrderId) await prisma.preOrder.deleteMany({ where: { id: reprintPreOrderId } }).catch(() => {})
+  if (reprintSkuId) await prisma.printCutRule.deleteMany({ where: { skuId: reprintSkuId } }).catch(() => {})
+  if (reprintSkuId) await prisma.machineModelSku.deleteMany({ where: { id: reprintSkuId } }).catch(() => {})
+  if (reprintModelId) await prisma.machineModel.deleteMany({ where: { id: reprintModelId } }).catch(() => {})
   if (assetId) await prisma.productionPrintFile.deleteMany({ where: { assetId } }).catch(() => {})
   if (versionId) await prisma.productionFrameRender.deleteMany({ where: { animationVersionId: versionId } }).catch(() => {})
   if (groupId) await prisma.printTemplateVersion.deleteMany({ where: { groupId } }).catch(() => {})

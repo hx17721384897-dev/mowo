@@ -13,13 +13,13 @@
           key: 'orders', icon: '📋', label: '全部订单',
           children: [
             { href: 'admin-orders.html?view=all',        icon: '▦', label: '订单总览' },
-            { href: 'admin-orders.html?view=paid',       icon: '📬', label: '待处理' },
-            { href: 'admin-orders.html?view=locked',     icon: '⏳', label: '处理中' },
-            { href: 'admin-orders.html?view=processing', icon: '🔧', label: '待生产' },
-            { href: 'admin-orders.html?view=producing',  icon: '⚙️', label: '生产中' },
-            { href: 'admin-orders.html?view=shipped',    icon: '🚚', label: '已发货' },
-            { href: 'admin-orders.html?view=received',   icon: '✅', label: '已收货' },
-            { href: 'admin-orders.html?view=aftersale',  icon: '🔴', label: '售后' }
+            { href: 'admin-orders.html?view=paid',       icon: '○', label: '已付款' },
+            { href: 'admin-orders.html?view=pending',    icon: '↓', label: '待处理' },
+            { href: 'admin-orders.html?view=locked',     icon: '⌁', label: '处理中' },
+            { href: 'admin-orders.html?view=processing', icon: '□', label: '待生产' },
+            { href: 'admin-orders.html?view=producing',  icon: '↻', label: '生产中' },
+            { href: 'admin-orders.html?view=ready',      icon: '✓', label: '待发货' },
+            { href: 'admin-orders.html?view=shipped',    icon: '→', label: '已发货' }
           ]
         },
         { href: 'admin-production-batches.html',       icon: '▦', label: '生产批次' },

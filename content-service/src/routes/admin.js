@@ -1251,6 +1251,21 @@ export default async function adminRoutes(fastify) {
     if (!orders.length)
       return reply.code(400).send({ success: false, message: '没有找到待生产订单' })
 
+    const formalItem = await fastify.prisma.salesOrderItem.findFirst({
+      where: {
+        productionTasks: { some: { id: { in: orders.map(order => order.id) } } },
+        salesOrder: { productionBatchOrders: { some: { batch: { status: { in: ['READY', 'IN_PROGRESS'] } } } } }
+      },
+      select: { id: true }
+    })
+    if (formalItem) {
+      return reply.code(409).send({
+        success: false,
+        code: 'FORMAL_PRODUCTION_WORKFLOW_REQUIRED',
+        message: '正式 PB 批次必须在“订单生产 > 待生产”导出 Word 和材料清单，旧帧图压缩包接口已停用'
+      })
+    }
+
     // ── 授权到期检查：CBR SKU 过期则拒绝导出 ──
     const allSkuIdsForCheck = [...new Set(orders.map(o => o.skuId).filter(Boolean))]
     const expiredSkus = await fastify.prisma.machineModelSku.findMany({

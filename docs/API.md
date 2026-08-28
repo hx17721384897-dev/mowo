@@ -7,6 +7,8 @@
 - `POST /batches/:batchId/export-addresses`：每个 `SO` 导出一行地址，首次导出进入处理中。
 - `POST /batches/:batchId/tracking`：按 `SO` 绑定快递面单，进入待生产。
 - `POST /batches/:batchId/export-production`：下载 Word、帧包标签和材料清单；首次成功导出进入生产中并建立唯一 `FP`。
+- `GET /orders?status=...&batchId=...&q=...`：后台各订单环节共用的正式 `SO/PB/PU/FP` 工作队列与数量统计。
+- `POST /units/:productionUnitId/reprint`：Body 为 `{ pages: [2], reason: "裁切偏移" }`；只生成指定页 Word，作废旧 `FP` 并建立下一制作尝试。
 - `GET /pairing/lookup/:code`：识别 `FP`、`KB` 或 `BX`。
 - `POST /pairing`：校验并记录 `FP + KB/BX` 配对，成功后扣减一套材料包。
 - `GET /packing/:trackingNo`：读取整笔总订单及服务端装箱进度。
@@ -14,7 +16,7 @@
 - `GET /packing-sessions`：读取待齐套与可发货会话。
 - `POST /packing/:trackingNo/ship`：通过完整性检查后确认发货。
 
-旧 `/api/admin/orders/export-address`、`import-tracking` 和 `batch-export-frames` 只保留历史兼容；一旦订单属于正式活动批次，前两者会拒绝操作，不能覆盖正式批次编号。
+旧 `/api/admin/orders/export-address`、`import-tracking` 和 `batch-export-frames` 只保留历史兼容；一旦订单属于正式活动批次，三者都会拒绝操作，不能覆盖正式批次编号或绕过正式 Word 生产流程。
 
 > 最后更新：2026-08-20（新增 Web 定制申请首批接口）
 > 后端服务：Node.js + Fastify，端口 **3001**
