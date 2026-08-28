@@ -26,11 +26,11 @@
         {
           key: 'scan', icon: '⌁', label: '扫码作业',
           children: [
-            { href: 'production-scan.html',          icon: '▦', label: '作业总览' },
-            { href: 'production-scan-frame.html',    icon: '1', label: '帧包完成' },
-            { href: 'production-scan-material.html', icon: '2', label: '材料领用' },
-            { href: 'production-scan-pairing.html',  icon: '3', label: '单件配对' },
-            { href: 'production-scan-packing.html',  icon: '4', label: '装箱发货' }
+            { href: 'production-scan.html',          icon: '▦', label: '作业总览', station: 'overview' },
+            { href: 'production-scan-frame.html',    icon: '1', label: '帧包完成', station: 'frame' },
+            { href: 'production-scan-material.html', icon: '2', label: '材料领用', station: 'material' },
+            { href: 'production-scan-pairing.html',  icon: '3', label: '单件配对', station: 'pairing' },
+            { href: 'production-scan-packing.html',  icon: '4', label: '装箱发货', station: 'packing' }
           ]
         },
         { href: 'admin-print-production.html',         icon: '↕', label: '打印与裁切设置' },
@@ -153,6 +153,16 @@
 .nav-third-item .nav-icon{width:14px;font-size:11px;}
 .sidebar .nav-third-item.active{color:var(--accent-y,#F5E642);background:rgba(245,230,66,.12);font-weight:800;}
 .sidebar .nav-third-item.active::before{content:'';position:absolute;left:28px;top:10px;width:5px;height:5px;border-radius:50%;background:var(--accent-y,#F5E642);}
+.nav-third-item[class*="station-"] .nav-icon{height:18px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-weight:900;}
+.nav-third-item.station-overview .nav-icon{background:#f5e642;color:#111;}
+.nav-third-item.station-frame .nav-icon{background:#2f73c9;color:#fff;}
+.nav-third-item.station-material .nav-icon{background:#c76518;color:#fff;}
+.nav-third-item.station-pairing .nav-icon{background:#168b86;color:#fff;}
+.nav-third-item.station-packing .nav-icon{background:#2b7d46;color:#fff;}
+.nav-third-item.station-frame.active{background:rgba(47,115,201,.22);color:#8fc1ff;}
+.nav-third-item.station-material.active{background:rgba(199,101,24,.22);color:#ffb878;}
+.nav-third-item.station-pairing.active{background:rgba(22,139,134,.22);color:#7be0dc;}
+.nav-third-item.station-packing.active{background:rgba(43,125,70,.25);color:#8bd6a3;}
 .sidebar-back{display:flex;align-items:center;gap:10px;padding:12px 20px;border-top:1px solid rgba(255,255,255,.08);color:var(--gray3,#787874);font-weight:800;font-size:13px;text-decoration:none;white-space:nowrap;overflow:hidden;transition:background .15s,color .15s;flex-shrink:0;}
 .sidebar-back:hover{background:rgba(255,255,255,.06);color:var(--white,#fff);}
 .sidebar.collapsed .sidebar-back .nav-label{opacity:0;}
@@ -354,7 +364,7 @@
           <div class="nav-third${nestedOpen ? ' open' : ''}">
             ${it.children.map(child => {
               const active = child.href.toLowerCase() === curFile ? ' active' : '';
-              return `<a class="nav-third-item${active}" href="${child.href}"><span class="nav-icon">${child.icon}</span><span class="nav-label">${child.label}</span></a>`;
+              return `<a class="nav-third-item${child.station ? ` station-${child.station}` : ''}${active}" href="${child.href}"><span class="nav-icon">${child.icon}</span><span class="nav-label">${child.label}</span></a>`;
             }).join('')}
           </div>
         </div>`;
@@ -386,6 +396,28 @@
     </div>
   </div>
 </div>`;
+
+    const scanStations = [
+      { file:'production-scan.html', label:'作业总览', key:'overview' },
+      { file:'production-scan-frame.html', label:'帧包完成', key:'frame' },
+      { file:'production-scan-material.html', label:'材料领用', key:'material' },
+      { file:'production-scan-pairing.html', label:'单件配对', key:'pairing' },
+      { file:'production-scan-packing.html', label:'装箱发货', key:'packing' }
+    ];
+    const currentStation = scanStations.find(station => station.file === location.pathname.split('/').pop());
+    if (currentStation) {
+      document.body.dataset.station = currentStation.key;
+      document.querySelectorAll('.station-link').forEach(link => {
+        const station = scanStations.find(item => item.file === link.getAttribute('href'));
+        if (station) link.classList.add(station.key);
+      });
+      const content = document.querySelector('.main .content');
+      if (content && currentStation.key !== 'overview' && !content.querySelector('.station-tabs')) {
+        content.insertAdjacentHTML('afterbegin', `<nav class="station-tabs" aria-label="扫码岗位切换">${scanStations.map(station =>
+          `<a class="station-tab ${station.key}${station.key === currentStation.key ? ' active' : ''}" href="${station.file}">${station.label}</a>`
+        ).join('')}</nav>`);
+      }
+    }
 
     // 折叠按钮
     const toggleBtn = document.getElementById('sidebarToggle');

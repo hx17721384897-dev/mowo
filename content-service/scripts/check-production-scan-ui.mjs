@@ -54,18 +54,22 @@ try {
   await page.addInitScript(token => localStorage.setItem('mowo_token', token), login.data.accessToken)
 
   const pages = [
-    ['production-scan.html', '扫码作业总览'],
-    ['production-scan-frame.html', '帧包完成'],
-    ['production-scan-material.html', '材料领用'],
-    ['production-scan-pairing.html', '单件配对'],
-    ['production-scan-packing.html', '装箱发货']
+    ['production-scan.html', '扫码作业总览', 'overview'],
+    ['production-scan-frame.html', '帧包完成', 'frame'],
+    ['production-scan-material.html', '材料领用', 'material'],
+    ['production-scan-pairing.html', '单件配对', 'pairing'],
+    ['production-scan-packing.html', '装箱发货', 'packing']
   ]
-  for (const [file, heading] of pages) {
+  for (const [file, heading, station] of pages) {
     await page.goto(`${webBase}/${file}`, { waitUntil: 'networkidle' })
     await page.getByRole('heading', { name: heading, exact: true }).waitFor({ timeout: 10000 })
-    if (!await page.getByText('扫码作业', { exact: true }).count()) throw new Error(`${heading} 未显示扫码作业菜单`)
+    const scanMenu = page.locator('[data-nested="production:scan"]')
+    if (!await scanMenu.count() || !await scanMenu.locator('.nav-third').isVisible()) throw new Error(`${heading} 未展开扫码作业三级菜单`)
+    if (await scanMenu.locator('.nav-third-item').count() !== 5) throw new Error(`${heading} 的扫码作业三级入口不完整`)
+    if (await page.evaluate(() => document.body.dataset.station) !== station) throw new Error(`${heading} 没有应用正确岗位颜色`)
+    if (station !== 'overview' && await page.locator('.station-tabs .station-tab').count() !== 5) throw new Error(`${heading} 缺少顶部岗位切换入口`)
   }
-  console.log('PASS five production scan pages load with the nested station menu')
+  console.log('PASS five production scan pages show the expanded, color-coded station menu')
 
   await page.goto(`${webBase}/production-scan-frame.html`, { waitUntil: 'networkidle' })
   await page.locator('body').click({ position: { x: 1000, y: 400 } })

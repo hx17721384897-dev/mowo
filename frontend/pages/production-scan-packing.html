@@ -3,7 +3,7 @@
 <body><aside class="sidebar" id="sidebar"></aside><main class="main" id="main">
 <header class="topbar"><div><h1>装箱发货</h1><div class="topbar-meta">先扫描快递面单，再逐件扫描已经配对的 FP</div></div><div class="scan-ready"><span class="scan-dot"></span>扫码枪已就绪</div></header>
 <div class="content"><div class="grid"><section class="panel"><h2>当前快递箱</h2><p class="sub">无需点击输入框。非 FP 编码在本页面会作为快递面单读取。</p><div class="field"><label>手工输入备用</label><div class="scan-row"><input class="input code" id="manualCode" placeholder="快递单号 / FP-..."><button class="btn btn-black" id="manualBtn">处理</button></div></div><div id="packingWork" class="result">等待扫描快递面单。</div></section><section class="panel"><h2>待齐套区</h2><p class="sub">未配齐记录保存在服务器，刷新或换电脑后仍可继续。</p><div id="waitingList"><div class="empty">正在加载...</div></div></section></div></div>
-</main><div class="toast" id="toast"></div><script src="../js/admin-sidebar.js"></script><script src="../js/production-scan-common.js"></script>
+</main><div class="toast" id="toast"></div><script src="../js/admin-sidebar.js?v=20260829-2"></script><script src="../js/production-scan-common.js?v=20260829-2"></script>
 <script>
 const S=MowoScan;let currentTracking='',packingData=null
 async function scan(code,type){code=code.trim();if(type==='FRAME'){if(!currentTracking)throw new Error('请先扫描快递面单');return scanUnit(code.toUpperCase())}return loadPacking(code)}
