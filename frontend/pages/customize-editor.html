@@ -30,7 +30,7 @@ body { font-family:var(--font); background:var(--white); color:var(--black); ove
 a { text-decoration:none; color:inherit; }
 
 /* ── 进度步骤条 ── */
-.progress-steps { position:fixed; top:var(--nav-h); left:0; right:0; z-index:799; background:rgba(252,226,179,0.92); backdrop-filter:blur(12px); border-bottom:1.5px solid rgba(44,31,20,.1); padding:10px var(--pad-mobile); display:flex; align-items:center; justify-content:center; gap:0; height:var(--prog-h); }
+.progress-steps { position:fixed; top:var(--nav-h); left:0; right:0; z-index:80; background:rgba(252,226,179,0.92); backdrop-filter:blur(12px); border-bottom:1.5px solid rgba(44,31,20,.1); padding:10px var(--pad-mobile); display:flex; align-items:center; justify-content:center; gap:0; height:var(--prog-h); }
 @media (min-width:1024px) { .progress-steps { padding:10px var(--pad-desk); } }
 .progress-back { position:absolute; left:var(--pad-mobile); top:50%; transform:translateY(-50%); height:32px; display:inline-flex; align-items:center; gap:7px; padding:0 10px; border:1.5px solid rgba(44,31,20,.18); border-radius:6px; background:rgba(255,255,255,.55); color:var(--black); font-size:12px; font-weight:800; transition:background .2s,border-color .2s; }
 .progress-back:hover { background:var(--white); border-color:rgba(44,31,20,.4); }
@@ -1030,7 +1030,7 @@ goState(S.UPLOAD);
       back.textContent = '← 返回我的动画';
       back.setAttribute('onclick', "location.href='my-animations.html'");
       const banner = document.createElement('div');
-      banner.style.cssText = 'position:fixed;top:calc(var(--nav-h, 64px) + 8px);left:50%;transform:translateX(-50%);z-index:850;background:#FFF8D6;border:1px solid #E8D66D;border-radius:8px;padding:8px 14px;font-weight:800;font-size:12px;max-width:calc(100vw - 32px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+      banner.style.cssText = 'position:fixed;top:calc(var(--nav-h, 64px) + 8px);left:50%;transform:translateX(-50%);z-index:80;background:#FFF8D6;border:1px solid #E8D66D;border-radius:8px;padding:8px 14px;font-weight:800;font-size:12px;max-width:calc(100vw - 32px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
       banner.textContent = `正在修改 ${asset.title}（${asset.assetNo} · V${current.versionNo}），旧版本会继续保留`;
       document.body.appendChild(banner);
       initEditor(current.frames.map(frame => frame.url));
@@ -2530,6 +2530,8 @@ document.getElementById('btnNextStep').addEventListener('click', async ()=>{
     const draftResult = await draftResponse.json();
     if (!draftResponse.ok || !draftResult.success) throw new Error(draftResult.message || '定制草稿保存失败');
     savedRequestId = draftResult.data.id;
+    // 本次已经明确走自己筛选，不能让旧的人工筛选编号影响下一页。
+    localStorage.removeItem('mowo_customize_human_request_id');
     safeStorageSet('mowo_customize_request_draft_id', draftResult.data.id);
   } catch(e) {
     alert('上传失败：' + (e.message || '请重试'));

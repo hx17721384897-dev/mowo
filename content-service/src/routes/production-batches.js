@@ -28,17 +28,20 @@ function flattenTasks(order) {
 
 async function getKitAvailability(prisma, skuIds) {
   if (!skuIds.length) return new Map()
-  const rows = await prisma.kitAssemblyBatch.groupBy({
-    by: ['skuId'],
+  const rows = await prisma.kitAssemblyBatch.findMany({
     where: {
       skuId: { in: skuIds },
       status: 'AVAILABLE',
       stockClass: 'NEW',
       availableQty: { gt: 0 }
     },
-    _sum: { availableQty: true }
+    select: { skuId: true, availableQty: true, reservedQty: true }
   })
-  return new Map(rows.map(row => [row.skuId, row._sum.availableQty || 0]))
+  const result = new Map(skuIds.map(skuId => [skuId, 0]))
+  for (const row of rows) {
+    result.set(row.skuId, (result.get(row.skuId) || 0) + Math.max(0, row.availableQty - row.reservedQty))
+  }
+  return result
 }
 
 async function assessOrders(prisma, orders, printGroups = null) {

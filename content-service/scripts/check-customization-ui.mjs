@@ -198,12 +198,16 @@ try {
   console.log('PASS customer edits the current animation and saves an immutable V2 in browser')
 
   await page.goto(`${webBase}/customize-editor.html?modelId=${encodeURIComponent(modelId)}`, { waitUntil:'networkidle' })
-  await page.evaluate(meta => {
+  await page.evaluate(({ meta, staleHumanRequestId }) => {
     localStorage.removeItem('mowo_customize_request_draft_id')
     localStorage.removeItem('mowo_customize_request_draft_key')
     localStorage.removeItem('mowo_customize_request_draft_owner')
+    localStorage.setItem('mowo_customize_human_request_id', staleHumanRequestId)
     localStorage.setItem('mowo_customize_meta', JSON.stringify(meta))
-  }, { id:modelId, modelId, name:model.name, frames:[1], ratios:['1:1'], sizes:['S'], modelType:'single' })
+  }, {
+    meta:{ id:modelId, modelId, name:model.name, frames:[1], ratios:['1:1'], sizes:['S'], modelType:'single' },
+    staleHumanRequestId:created.data.id
+  })
   await page.reload({ waitUntil:'networkidle' })
   await page.locator('#fileInput').setInputFiles({ name:'self-source.png', mimeType:'image/png', buffer:PNG })
   await page.locator('#btnStartEdit').click()
@@ -217,8 +221,21 @@ try {
   await page.getByRole('button', { name:/下一步/ }).click()
   await page.waitForURL(/customize-confirm\.html/, { timeout:20000 })
   if (!new URL(page.url()).searchParams.get('requestId')) throw new Error('选款式网址没有携带云端草稿编号')
+  if (await page.evaluate(() => localStorage.getItem('mowo_customize_human_request_id'))) throw new Error('自己筛选没有清除旧人工筛选编号')
   console.log('PASS customer self-screened image reaches style selection when browser storage is full')
   await page.evaluate(() => Object.keys(localStorage).filter(key => key.startsWith('mowo_test_quota_')).forEach(key => localStorage.removeItem(key)))
+
+  // 即使旧版页面或手工操作再次留下人工编号，本次网址中的自己筛选草稿仍必须优先。
+  await page.evaluate(staleHumanRequestId => localStorage.setItem('mowo_customize_human_request_id', staleHumanRequestId), created.data.id)
+  await page.locator('#frameOptions .opt-btn').first().click()
+  await page.locator('#sizeOptions .opt-btn').first().click()
+  await page.locator('#materialOptions .opt-btn').first().click()
+  await page.locator('#colorOptions .color-opt').first().click()
+  await page.getByRole('button', { name:/提交订单/ }).click()
+  await page.waitForURL(/checkout\.html/, { timeout:20000 }).catch(() => {
+    throw new Error(`旧人工编号干扰了自己筛选提交；停留在 ${page.url()}；页面提示：${orderDialogs.join(' | ') || '无'}`)
+  })
+  console.log('PASS self-screened request ignores stale human-screening state and enters checkout')
 
   await page.setViewportSize({ width:390, height:844 })
   await page.goto(`${webBase}/my-customizations.html`, { waitUntil:'networkidle' })

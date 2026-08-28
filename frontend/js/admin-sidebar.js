@@ -23,7 +23,16 @@
           ]
         },
         { href: 'admin-production-batches.html',       icon: '▦', label: '生产批次' },
-        { href: 'production-scan.html',                icon: '⌁', label: '扫码生产' },
+        {
+          key: 'scan', icon: '⌁', label: '扫码作业',
+          children: [
+            { href: 'production-scan.html',          icon: '▦', label: '作业总览' },
+            { href: 'production-scan-frame.html',    icon: '1', label: '帧包完成' },
+            { href: 'production-scan-material.html', icon: '2', label: '材料领用' },
+            { href: 'production-scan-pairing.html',  icon: '3', label: '单件配对' },
+            { href: 'production-scan-packing.html',  icon: '4', label: '装箱发货' }
+          ]
+        },
         { href: 'admin-print-production.html',         icon: '↕', label: '打印与裁切设置' },
         { href: 'admin-import.html',                 icon: '📥', label: '定制导入' }
       ]

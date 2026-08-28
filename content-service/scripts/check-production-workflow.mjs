@@ -10,32 +10,44 @@ function assert(condition, message) {
 }
 
 try {
-  const [schema, routes, orderPage, batchPage, scanPage, oldAdmin] = await Promise.all([
+  const [schema, routes, orderPage, batchPage, scanOverview, scanFrame, scanMaterial, scanPairing, scanPacking, scanCommon, sidebar, oldAdmin] = await Promise.all([
     fs.readFile(new URL('prisma/schema.prisma', root), 'utf8'),
     fs.readFile(new URL('src/routes/production-workflow.js', root), 'utf8'),
     fs.readFile(new URL('../frontend/pages/admin-orders.html', root), 'utf8'),
     fs.readFile(new URL('../frontend/pages/admin-production-batches.html', root), 'utf8'),
     fs.readFile(new URL('../frontend/pages/production-scan.html', root), 'utf8'),
+    fs.readFile(new URL('../frontend/pages/production-scan-frame.html', root), 'utf8'),
+    fs.readFile(new URL('../frontend/pages/production-scan-material.html', root), 'utf8'),
+    fs.readFile(new URL('../frontend/pages/production-scan-pairing.html', root), 'utf8'),
+    fs.readFile(new URL('../frontend/pages/production-scan-packing.html', root), 'utf8'),
+    fs.readFile(new URL('../frontend/js/production-scan-common.js', root), 'utf8'),
+    fs.readFile(new URL('../frontend/js/admin-sidebar.js', root), 'utf8'),
     fs.readFile(new URL('src/routes/admin.js', root), 'utf8')
   ])
   assert(schema.includes('fulfillmentStatus') && schema.includes('model ProductionFramePack'), '数据库区分付款事实、履约阶段和唯一帧素材包')
   assert(schema.includes('model ProductionUnitPairing') && schema.includes('model ProductionPackingSession'), '数据库持久保存单件配对与整单装箱会话')
+  assert(schema.includes('model ProductionMaterialPick') && schema.includes('reservedQty'), '数据库持久保存材料领用、预留、消耗和退回数量')
   assert(schema.includes('model ProductionFrameReprint') && schema.includes('requestedPages'), '数据库持久保存指定页返工和新旧帧包码')
   assert(routes.includes('PENDING_ADDRESS_EXPORT') && routes.includes('WAITING_TRACKING') && routes.includes('READY_FOR_PRODUCTION'), '后端实现待处理、处理中和待生产阶段')
   assert(routes.includes('export-production') && routes.includes('framePackCode'), '首次生产资料导出会建立帧包身份并启动两条生产线')
   assert(routes.includes('ensureBatchPrintFiles') && routes.includes('再次导出时系统会自动补生成'), '补上传模板后可以为旧批次自动补生成 Word')
   assert(routes.includes("fastify.get('/orders'") && routes.includes("fastify.post('/units/:productionUnitId/reprint'"), '订单环节页和按页返工使用正式生产接口')
   assert(routes.includes('kitAssemblyBatch.updateMany') && routes.includes('skuInventory.updateMany'), '材料包配对采用条件扣减并同步汇总库存')
+  assert(routes.includes("frame-packs/:code/complete") && routes.includes("fastify.post('/material-picks'"), '帧包完成与材料领用是独立生产动作')
+  assert(routes.includes("status: 'ACTIVE', remainingQty: { gt: 0 }") && routes.includes('reservedQty: { decrement: 1 }'), '配对只消耗当前批次已领材料并同步释放预留')
+  assert(routes.includes('resolvePickedKitSource') && routes.includes('kitContainerId: container.id'), '箱码配对只使用当前生产批次已领用的箱内材料批次')
   assert(routes.includes('refreshReadyToShip') && routes.includes("fulfillmentStatus: 'SHIPPED'"), '全部单件装箱完成后才允许发货')
   assert(oldAdmin.includes('正式 PB 批次必须走总订单地址导出'), '旧地址导出不能覆盖正式生产批次')
   assert(oldAdmin.includes('旧帧图压缩包接口已停用'), '旧帧图导出不能覆盖正式生产批次')
   assert(orderPage.includes('/api/admin/production-workflow/orders') && orderPage.includes('/reprint'), '订单环节页只读取正式订单并提供返工入口')
   assert(batchPage.includes('进入当前订单环节') && !batchPage.includes('onclick="exportAddresses()"') && !batchPage.includes('onclick="exportProduction()"'), '生产批次页只做总览和环节跳转，不重复推进状态')
-  assert(scanPage.includes('单件配对') && scanPage.includes('整单装箱与发货') && scanPage.includes('待齐套区'), '扫码页面分开单件配对与整单装箱')
+  assert(scanOverview.includes('扫码作业总览') && scanFrame.includes('帧包完成') && scanMaterial.includes('材料领用') && scanPairing.includes('单件配对') && scanPacking.includes('装箱发货'), '扫码总览与四个岗位页面已经分开')
+  assert(scanCommon.includes('installScanner') && scanCommon.includes("target?.matches?.('input,textarea,select"), '扫码枪无需点击输入框并保留手工输入备用')
+  assert(sidebar.includes("key: 'scan'") && sidebar.includes('production-scan-packing.html'), '后台菜单以扫码作业二级菜单管理五个三级页面')
   await Promise.all([
     prisma.productionFramePack.count(), prisma.productionUnitPairing.count(),
     prisma.productionPackingSession.count(), prisma.productionPackingScan.count(),
-    prisma.productionFrameReprint.count()
+    prisma.productionFrameReprint.count(), prisma.productionMaterialPick.count()
   ])
   console.log('Production workflow checks passed')
 } finally {

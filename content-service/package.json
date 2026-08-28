@@ -24,6 +24,7 @@
     "check:frame-making": "node scripts/check-frame-making.mjs",
     "check:production-artifacts": "node scripts/check-production-artifacts.mjs",
     "check:production-workflow": "node scripts/check-production-workflow.mjs",
+    "check:production-scan-ui": "node scripts/check-production-scan-ui.mjs",
     "assets:backfill": "node scripts/backfill-animation-assets.mjs",
     "assets:backfill-collab": "node scripts/backfill-collab-animation-assets.mjs",
     "check:launch-safety": "node scripts/check-launch-safety.mjs",

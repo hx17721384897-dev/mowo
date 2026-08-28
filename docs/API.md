@@ -9,8 +9,12 @@
 - `POST /batches/:batchId/export-production`：下载 Word、帧包标签和材料清单；首次成功导出进入生产中并建立唯一 `FP`。
 - `GET /orders?status=...&batchId=...&q=...`：后台各订单环节共用的正式 `SO/PB/PU/FP` 工作队列与数量统计。
 - `POST /units/:productionUnitId/reprint`：Body 为 `{ pages: [2], reason: "裁切偏移" }`；只生成指定页 Word，作废旧 `FP` 并建立下一制作尝试。
-- `GET /pairing/lookup/:code`：识别 `FP`、`KB` 或 `BX`。
-- `POST /pairing`：校验并记录 `FP + KB/BX` 配对，成功后扣减一套材料包。
+- `GET /scan-overview`：读取活动生产批次的帧包、领料、配对、装箱进度和近期扫码记录。
+- `GET /pairing/lookup/:code`：识别 `FP`、`KB` 或 `BX`，并返回规格及当前可用数量。
+- `POST /frame-packs/:code/complete`：登记一个唯一 `FP` 已完成打印、裁切和装袋。
+- `GET /material-picks`、`POST /material-picks`：查询或登记某个 `PB` 从 `KB/BX` 领用的数量；领用只预留库存。
+- `POST /material-picks/:id/return`：退回尚未进入逐件配对的领料数量，并释放预留库存。
+- `POST /pairing`：校验并记录 `FP + KB/BX` 配对，只能消耗当前 `PB` 已领用的来源，成功后正式扣减一套材料包。
 - `GET /packing/:trackingNo`：读取整笔总订单及服务端装箱进度。
 - `POST /packing/:trackingNo/scan`：扫描一个已配对的单件产品。
 - `GET /packing-sessions`：读取待齐套与可发货会话。

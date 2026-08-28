@@ -36,7 +36,7 @@ button { font-family:var(--font); }
    进度条 & 步骤
 ══════════════════════════════ */
 .progress-steps {
-  position:fixed; top:var(--nav-h); left:0; right:0; z-index:799;
+  position:fixed; top:var(--nav-h); left:0; right:0; z-index:80;
   background:rgba(252,226,179,0.92); backdrop-filter:blur(12px);
   border-bottom:1.5px solid rgba(44,31,20,.1);
   padding:10px var(--pad-mobile); display:flex; align-items:center; justify-content:center; gap:0;
@@ -1308,8 +1308,14 @@ async function _createCustomProducts(token, frameSources) {
 async function submitOrder() {
   const token = localStorage.getItem('mowo_token');
   if (!token) { if (typeof openAuthModal === 'function') openAuthModal(); return; }
-  const humanRequestId = new URLSearchParams(location.search).get('humanRequestId') || localStorage.getItem('mowo_customize_human_request_id');
-  const draftId = new URLSearchParams(location.search).get('requestId') || localStorage.getItem('mowo_customize_request_draft_id');
+  const flowParams = new URLSearchParams(location.search);
+  const requestIdFromUrl = flowParams.get('requestId');
+  const humanRequestIdFromUrl = flowParams.get('humanRequestId');
+  // 网址参数代表用户本次实际进入的路线，必须优先于浏览器中可能残留的旧编号。
+  const humanRequestId = humanRequestIdFromUrl
+    || (!requestIdFromUrl ? localStorage.getItem('mowo_customize_human_request_id') : null);
+  const draftId = requestIdFromUrl
+    || (!humanRequestId ? localStorage.getItem('mowo_customize_request_draft_id') : null);
   if (!_reuseAssetId && !humanRequestId && !draftId) {
     alert('没有找到本次定制草稿，请返回上传页面重新提交素材');
     return;
