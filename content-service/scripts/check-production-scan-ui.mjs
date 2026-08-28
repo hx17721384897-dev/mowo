@@ -72,6 +72,9 @@ try {
   console.log('PASS five production scan pages show the expanded, color-coded station menu')
 
   await page.goto(`${webBase}/production-scan-frame.html`, { waitUntil: 'networkidle' })
+  if (await page.evaluate(() => MowoScan.classify('LEGACY-KIT-TEST')) !== 'KIT_BATCH') {
+    throw new Error('旧材料批次码没有按材料来源识别')
+  }
   await page.locator('body').click({ position: { x: 1000, y: 400 } })
   await page.keyboard.type('FP-NOT-EXIST', { delay: 2 })
   await page.keyboard.press('Enter')

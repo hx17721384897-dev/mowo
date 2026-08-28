@@ -7,7 +7,7 @@
   function esc(value){const d=document.createElement('div');d.textContent=value??'';return d.innerHTML}
   function toast(message,error=false){const el=document.getElementById('toast');if(!el)return;el.textContent=message;el.className=`toast${error?' error':''}`;el.style.display='block';clearTimeout(el._timer);el._timer=setTimeout(()=>el.style.display='none',2800)}
   function beep(ok=true){try{const ctx=new(window.AudioContext||window.webkitAudioContext)(),osc=ctx.createOscillator(),gain=ctx.createGain();osc.frequency.value=ok?880:190;gain.gain.value=.06;osc.connect(gain);gain.connect(ctx.destination);osc.start();osc.stop(ctx.currentTime+(ok ? 0.09 : 0.22))}catch{}}
-  function classify(code){const value=String(code||'').trim().toUpperCase();if(value.startsWith('FP-'))return'FRAME';if(value.startsWith('KB-'))return'KIT_BATCH';if(value.startsWith('BX-'))return'KIT_BOX';return'TRACKING'}
+  function classify(code){const value=String(code||'').trim().toUpperCase();if(value.startsWith('FP-'))return'FRAME';if(value.startsWith('KB-')||value.startsWith('LEGACY-KIT-'))return'KIT_BATCH';if(value.startsWith('BX-'))return'KIT_BOX';return'TRACKING'}
   function installScanner(handler){
     document.addEventListener('keydown',event=>{
       if(event.ctrlKey||event.altKey||event.metaKey)return

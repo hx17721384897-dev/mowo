@@ -30,6 +30,7 @@
 - `npm run check`、`check:production-batches`、`check:production-artifacts`、`check:inventory-traceability` 和 `check:production-workflow` 已通过核心检查。
 - `npm run check:production-scan-ui` 已用临时生产员工真实打开五个页面，验证三级菜单、无需聚焦输入框的扫码捕获和手机宽度布局，测试账号已自动清理。
 - 五个扫码页面会使用带版本号的菜单脚本，避免浏览器继续显示旧“扫码生产”；当前岗位会自动展开并高亮，帧包、领料、配对、装箱分别使用蓝、橙、青、绿标识。
+- 扫码分类同时兼容正式 `KB-...` 和本地历史库存 `LEGACY-KIT-...`；历史批次仍必须通过后端库存、SKU 和当前生产批次领用校验。
 - 已使用一笔包含两个 `PU` 的本地测试订单实际跑通：两次 `FP + KB` 配对、两件装箱、整单发货；测试后订单、批次和库存已恢复，未残留测试帧包或材料批次。
 - 已实际调用指定页返工接口：24 帧两页只重印第 2 页，下载 Word 只有一页 12 个帧位；`FP-01` 作废、`FP-02` 生效，返工记录完整，测试数据清理后为 0。
 
@@ -54,3 +55,5 @@
 - 组装完成款是独立产线，不包含在本清单中。
 
 专项命令：`npm run check:production-workflow`、`npm run check:production-scan-ui`。
+
+负责人端到端手工测试使用 `PRODUCTION_MANUAL_TEST_PLAN.md`，其中固定了三类订单、虚拟地址、快递单号、现有材料批次码和 `FP` 记录表。
