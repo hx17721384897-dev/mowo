@@ -69,14 +69,15 @@ async function ensureBatchPrintFiles(fastify, context, createdBy) {
   const groupMap = new Map(groups.map(group => [group.id, group]))
   const errors = []
   for (const row of rows) {
-    const exists = files.some(file => file.animationVersionId === row.item.animationVersionId && file.targetFrameCount === row.task.frameCount)
-    if (exists) continue
     const unit = units.get(row.task.id)
     const template = groupMap.get(unit?.printGroupId)?.templates?.[0]
     if (!row.item.animationAssetId || !row.item.animationVersionId || !template) {
       errors.push({ productionNo: row.task.orderNo, specification: `${row.task.size} · ${row.task.frameCount}帧`, reason: !template ? '打印裁切组仍未上传有效 Word 模板' : '缺少动画资产或锁定版本' })
       continue
     }
+    const exists = files.some(file => file.animationVersionId === row.item.animationVersionId &&
+      file.targetFrameCount === row.task.frameCount && file.templateVersionId === template.id)
+    if (exists) continue
     try {
       await generateProductionFile(fastify, {
         assetId: row.item.animationAssetId, animationVersionId: row.item.animationVersionId,
@@ -91,7 +92,14 @@ async function ensureBatchPrintFiles(fastify, context, createdBy) {
     where: { productionBatchId: context.batch.id, status: 'READY', sourceType: { not: 'REPRINT' } },
     include: { asset: { select: { assetNo: true } } }, orderBy: { createdAt: 'asc' }
   })
-  return { files, errors }
+  const fileByProductionUnit = new Map(rows.map(row => {
+    const unit = units.get(row.task.id)
+    const template = groupMap.get(unit?.printGroupId)?.templates?.[0]
+    const file = template ? files.find(candidate => candidate.animationVersionId === row.item.animationVersionId &&
+      candidate.targetFrameCount === row.task.frameCount && candidate.templateVersionId === template.id) : null
+    return [row.task.id, file || null]
+  }))
+  return { files, errors, fileByProductionUnit }
 }
 
 async function audit(fastify, req, action, targetId) {
@@ -342,14 +350,13 @@ export default async function productionWorkflowRoutes(fastify) {
     const tasks = allTasks(context.orders)
     const ensured = await ensureBatchPrintFiles(fastify, context, req.user.userId)
     const files = ensured.files
-    const fileForTask = row => files.find(file =>
-      file.animationVersionId === row.item.animationVersionId && file.targetFrameCount === row.task.frameCount)
+    const fileForTask = row => ensured.fileByProductionUnit.get(row.task.id)
     const missing = tasks.filter(row => !fileForTask(row)).map(row => ({
       productionNo: row.task.orderNo, specification: `${row.task.size} · ${row.task.frameCount}帧`
     }))
     if (missing.length) return reply.code(409).send({
       success: false,
-      message: '部分产品缺少可打印 Word，请先到“打印与裁切设置”补齐对应模板；再次导出时系统会自动补生成',
+      message: '部分产品的打印文件生成失败，请查看具体产品和原因；修正后再次导出会自动补生成',
       data: missing.map(item => ({ ...item, reason: ensured.errors.find(error => error.productionNo === item.productionNo)?.reason || '文件生成失败' }))
     })
 

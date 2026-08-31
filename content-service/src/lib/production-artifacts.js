@@ -117,7 +117,7 @@ export function buildProductionDocx(templateBuffer, renderedBuffers, targetFrame
   const sectionMatch = bodyMatch[1].match(/<w:sectPr[\s\S]*?<\/w:sectPr>/)
   const section = sectionMatch?.[0] || ''
   const pageTemplate = bodyMatch[1].replace(section, '')
-  const pages = targetFrameCount / group.framesPerSheet
+  const pages = Math.ceil(targetFrameCount / group.framesPerSheet)
   const selectedPages = Array.isArray(requestedPages) && requestedPages.length
     ? [...new Set(requestedPages.map(Number))].sort((a, b) => a - b)
     : Array.from({ length: pages }, (_, index) => index + 1)
@@ -133,21 +133,27 @@ export function buildProductionDocx(templateBuffer, renderedBuffers, targetFrame
   const pageXml = []
   for (const pageNumber of selectedPages) {
     const page = pageNumber - 1
-    let cellIndex = 0
+    const frameStart = page * group.framesPerSheet
+    const framesOnPage = Math.min(group.framesPerSheet, targetFrameCount - frameStart)
+    let slotIndex = 0
+    let filledCount = 0
     const filled = pageTemplate.replace(/<w:tc([\s\S]*?)<\/w:tc>/g, match => {
-      if (cellIndex >= group.framesPerSheet) return match
-      const absoluteIndex = page * group.framesPerSheet + cellIndex
+      if (slotIndex >= group.framesPerSheet) return match
+      slotIndex += 1
+      const tcPr = match.match(/<w:tcPr[\s\S]*?<\/w:tcPr>/)?.[0] || ''
+      if (filledCount >= framesOnPage) return `<w:tc>${tcPr}<w:p/></w:tc>`
+      const absoluteIndex = frameStart + filledCount
       const buffer = renderedBuffers[absoluteIndex % renderedBuffers.length]
       imageNumber += 1
       const relId = `rIdMowoProduction${imageNumber}`
       const mediaName = `mowo-production-${imageNumber}.png`
       zip.addFile(`word/media/${mediaName}`, buffer)
       relationships.push(`<Relationship Id="${relId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${mediaName}"/>`)
-      const tcPr = match.match(/<w:tcPr[\s\S]*?<\/w:tcPr>/)?.[0] || ''
-      cellIndex += 1
+      filledCount += 1
       return `<w:tc>${tcPr}${drawingXml(relId, widthEmu, heightEmu, imageNumber)}</w:tc>`
     })
-    if (cellIndex !== group.framesPerSheet) throw new Error(`模板可用单元格为 ${cellIndex} 个，与单页 ${group.framesPerSheet} 帧不一致`)
+    if (slotIndex !== group.framesPerSheet) throw new Error(`模板可用单元格为 ${slotIndex} 个，与单页 ${group.framesPerSheet} 帧不一致`)
+    if (filledCount !== framesOnPage) throw new Error(`第 ${pageNumber} 页应插入 ${framesOnPage} 帧，实际只插入 ${filledCount} 帧`)
     pageXml.push(filled)
     if (pageNumber !== selectedPages.at(-1)) pageXml.push('<w:p><w:r><w:br w:type="page"/></w:r></w:p>')
   }
@@ -211,11 +217,10 @@ export async function generateProductionFile(fastify, { assetId, animationVersio
   const target = Number(targetFrameCount)
   if (!Number.isInteger(target) || target <= 0) throw new Error('目标帧数无效')
   if (target % animationVersion.baseFrameCount !== 0) throw new Error(`目标帧数必须是核心 ${animationVersion.baseFrameCount} 帧的整数倍`)
-  if (target % template.group.framesPerSheet !== 0) throw new Error(`目标帧数必须能被模板单页 ${template.group.framesPerSheet} 帧整除`)
   const render = await ensureFrameRender(fastify, animationVersion, template.group, markerEnabled)
   const renderedBuffers = await Promise.all(render.frameKeys.map(key => fastify.storageGetBuffer(key)))
   const templateBuffer = await fastify.storageGetBuffer(template.objectKey)
-  const totalPages = target / template.group.framesPerSheet
+  const totalPages = Math.ceil(target / template.group.framesPerSheet)
   const selectedPages = Array.isArray(requestedPages) && requestedPages.length
     ? [...new Set(requestedPages.map(Number))].sort((a, b) => a - b)
     : null

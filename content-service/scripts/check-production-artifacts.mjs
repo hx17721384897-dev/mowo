@@ -52,6 +52,20 @@ const secondPageZip = new AdmZip(secondPageOnly)
 const secondPageXml = secondPageZip.getEntry('word/document.xml').getData().toString('utf8')
 const secondPageMedia = secondPageZip.getEntries().filter(entry => entry.entryName.startsWith('word/media/mowo-production-'))
 assert(secondPageMedia.length === 12 && (secondPageXml.match(/w:type="page"/g) || []).length === 0, '24 帧返工只选择第 2 页时只生成一页 12 个帧位')
+
+const partialPageOutput = buildProductionDocx(template, frames, 16, {
+  size: '8x8cm', framesPerSheet: 6, frameWidthMm: 80, frameHeightMm: 80
+})
+const partialPageZip = new AdmZip(partialPageOutput)
+const partialPageXml = partialPageZip.getEntry('word/document.xml').getData().toString('utf8')
+const partialPageMedia = partialPageZip.getEntries().filter(entry => entry.entryName.startsWith('word/media/mowo-production-'))
+assert(partialPageMedia.length === 16 && (partialPageXml.match(/w:type="page"/g) || []).length === 2, '16 帧使用每页 6 帧模板时生成 6+6+4 共三页')
+const partialLastPage = buildProductionDocx(template, frames, 16, {
+  size: '8x8cm', framesPerSheet: 6, frameWidthMm: 80, frameHeightMm: 80
+}, [3])
+const partialLastPageZip = new AdmZip(partialLastPage)
+const partialLastPageMedia = partialLastPageZip.getEntries().filter(entry => entry.entryName.startsWith('word/media/mowo-production-'))
+assert(partialLastPageMedia.length === 4, '16 帧文件返工第 3 页时只插入最后 4 帧')
 console.log('Production artifact checks passed')
 
 const prisma = new PrismaClient()
