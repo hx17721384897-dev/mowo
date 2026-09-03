@@ -32,6 +32,9 @@ try {
   assert(routes.includes('export-production') && routes.includes('framePackCode'), '首次生产资料导出会建立帧包身份并启动两条生产线')
   assert(routes.includes('ensureBatchPrintFiles') && routes.includes('再次导出会自动补生成'), '补上传模板后可以为旧批次自动补生成 Word')
   assert(routes.includes('file.templateVersionId === template.id') && routes.includes('fileByProductionUnit'), '生产文件按动画、帧数和冻结模板共同匹配，不会跨尺寸串用')
+  assert(routes.includes("fastify.get('/frame-print-queue'") && routes.includes('printCopies: 1'), '帧包岗位读取每个 PU 一条且固定打印一份的统一队列')
+  assert(routes.includes('打印队列/${groupFolderByKey.get(groupKey)}') && routes.includes("String(sequence).padStart(4, '0')"), 'ZIP 按裁切组和冻结顺序输出逐 PU 文件')
+  assert(routes.includes('printFileId: printFile.id') && routes.includes("['生产顺序','打印份数','页数','裁切组'"), 'FP 绑定实际 Word 且标签清单使用同一打印顺序')
   assert(routes.includes("fastify.get('/orders'") && routes.includes("fastify.post('/units/:productionUnitId/reprint'"), '订单环节页和按页返工使用正式生产接口')
   assert(routes.includes('kitAssemblyBatch.updateMany') && routes.includes('skuInventory.updateMany'), '材料包配对采用条件扣减并同步汇总库存')
   assert(routes.includes("frame-packs/:code/complete") && routes.includes("fastify.post('/material-picks'"), '帧包完成与材料领用是独立生产动作')
@@ -44,6 +47,7 @@ try {
   assert(batchPage.includes('进入当前订单环节') && !batchPage.includes('onclick="exportAddresses()"') && !batchPage.includes('onclick="exportProduction()"'), '生产批次页只做总览和环节跳转，不重复推进状态')
   assert(scanOverview.includes('扫码作业总览') && scanFrame.includes('帧包完成') && scanMaterial.includes('材料领用') && scanPairing.includes('单件配对') && scanPacking.includes('装箱发货'), '扫码总览与四个岗位页面已经分开')
   assert(scanCommon.includes('installScanner') && scanCommon.includes("target?.matches?.('input,textarea,select"), '扫码枪无需点击输入框并保留手工输入备用')
+  assert(scanFrame.includes('批次打印队列') && scanFrame.includes('打印 1 份') && scanFrame.includes('downloadPrint'), '帧包完成页展示当前打印任务、固定份数和逐件下载')
   assert(sidebar.includes("key: 'scan'") && sidebar.includes('production-scan-packing.html'), '后台菜单以扫码作业二级菜单管理五个三级页面')
   await Promise.all([
     prisma.productionFramePack.count(), prisma.productionUnitPairing.count(),

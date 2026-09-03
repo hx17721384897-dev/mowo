@@ -54,12 +54,20 @@ function allTasks(orders) {
   return orders.flatMap(order => order.items.flatMap(item => item.productionTasks.map(task => ({ task, item, order }))))
 }
 
+function orderedTaskRows(context) {
+  const rows = allTasks(context.orders)
+  const rowById = new Map(rows.map(row => [row.task.id, row]))
+  const ordered = context.batch.units.map(unit => rowById.get(unit.productionUnitId)).filter(Boolean)
+  const included = new Set(ordered.map(row => row.task.id))
+  return [...ordered, ...rows.filter(row => !included.has(row.task.id))]
+}
+
 async function ensureBatchPrintFiles(fastify, context, createdBy) {
   let files = await fastify.prisma.productionPrintFile.findMany({
     where: { productionBatchId: context.batch.id, status: 'READY', sourceType: { not: 'REPRINT' } },
     include: { asset: { select: { assetNo: true } } }, orderBy: { createdAt: 'asc' }
   })
-  const rows = allTasks(context.orders)
+  const rows = orderedTaskRows(context)
   const units = new Map(context.batch.units.map(unit => [unit.productionUnitId, unit]))
   const groupIds = [...new Set(context.batch.units.map(unit => unit.printGroupId).filter(Boolean))]
   const groups = groupIds.length ? await fastify.prisma.printCutGroup.findMany({
@@ -200,6 +208,58 @@ export default async function productionWorkflowRoutes(fastify) {
       })),
       waitingSessions,
       recent: recent.map(row => ({ action: row.action, targetId: row.targetId, createdAt: row.createdAt, userId: row.userId }))
+    } })
+  })
+
+  // 帧包岗位与批次导出共用同一份冻结顺序；每个 PU 永远是一条只打印一次的任务。
+  fastify.get('/frame-print-queue', { preHandler: requireProduction }, async (req, reply) => {
+    const requestedBatchId = String(req.query?.batchId || '').trim()
+    const batches = await fastify.prisma.productionBatch.findMany({
+      where: { status: { in: ACTIVE_BATCH_STATUSES } },
+      include: { units: true }, orderBy: { updatedAt: 'desc' }, take: 30
+    })
+    const selected = requestedBatchId ? batches.find(batch => batch.id === requestedBatchId) : batches[0]
+    if (requestedBatchId && !selected) return reply.code(404).send({ success: false, message: '没有找到可生产的批次' })
+    if (!selected) return reply.send({ success: true, data: { batches: [], batch: null, queue: [] } })
+    const context = await loadBatchContext(fastify.prisma, selected.id)
+    if (!context) return reply.code(404).send({ success: false, message: '生产批次没有正式订单' })
+    const rows = orderedTaskRows(context)
+    const packs = await fastify.prisma.productionFramePack.findMany({
+      where: { batchId: selected.id, isActive: true }, orderBy: { attemptNo: 'desc' }
+    })
+    const packByUnit = new Map(packs.map(pack => [pack.productionUnitId, pack]))
+    const fileIds = [...new Set(packs.map(pack => pack.printFileId).filter(Boolean))]
+    const files = fileIds.length ? await fastify.prisma.productionPrintFile.findMany({
+      where: { id: { in: fileIds }, status: 'READY' }
+    }) : []
+    const fileById = new Map(files.map(file => [file.id, file]))
+    const urlByFileId = new Map()
+    const queue = []
+    for (const row of rows) {
+      const unit = context.batch.units.find(item => item.productionUnitId === row.task.id)
+      const pack = packByUnit.get(row.task.id)
+      const file = pack?.printFileId ? fileById.get(pack.printFileId) : null
+      if (file && !urlByFileId.has(file.id)) urlByFileId.set(file.id, await fastify.storagePresignGet(file.objectKey, 900))
+      const sequence = unit?.printSequence || queue.length + 1
+      const pageCount = unit?.printPageCount || null
+      const fileName = pack && file ? `${String(sequence).padStart(4, '0')}_${safeName(row.task.orderNo)}_${safeName(pack.code)}_${safeName(row.task.size)}_${row.task.frameCount}帧_${pageCount || '?'}页.docx` : null
+      queue.push({
+        sequence, productionUnitId: row.task.id, productionNo: row.task.orderNo,
+        salesOrderNo: row.order.orderNo, framePackCode: pack?.code || null,
+        groupCode: unit?.printGroupCode || null, groupName: unit?.printGroupName || '打印组待确认',
+        specification: `${row.task.modelName} · ${row.task.size} · ${row.task.frameCount}帧 · ${row.task.material} · ${row.task.colorName}`,
+        pageCount, printCopies: 1, frameStatus: unit?.frameStatus || 'WAITING',
+        fileName, downloadUrl: file ? urlByFileId.get(file.id) : null
+      })
+    }
+    return reply.send({ success: true, data: {
+      batches: batches.map(batch => ({
+        id: batch.id, status: batch.status, total: batch.units.length,
+        completed: batch.units.filter(unit => unit.frameStatus === 'COMPLETED').length
+      })),
+      batch: { id: selected.id, status: selected.status, total: queue.length,
+        completed: queue.filter(item => item.frameStatus === 'COMPLETED').length },
+      queue
     } })
   })
 
@@ -347,9 +407,8 @@ export default async function productionWorkflowRoutes(fastify) {
     const invalid = context.orders.filter(order => !['READY_FOR_PRODUCTION', 'PRODUCING'].includes(order.fulfillmentStatus))
     if (invalid.length) return reply.code(409).send({ success: false, message: '部分订单尚未绑定面单', data: invalid.map(o => o.orderNo) })
 
-    const tasks = allTasks(context.orders)
+    const tasks = orderedTaskRows(context)
     const ensured = await ensureBatchPrintFiles(fastify, context, req.user.userId)
-    const files = ensured.files
     const fileForTask = row => ensured.fileByProductionUnit.get(row.task.id)
     const missing = tasks.filter(row => !fileForTask(row)).map(row => ({
       productionNo: row.task.orderNo, specification: `${row.task.size} · ${row.task.frameCount}帧`
@@ -362,14 +421,18 @@ export default async function productionWorkflowRoutes(fastify) {
 
     await fastify.prisma.$transaction(async tx => {
       for (const row of tasks) {
+        const printFile = fileForTask(row)
         const existing = await tx.productionFramePack.findFirst({ where: { productionUnitId: row.task.id, isActive: true } })
         if (!existing) await tx.productionFramePack.create({ data: {
           code: framePackCode(row.task.orderNo), productionUnitId: row.task.id,
           salesOrderId: row.order.id, batchId: context.batch.id, skuId: row.task.skuId,
           animationVersionId: row.item.animationVersionId || null,
           targetFrameCount: row.task.frameCount, size: row.task.size,
-          status: 'IN_PROGRESS', createdBy: req.user.userId
+          status: 'IN_PROGRESS', printFileId: printFile.id, createdBy: req.user.userId
         } })
+        else if (existing.printFileId !== printFile.id) await tx.productionFramePack.update({
+          where: { id: existing.id }, data: { printFileId: printFile.id }
+        })
       }
       await tx.productionBatch.update({ where: { id: context.batch.id }, data: { status: 'IN_PROGRESS' } })
       await tx.productionBatchUnit.updateMany({ where: { batchId: context.batch.id, frameStatus: 'WAITING' }, data: { frameStatus: 'IN_PROGRESS' } })
@@ -389,15 +452,33 @@ export default async function productionWorkflowRoutes(fastify) {
     })
     const skuMap = new Map(skus.map(sku => [sku.id, sku]))
     const entries = []
-    const archiveName = file => `${file.asset?.assetNo || file.id.slice(0, 8)}_${safeName(file.displayName)}`
-    for (const file of files) entries.push({ name: `Word/${archiveName(file)}`, buffer: await fastify.storageGetBuffer(file.objectKey) })
+    const fileBufferById = new Map()
+    const groupFolderByKey = new Map()
+    const printRows = []
+    for (const row of tasks) {
+      const unit = context.batch.units.find(item => item.productionUnitId === row.task.id)
+      const pack = packMap.get(row.task.id)
+      const file = fileForTask(row)
+      if (!fileBufferById.has(file.id)) fileBufferById.set(file.id, await fastify.storageGetBuffer(file.objectKey))
+      const groupKey = unit?.printGroupId || 'UNCONFIGURED'
+      if (!groupFolderByKey.has(groupKey)) {
+        const groupNumber = String(groupFolderByKey.size + 1).padStart(2, '0')
+        groupFolderByKey.set(groupKey, `${groupNumber}_${safeName(unit?.printGroupName || '打印组待确认')}`)
+      }
+      const sequence = unit?.printSequence || printRows.length + 1
+      const pageCount = unit?.printPageCount || '?'
+      const taskFileName = `${String(sequence).padStart(4, '0')}_${safeName(row.task.orderNo)}_${safeName(pack.code)}_${safeName(row.task.size)}_${row.task.frameCount}帧_${pageCount}页.docx`
+      const archivePath = `打印队列/${groupFolderByKey.get(groupKey)}/${taskFileName}`
+      entries.push({ name: archivePath, buffer: fileBufferById.get(file.id) })
+      printRows.push({ row, unit, pack, file, archivePath, taskFileName })
+    }
     entries.push({ name: '帧素材包标签.csv', buffer: csvBuffer(
-      ['生产顺序','帧包码','总订单号','单件产品号','动画版本','目标帧数','尺寸','Word文件'],
-      tasks.map(row => {
-        const unit = context.batch.units.find(item => item.productionUnitId === row.task.id)
-        return [unit?.printSequence, packMap.get(row.task.id)?.code, row.order.orderNo, row.task.orderNo,
-          row.item.animationVersionId, row.task.frameCount, row.task.size, archiveName(fileForTask(row))]
-      })
+      ['生产顺序','打印份数','页数','裁切组','帧包码','总订单号','单件产品号','动画版本','目标帧数','尺寸','Word文件'],
+      printRows.map(({ row, unit, pack, archivePath }) => [
+        unit?.printSequence, 1, unit?.printPageCount, unit?.printGroupName, pack.code,
+        row.order.orderNo, row.task.orderNo, row.item.animationVersionId,
+        row.task.frameCount, row.task.size, archivePath
+      ])
     ) })
     entries.push({ name: '材料包需求清单.csv', buffer: csvBuffer(
       ['SKU','款式','尺寸','帧数','材质','颜色','需要数量'],

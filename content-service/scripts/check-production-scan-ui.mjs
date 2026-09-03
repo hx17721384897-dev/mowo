@@ -72,6 +72,11 @@ try {
   console.log('PASS five production scan pages show the expanded, color-coded station menu')
 
   await page.goto(`${webBase}/production-scan-frame.html`, { waitUntil: 'networkidle' })
+  await page.getByRole('heading', { name: '批次打印队列', exact: true }).waitFor()
+  if (!await page.locator('#batchSelect').count() || !await page.locator('#queueCurrent').count()) {
+    throw new Error('帧包完成页缺少批次选择或当前打印任务')
+  }
+  console.log('PASS frame station shows the shared ordered print queue')
   if (await page.evaluate(() => MowoScan.classify('LEGACY-KIT-TEST')) !== 'KIT_BATCH') {
     throw new Error('旧材料批次码没有按材料来源识别')
   }
