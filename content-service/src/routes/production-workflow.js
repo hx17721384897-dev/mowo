@@ -1,5 +1,6 @@
 import archiver from 'archiver'
 import { generateProductionFile } from '../lib/production-artifacts.js'
+import { workbookBuffer } from '../lib/simple-xlsx.js'
 
 const ACTIVE_BATCH_STATUSES = ['READY', 'IN_PROGRESS']
 
@@ -19,6 +20,14 @@ function safeName(value) {
 
 function framePackCode(productionNo, attemptNo = 1) {
   return `FP-${String(productionNo).replace(/^PU-/, '')}-${String(attemptNo).padStart(2, '0')}`
+}
+
+function workflowLabel(value) {
+  return ({
+    WAITING: '待处理', IN_PROGRESS: '进行中', COMPLETED: '已完成',
+    PICKED: '已领用', PAIRED: '已配对', PACKED: '已装箱', SHIPPED: '已发货',
+    CREATED: '已创建', VOID: '已作废', NORMAL: '正常'
+  })[value] || value || '-'
 }
 
 async function zipBuffer(entries) {
@@ -48,6 +57,80 @@ async function loadBatchContext(prisma, batchId) {
     orderBy: { createdAt: 'asc' }
   })
   return { batch, orders }
+}
+
+async function buildProductionWorkbook(fastify, context, printRows = []) {
+  const tasks = orderedTaskRows(context)
+  const [units, packs, skus, picks, pairings] = await Promise.all([
+    fastify.prisma.productionBatchUnit.findMany({ where: { batchId: context.batch.id }, orderBy: { printSequence: 'asc' } }),
+    fastify.prisma.productionFramePack.findMany({ where: { batchId: context.batch.id, isActive: true } }),
+    fastify.prisma.machineModelSku.findMany({
+      where: { id: { in: [...new Set(tasks.map(row => row.task.skuId))] } },
+      include: { model: { select: { name: true } } }
+    }),
+    fastify.prisma.productionMaterialPick.findMany({
+      where: { batchId: context.batch.id, status: { in: ['ACTIVE', 'CONSUMED'] } },
+      include: { kitAssemblyBatch: true, kitContainer: true }, orderBy: { pickedAt: 'asc' }
+    }),
+    fastify.prisma.productionUnitPairing.findMany({ where: { batchId: context.batch.id, status: { not: 'VOID' } } })
+  ])
+  const unitMap = new Map(units.map(unit => [unit.productionUnitId, unit]))
+  const skuMap = new Map(skus.map(sku => [sku.id, sku]))
+  const packMap = new Map(packs.map(pack => [pack.productionUnitId, pack]))
+  const pairingMap = new Map(pairings.map(pairing => [pairing.productionUnitId, pairing]))
+  const printMap = new Map(printRows.map(row => [row.row.task.id, row]))
+  const kitBatchIds = [...new Set(pairings.map(pairing => pairing.kitAssemblyBatchId))]
+  const containerIds = [...new Set(pairings.map(pairing => pairing.kitContainerId).filter(Boolean))]
+  const [kitBatches, containers] = await Promise.all([
+    kitBatchIds.length ? fastify.prisma.kitAssemblyBatch.findMany({ where: { id: { in: kitBatchIds } } }) : [],
+    containerIds.length ? fastify.prisma.kitContainer.findMany({ where: { id: { in: containerIds } } }) : []
+  ])
+  const kitBatchMap = new Map(kitBatches.map(batch => [batch.id, batch]))
+  const containerMap = new Map(containers.map(container => [container.id, container]))
+  const pickedSources = new Map()
+  for (const pick of picks) {
+    const rows = pickedSources.get(pick.skuId) || []
+    rows.push(pick.kitContainer?.code || pick.kitAssemblyBatch.batchNo)
+    pickedSources.set(pick.skuId, rows)
+  }
+
+  const detailHeaders = ['生产顺序','生产批次','总订单号','快递公司','快递单号','单件产品号','SKU编码','完整规格','动画资产','动画版本','帧包码','材料来源码','打印裁切组','打印页数','Word文件','帧包状态','领料状态','配对状态','装箱状态','异常状态']
+  const detailRows = tasks.map((row, index) => {
+    const unit = unitMap.get(row.task.id)
+    const sku = skuMap.get(row.task.skuId)
+    const pack = packMap.get(row.task.id)
+    const pairing = pairingMap.get(row.task.id)
+    const print = printMap.get(row.task.id)
+    const materialSource = pairing
+      ? (pairing.kitContainerId ? containerMap.get(pairing.kitContainerId)?.code : kitBatchMap.get(pairing.kitAssemblyBatchId)?.batchNo)
+      : ((pickedSources.get(row.task.skuId) || []).length ? `待配对（已领：${[...new Set(pickedSources.get(row.task.skuId))].join(' / ')}）` : '待领用')
+    return [
+      unit?.printSequence || index + 1, context.batch.id, row.order.orderNo,
+      row.order.trackingCompany || '待绑定', row.order.trackingNo || '待绑定', row.task.orderNo,
+      sku?.skuCode || 'SKU编码缺失',
+      `${row.task.modelName} · ${row.task.size} · ${row.task.frameCount}帧 · ${row.task.material} · ${row.task.colorName}`,
+      row.item.animationAssetId || '-', row.item.animationVersionId || '-', pack?.code || '待生成', materialSource || '待确认',
+      unit?.printGroupName || '待配置', unit?.printPageCount || '-', print?.taskFileName || '-',
+      workflowLabel(unit?.frameStatus), workflowLabel(unit?.materialStatus), workflowLabel(unit?.pairingStatus),
+      workflowLabel(unit?.packageStatus), workflowLabel(unit?.exceptionStatus)
+    ]
+  })
+  const demandHeaders = ['SKU编码','款式','尺寸','帧数','材质','颜色','需要数量','已领数量','已配对数量','材料来源码']
+  const demandRows = context.batch.batchItems.map(item => {
+    const sku = skuMap.get(item.skuId)
+    const skuPicks = picks.filter(pick => pick.skuId === item.skuId)
+    return [
+      sku?.skuCode || 'SKU编码缺失', sku?.model?.name || '-', sku?.size || '-', sku?.frameCount || '-',
+      sku?.material || '-', sku?.colorName || '-', item.plannedQty,
+      skuPicks.reduce((sum, pick) => sum + pick.quantity - pick.returnedQty, 0),
+      skuPicks.reduce((sum, pick) => sum + pick.consumedQty, 0),
+      skuPicks.length ? [...new Set(skuPicks.map(pick => pick.kitContainer?.code || pick.kitAssemblyBatch.batchNo))].join(' / ') : '待领用'
+    ]
+  })
+  return workbookBuffer([
+    { name: '单件生产明细', rows: [detailHeaders, ...detailRows], widths: [10,23,22,12,22,24,24,42,22,38,28,34,24,10,48,12,12,12,12,12] },
+    { name: '材料需求汇总', rows: [demandHeaders, ...demandRows], widths: [24,16,12,10,14,12,12,12,12,38] }
+  ])
 }
 
 function allTasks(orders) {
@@ -446,11 +529,6 @@ export default async function productionWorkflowRoutes(fastify) {
 
     const framePacks = await fastify.prisma.productionFramePack.findMany({ where: { batchId: context.batch.id, isActive: true } })
     const packMap = new Map(framePacks.map(pack => [pack.productionUnitId, pack]))
-    const skus = await fastify.prisma.machineModelSku.findMany({
-      where: { id: { in: [...new Set(tasks.map(row => row.task.skuId))] } },
-      select: { id: true, skuCode: true, size: true, material: true, frameCount: true, colorName: true, model: { select: { name: true } } }
-    })
-    const skuMap = new Map(skus.map(sku => [sku.id, sku]))
     const entries = []
     const fileBufferById = new Map()
     const groupFolderByKey = new Map()
@@ -472,26 +550,23 @@ export default async function productionWorkflowRoutes(fastify) {
       entries.push({ name: archivePath, buffer: fileBufferById.get(file.id) })
       printRows.push({ row, unit, pack, file, archivePath, taskFileName })
     }
-    entries.push({ name: '帧素材包标签.csv', buffer: csvBuffer(
-      ['生产顺序','打印份数','页数','裁切组','帧包码','总订单号','单件产品号','动画版本','目标帧数','尺寸','Word文件'],
-      printRows.map(({ row, unit, pack, archivePath }) => [
-        unit?.printSequence, 1, unit?.printPageCount, unit?.printGroupName, pack.code,
-        row.order.orderNo, row.task.orderNo, row.item.animationVersionId,
-        row.task.frameCount, row.task.size, archivePath
-      ])
-    ) })
-    entries.push({ name: '材料包需求清单.csv', buffer: csvBuffer(
-      ['SKU','款式','尺寸','帧数','材质','颜色','需要数量'],
-      context.batch.batchItems.map(item => {
-        const sku = skuMap.get(item.skuId) || {}
-        return [sku.skuCode || item.skuId, sku.model?.name, sku.size, sku.frameCount, sku.material, sku.colorName, item.plannedQty]
-      })
-    ) })
+    entries.push({ name: `${context.batch.id}_批次生产总表.xlsx`, buffer: await buildProductionWorkbook(fastify, context, printRows) })
     const zip = await zipBuffer(entries)
     await audit(fastify, req, `批次 ${context.batch.id} 导出生产资料并进入生产中`, context.batch.id)
     reply.header('Content-Type', 'application/zip')
     reply.header('Content-Disposition', `attachment; filename="${context.batch.id}_production.zip"`)
     return reply.send(zip)
+  })
+
+  // 批次在线记录是事实来源；任何阶段都可以重新下载当前状态快照。
+  fastify.get('/batches/:batchId/production-ledger', { preHandler: requireAdmin }, async (req, reply) => {
+    const context = await loadBatchContext(fastify.prisma, req.params.batchId)
+    if (!context) return reply.code(404).send({ success: false, message: '正式生产批次不存在' })
+    const buffer = await buildProductionWorkbook(fastify, context)
+    await audit(fastify, req, `批次 ${context.batch.id} 下载生产总表`, context.batch.id)
+    reply.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    reply.header('Content-Disposition', `attachment; filename="${context.batch.id}_production_ledger.xlsx"`)
+    return reply.send(buffer)
   })
 
   // 一张打印坏了也必须换新 FP 码；文档只包含员工指定的页。
@@ -606,26 +681,70 @@ export default async function productionWorkflowRoutes(fastify) {
     return reply.code(404).send({ success: false, message: '没有找到该帧包码、材料包批次码或箱码' })
   })
 
+  fastify.get('/pairing/material-source/:code', { preHandler: requireProduction }, async (req, reply) => {
+    const code = String(req.params.code || '').trim()
+    const batchId = String(req.query?.batchId || '').trim()
+    if (!batchId) return reply.code(400).send({ success: false, message: '请先选择当前生产批次' })
+    try {
+      const result = await fastify.prisma.$transaction(async tx => {
+        const batch = await tx.productionBatch.findUnique({ where: { id: batchId } })
+        if (!batch || !ACTIVE_BATCH_STATUSES.includes(batch.status)) throw new Error('当前生产批次不存在或已经结束')
+        const directBatch = await tx.kitAssemblyBatch.findUnique({ where: { batchNo: code } })
+        const container = directBatch ? null : await tx.kitContainer.findUnique({ where: { code } })
+        if (!directBatch && (!container || !container.isActive)) throw new Error('材料包批次码或箱码不存在')
+        const where = directBatch
+          ? { batchId, kitAssemblyBatchId: directBatch.id, status: 'ACTIVE', remainingQty: { gt: 0 } }
+          : { batchId, kitContainerId: container.id, status: 'ACTIVE', remainingQty: { gt: 0 } }
+        const picks = await tx.productionMaterialPick.findMany({ where, include: { kitAssemblyBatch: true, kitContainer: true }, orderBy: { pickedAt: 'asc' } })
+        if (!picks.length) throw new Error('该材料来源未在当前批次领用，或已领数量已经用完')
+        const skuId = directBatch?.skuId || container.skuId
+        const sku = await tx.machineModelSku.findUnique({ where: { id: skuId }, include: { model: { select: { name: true } } } })
+        return {
+          code, batchId, skuId, skuCode: sku?.skuCode || 'SKU编码缺失',
+          specification: sku ? `${sku.model?.name || ''} · ${sku.size} · ${sku.frameCount}帧 · ${sku.material} · ${sku.colorName}` : null,
+          pickedQty: picks.reduce((sum, pick) => sum + pick.quantity - pick.returnedQty, 0),
+          remainingQty: picks.reduce((sum, pick) => sum + pick.remainingQty, 0),
+          consumedQty: picks.reduce((sum, pick) => sum + pick.consumedQty, 0)
+        }
+      })
+      return reply.send({ success: true, data: result })
+    } catch (error) {
+      return reply.code(409).send({ success: false, message: error.message })
+    }
+  })
+
   // 裁切、装袋并贴标后扫描 FP，独立确认帧素材包完成。
   fastify.post('/frame-packs/:code/complete', { preHandler: requireProduction }, async (req, reply) => {
     const code = String(req.params.code || '').trim()
+    const batchId = String(req.body?.batchId || '').trim()
+    if (!batchId) return reply.code(400).send({ success: false, message: '请先选择当前生产批次' })
     try {
       const result = await fastify.prisma.$transaction(async tx => {
         const frame = await tx.productionFramePack.findUnique({ where: { code } })
         if (!frame || !frame.isActive || frame.status === 'VOID') throw new Error('帧素材包不存在或已经作废')
-        if (['PAIRED', 'PACKED', 'SHIPPED'].includes(frame.status)) return { frame, reused: true }
+        if (frame.batchId !== batchId) throw new Error(`该帧包属于 ${frame.batchId}，不能登记到当前批次 ${batchId}`)
+        const batch = await tx.productionBatch.findUnique({ where: { id: batchId } })
+        if (!batch || !ACTIVE_BATCH_STATUSES.includes(batch.status)) throw new Error('当前生产批次不存在或已经结束')
+        if (['PAIRED', 'PACKED', 'SHIPPED'].includes(frame.status)) return { frame, reused: true, advanced: true, changed: false }
         if (!['CREATED', 'IN_PROGRESS', 'COMPLETED'].includes(frame.status)) throw new Error('该帧素材包当前不能登记完成')
-        if (frame.status !== 'COMPLETED') {
-          await tx.productionFramePack.update({ where: { id: frame.id }, data: { status: 'COMPLETED' } })
+        if (frame.status === 'COMPLETED') return { frame, reused: true, advanced: false, changed: false }
+        const changed = await tx.productionFramePack.updateMany({
+          where: { id: frame.id, status: { in: ['CREATED', 'IN_PROGRESS'] }, isActive: true }, data: { status: 'COMPLETED' }
+        })
+        if (changed.count === 1) {
           await tx.productionBatchUnit.updateMany({
             where: { batchId: frame.batchId, productionUnitId: frame.productionUnitId },
             data: { frameStatus: 'COMPLETED' }
           })
         }
-        return { frame, reused: frame.status === 'COMPLETED' }
+        return { frame, reused: changed.count !== 1, advanced: false, changed: changed.count === 1 }
       })
-      await audit(fastify, req, `帧素材包 ${code} 完成裁切装袋`, result.frame.id)
-      return reply.send({ success: true, message: result.reused ? '该帧素材包此前已经登记完成' : '帧素材包已登记完成', data: result })
+      if (result.changed) await audit(fastify, req, `帧素材包 ${code} 完成裁切装袋`, result.frame.id)
+      return reply.send({
+        success: true,
+        message: result.advanced ? `该帧素材包已经进入${workflowLabel(result.frame.status)}，本次未重复登记` : result.reused ? '该帧素材包此前已经登记完成，本次未重复登记' : '帧素材包已登记完成',
+        data: result
+      })
     } catch (error) {
       return reply.code(409).send({ success: false, message: error.message })
     }
@@ -726,13 +845,25 @@ export default async function productionWorkflowRoutes(fastify) {
   fastify.post('/pairing', { preHandler: requireProduction }, async (req, reply) => {
     const frameCode = String(req.body?.framePackCode || '').trim()
     const kitCode = String(req.body?.kitCode || '').trim()
+    const batchId = String(req.body?.batchId || '').trim()
+    if (!batchId) return reply.code(400).send({ success: false, message: '请先选择当前生产批次' })
     if (!frameCode || !kitCode) return reply.code(400).send({ success: false, message: '请依次扫描帧素材包和材料包批次/箱码' })
     try {
       const result = await fastify.prisma.$transaction(async tx => {
         const frame = await tx.productionFramePack.findUnique({ where: { code: frameCode } })
-        if (!frame || !frame.isActive || frame.status !== 'COMPLETED') throw new Error('帧素材包不存在、已作废、尚未登记完成或已经配对')
+        if (!frame || !frame.isActive) throw new Error('帧素材包不存在或已经作废')
+        if (frame.batchId !== batchId) throw new Error(`该帧包属于 ${frame.batchId}，不能在当前批次 ${batchId} 配对`)
         const existing = await tx.productionUnitPairing.findUnique({ where: { productionUnitId: frame.productionUnitId } })
-        if (existing && existing.status !== 'VOID') throw new Error('该单件产品已经完成配对，不能重复领取材料包')
+        if (existing && existing.status !== 'VOID') {
+          const [existingBatch, existingContainer] = await Promise.all([
+            tx.kitAssemblyBatch.findUnique({ where: { id: existing.kitAssemblyBatchId } }),
+            existing.kitContainerId ? tx.kitContainer.findUnique({ where: { id: existing.kitContainerId } }) : null
+          ])
+          const existingSourceCode = existingContainer?.code || existingBatch?.batchNo || '未知材料来源'
+          if (existingSourceCode !== kitCode) throw new Error(`该帧包已经与 ${existingSourceCode} 配对，不能改用 ${kitCode}`)
+          return { pairing: existing, frameCode, reused: true, sourceCode: existingSourceCode }
+        }
+        if (frame.status !== 'COMPLETED') throw new Error('该帧素材包尚未登记完成，不能配对')
         const workflowUnit = await tx.productionBatchUnit.findFirst({ where: { batchId: frame.batchId, productionUnitId: frame.productionUnitId } })
         if (!workflowUnit || workflowUnit.materialStatus !== 'PICKED') throw new Error('该生产件尚未完成材料领用')
         const { pick, kitBatch, container } = await resolvePickedKitSource(tx, {
@@ -778,10 +909,10 @@ export default async function productionWorkflowRoutes(fastify) {
           pairingStatus: 'COMPLETED'
         } })
         await tx.batchItem.updateMany({ where: { batchId: frame.batchId, skuId: frame.skuId }, data: { actualQty: { increment: 1 } } })
-        return { pairing, frameCode, materialPickId: pick.id, kitBatchNo: kitBatch.batchNo, containerCode: container?.code || null }
+        return { pairing, frameCode, materialPickId: pick.id, kitBatchNo: kitBatch.batchNo, containerCode: container?.code || null, reused: false }
       })
-      await audit(fastify, req, `帧包 ${frameCode} 与材料包 ${kitCode} 配对`, result.pairing.id)
-      return reply.send({ success: true, message: '配对成功，请保留单件产品外包装上的帧包码', data: result })
+      if (!result.reused) await audit(fastify, req, `帧包 ${frameCode} 与材料包 ${kitCode} 配对`, result.pairing.id)
+      return reply.send({ success: true, message: result.reused ? `该帧包此前已与 ${result.sourceCode} 配对，本次未重复扣减库存` : '配对成功，请保留单件产品外包装上的帧包码', data: result })
     } catch (error) {
       return reply.code(409).send({ success: false, message: error.message })
     }
@@ -789,17 +920,22 @@ export default async function productionWorkflowRoutes(fastify) {
 
   fastify.get('/packing/:trackingNo', { preHandler: requireProduction }, async (req, reply) => {
     const trackingNo = String(req.params.trackingNo || '').trim()
+    const batchId = String(req.query?.batchId || '').trim()
+    if (!batchId) return reply.code(400).send({ success: false, message: '请先选择当前生产批次' })
     const order = await fastify.prisma.salesOrder.findFirst({ where: { trackingNo }, include: {
       items: { include: { productionTasks: { orderBy: { unitIndex: 'asc' } } } }, productionBatchOrders: true
     } })
     if (!order) return reply.code(404).send({ success: false, message: '没有找到该快递面单绑定的总订单' })
+    if (!order.productionBatchOrders.some(row => row.batchId === batchId)) {
+      return reply.code(409).send({ success: false, message: `该快递面单不属于当前生产批次 ${batchId}` })
+    }
     const tasks = order.items.flatMap(item => item.productionTasks)
     const pairings = await fastify.prisma.productionUnitPairing.findMany({ where: { productionUnitId: { in: tasks.map(task => task.id) }, status: { not: 'VOID' } } })
     const session = await fastify.prisma.productionPackingSession.findUnique({ where: { salesOrderId: order.id }, include: { scans: true } })
     const pairMap = new Map(pairings.map(row => [row.productionUnitId, row]))
     const scanned = new Set((session?.scans || []).map(row => row.productionUnitId))
     return reply.send({ success: true, data: {
-      order: { id: order.id, orderNo: order.orderNo, receiverName: order.receiverName, fulfillmentStatus: order.fulfillmentStatus },
+      order: { id: order.id, orderNo: order.orderNo, receiverName: order.receiverName, fulfillmentStatus: order.fulfillmentStatus, batchId },
       session: session ? { id: session.id, status: session.status } : null,
       units: tasks.map(task => ({ productionUnitId: task.id, productionNo: task.orderNo,
         specification: `${task.modelName} · ${task.frameCount}帧 · ${task.size} · ${task.material} · ${task.colorName}`,
@@ -809,8 +945,9 @@ export default async function productionWorkflowRoutes(fastify) {
   })
 
   fastify.get('/packing-sessions', { preHandler: requireProduction }, async (req, reply) => {
+    const batchId = String(req.query?.batchId || '').trim()
     const sessions = await fastify.prisma.productionPackingSession.findMany({
-      where: { status: { in: ['OPEN', 'COMPLETE'] } }, include: { scans: true }, orderBy: { updatedAt: 'desc' }, take: 100
+      where: { status: { in: ['OPEN', 'COMPLETE'] }, ...(batchId ? { batchId } : {}) }, include: { scans: true }, orderBy: { updatedAt: 'desc' }, take: 100
     })
     const orders = sessions.length ? await fastify.prisma.salesOrder.findMany({
       where: { id: { in: sessions.map(session => session.salesOrderId) } },
@@ -831,6 +968,8 @@ export default async function productionWorkflowRoutes(fastify) {
   fastify.post('/packing/:trackingNo/scan', { preHandler: requireProduction }, async (req, reply) => {
     const trackingNo = String(req.params.trackingNo || '').trim()
     const frameCode = String(req.body?.framePackCode || '').trim()
+    const batchId = String(req.body?.batchId || '').trim()
+    if (!batchId) return reply.code(400).send({ success: false, message: '请先选择当前生产批次' })
     if (!frameCode) return reply.code(400).send({ success: false, message: '请扫描单件产品外包装上的帧包码' })
     try {
       const data = await fastify.prisma.$transaction(async tx => {
@@ -843,6 +982,7 @@ export default async function productionWorkflowRoutes(fastify) {
         if (!pairing || !['PAIRED', 'PACKED'].includes(pairing.status)) throw new Error('该产品尚未完成帧包与材料包配对')
         const membership = await tx.productionBatchOrder.findFirst({ where: { salesOrderId: order.id, batch: { status: { in: ACTIVE_BATCH_STATUSES } } } })
         if (!membership) throw new Error('该订单没有有效生产批次')
+        if (membership.batchId !== batchId) throw new Error(`该产品属于 ${membership.batchId}，不能装入当前批次 ${batchId}`)
         const session = await tx.productionPackingSession.upsert({
           where: { salesOrderId: order.id },
           create: { salesOrderId: order.id, batchId: membership.batchId, trackingNo, startedBy: req.user.userId },

@@ -288,6 +288,7 @@ export default async function machineModelRoutes(fastify) {
         colorHex,
         price:     Number(price),
         skuBarcode,
+        skuCode:   skuBarcode,
         isActive:  true,
         sortOrder: maxSort ? maxSort.sortOrder + 1 : 0,
       }

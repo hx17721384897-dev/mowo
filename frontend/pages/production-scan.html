@@ -1,14 +1,55 @@
 <!DOCTYPE html>
-<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>扫码作业总览 - 哞屋后台</title><script src="../js/auth.js"></script><link rel="stylesheet" href="../css/production-scan.css"></head>
-<body><aside class="sidebar" id="sidebar"></aside><main class="main" id="main">
-<header class="topbar"><div><h1>扫码作业总览</h1><div class="topbar-meta">查看四条生产进度，具体扫码请进入对应岗位页面</div></div><button class="btn" onclick="loadOverview()">刷新</button></header>
-<div class="content">
-<div class="station-links"><a class="station-link" href="production-scan-frame.html">帧包完成<small>打印、裁切、装袋并贴 FP 后登记</small></a><a class="station-link" href="production-scan-material.html">材料领用<small>按生产批次扫描 KB/BX 并预留数量</small></a><a class="station-link" href="production-scan-pairing.html">单件配对<small>选择材料来源后连续扫描 FP</small></a><a class="station-link" href="production-scan-packing.html">装箱发货<small>扫描面单，再逐件扫描 FP</small></a></div>
-<div class="cards"><div class="card"><span>帧包完成</span><strong id="frameTotal">0</strong></div><div class="card"><span>材料已领</span><strong id="materialTotal">0</strong></div><div class="card"><span>已经配对</span><strong id="pairedTotal">0</strong></div><div class="card"><span>完成装箱</span><strong id="packedTotal">0</strong></div></div>
-<div class="grid"><section class="panel"><h2>活动生产批次</h2><p class="sub">每项数字都来自独立作业记录，不再由配对一次性代填。</p><div id="batches"><div class="empty">正在加载...</div></div></section><section class="panel"><h2>最近扫码记录</h2><p class="sub">记录操作人、时间和生产对象，纠错不能覆盖原记录。</p><div id="recent"><div class="empty">正在加载...</div></div></section></div>
-</div></main><div class="toast" id="toast"></div><script src="../js/admin-sidebar.js?v=20260829-2"></script><script src="../js/production-scan-common.js?v=20260829-3"></script>
-<script>
-const S=MowoScan
-async function loadOverview(){try{const d=await S.request('/api/admin/production-workflow/scan-overview'),sum=k=>d.batches.reduce((n,b)=>n+b[k],0);frameTotal.textContent=sum('frameCompleted');materialTotal.textContent=sum('materialPicked');pairedTotal.textContent=sum('paired');packedTotal.textContent=sum('packaged');batches.innerHTML=d.batches.length?d.batches.map(b=>`<div class="row"><div><div class="row-title">${S.esc(b.id)}</div><div class="row-meta">共 ${b.total} 件 · 帧包 ${b.frameCompleted} · 领料 ${b.materialPicked} · 配对 ${b.paired} · 装箱 ${b.packaged}${b.exceptions?` · 异常 ${b.exceptions}`:''}</div></div><a class="btn" href="admin-production-batches.html?batchId=${encodeURIComponent(b.id)}">查看</a></div>`).join(''):'<div class="empty">当前没有活动生产批次</div>';recent.innerHTML=d.recent.length?d.recent.map(r=>`<div class="row"><div><div class="row-title">${S.esc(r.action)}</div><div class="row-meta">${S.formatTime(r.createdAt)} · ${S.esc(r.targetId||'')}</div></div></div>`).join(''):'<div class="empty">还没有扫码记录</div>'}catch(e){S.toast(e.message,true)}}
-document.addEventListener('DOMContentLoaded',async()=>{if(await S.ensureStaff())loadOverview()})
-</script></body></html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>扫码作业 - 哞屋后台</title>
+  <script src="../js/auth.js"></script>
+  <link rel="stylesheet" href="../css/production-scan.css">
+</head>
+<body data-station="overview">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main" id="main">
+    <header class="topbar">
+      <div><h1 id="stationTitle">扫码作业总览</h1><div class="topbar-meta" id="stationMeta">一个工作台连续完成帧包、领料、配对和装箱</div></div>
+      <div class="scan-ready"><span class="scan-dot"></span>扫码枪已就绪</div>
+    </header>
+    <div class="content">
+      <section class="work-context">
+        <div><span>当前工作批次</span><strong id="activeBatchText">尚未选择</strong><small>本次浏览器作业期间，切换环节不会丢失</small></div>
+        <select class="select" id="globalBatch" aria-label="当前工作批次"><option value="">请选择生产批次</option></select>
+      </section>
+      <nav class="work-tabs" aria-label="扫码环节">
+        <button data-station="overview">总览</button><button data-station="frame">1 帧包完成</button><button data-station="material">2 材料领用</button><button data-station="pairing">3 单件配对</button><button data-station="packing">4 装箱发货</button>
+      </nav>
+
+      <section class="work-view" data-view="overview">
+        <div class="cards"><div class="card"><span>帧包完成</span><strong id="frameTotal">0</strong></div><div class="card"><span>材料已领</span><strong id="materialTotal">0</strong></div><div class="card"><span>已经配对</span><strong id="pairedTotal">0</strong></div><div class="card"><span>完成装箱</span><strong id="packedTotal">0</strong></div></div>
+        <div class="grid"><section class="panel"><h2>当前批次进度</h2><p class="sub">选择批次后，四个岗位共用同一工作范围。</p><div id="overviewBatch"><div class="empty">请先选择生产批次</div></div></section><section class="panel"><h2>最近服务器记录</h2><p class="sub">这里是正式记录，本机列表只用于现场快速查看。</p><div id="serverRecent"><div class="empty">正在加载...</div></div></section></div>
+      </section>
+
+      <section class="work-view" data-view="frame" hidden>
+        <section class="panel queue-panel"><div class="queue-head"><div><h2>批次打印队列</h2><p class="sub">完成裁切、装袋和贴标后扫描 FP；系统拒绝其他批次的帧包。</p></div><button class="btn" id="refreshQueue">刷新队列</button></div><div class="queue-current" id="queueCurrent">请先选择生产批次</div><div class="queue-list" id="queueList"></div></section>
+        <div class="grid"><section class="panel"><h2>扫描帧素材包</h2><div class="field"><label>手工输入备用</label><div class="scan-row"><input class="input code" id="frameManual" placeholder="FP-..."><button class="btn btn-black" id="frameManualBtn">登记完成</button></div></div><div class="result" id="frameResult">等待扫描帧素材包。</div></section><section class="panel"><h2>本机最近完成</h2><p class="sub">重复扫描合并在原记录中，不代表重复生产。</p><div id="frameRecent"><div class="empty">暂无记录</div></div></section></div>
+      </section>
+
+      <section class="work-view" data-view="material" hidden>
+        <div class="grid"><section class="panel"><h2>领取材料包</h2><p class="sub">当前批次已经统一选择，扫描 KB/BX 后填写领取数量。</p><div class="field"><label>手工输入备用</label><div class="scan-row"><input class="input code" id="materialManual" placeholder="KB-... / BX-..."><button class="btn" id="materialManualBtn">读取</button></div></div><div class="result" id="materialSourceResult">等待扫描材料来源。</div><div class="field"><label>领取数量</label><input class="input" id="materialQuantity" type="number" min="1" value="1"></div><button class="btn btn-black" id="materialPickBtn" disabled>确认领用</button></section><section class="panel"><h2>本批次领料记录</h2><p class="sub">配对前只是预留；单件配对成功时才正式扣除。</p><div id="materialPicks"><div class="empty">请先选择生产批次</div></div></section></div>
+      </section>
+
+      <section class="work-view" data-view="pairing" hidden>
+        <section class="panel source-strip"><div><h2>本批次可配材料</h2><p class="sub">先扫描下列已领材料来源，再连续扫描同规格 FP。</p></div><div id="pairingSources"><div class="empty">请先选择生产批次</div></div></section>
+        <div class="grid"><section class="panel"><h2>当前材料来源</h2><div class="result" id="pairingSourceResult">尚未选择材料来源，请先扫描 KB 或 BX。</div><div class="field"><label>手工输入备用</label><div class="scan-row"><input class="input code" id="pairingManual" placeholder="KB / BX / FP"><button class="btn btn-black" id="pairingManualBtn">处理</button></div></div><div class="result" id="pairingResult">选择材料来源后，可以连续扫描帧素材包。</div></section><section class="panel"><h2>本机最近配对</h2><p class="sub">同一 FP 重复扫描不会再次扣库存。</p><div id="pairingRecent"><div class="empty">暂无记录</div></div></section></div>
+      </section>
+
+      <section class="work-view" data-view="packing" hidden>
+        <div class="grid"><section class="panel"><h2>当前快递箱</h2><p class="sub">先扫描当前批次的快递面单，再逐件扫描已经配对的 FP。</p><div class="field"><label>手工输入备用</label><div class="scan-row"><input class="input code" id="packingManual" placeholder="快递单号 / FP-..."><button class="btn btn-black" id="packingManualBtn">处理</button></div></div><div id="packingWork" class="result">等待扫描快递面单。</div></section><section class="panel"><h2>待齐套区</h2><p class="sub">未配齐记录保存在服务器，换电脑后仍可继续。</p><div id="waitingList"><div class="empty">请先选择生产批次</div></div></section></div>
+      </section>
+    </div>
+  </main>
+  <div class="toast" id="toast"></div>
+  <script src="../js/admin-sidebar.js?v=20260903-1"></script>
+  <script src="../js/production-scan-common.js?v=20260903-1"></script>
+  <script src="../js/production-scan-workbench.js?v=20260903-1"></script>
+</body>
+</html>

@@ -34,7 +34,7 @@ try {
   assert(routes.includes('file.templateVersionId === template.id') && routes.includes('fileByProductionUnit'), '生产文件按动画、帧数和冻结模板共同匹配，不会跨尺寸串用')
   assert(routes.includes("fastify.get('/frame-print-queue'") && routes.includes('printCopies: 1'), '帧包岗位读取每个 PU 一条且固定打印一份的统一队列')
   assert(routes.includes('打印队列/${groupFolderByKey.get(groupKey)}') && routes.includes("String(sequence).padStart(4, '0')"), 'ZIP 按裁切组和冻结顺序输出逐 PU 文件')
-  assert(routes.includes('printFileId: printFile.id') && routes.includes("['生产顺序','打印份数','页数','裁切组'"), 'FP 绑定实际 Word 且标签清单使用同一打印顺序')
+  assert(routes.includes('printFileId: printFile.id') && routes.includes('批次生产总表.xlsx') && routes.includes("name: '单件生产明细'"), 'FP 绑定实际 Word 且统一生产总表使用同一打印顺序')
   assert(routes.includes("fastify.get('/orders'") && routes.includes("fastify.post('/units/:productionUnitId/reprint'"), '订单环节页和按页返工使用正式生产接口')
   assert(routes.includes('kitAssemblyBatch.updateMany') && routes.includes('skuInventory.updateMany'), '材料包配对采用条件扣减并同步汇总库存')
   assert(routes.includes("frame-packs/:code/complete") && routes.includes("fastify.post('/material-picks'"), '帧包完成与材料领用是独立生产动作')
@@ -45,10 +45,12 @@ try {
   assert(oldAdmin.includes('旧帧图压缩包接口已停用'), '旧帧图导出不能覆盖正式生产批次')
   assert(orderPage.includes('/api/admin/production-workflow/orders') && orderPage.includes('/reprint'), '订单环节页只读取正式订单并提供返工入口')
   assert(batchPage.includes('进入当前订单环节') && !batchPage.includes('onclick="exportAddresses()"') && !batchPage.includes('onclick="exportProduction()"'), '生产批次页只做总览和环节跳转，不重复推进状态')
-  assert(scanOverview.includes('扫码作业总览') && scanFrame.includes('帧包完成') && scanMaterial.includes('材料领用') && scanPairing.includes('单件配对') && scanPacking.includes('装箱发货'), '扫码总览与四个岗位页面已经分开')
+  assert(scanOverview.includes('data-view="frame"') && scanOverview.includes('data-view="material"') && scanOverview.includes('data-view="pairing"') && scanOverview.includes('data-view="packing"'), '扫码总览与四个岗位已经收拢为同一工作台')
+  assert(scanFrame.includes('station=frame') && scanMaterial.includes('station=material') && scanPairing.includes('station=pairing') && scanPacking.includes('station=packing'), '旧岗位地址只跳转到统一工作台，不保留重复业务系统')
   assert(scanCommon.includes('installScanner') && scanCommon.includes("target?.matches?.('input,textarea,select"), '扫码枪无需点击输入框并保留手工输入备用')
-  assert(scanFrame.includes('批次打印队列') && scanFrame.includes('打印 1 份') && scanFrame.includes('downloadPrint'), '帧包完成页展示当前打印任务、固定份数和逐件下载')
-  assert(sidebar.includes("key: 'scan'") && sidebar.includes('production-scan-packing.html'), '后台菜单以扫码作业二级菜单管理五个三级页面')
+  assert(scanOverview.includes('批次打印队列') && scanOverview.includes('globalBatch') && scanOverview.includes('production-scan-workbench.js'), '统一工作台展示批次打印队列并只选择一次工作批次')
+  assert(sidebar.includes("key: 'scan'") && sidebar.includes('production-scan.html?station=packing'), '后台菜单以扫码作业二级菜单打开统一工作台的五个环节')
+  assert(routes.includes("if (frame.batchId !== batchId)") && routes.includes("if (!result.reused) await audit"), '帧包与配对强制校验当前批次且重复扫码不重复写成功日志')
   await Promise.all([
     prisma.productionFramePack.count(), prisma.productionUnitPairing.count(),
     prisma.productionPackingSession.count(), prisma.productionPackingScan.count(),

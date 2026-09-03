@@ -26,11 +26,11 @@
         {
           key: 'scan', icon: '⌁', label: '扫码作业',
           children: [
-            { href: 'production-scan.html',          icon: '▦', label: '作业总览', station: 'overview' },
-            { href: 'production-scan-frame.html',    icon: '1', label: '帧包完成', station: 'frame' },
-            { href: 'production-scan-material.html', icon: '2', label: '材料领用', station: 'material' },
-            { href: 'production-scan-pairing.html',  icon: '3', label: '单件配对', station: 'pairing' },
-            { href: 'production-scan-packing.html',  icon: '4', label: '装箱发货', station: 'packing' }
+            { href: 'production-scan.html?station=overview', icon: '▦', label: '作业总览', station: 'overview' },
+            { href: 'production-scan.html?station=frame',    icon: '1', label: '帧包完成', station: 'frame' },
+            { href: 'production-scan.html?station=material', icon: '2', label: '材料领用', station: 'material' },
+            { href: 'production-scan.html?station=pairing',  icon: '3', label: '单件配对', station: 'pairing' },
+            { href: 'production-scan.html?station=packing',  icon: '4', label: '装箱发货', station: 'packing' }
           ]
         },
         { href: 'admin-print-production.html',         icon: '↕', label: '打印与裁切设置' },

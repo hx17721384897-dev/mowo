@@ -54,11 +54,11 @@ try {
   await page.addInitScript(token => localStorage.setItem('mowo_token', token), login.data.accessToken)
 
   const pages = [
-    ['production-scan.html', '扫码作业总览', 'overview'],
-    ['production-scan-frame.html', '帧包完成', 'frame'],
-    ['production-scan-material.html', '材料领用', 'material'],
-    ['production-scan-pairing.html', '单件配对', 'pairing'],
-    ['production-scan-packing.html', '装箱发货', 'packing']
+    ['production-scan.html?station=overview', '扫码作业总览', 'overview'],
+    ['production-scan.html?station=frame', '帧包完成', 'frame'],
+    ['production-scan.html?station=material', '材料领用', 'material'],
+    ['production-scan.html?station=pairing', '单件配对', 'pairing'],
+    ['production-scan.html?station=packing', '装箱发货', 'packing']
   ]
   for (const [file, heading, station] of pages) {
     await page.goto(`${webBase}/${file}`, { waitUntil: 'networkidle' })
@@ -67,16 +67,32 @@ try {
     if (!await scanMenu.count() || !await scanMenu.locator('.nav-third').isVisible()) throw new Error(`${heading} 未展开扫码作业三级菜单`)
     if (await scanMenu.locator('.nav-third-item').count() !== 5) throw new Error(`${heading} 的扫码作业三级入口不完整`)
     if (await page.evaluate(() => document.body.dataset.station) !== station) throw new Error(`${heading} 没有应用正确岗位颜色`)
-    if (station !== 'overview' && await page.locator('.station-tabs .station-tab').count() !== 5) throw new Error(`${heading} 缺少顶部岗位切换入口`)
+    if (await page.locator('.work-tabs button').count() !== 5) throw new Error(`${heading} 缺少统一工作台环节切换入口`)
   }
-  console.log('PASS five production scan pages show the expanded, color-coded station menu')
+  console.log('PASS unified production workbench shows five color-coded station entries')
 
-  await page.goto(`${webBase}/production-scan-frame.html`, { waitUntil: 'networkidle' })
+  await page.goto(`${webBase}/production-scan.html?station=frame`, { waitUntil: 'networkidle' })
   await page.getByRole('heading', { name: '批次打印队列', exact: true }).waitFor()
-  if (!await page.locator('#batchSelect').count() || !await page.locator('#queueCurrent').count()) {
+  if (!await page.locator('#globalBatch').count() || !await page.locator('#queueCurrent').count()) {
     throw new Error('帧包完成页缺少批次选择或当前打印任务')
   }
   console.log('PASS frame station shows the shared ordered print queue')
+  const batchOptions = await page.locator('#globalBatch option').count()
+  if (batchOptions > 1) {
+    await page.locator('#globalBatch').selectOption({ index: 1 })
+    await page.waitForFunction(() => document.querySelector('#activeBatchText')?.textContent?.startsWith('PB-'))
+    const selectedBatch = await page.locator('#globalBatch').inputValue()
+    await page.evaluate(() => { window.__scanWorkbenchMarker = 'preserved' })
+    await page.locator('.work-tabs button[data-station="material"]').click()
+    await page.getByRole('heading', { name: '领取材料包', exact: true }).waitFor()
+    await page.locator('.work-tabs button[data-station="pairing"]').click()
+    await page.getByRole('heading', { name: '当前材料来源', exact: true }).waitFor()
+    if (await page.locator('#globalBatch').inputValue() !== selectedBatch || await page.evaluate(() => window.__scanWorkbenchMarker) !== 'preserved') {
+      throw new Error('切换扫码环节时页面刷新或丢失了当前生产批次')
+    }
+    await page.locator('.work-tabs button[data-station="frame"]').click()
+    console.log('PASS station switching preserves the page and selected production batch')
+  }
   if (await page.evaluate(() => MowoScan.classify('LEGACY-KIT-TEST')) !== 'KIT_BATCH') {
     throw new Error('旧材料批次码没有按材料来源识别')
   }
@@ -84,13 +100,15 @@ try {
   await page.keyboard.type('FP-NOT-EXIST', { delay: 2 })
   await page.keyboard.press('Enter')
   await page.locator('#toast.error').waitFor({ timeout: 10000 })
-  if (!await page.locator('#manualCode').evaluate(element => element.value === '')) {
+  if (!await page.locator('#frameManual').evaluate(element => element.value === '')) {
     throw new Error('全局扫码测试错误地依赖了手工输入框')
   }
   console.log('PASS barcode input is captured without focusing a field')
 
+  if (process.env.SCREENSHOT_PATH) await page.screenshot({ path: process.env.SCREENSHOT_PATH, fullPage: true })
+
   await page.setViewportSize({ width: 390, height: 844 })
-  await page.goto(`${webBase}/production-scan-pairing.html`, { waitUntil: 'networkidle' })
+  await page.goto(`${webBase}/production-scan.html?station=pairing`, { waitUntil: 'networkidle' })
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1)
   if (overflow) throw new Error('单件配对页面在手机宽度出现横向溢出')
   console.log('PASS production scan station fits a mobile viewport')
