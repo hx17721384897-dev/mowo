@@ -159,10 +159,6 @@
 .nav-third-item.station-material .nav-icon{background:#c76518;color:#fff;}
 .nav-third-item.station-pairing .nav-icon{background:#168b86;color:#fff;}
 .nav-third-item.station-packing .nav-icon{background:#2b7d46;color:#fff;}
-.nav-third-item.station-frame.active{background:rgba(47,115,201,.22);color:#8fc1ff;}
-.nav-third-item.station-material.active{background:rgba(199,101,24,.22);color:#ffb878;}
-.nav-third-item.station-pairing.active{background:rgba(22,139,134,.22);color:#7be0dc;}
-.nav-third-item.station-packing.active{background:rgba(43,125,70,.25);color:#8bd6a3;}
 .sidebar-back{display:flex;align-items:center;gap:10px;padding:12px 20px;border-top:1px solid rgba(255,255,255,.08);color:var(--gray3,#787874);font-weight:800;font-size:13px;text-decoration:none;white-space:nowrap;overflow:hidden;transition:background .15s,color .15s;flex-shrink:0;}
 .sidebar-back:hover{background:rgba(255,255,255,.06);color:var(--white,#fff);}
 .sidebar.collapsed .sidebar-back .nav-label{opacity:0;}

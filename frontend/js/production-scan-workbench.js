@@ -3,11 +3,11 @@
   const BATCH_KEY = 'mowo_production_active_batch'
   const HISTORY_KEY = 'mowo_production_scan_history'
   const stations = {
-    overview: ['扫码作业总览', '一个工作台连续完成帧包、领料、配对和装箱'],
-    frame: ['帧包完成', '打印、裁切、装袋并贴标后扫描 FP'],
-    material: ['材料领用', '扫描 KB/BX 为当前生产批次预留材料'],
-    pairing: ['单件配对', '扫描已领材料来源，再连续扫描同规格 FP'],
-    packing: ['装箱发货', '扫描面单，再逐件扫描已经配对的 FP']
+    overview: '扫码作业总览',
+    frame: '帧包完成',
+    material: '材料领用',
+    pairing: '单件配对',
+    packing: '装箱发货'
   }
   const requestedStation = new URLSearchParams(location.search).get('station')
   const state = {
@@ -47,7 +47,7 @@
   }
   function renderBatchContext() {
     const batch = currentBatchInfo()
-    el('activeBatchText').textContent = batch ? `${batch.id} · 共 ${batch.total} 件` : '尚未选择'
+    el('batchSelectionState').textContent = batch ? `${batch.total} 件` : '未选择'
   }
   function renderOverview() {
     const batch = currentBatchInfo()
@@ -81,14 +81,22 @@
     document.body.dataset.station = state.station
     document.querySelectorAll('.work-view').forEach(view => { view.hidden = view.dataset.view !== state.station })
     document.querySelectorAll('.work-tabs button').forEach(button => button.classList.toggle('active', button.dataset.station === state.station))
-    el('stationTitle').textContent = stations[state.station][0]
-    el('stationMeta').textContent = stations[state.station][1]
+    el('stationTitle').textContent = stations[state.station]
     if (push) history.replaceState(null, '', `production-scan.html?station=${state.station}`)
-    document.querySelectorAll('a[href*="production-scan.html?station="]').forEach(link => {
-      const station = new URL(link.href, location.href).searchParams.get('station')
-      link.classList.toggle('active', station === state.station)
-    })
+    syncSidebarStation()
+    const stationAtRender = state.station
+    setTimeout(() => { if (state.station === stationAtRender) syncSidebarStation() }, 0)
     refreshStation().catch(error => S.toast(error.message, true))
+  }
+  function syncSidebarStation() {
+    const target = `production-scan.html?station=${state.station}`
+    if (typeof window.__adminSidebarSetActive === 'function') {
+      window.__adminSidebarSetActive(target)
+      return
+    }
+    document.querySelectorAll('.nav-third-item[href*="production-scan.html?station="]').forEach(link => {
+      link.classList.toggle('active', link.getAttribute('href') === target)
+    })
   }
   async function changeBatch(value) {
     state.batchId = value || ''

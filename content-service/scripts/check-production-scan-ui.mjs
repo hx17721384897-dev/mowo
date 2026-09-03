@@ -1,5 +1,6 @@
 import { chromium } from 'file:///C:/Users/25839/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs'
 import { PrismaClient } from '@prisma/client'
+import path from 'node:path'
 
 const prisma = new PrismaClient()
 const apiBase = process.env.TEST_API_BASE || 'http://127.0.0.1:3001'
@@ -62,7 +63,7 @@ try {
   ]
   for (const [file, heading, station] of pages) {
     await page.goto(`${webBase}/${file}`, { waitUntil: 'networkidle' })
-    await page.getByRole('heading', { name: heading, exact: true }).waitFor({ timeout: 10000 })
+    await page.locator('#stationTitle').filter({ hasText: heading }).waitFor({ timeout: 10000 })
     const scanMenu = page.locator('[data-nested="production:scan"]')
     if (!await scanMenu.count() || !await scanMenu.locator('.nav-third').isVisible()) throw new Error(`${heading} 未展开扫码作业三级菜单`)
     if (await scanMenu.locator('.nav-third-item').count() !== 5) throw new Error(`${heading} 的扫码作业三级入口不完整`)
@@ -71,8 +72,14 @@ try {
   }
   console.log('PASS unified production workbench shows five color-coded station entries')
 
+  const visibleCopy = await page.locator('body').innerText()
+  if (visibleCopy.includes('本次浏览器作业期间') || visibleCopy.includes('这里是正式记录') || visibleCopy.includes('服务器仍会')) {
+    throw new Error('扫码页面仍展示面向开发讨论的实现说明')
+  }
+  console.log('PASS production workbench only shows staff-facing operational copy')
+
   await page.goto(`${webBase}/production-scan.html?station=frame`, { waitUntil: 'networkidle' })
-  await page.getByRole('heading', { name: '批次打印队列', exact: true }).waitFor()
+  await page.getByRole('heading', { name: '打印队列', exact: true }).waitFor()
   if (!await page.locator('#globalBatch').count() || !await page.locator('#queueCurrent').count()) {
     throw new Error('帧包完成页缺少批次选择或当前打印任务')
   }
@@ -80,17 +87,29 @@ try {
   const batchOptions = await page.locator('#globalBatch option').count()
   if (batchOptions > 1) {
     await page.locator('#globalBatch').selectOption({ index: 1 })
-    await page.waitForFunction(() => document.querySelector('#activeBatchText')?.textContent?.startsWith('PB-'))
+    await page.waitForFunction(() => document.querySelector('#batchSelectionState')?.textContent?.includes('件'))
     const selectedBatch = await page.locator('#globalBatch').inputValue()
     await page.evaluate(() => { window.__scanWorkbenchMarker = 'preserved' })
     await page.locator('.work-tabs button[data-station="material"]').click()
     await page.getByRole('heading', { name: '领取材料包', exact: true }).waitFor()
     await page.locator('.work-tabs button[data-station="pairing"]').click()
-    await page.getByRole('heading', { name: '当前材料来源', exact: true }).waitFor()
+    await page.locator('[data-view="pairing"] h2').filter({ hasText: '单件配对' }).waitFor()
     if (await page.locator('#globalBatch').inputValue() !== selectedBatch || await page.evaluate(() => window.__scanWorkbenchMarker) !== 'preserved') {
       throw new Error('切换扫码环节时页面刷新或丢失了当前生产批次')
     }
     await page.locator('.work-tabs button[data-station="frame"]').click()
+    if (process.env.SCREENSHOT_DIR) {
+      for (const station of ['overview', 'frame', 'material', 'pairing', 'packing']) {
+        await page.locator(`.work-tabs button[data-station="${station}"]`).click()
+        await page.waitForTimeout(180)
+        const activeSidebarStations = page.locator('[data-nested="production:scan"] .nav-third-item.active')
+        if (await activeSidebarStations.count() !== 1 || !await activeSidebarStations.first().getAttribute('href').then(href => href?.includes(`station=${station}`))) {
+          throw new Error(`${station} 切换后左侧菜单高亮不唯一`)
+        }
+        await page.screenshot({ path: path.join(process.env.SCREENSHOT_DIR, `production-scan-${station}.png`), fullPage: true })
+      }
+      await page.locator('.work-tabs button[data-station="frame"]').click()
+    }
     console.log('PASS station switching preserves the page and selected production batch')
   }
   if (await page.evaluate(() => MowoScan.classify('LEGACY-KIT-TEST')) !== 'KIT_BATCH') {
