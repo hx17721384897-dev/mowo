@@ -710,8 +710,11 @@ async function openSaleConfig(workId) {
     const data = json.data
     _saleCandidates = data.candidates || []
     _saleBaseFrameCount = data.baseFrameCount || 0
-    const selectedMap = new Map((data.selected || []).map(row => [row.skuId, row]))
-    _saleRows = (data.selected || []).sort((a,b) => a.sortOrder - b.sortOrder).map(row => ({ ...row }))
+    const candidateMap = new Map(_saleCandidates.map(sku => [sku.id, sku]))
+    _saleRows = (data.selected || [])
+      .filter(row => candidateMap.get(row.skuId)?.compatible)
+      .sort((a,b) => a.sortOrder - b.sortOrder)
+      .map(row => ({ ...row }))
     document.getElementById('saleSummary').value = data.storefrontSummary || ''
     document.getElementById('saleSortOrder').value = data.storefrontSortOrder || 0
     document.getElementById('showIncompatibleSkus').checked = false

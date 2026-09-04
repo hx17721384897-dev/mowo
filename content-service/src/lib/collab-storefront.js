@@ -7,6 +7,14 @@ export class CollabStorefrontError extends Error {
   }
 }
 
+function isFrameCompatible(baseFrameCount, targetFrameCount) {
+  return Number.isInteger(baseFrameCount)
+    && baseFrameCount > 0
+    && Number.isInteger(targetFrameCount)
+    && targetFrameCount >= baseFrameCount
+    && targetFrameCount % baseFrameCount === 0
+}
+
 export function publicCollabWorkWhere(extra = {}) {
   return {
     status: 'approved',
@@ -69,6 +77,7 @@ export async function resolveCollabOffer(prisma, workId, skuId) {
       isRevision: true,
       animationAssetId: true,
       animationVersionId: true,
+      animationVersion: { select: { baseFrameCount: true } },
       saleSkus: {
         where: { skuId, isEnabled: true },
         take: 1,
@@ -93,6 +102,9 @@ export async function resolveCollabOffer(prisma, workId, skuId) {
   })
   if (!sku || !sku.isActive || !sku.model?.isActive) {
     throw new CollabStorefrontError('SKU_NOT_FOR_SALE', '商品规格不存在或已停止销售', 404)
+  }
+  if (!isFrameCompatible(work.animationVersion?.baseFrameCount, sku.frameCount)) {
+    throw new CollabStorefrontError('SKU_FRAME_INCOMPATIBLE', '该商品规格与动画帧数不兼容', 409)
   }
   const saleConfig = work.saleSkus?.[0]
   if (!saleConfig) {

@@ -3,6 +3,7 @@
 
 import { calcRevenueRate } from '../lib/revenue.js'
 import { linkCollabWorkToAnimation } from '../lib/collab-animation-asset.js'
+import { isCollabSkuFrameCompatible } from '../lib/collab-sale-config.js'
 import { generateCoverThumb } from '../lib/thumbnail.js'
 import {
   collabFinalPrice,
@@ -47,6 +48,7 @@ export default async function collabRoutes(fastify) {
           isExclusiveWork: true,
           approvedAt: true,
           createdAt: true,
+          animationVersion: { select: { baseFrameCount: true } },
           saleSkus: {
             where: { isEnabled: true, sku: { isActive: true, model: { isActive: true } } },
             orderBy: { sortOrder: 'asc' },
@@ -54,7 +56,7 @@ export default async function collabRoutes(fastify) {
               finalPrice: true,
               leadTimeDays: true,
               fulfillmentMode: true,
-              sku: { select: { id: true, size: true } },
+              sku: { select: { id: true, size: true, frameCount: true } },
             },
           },
         },
@@ -71,7 +73,8 @@ export default async function collabRoutes(fastify) {
     const profileMap = Object.fromEntries(profiles.map(p => [p.userId, p]))
 
     const result = works.map(work => {
-      const prices = work.saleSkus.map(offer => collabFinalPrice(offer))
+      const saleSkus = work.saleSkus.filter(offer => isCollabSkuFrameCompatible(work.animationVersion?.baseFrameCount, offer.sku.frameCount))
+      const prices = saleSkus.map(offer => collabFinalPrice(offer))
       return {
         id: work.id,
         creatorId: work.creatorId,
@@ -84,11 +87,11 @@ export default async function collabRoutes(fastify) {
         approvedAt: work.approvedAt,
         creator: profileMap[work.creatorId] ?? { userId: work.creatorId, nickname: '创作者', avatarUrl: null },
         minPrice: prices.length ? Math.min(...prices) : null,
-        availableSkuCount: work.saleSkus.length,
-        availableSizes: [...new Set(work.saleSkus.map(offer => offer.sku.size).filter(Boolean))],
-        minLeadTimeDays: work.saleSkus.length ? Math.min(...work.saleSkus.map(offer => offer.leadTimeDays)) : null,
+        availableSkuCount: saleSkus.length,
+        availableSizes: [...new Set(saleSkus.map(offer => offer.sku.size).filter(Boolean))],
+        minLeadTimeDays: saleSkus.length ? Math.min(...saleSkus.map(offer => offer.leadTimeDays)) : null,
       }
-    })
+    }).filter(work => work.availableSkuCount > 0)
 
     return reply.send({ success: true, data: { works: result, total, page: pageNumber, limit: limitNumber } })
   })
@@ -112,6 +115,7 @@ export default async function collabRoutes(fastify) {
         isNewbieWork: true,
         isExclusiveWork: true,
         approvedAt: true,
+        animationVersion: { select: { baseFrameCount: true } },
         saleSkus: {
           where: { isEnabled: true, sku: { isActive: true, model: { isActive: true } } },
           orderBy: { sortOrder: 'asc' },
@@ -130,7 +134,9 @@ export default async function collabRoutes(fastify) {
     })
 
     // 为每个正式销售 SKU 附加公开媒体、最终售价和交期。
-    const skus = work.saleSkus.map(offer => {
+    const skus = work.saleSkus
+      .filter(offer => isCollabSkuFrameCompatible(work.animationVersion?.baseFrameCount, offer.sku.frameCount))
+      .map(offer => {
       const s = offer.sku
       const exampleKeys = safeJson(s.exampleMedia, [])
       const exampleUrls = exampleKeys.map(k => presignOrPassthrough(k, fastify, 3600)).filter(Boolean)
@@ -149,7 +155,10 @@ export default async function collabRoutes(fastify) {
         leadTimeDays: offer.leadTimeDays,
         exampleMedia: exampleUrls,
       }
-    })
+      })
+    if (!skus.length) {
+      return reply.code(404).send({ success: false, message: '作品不存在或已下架' })
+    }
 
     // 帧图：生成预签名URL
     const frameKeys = safeJson(work.animationFrames)

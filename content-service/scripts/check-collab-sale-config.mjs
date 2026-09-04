@@ -183,6 +183,28 @@ try {
   assert(publicAfter.ok && Number(publicBody.data.supportedSkus[0].finalPrice) === 128.5, '顾客端读取正式销售配置中的最终价格')
   assert(publicBody.data.supportedSkus[0].leadTimeDays === 9, '顾客端获得已配置的预计发货天数')
 
+  await prisma.collabSaleSku.create({
+    data: {
+      collabWorkId: workId,
+      skuId: incompatibleSkuId,
+      finalPrice: 130,
+      fulfillmentMode: 'MAKE_TO_ORDER',
+      leadTimeDays: 7,
+      sortOrder: 1,
+      createdBy: userId,
+      updatedBy: userId,
+    },
+  })
+  const corruptedDetail = await request(`/api/collab/works/${workId}`)
+  const corruptedBody = await corruptedDetail.json()
+  assert(corruptedDetail.ok && corruptedBody.data.supportedSkus.every(item => item.id !== incompatibleSkuId), '公开详情自动排除数据库中的异常不兼容 SKU')
+  const incompatibleAdd = await request('/api/cart/add', token, {
+    method: 'POST',
+    body: JSON.stringify({ itemType: 'MARKET', contentId: workId, hardwareSkuId: incompatibleSkuId, quantity: 1 }),
+  })
+  assert(incompatibleAdd.status === 409, '购物车再次拒绝数据库中的异常不兼容 SKU')
+  await prisma.collabSaleSku.delete({ where: { collabWorkId_skuId: { collabWorkId: workId, skuId: incompatibleSkuId } } })
+
   const log = await prisma.operationLog.findFirst({
     where: { userId, targetId: workId, target: 'COLLAB_SALE_CONFIG' },
     orderBy: { createdAt: 'desc' },
