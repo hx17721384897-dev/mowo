@@ -3,16 +3,25 @@
 // 注册前缀：/api/cart
 
 import crypto from 'crypto'
+import {
+  CollabStorefrontError,
+  resolveCollabOffer,
+} from '../lib/collab-storefront.js'
 
 // ── 计算商品当前价格 ──
 async function getItemCurrentPrice(prisma, item) {
   try {
+    if (item.itemType === 'MARKET') {
+      const offer = await resolveCollabOffer(prisma, item.contentId, item.hardwareSkuId)
+      return offer.finalPrice
+    }
     const sku = await prisma.machineModelSku.findUnique({
       where: { id: item.hardwareSkuId },
-      select: { price: true }
+      select: { price: true, isActive: true, model: { select: { isActive: true } } }
     })
-    return sku?.price ?? null
-  } catch {
+    return sku?.isActive && sku.model?.isActive ? sku.price : null
+  } catch (error) {
+    if (!(error instanceof CollabStorefrontError)) throw error
     return null
   }
 }
@@ -46,6 +55,12 @@ export default async function cartRoutes(fastify) {
     const items = await Promise.all(cart.items.map(async item => {
       const currentPrice = await getItemCurrentPrice(prisma, item)
       let status = item.status
+
+      // 作品、款式或关联关系失效后，旧购物车条目不可继续结算。
+      if (currentPrice === null && status !== 'invalid') {
+        status = 'invalid'
+        await prisma.cartItem.update({ where: { id: item.id }, data: { status } })
+      }
 
       // 检测价格变动
       if (currentPrice !== null && item.snapshotPrice !== null) {
@@ -131,6 +146,7 @@ export default async function cartRoutes(fastify) {
     let customProductId = null
     let configSnapshotJson = null
     let snapshotPreviewUrl = null
+    let resolvedPrice = Number(sku.price)
 
     // ── 物理约束校验 ──
     if (itemType === 'CUSTOM') {
@@ -199,25 +215,21 @@ export default async function cartRoutes(fastify) {
 
     } else {
       // MARKET 类型
-      const work = await prisma.collabWork.findUnique({ where: { id: contentId } })
-      if (!work) return reply.code(404).send({ success: false, message: '联名作品不存在' })
-
-      // 规格兼容性校验（检查 hardwareSkuCode 在 supportedSkus 中）
-      if (work.supportedSkus) {
-        try {
-          const supported = JSON.parse(work.supportedSkus)
-          if (Array.isArray(supported) && supported.length > 0) {
-            const skuCodeOrId = sku.skuCode || sku.id
-            if (!supported.includes(skuCodeOrId) && !supported.includes(sku.id)) {
-              return reply.code(400).send({ success: false, message: '所选外壳不支持此联名作品' })
-            }
-          }
-        } catch {}
+      let offer
+      try {
+        offer = await resolveCollabOffer(prisma, contentId, hardwareSkuId)
+      } catch (error) {
+        if (error instanceof CollabStorefrontError) {
+          return reply.code(error.statusCode).send({ success: false, message: error.message, code: error.code })
+        }
+        throw error
       }
+      const work = offer.work
 
       snapshotTitle = work.title || '联名作品'
-      coverUrl = work.coverImageUrl || null
+      coverUrl = work.coverUrl || null
       creatorId = work.creatorId || null
+      resolvedPrice = offer.finalPrice
     }
 
     const cart = await getOrCreateCart(prisma, userId)
@@ -229,13 +241,17 @@ export default async function cartRoutes(fastify) {
     if (existing) {
       const updated = await prisma.cartItem.update({
         where: { id: existing.id },
-        data: { quantity: existing.quantity + parseInt(quantity) }
+        data: {
+          quantity: existing.quantity + parseInt(quantity),
+          snapshotPrice: resolvedPrice,
+          status: 'normal',
+        }
       })
       return reply.send({ success: true, data: updated, merged: true })
     }
 
     // 价格快照
-    const snapshotPrice = sku.price ?? null
+    const snapshotPrice = resolvedPrice
 
     const item = await prisma.cartItem.create({
       data: {
@@ -390,8 +406,30 @@ export default async function cartRoutes(fastify) {
         const { itemType, contentId, hardwareSkuId, quantity = 1 } = gi
         if (!itemType || !contentId || !hardwareSkuId) continue
 
-        const sku = await prisma.machineModelSku.findUnique({ where: { id: hardwareSkuId } })
-        if (!sku) { failedItems.push({ ...gi, reason: 'SKU不存在' }); continue }
+        if (itemType !== 'MARKET') {
+          failedItems.push({ ...gi, reason: '游客购物车只支持联名商品' })
+          continue
+        }
+
+        const sku = await prisma.machineModelSku.findUnique({
+          where: { id: hardwareSkuId },
+          include: { model: { select: { isActive: true } } },
+        })
+        if (!sku?.isActive || !sku.model?.isActive) {
+          failedItems.push({ ...gi, reason: 'SKU不存在或已停用' })
+          continue
+        }
+
+        let offer
+        try {
+          offer = await resolveCollabOffer(prisma, contentId, hardwareSkuId)
+        } catch (error) {
+          if (error instanceof CollabStorefrontError) {
+            failedItems.push({ ...gi, reason: error.message })
+            continue
+          }
+          throw error
+        }
 
         // 检查总件数限制
         const totalQty = cart.items.reduce((s, i) => s + i.quantity, 0)
@@ -405,21 +443,14 @@ export default async function cartRoutes(fastify) {
         if (existing) {
           await prisma.cartItem.update({
             where: { id: existing.id },
-            data: { quantity: existing.quantity + parseInt(quantity) }
+            data: {
+              quantity: existing.quantity + parseInt(quantity),
+              snapshotPrice: offer.finalPrice,
+              status: 'normal',
+            }
           })
         } else {
-          let snapshotTitle = ''
-          let coverUrl = null
-          let creatorId = null
-          if (itemType === 'MARKET') {
-            const work = await prisma.collabWork.findUnique({ where: { id: contentId } })
-            if (!work) { failedItems.push({ ...gi, reason: '联名作品不存在' }); continue }
-            snapshotTitle = work.title || '联名作品'
-            coverUrl = work.coverImageUrl || null
-            creatorId = work.creatorId || null
-          } else {
-            snapshotTitle = `定制款 · ${sku.size || ''}`
-          }
+          const work = offer.work
 
           await prisma.cartItem.create({
             data: {
@@ -428,12 +459,12 @@ export default async function cartRoutes(fastify) {
               contentId,
               hardwareSkuId,
               hardwareSkuCode: sku.skuCode || null,
-              snapshotTitle,
-              coverUrl,
-              snapshotPrice: sku.price ?? null,
+              snapshotTitle: work.title || '联名作品',
+              coverUrl: work.coverUrl || null,
+              snapshotPrice: offer.finalPrice,
               quantity: parseInt(quantity),
               selected: true,
-              creatorId,
+              creatorId: work.creatorId || null,
               status: 'normal'
             }
           })
@@ -506,12 +537,20 @@ export default async function cartRoutes(fastify) {
       return reply.code(400).send({ success: false, message: '部分购物车条目不存在或不属于当前账号' })
     }
 
-    // 全量校验
+    // 全量校验：结算时重新读取商品状态和价格，不能信任购物车页面之前的结果。
     const problems = []
+    const currentPrices = new Map()
     for (const item of items) {
-      if (item.status === 'invalid') problems.push({ id: item.id, reason: '商品已下架' })
+      const currentPrice = await getItemCurrentPrice(prisma, item)
+      currentPrices.set(item.id, currentPrice)
+      if (currentPrice === null) {
+        problems.push({ id: item.id, reason: '商品或所选规格已停止销售' })
+        continue
+      }
+      const priceChanged = item.snapshotPrice === null
+        || Math.abs(Number(currentPrice) - Number(item.snapshotPrice)) > 0.01
+      if (priceChanged) problems.push({ id: item.id, reason: '价格已变动，请确认后再结算' })
       else if (item.status === 'stock_out') problems.push({ id: item.id, reason: '商品库存不足' })
-      else if (item.status === 'price_changed') problems.push({ id: item.id, reason: '价格已变动，请确认后再结算' })
     }
     if (problems.length > 0) {
       return reply.code(400).send({ success: false, message: '部分商品有问题，请处理后再结算', problems })
@@ -520,8 +559,7 @@ export default async function cartRoutes(fastify) {
     // 计算总价
     let totalAmount = 0
     for (const item of items) {
-      const price = await getItemCurrentPrice(prisma, item)
-      totalAmount += (Number(price) || 0) * item.quantity
+      totalAmount += Number(currentPrices.get(item.id)) * item.quantity
     }
 
     // 库存预锁（MARKET 普通品）

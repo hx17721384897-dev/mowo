@@ -4,6 +4,11 @@
 import { calcRevenueRate } from '../lib/revenue.js'
 import { linkCollabWorkToAnimation } from '../lib/collab-animation-asset.js'
 import { generateCoverThumb } from '../lib/thumbnail.js'
+import {
+  collabFinalPrice,
+  parseJsonArray,
+  publicCollabWorkWhere,
+} from '../lib/collab-storefront.js'
 
 export default async function collabRoutes(fastify) {
   const { prisma } = fastify
@@ -14,21 +19,22 @@ export default async function collabRoutes(fastify) {
 
   /**
    * GET /api/collab/works
-   * 联名作品列表（只返回 approved 状态）
+   * 联名商品列表（只返回当前公开销售的字段）
    * 查询参数：page / limit / creatorId
    */
   fastify.get('/collab/works', async (req, reply) => {
     const { page = 1, limit = 12, creatorId } = req.query
-    const skip = (Number(page) - 1) * Number(limit)
+    const pageNumber = Math.max(1, Number.parseInt(page, 10) || 1)
+    const limitNumber = Math.min(50, Math.max(1, Number.parseInt(limit, 10) || 12))
+    const skip = (pageNumber - 1) * limitNumber
 
-    const where = { status: 'approved', shelfStatus: 'on_sale' }
-    if (creatorId) where.creatorId = creatorId
+    const where = publicCollabWorkWhere(creatorId ? { creatorId } : {})
 
     const [works, total] = await Promise.all([
       prisma.collabWork.findMany({
         where,
         skip,
-        take: Number(limit),
+        take: limitNumber,
         orderBy: { approvedAt: 'desc' },
         select: {
           id: true,
@@ -38,6 +44,7 @@ export default async function collabRoutes(fastify) {
           coverUrl: true,
           hoverGifUrl: true,
           supportedSkus: true,
+          creatorMarkups: true,
           isNewbieWork: true,
           isExclusiveWork: true,
           approvedAt: true,
@@ -55,45 +62,45 @@ export default async function collabRoutes(fastify) {
     })
     const profileMap = Object.fromEntries(profiles.map(p => [p.userId, p]))
 
-    // 批量查询点赞数
-    const workIds = works.map(w => w.id)
-    const likeCounts = fastify.config.features.community && workIds.length
-      ? await prisma.like.groupBy({
-          by: ['targetId'],
-          where: { targetType: 'collab_work', targetId: { in: workIds } },
-          _count: { id: true },
+    const skuRefs = [...new Set(works.flatMap(work => parseJsonArray(work.supportedSkus)))]
+    const skus = skuRefs.length
+      ? await prisma.machineModelSku.findMany({
+          where: {
+            isActive: true,
+            model: { isActive: true },
+            OR: [{ id: { in: skuRefs } }, { skuCode: { in: skuRefs } }],
+          },
+          select: { id: true, skuCode: true, size: true, price: true },
         })
       : []
-    const likeCountMap = Object.fromEntries(likeCounts.map(l => [l.targetId, l._count.id]))
+    const skuMap = new Map(skus.flatMap(sku => [[sku.id, sku], [sku.skuCode, sku]]).filter(([key]) => key))
 
-    // 若已登录，批量查询当前用户点赞状态
-    let myLikedSet = new Set()
-    const token = req.headers.authorization?.replace('Bearer ', '') || ''
-    if (fastify.config.features.community && token) {
-      try {
-        const user = fastify.jwt.decode(token)
-        fastify.jwt.verify(token)
-        if (user) {
-          const myLikes = await prisma.like.findMany({
-            where: { userId: user.userId, targetType: 'collab_work', targetId: { in: workIds } },
-            select: { targetId: true },
-          })
-          myLikedSet = new Set(myLikes.map(l => l.targetId))
-        }
-      } catch {}
-    }
+    const result = works.map(work => {
+      const availableSkus = [...new Map(
+        parseJsonArray(work.supportedSkus)
+          .map(ref => skuMap.get(ref))
+          .filter(Boolean)
+          .map(sku => [sku.id, sku]),
+      ).values()]
+      const prices = availableSkus.map(sku => collabFinalPrice(work, sku))
+      return {
+        id: work.id,
+        creatorId: work.creatorId,
+        title: work.title,
+        description: work.description,
+        coverUrl: presignOrPassthrough(work.coverUrl, fastify, 3600),
+        hoverGifUrl: presignOrNull(work.hoverGifUrl, fastify, 3600),
+        isNewbieWork: work.isNewbieWork,
+        isExclusiveWork: work.isExclusiveWork,
+        approvedAt: work.approvedAt,
+        creator: profileMap[work.creatorId] ?? { userId: work.creatorId, nickname: '创作者', avatarUrl: null },
+        minPrice: prices.length ? Math.min(...prices) : null,
+        availableSkuCount: availableSkus.length,
+        availableSizes: [...new Set(availableSkus.map(sku => sku.size).filter(Boolean))],
+      }
+    })
 
-    const result = works.map(w => ({
-      ...w,
-      supportedSkus: safeJson(w.supportedSkus),
-      coverUrl: presignOrPassthrough(w.coverUrl, fastify, 3600),   // data URI 直接透传，OSS key 才签名
-      hoverGifUrl: presignOrNull(w.hoverGifUrl, fastify, 3600),
-      creator: profileMap[w.creatorId] ?? { userId: w.creatorId, nickname: '创作者', avatarUrl: null },
-      likeCount: likeCountMap[w.id] ?? 0,
-      isLiked: myLikedSet.has(w.id),
-    }))
-
-    return reply.send({ success: true, data: { works: result, total, page: Number(page), limit: Number(limit) } })
+    return reply.send({ success: true, data: { works: result, total, page: pageNumber, limit: limitNumber } })
   })
 
   /**
@@ -101,10 +108,24 @@ export default async function collabRoutes(fastify) {
    * 联名作品详情（含帧图列表，供展示动画用）
    */
   fastify.get('/collab/works/:id', async (req, reply) => {
-    const work = await prisma.collabWork.findUnique({
-      where: { id: req.params.id },
+    const work = await prisma.collabWork.findFirst({
+      where: publicCollabWorkWhere({ id: req.params.id }),
+      select: {
+        id: true,
+        creatorId: true,
+        title: true,
+        description: true,
+        coverUrl: true,
+        hoverGifUrl: true,
+        animationFrames: true,
+        supportedSkus: true,
+        creatorMarkups: true,
+        isNewbieWork: true,
+        isExclusiveWork: true,
+        approvedAt: true,
+      },
     })
-    if (!work || work.status !== 'approved') {
+    if (!work) {
       return reply.code(404).send({ success: false, message: '作品不存在' })
     }
 
@@ -115,27 +136,44 @@ export default async function collabRoutes(fastify) {
     })
 
     // 获取支持的SKU详情（含 exampleMedia + 加价后价格）
-    const skuIds = safeJson(work.supportedSkus)
-    const creatorMarkups = safeJsonObj(work.creatorMarkups)
-    const rawSkus = skuIds.length
+    const skuRefs = parseJsonArray(work.supportedSkus)
+    const rawSkus = skuRefs.length
       ? await prisma.machineModelSku.findMany({
-          where: { id: { in: skuIds } },
-          select: { id: true, size: true, material: true, frameCount: true, colorName: true, colorHex: true, price: true, exampleMedia: true },
+          where: {
+            isActive: true,
+            model: { isActive: true },
+            OR: [{ id: { in: skuRefs } }, { skuCode: { in: skuRefs } }],
+          },
+          select: {
+            id: true,
+            size: true,
+            material: true,
+            frameCount: true,
+            colorName: true,
+            colorHex: true,
+            price: true,
+            previewImage: true,
+            exampleMedia: true,
+            model: { select: { id: true, name: true } },
+          },
         })
       : []
 
     // 为每个 SKU 附加 exampleMedia 预签名 URL 和最终价格（含创作者加价）
     const skus = rawSkus.map(s => {
-      const basePrice = Number(s.price)
-      const markup = Number(creatorMarkups[s.id] ?? 0)
-      const finalPrice = basePrice + markup
       const exampleKeys = safeJson(s.exampleMedia, [])
-      const exampleUrls = exampleKeys.map(k => fastify.ossPresignGet(k, 3600))
+      const exampleUrls = exampleKeys.map(k => presignOrPassthrough(k, fastify, 3600)).filter(Boolean)
       return {
-        ...s,
-        price: basePrice,
-        markup,
-        finalPrice,
+        id: s.id,
+        modelId: s.model.id,
+        modelName: s.model.name,
+        size: s.size,
+        material: s.material,
+        frameCount: s.frameCount,
+        colorName: s.colorName,
+        colorHex: s.colorHex,
+        previewImage: presignOrPassthrough(s.previewImage, fastify, 3600),
+        finalPrice: collabFinalPrice(work, s),
         exampleMedia: exampleUrls,
       }
     })
@@ -150,37 +188,21 @@ export default async function collabRoutes(fastify) {
     // 封面图：data URI 直接透传，OSS key 才签名
     const coverUrl = presignOrPassthrough(work.coverUrl, fastify, 3600)
 
-    // 点赞数 + 当前用户是否已点赞
-    const likeCount = fastify.config.features.community
-      ? await prisma.like.count({ where: { targetType: 'collab_work', targetId: work.id } })
-      : 0
-    let isLiked = false
-    const token = req.headers.authorization?.replace('Bearer ', '') || ''
-    if (fastify.config.features.community && token) {
-      try {
-        const user = fastify.jwt.decode(token)
-        fastify.jwt.verify(token)
-        if (user) {
-          const hit = await prisma.like.findFirst({
-            where: { userId: user.userId, targetType: 'collab_work', targetId: work.id },
-          })
-          isLiked = !!hit
-        }
-      } catch {}
-    }
-
     return reply.send({
       success: true,
       data: {
-        ...work,
+        id: work.id,
+        creatorId: work.creatorId,
+        title: work.title,
+        description: work.description,
         animationFrames: frameUrls,
         hoverGifUrl,
         coverUrl,
         supportedSkus: skus,
-        creatorMarkups,
+        isNewbieWork: work.isNewbieWork,
+        isExclusiveWork: work.isExclusiveWork,
+        approvedAt: work.approvedAt,
         creator: profile ?? { userId: work.creatorId, nickname: '创作者', avatarUrl: null },
-        likeCount,
-        isLiked,
       },
     })
   })
@@ -392,43 +414,8 @@ export default async function collabRoutes(fastify) {
   })
 
   // ─────────────────────────────────────────────
-  // 点赞接口（需登录，普通用户即可）
-  // ─────────────────────────────────────────────
-
-  /**
-   * POST /api/collab/works/:id/like
-   * 切换点赞状态，返回 { liked, likeCount }
-   */
-  fastify.post('/collab/works/:id/like', { preHandler: requireAuth }, async (req, reply) => {
-    const workId = req.params.id
-    const userId = req.user.userId
-
-    const work = await prisma.collabWork.findUnique({ where: { id: workId }, select: { id: true, status: true } })
-    if (!work || work.status !== 'approved') {
-      return reply.code(404).send({ success: false, message: '作品不存在' })
-    }
-
-    const existing = await prisma.like.findFirst({
-      where: { userId, targetType: 'collab_work', targetId: workId },
-    })
-
-    if (existing) {
-      await prisma.like.delete({ where: { id: existing.id } })
-    } else {
-      await prisma.like.create({ data: { userId, targetType: 'collab_work', targetId: workId } })
-    }
-
-    const likeCount = await prisma.like.count({ where: { targetType: 'collab_work', targetId: workId } })
-    return reply.send({ success: true, data: { liked: !existing, likeCount } })
-  })
-
-  // ─────────────────────────────────────────────
   // 辅助函数
   // ─────────────────────────────────────────────
-
-  async function requireAuth(req, reply) {
-    return fastify.authenticate(req, reply)
-  }
 
   async function requireCertified(req, reply) {
     const active = await fastify.authenticate(req, reply)
@@ -442,11 +429,6 @@ export default async function collabRoutes(fastify) {
 function safeJson(str, fallback = []) {
   if (str == null) return fallback
   try { const v = JSON.parse(str); return v ?? fallback } catch { return fallback }
-}
-
-function safeJsonObj(str) {
-  if (str == null) return {}
-  try { const v = JSON.parse(str); return (v && typeof v === 'object' && !Array.isArray(v)) ? v : {} } catch { return {} }
 }
 
 /**
