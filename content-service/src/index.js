@@ -50,6 +50,7 @@ import productionWorkflowRoutes from './routes/production-workflow.js'
 import printProductionRoutes from './routes/print-production.js'
 import frameLibraryRoutes from './routes/frame-library.js'
 import frameMakingRoutes from './routes/frame-making.js'
+import frameImportRoutes from './routes/frame-imports.js'
 import accountRoutes     from './routes/account.js'
 import { startScheduler }     from './lib/scheduler.js'
 import { startBullScheduler } from './lib/bull-scheduler.js'
@@ -225,6 +226,7 @@ async function start() {
     await fastify.register(printProductionRoutes, { prefix: '/api/admin/print-production' })
     await fastify.register(frameLibraryRoutes, { prefix: '/api/admin/frame-library' })
     await fastify.register(frameMakingRoutes, { prefix: '/api/admin/frame-making' })
+    await fastify.register(frameImportRoutes, { prefix: '/api/admin/frame-imports' })
 
     await fastify.listen({ port: config.port, host: config.host })
     startScheduler(fastify)

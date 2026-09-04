@@ -1,6 +1,6 @@
 # 后台帧图资产总库
 
-> 首版实施日期：2026-08-26，同日补充后台“帧图制作”工作台和生产文件模块。本文件记录当前已经实现的后台总库、制作草稿、生产文件、权限、来源与授权边界。用户侧动画资产和 V1/V2 规则见 `animation-assets.md`，打印细节见 `../PRINT_PRODUCTION_PLANNING.md`。
+> 首版实施日期：2026-08-26；2026-09-04 增加已编辑序列帧的文件夹批量导入。本文件记录当前已经实现的后台总库、制作草稿、批量导入、生产文件、权限、来源与授权边界。用户侧动画资产和 V1/V2 规则见 `animation-assets.md`，打印细节见 `../PRINT_PRODUCTION_PLANNING.md`。
 
 ## 简单说明
 
@@ -12,14 +12,17 @@
 
 - 后台页面：`frontend/pages/admin-frame-library.html`
 - 后台制作页面：`frontend/pages/admin-frame-making.html` 和 `frontend/js/admin-frame-making.js`
-- 后台导航：`frontend/js/admin-sidebar.js` 的“素材 -> 帧图资产库 / 帧图制作”
+- 后台批量导入页面：`frontend/pages/admin-frame-imports.html` 和 `frontend/js/admin-frame-imports.js`
+- 后台导航：`frontend/js/admin-sidebar.js` 的“素材 -> 帧图资产库 / 帧图制作 / 批量导入”
 - 后台接口：`content-service/src/routes/frame-library.js`，前缀 `/api/admin/frame-library`
 - 后台制作接口：`content-service/src/routes/frame-making.js`，前缀 `/api/admin/frame-making`
+- 后台批量导入接口：`content-service/src/routes/frame-imports.js`，前缀 `/api/admin/frame-imports`
 - 联名关联：`content-service/src/lib/collab-animation-asset.js`
 - 文件用途：`LIBRARY_FRAME`，规则位于 `content-service/src/lib/private-files.js`
-- 数据结构：`AnimationAsset`、`AnimationAssetVersion`、`AnimationTag`、`AnimationAssetTag`、`ProductionFrameRender`、`ProductionPrintFile`，以及 `CollabWork.animationAssetId/animationVersionId`
+- 数据结构：`AnimationAsset`、`AnimationAssetVersion`、`AnimationTag`、`AnimationAssetTag`、`FrameAssetImportBatch`、`FrameAssetImportItem`、`ProductionFrameRender`、`ProductionPrintFile`，以及 `CollabWork.animationAssetId/animationVersionId`
 - 制作草稿数据：`FrameAssetDraft`，使用 `FD-YYYYMMDD-XXXXXX` 编号
 - 数据迁移：`prisma/migrations/20260825193000_add_frame_asset_library/migration.sql` 和 `20260826120000_add_frame_asset_drafts/migration.sql`
+- 批量导入迁移：`prisma/migrations/20260904150000_add_frame_asset_batch_imports/migration.sql`
 
 本地数据库已通过 `prisma db execute` 应用该增量 SQL。由于项目早期没有建立完整 Prisma 迁移账本，`prisma migrate status` 仍会把本次和多项历史迁移列为“未登记”；不能在现有本地库直接重跑全部旧迁移，应先完成迁移基线整理。接口与自动测试已经直接确认本次表和字段可用。
 
@@ -83,6 +86,20 @@
 
 `FD` 只代表一次后台制作工作，`ANM` 才代表一套可被版本、订单和生产引用的动画资产，两者不能合并为一个编号。
 
+## 已编辑序列帧批量导入
+
+“批量导入”面向已经完成编辑的 PNG/JPG 序列帧，不进入视频筛选器，也不建立 `FD` 草稿。负责人在浏览器选择一个总文件夹；总文件夹下第一层的每个子文件夹代表一套动画，子文件夹内只允许数字命名的 PNG/JPG。系统按数字自然顺序排列，允许 2、4、12、16 等不同帧数。
+
+1. 一次导入建立一个 `FI-YYYYMMDD-XXXXXXXX` 批次；`FI` 只追踪上传和入库工作，不替代每套动画自己的 `ANM`。
+2. 当前上限是每批 100 套、2000 张、500MB；每套 2 至 50 张，单张不超过 20MB。浏览器同时上传 4 张，避免瞬时占满连接和本地服务；瞬时网络或服务器错误会自动再尝试一次。
+3. 公司批次默认“内部制作 + 内部测试 + 公司权利主体 + 仅限内部使用”；客户批次默认“线下客户 + 私人定制 + 客户权利主体 + 仅限私人使用”。客户批次必须填写客户或权利人名称；公司商品用途必须明确标记已授权。
+4. 共同资料可以一次应用到全部；勾选任意项目后可以批量添加标签、移除标签或修改用途；名称、标签、用途和权利人仍可逐套修改。标签的批量添加是合并，不覆盖已有标签。
+5. 上传完成后服务器重新检查真实文件状态、MIME、图片尺寸、数字序号和资料规则，并用按帧顺序排列的文件 SHA-256 建立内容指纹。同组尺寸不同或序号不连续属于提醒；上传缺失、图片损坏或权利资料不合法会阻止该套入库。管理员修正被拦资料后点击“重新检查”，不必重新上传整批文件。
+6. 内容和顺序与已有批量资产完全相同时默认跳过；负责人可以在明确确认后勾选“仍然导入”。名称相同但图片不同不会被当作内容重复。
+7. 正式入库逐套使用独立数据库事务：成功的一套生成自己的 `ANM + V1` 并绑定私有帧图；失败的一套保留原因，可单独重试，不回滚同批其他成功动画，也不会留下半套资产。
+8. 批次记录保留原文件夹名称、逐套状态、生成的 ANM、操作人、数量和时间。中断后未绑定资产的私有上传文件沿用 24 小时自动清理规则；过期后需要重新建立导入批次。
+9. 当前首版使用浏览器文件夹选择，不接受 ZIP，也尚未提供 Excel 导入资料；大量共同字段通过页面统一应用和勾选批量操作完成。
+
 ## 权限与文件安全
 
 | 岗位 | 总库权限 |
@@ -122,6 +139,8 @@
 `npm run check:frame-library` 会建立临时岗位账号和测试资料，验证岗位隔离、ANM/V1、线下客户无账号入库、后绑定账号、未授权禁止转联名、私人资料禁止永久删除、内部无关联测试资料删除、归档恢复、搜索、短期预览地址和真实后台页面；结束后自动清理测试数据。
 
 `npm run check:frame-making` 验证制作岗位隔离、FD 草稿、原素材绑定、短期读取地址、生产人员保存并提交负责人、确认后禁止生产人员改写、并发覆盖保护、负责人发布、ANM/V1 追溯、重复提交幂等、无定制/订单副作用，以及浏览器真实上传后进入完整编辑器并显示播放/去重/抽帧/撤销/筛选控件；结束后自动清理测试数据。
+
+`npm run check:frame-imports` 建立临时负责人、两帧与四帧文件夹，验证专用上传登记、真实 PNG 内容校验、服务器预检、私有首帧预览、共同标签、独立 ANM/V1、实际帧数、浏览器文件夹识别和完成批次回看；结束后自动清理测试数据与物理文件。
 
 `npm run check:production-artifacts` 不依赖业务数据，验证一页 12 格 Word 模板、24 帧自动扩页、图片关系和核心帧循环插入。数据库接口与真实页面验收需要先应用 `20260826190000_add_print_templates_and_artifacts` 迁移。
 

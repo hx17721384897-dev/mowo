@@ -128,6 +128,7 @@ model User {
   frameAssetDraftsCreated       FrameAssetDraft[]             @relation("FrameAssetDraftCreator")
   frameAssetDraftsEdited        FrameAssetDraft[]             @relation("FrameAssetDraftEditor")
   frameAssetDraftsOwned         FrameAssetDraft[]             @relation("FrameAssetDraftOwner")
+  frameAssetImportBatches       FrameAssetImportBatch[]       @relation("FrameAssetImportBatchCreator")
   salesOrders                   SalesOrder[]
 
   @@map("users")
@@ -1824,12 +1825,77 @@ model AnimationAsset {
   tags                  AnimationAssetTag[]
   sourceDraft           FrameAssetDraft?
   productionFiles       ProductionPrintFile[]
+  sourceImportItem      FrameAssetImportItem?   @relation("FrameAssetImportItemAsset")
 
   @@index([ownerUserId, status, updatedAt])
   @@index([assetType, collabStatus])
   @@index([sourceChannel, usageType, status])
   @@index([createdByStaffId, createdAt])
   @@map("animation_assets")
+}
+
+// 已经编辑好的序列帧按文件夹批量导入。批次负责上传、预检、资料填写和失败重试。
+model FrameAssetImportBatch {
+  id               String    @id @default(uuid())
+  batchNo          String    @unique @map("batch_no") @db.VarChar(32)
+  batchType        String    @map("batch_type") @db.VarChar(20) // COMPANY | CUSTOMER
+  status           String    @default("UPLOADING") @db.VarChar(24) // UPLOADING | READY | IMPORTING | PARTIAL | COMPLETED | FAILED
+  defaults         Json?
+  totalItems       Int       @default(0) @map("total_items")
+  totalFiles       Int       @default(0) @map("total_files")
+  totalBytes       BigInt    @default(0) @map("total_bytes")
+  importedItems    Int       @default(0) @map("imported_items")
+  failedItems      Int       @default(0) @map("failed_items")
+  skippedItems     Int       @default(0) @map("skipped_items")
+  createdByStaffId String    @map("created_by_staff_id")
+  preflightedAt    DateTime? @map("preflighted_at")
+  completedAt      DateTime? @map("completed_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  createdBy User                   @relation("FrameAssetImportBatchCreator", fields: [createdByStaffId], references: [id], onDelete: Restrict)
+  items     FrameAssetImportItem[]
+
+  @@index([status, updatedAt])
+  @@index([createdByStaffId, createdAt])
+  @@map("frame_asset_import_batches")
+}
+
+model FrameAssetImportItem {
+  id                  String    @id @default(uuid())
+  batchId             String    @map("batch_id")
+  position            Int
+  folderName          String    @map("folder_name") @db.VarChar(255)
+  relativePath        String    @map("relative_path") @db.VarChar(500)
+  status              String    @default("UPLOADING") @db.VarChar(24) // UPLOADING | READY | WARNING | BLOCKED | IMPORTED | SKIPPED_DUPLICATE | FAILED
+  title               String    @db.VarChar(200)
+  sourceChannel       String    @map("source_channel") @db.VarChar(30)
+  usageType           String    @map("usage_type") @db.VarChar(30)
+  rightsHolderType    String    @map("rights_holder_type") @db.VarChar(30)
+  rightsHolderName    String?   @map("rights_holder_name") @db.VarChar(120)
+  rightsHolderContact String?   @map("rights_holder_contact") @db.VarChar(200)
+  authorizationStatus String    @map("authorization_status") @db.VarChar(30)
+  ownerPhone          String?   @map("owner_phone") @db.VarChar(20)
+  tags                Json?
+  internalNotes       String?   @map("internal_notes") @db.Text
+  fileManifest        Json      @map("file_manifest")
+  frameCount          Int       @map("frame_count")
+  fingerprint         String?   @db.VarChar(64)
+  duplicateAssetId    String?   @map("duplicate_asset_id")
+  allowDuplicate      Boolean   @default(false) @map("allow_duplicate")
+  issues              Json?
+  animationAssetId    String?   @unique @map("animation_asset_id")
+  importedAt          DateTime? @map("imported_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  batch          FrameAssetImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  animationAsset AnimationAsset?       @relation("FrameAssetImportItemAsset", fields: [animationAssetId], references: [id], onDelete: SetNull)
+
+  @@unique([batchId, folderName])
+  @@index([batchId, status, position])
+  @@index([fingerprint])
+  @@map("frame_asset_import_items")
 }
 
 model AnimationTag {

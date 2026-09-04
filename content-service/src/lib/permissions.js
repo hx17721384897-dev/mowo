@@ -72,6 +72,7 @@ export function requiredPermissionForRequest(method, rawUrl) {
   if (path.startsWith('/api/admin/customization-requests')) return PERMISSION.CUSTOMIZATION_REVIEW
   if (path.startsWith('/api/admin/frame-library')) return PERMISSION.FRAME_LIBRARY
   if (path.startsWith('/api/admin/frame-making')) return PERMISSION.FRAME_MAKING
+  if (path.startsWith('/api/admin/frame-imports')) return PERMISSION.FRAME_LIBRARY
   if (path.startsWith('/api/admin/print-production')) return PERMISSION.PRODUCTION_CONFIG
 
   if (

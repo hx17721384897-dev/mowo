@@ -22,6 +22,7 @@
     "check:print-production": "node scripts/check-print-production.mjs",
     "check:frame-library": "node scripts/check-frame-library.mjs",
     "check:frame-making": "node scripts/check-frame-making.mjs",
+    "check:frame-imports": "node scripts/check-frame-imports.mjs",
     "check:production-artifacts": "node scripts/check-production-artifacts.mjs",
     "check:production-workflow": "node scripts/check-production-workflow.mjs",
     "check:production-scan-ui": "node scripts/check-production-scan-ui.mjs",

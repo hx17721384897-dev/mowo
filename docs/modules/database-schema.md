@@ -1,12 +1,12 @@
 # 数据库 Schema 与迁移事实
 
-> 调查基准：2026-08-13。应用层事实来自当前 `content-service/prisma/schema.prisma`；实际库来自对本机 `mowo_db` 的检查；迁移事实来自 `prisma/migrations/` 和 `_prisma_migrations` 状态。
+> 调查基准：2026-08-13；结构数量更新：2026-09-04。应用层事实来自当前 `content-service/prisma/schema.prisma`；实际库来自对本机 `mowo_db` 的检查；迁移事实来自 `prisma/migrations/` 和 `_prisma_migrations` 状态。
 
 ## 调查范围与结论
 
-- 当前 Prisma Schema 定义 **80 个 model、4 个 enum**，不是 Schema 文件头注释的 25，也不是 `README.md` 的 37 或 `docs/DATABASE.md` 的 63。
+- 当前 Prisma Schema 定义 **109 个 model、4 个 enum**；业务仍在持续分阶段实施，旧文档中的 25、37、63 或 80 均不是当前数量。
 - 2026-08-13 已在本地库单独应用 `private_files`、账号注销、`rate_limit_buckets` 和 `consent_records` 等增量 SQL；此前数据库基线问题仍未解决。
-- 仓库有 29 个迁移目录；完整空库基线问题仍未解决。
+- 仓库有 44 个迁移目录；完整空库基线问题仍未解决。
 - `prisma migrate status` 显示 20 个迁移在本机库中全部“尚未应用”，表明本地库不是由当前 Prisma 迁移账本建立或登记。
 - 结论：**本地结构可用不等于数据库可部署**。当前无法只靠仓库在空库可靠重建与当前相同的数据库，也缺少可审计的升级/回滚链。
 
@@ -16,12 +16,12 @@
 |---|---|
 | 数据库 | PostgreSQL，本地库名 `mowo_db`、schema `public` |
 | ORM | Prisma Client / Prisma CLI 5.22.0 |
-| Schema | 80 模型，使用 `@@map` 映射 snake_case 表名 |
-| 迁移 | 29 个迁移目录；本地库因历史账本缺失仍不能直接执行全量 `migrate deploy` |
+| Schema | 109 模型，使用 `@@map` 映射 snake_case 表名 |
+| 迁移 | 44 个迁移目录；本地库因历史账本缺失仍不能直接执行全量 `migrate deploy` |
 | 种子 | `prisma/seed.js`，创建 5 类测试账号、SKU/库存、联名活动和平台规则 |
 | 本地验证 | `prisma validate` 通过；数据库与 Schema diff 为空 |
 
-## 80 个模型分组
+## 模型分组
 
 | 分组 | 模型 |
 |---|---|
@@ -35,7 +35,7 @@
 | 联络 | ContactSubmission |
 | 新购物车、定制与动画资产 | Cart、CartItem、CustomProduct、CustomizationRequest、CustomizationRequestEvent、CustomizationFrameSelection、AnimationAsset、AnimationAssetVersion、PreOrder、UserAddress、ContentQuota |
 
-完整字段和关系仍以 Schema 为准；各业务语义见对应模块文档。此处不复制 80 张表的全部字段，避免再次产生一份难以同步的 Schema 镜像。
+下表保留最初调查时的主要业务分组，不作为109个模型的完整枚举。完整字段和关系仍以 Schema 为准；各业务语义见对应模块文档，避免再次产生一份难以同步的 Schema 镜像。
 
 ### 本轮新增表
 
@@ -48,6 +48,8 @@
 | `customization_frame_selections` | 员工正式提交的筛帧版本 | 版本只追加不覆盖；公开说明与内部备注分离；帧文件绑定具体版本 |
 | `animation_assets` | 与定制、SKU 和订单分开的可复购动画主记录 | 私人资产允许前台软删除；联名资产禁止普通删除；后台留存期限待上线政策确认 |
 | `animation_asset_versions` | 用户最终确认的不可覆盖核心帧版本 | 保存帧顺序、来源、基础帧数、编辑数据和清单哈希；旧订单未来锁定具体版本 |
+| `frame_asset_import_batches` | 已编辑序列帧的批量导入任务 | 保存 FI 编号、公司/客户批次类型、总量、处理进度、操作人和完成时间；不替代 ANM |
+| `frame_asset_import_items` | 批次内每个第一层子文件夹 | 保存文件清单、资料、标签、内容指纹、预检问题、重复判断、失败原因和最终 ANM 关系 |
 
 本地库已单独执行人工筛帧增量迁移 `20260820210000_add_staff_frame_selection` 和动画资产增量迁移 `20260821150000_add_animation_assets_and_versions`。没有执行全量 `prisma migrate deploy`；由于历史迁移账本不完整，该命令可能应用超出本轮范围的旧迁移。完整基线仍是发布阻断项。
 
