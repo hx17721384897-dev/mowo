@@ -4,6 +4,12 @@
 import { calcRevenueRate, buildRevenueConfig } from '../lib/revenue.js'
 import { generateAndUploadHoverGif } from '../lib/gif-generator.js'
 import { updateCollabAssetStatus } from '../lib/collab-animation-asset.js'
+import {
+  COLLAB_FULFILLMENT_MODE,
+  getCollabSaleReadiness,
+  isCollabSkuFrameCompatible,
+  normalizeSaleConfigInput,
+} from '../lib/collab-sale-config.js'
 
 export default async function adminCollabRoutes(fastify) {
   const { prisma } = fastify
@@ -30,6 +36,12 @@ export default async function adminCollabRoutes(fastify) {
         skip,
         take: Number(limit),
         orderBy: { createdAt: 'desc' },
+        include: {
+          saleSkus: {
+            where: { isEnabled: true },
+            select: { id: true, finalPrice: true, leadTimeDays: true, fulfillmentMode: true },
+          },
+        },
       }),
       prisma.collabWork.count({ where }),
     ])
@@ -68,6 +80,7 @@ export default async function adminCollabRoutes(fastify) {
         creator: profileMap[w.creatorId] ?? null,
         creatorLevel: { bullEnergy: cp.bullLevel ?? 1, isExclusive: cp.isExclusive ?? false },
         revenueRatePreview: preview.rate,
+        saleConfigCount: w.saleSkus.length,
       }
     })
 
@@ -79,7 +92,13 @@ export default async function adminCollabRoutes(fastify) {
    * 联名作品详情（审核用，含帧图预签名URL）
    */
   fastify.get('/admin/collab/works/:id', { preHandler: requireAdmin }, async (req, reply) => {
-    const work = await prisma.collabWork.findUnique({ where: { id: req.params.id } })
+    const work = await prisma.collabWork.findUnique({
+      where: { id: req.params.id },
+      include: {
+        animationVersion: { select: { baseFrameCount: true } },
+        saleSkus: { where: { isEnabled: true }, orderBy: { sortOrder: 'asc' }, include: { sku: { include: { model: true } } } },
+      },
+    })
     if (!work) return reply.code(404).send({ success: false, message: '作品不存在' })
 
     const frameKeys = safeJson(work.animationFrames)
@@ -92,9 +111,22 @@ export default async function adminCollabRoutes(fastify) {
       ? fastify.ossPresignGet(work.coverUrl, 3600)
       : work.coverUrl || null
 
+    const profile = await prisma.userProfile.findUnique({
+      where: { userId: work.creatorId },
+      select: { userId: true, nickname: true, avatarUrl: true },
+    })
+    const readiness = await getCollabSaleReadiness(prisma, work.id)
+
     return reply.send({
       success: true,
-      data: { ...work, animationFrames: frameUrls, coverUrl, supportedSkus: safeJson(work.supportedSkus) },
+      data: {
+        ...work,
+        animationFrames: frameUrls,
+        coverUrl,
+        supportedSkus: safeJson(work.supportedSkus),
+        creator: profile,
+        saleReadiness: { ready: readiness.ready, blockers: readiness.blockers, baseFrameCount: readiness.baseFrameCount },
+      },
     })
   })
 
@@ -193,8 +225,9 @@ export default async function adminCollabRoutes(fastify) {
         isExclusiveWork: creatorFinanceEnabled ? (creatorProfile?.isExclusive ?? false) : false,
         newbieExpiredAt: creatorFinanceEnabled ? newbieExpiredAt : null,
         revenueRate: rate,
-        isOnShelf: true,
-        shelfAt: now,
+        isOnShelf: false,
+        shelfAt: null,
+        shelfStatus: 'off_shelf',
         },
       })
       await updateCollabAssetStatus(tx, approved, 'approved')
@@ -299,6 +332,7 @@ export default async function adminCollabRoutes(fastify) {
     if (!work) return reply.code(404).send({ success: false, message: '作品不存在' })
     if (work.status !== 'approved')
       return reply.code(400).send({ success: false, message: '只有审核通过的作品才能上下架' })
+    if (action === 'on' && !(await requireSaleReady(req.params.id, reply))) return
     const now = new Date()
     const updated = await prisma.collabWork.update({
       where: { id: req.params.id },
@@ -346,6 +380,7 @@ export default async function adminCollabRoutes(fastify) {
     if (!work) return reply.code(404).send({ success: false, message: '作品不存在' })
     if (work.shelfStatus !== 'suspended')
       return reply.code(400).send({ success: false, message: '只有暂停中的作品才能恢复' })
+    if (!(await requireSaleReady(req.params.id, reply))) return
 
     const updated = await prisma.collabWork.update({
       where: { id: req.params.id },
@@ -413,6 +448,7 @@ export default async function adminCollabRoutes(fastify) {
     if (!work) return reply.code(404).send({ success: false, message: '作品不存在' })
     if (work.shelfStatus !== 'off_shelf')
       return reply.code(400).send({ success: false, message: '只有已下架的作品才能重新上架' })
+    if (!(await requireSaleReady(req.params.id, reply))) return
 
     const updated = await prisma.collabWork.update({
       where: { id: req.params.id },
@@ -441,6 +477,8 @@ export default async function adminCollabRoutes(fastify) {
     if (!work) return reply.code(404).send({ success: false, message: '作品不存在' })
     if (work.shelfStatus !== 'pending_delist')
       return reply.code(400).send({ success: false, message: '作品不在申请处理中状态' })
+
+    if (approve === false && !(await requireSaleReady(req.params.id, reply))) return
 
     const now = new Date()
     const data = approve
@@ -474,6 +512,181 @@ export default async function adminCollabRoutes(fastify) {
     }).catch(() => {})
 
     return reply.send({ success: true, message: approve ? '已同意下架' : '已拒绝申请，作品恢复上架', data: updated })
+  })
+
+  // ─────────────────────────────────────────────
+  // 联名商品销售配置
+  // ─────────────────────────────────────────────
+
+  fastify.get('/admin/collab/:id/sale-config', { preHandler: requireAdmin }, async (req, reply) => {
+    const readiness = await getCollabSaleReadiness(prisma, req.params.id)
+    if (!readiness.work) return reply.code(404).send({ success: false, message: '作品不存在' })
+
+    const candidates = await prisma.machineModelSku.findMany({
+      where: { isActive: true, model: { isActive: true } },
+      orderBy: [
+        { model: { sortOrder: 'asc' } },
+        { sortOrder: 'asc' },
+        { size: 'asc' },
+        { frameCount: 'asc' },
+      ],
+      include: { model: { select: { id: true, name: true, isActive: true } } },
+    })
+
+    const imageUrl = key => presignAdminKey(key, fastify, 3600)
+    const selected = readiness.offers.map(offer => ({
+      id: offer.id,
+      skuId: offer.skuId,
+      finalPrice: Number(offer.finalPrice),
+      fulfillmentMode: offer.fulfillmentMode,
+      leadTimeDays: offer.leadTimeDays,
+      sortOrder: offer.sortOrder,
+      isEnabled: offer.isEnabled,
+    }))
+
+    return reply.send({
+      success: true,
+      data: {
+        storefrontSummary: readiness.work.storefrontSummary,
+        storefrontSortOrder: readiness.work.storefrontSortOrder,
+        baseFrameCount: readiness.baseFrameCount,
+        ready: readiness.ready,
+        blockers: readiness.blockers,
+        selected,
+        candidates: candidates.map(sku => ({
+          id: sku.id,
+          skuCode: sku.skuCode,
+          modelId: sku.modelId,
+          modelName: sku.model.name,
+          size: sku.size,
+          material: sku.material,
+          frameCount: sku.frameCount,
+          colorName: sku.colorName,
+          colorHex: sku.colorHex,
+          basePrice: Number(sku.price),
+          previewImage: imageUrl(sku.previewImage),
+          compatible: isCollabSkuFrameCompatible(readiness.baseFrameCount, sku.frameCount),
+        })),
+      },
+    })
+  })
+
+  fastify.put('/admin/collab/:id/sale-config', { preHandler: requireAdmin }, async (req, reply) => {
+    const work = await prisma.collabWork.findUnique({
+      where: { id: req.params.id },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        isRevision: true,
+        storefrontSummary: true,
+        storefrontSortOrder: true,
+        animationFrames: true,
+        animationVersion: { select: { baseFrameCount: true } },
+        saleSkus: { orderBy: { sortOrder: 'asc' } },
+      },
+    })
+    if (!work) return reply.code(404).send({ success: false, message: '作品不存在' })
+    if (work.status !== 'approved' || work.isRevision) {
+      return reply.code(409).send({ success: false, message: '只有审核通过的正式作品可以配置销售规格' })
+    }
+
+    const config = normalizeSaleConfigInput(req.body)
+    if (config.storefrontSummary && config.storefrontSummary.length > 300) {
+      return reply.code(400).send({ success: false, message: '货架简介最多 300 个字' })
+    }
+    if (config.storefrontSortOrder < -10000 || config.storefrontSortOrder > 10000) {
+      return reply.code(400).send({ success: false, message: '推荐顺序必须在 -10000 到 10000 之间' })
+    }
+    if (!config.skus.length || config.skus.length > 100) {
+      return reply.code(400).send({ success: false, message: '请选择 1 至 100 个可售 SKU' })
+    }
+    const uniqueSkuIds = [...new Set(config.skus.map(row => row.skuId))]
+    if (uniqueSkuIds.length !== config.skus.length || uniqueSkuIds.some(id => !id)) {
+      return reply.code(400).send({ success: false, message: '销售配置包含空白或重复 SKU' })
+    }
+
+    const skus = await prisma.machineModelSku.findMany({
+      where: { id: { in: uniqueSkuIds }, isActive: true, model: { isActive: true } },
+      include: { model: { select: { name: true } } },
+    })
+    if (skus.length !== uniqueSkuIds.length) {
+      return reply.code(409).send({ success: false, message: '部分 SKU 不存在、款式已停用或 SKU 已停用' })
+    }
+    const skuMap = new Map(skus.map(sku => [sku.id, sku]))
+    const baseFrameCount = work.animationVersion?.baseFrameCount || safeJson(work.animationFrames).length
+    if (!baseFrameCount) return reply.code(409).send({ success: false, message: '作品没有可用核心帧，暂不能配置销售规格' })
+
+    for (const row of config.skus) {
+      const sku = skuMap.get(row.skuId)
+      const label = sku.skuCode || `${sku.model.name} ${sku.size} ${sku.frameCount}帧`
+      if (!isCollabSkuFrameCompatible(baseFrameCount, sku.frameCount)) {
+        return reply.code(409).send({ success: false, message: `${label} 与 ${baseFrameCount} 个核心帧不兼容` })
+      }
+      if (!Number.isFinite(row.finalPrice) || row.finalPrice < Number(sku.price) || row.finalPrice > 999999.99) {
+        return reply.code(400).send({ success: false, message: `${label} 的最终售价必须不低于基础价且不超过 999999.99 元` })
+      }
+      if (!Object.values(COLLAB_FULFILLMENT_MODE).includes(row.fulfillmentMode)) {
+        return reply.code(400).send({ success: false, message: `${label} 的供货方式无效` })
+      }
+      if (!Number.isInteger(row.leadTimeDays) || row.leadTimeDays < 1 || row.leadTimeDays > 60) {
+        return reply.code(400).send({ success: false, message: `${label} 的预计发货天数必须是 1 至 60 天` })
+      }
+    }
+
+    const before = {
+      storefrontSummary: work.storefrontSummary,
+      storefrontSortOrder: work.storefrontSortOrder,
+      skus: work.saleSkus.map(row => ({
+        skuId: row.skuId,
+        finalPrice: Number(row.finalPrice),
+        fulfillmentMode: row.fulfillmentMode,
+        leadTimeDays: row.leadTimeDays,
+        sortOrder: row.sortOrder,
+        isEnabled: row.isEnabled,
+      })),
+    }
+    const operatorId = req.user.userId
+    const legacyMarkups = Object.fromEntries(config.skus.map(row => [
+      row.skuId,
+      Number((row.finalPrice - Number(skuMap.get(row.skuId).price)).toFixed(2)),
+    ]))
+
+    await prisma.$transaction(async tx => {
+      await tx.collabWork.update({
+        where: { id: work.id },
+        data: {
+          storefrontSummary: config.storefrontSummary,
+          storefrontSortOrder: config.storefrontSortOrder,
+          supportedSkus: JSON.stringify(config.skus.map(row => row.skuId)),
+          creatorMarkups: JSON.stringify(legacyMarkups),
+        },
+      })
+      await tx.collabSaleSku.deleteMany({
+        where: { collabWorkId: work.id, skuId: { notIn: uniqueSkuIds } },
+      })
+      for (const row of config.skus) {
+        await tx.collabSaleSku.upsert({
+          where: { collabWorkId_skuId: { collabWorkId: work.id, skuId: row.skuId } },
+          create: { collabWorkId: work.id, createdBy: operatorId, updatedBy: operatorId, ...row },
+          update: { updatedBy: operatorId, ...row },
+        })
+      }
+    })
+
+    const readiness = await getCollabSaleReadiness(prisma, work.id)
+    req.operationAudit = {
+      action: `更新联名作品《${work.title}》销售配置`,
+      target: 'COLLAB_SALE_CONFIG',
+      targetId: work.id,
+      before,
+      after: config,
+    }
+    return reply.send({
+      success: true,
+      message: readiness.ready ? '销售配置已保存，可以上架' : '销售配置已保存，但仍有上架阻断项',
+      data: { ready: readiness.ready, blockers: readiness.blockers },
+    })
   })
 
   // ─────────────────────────────────────────────
@@ -688,6 +901,18 @@ export default async function adminCollabRoutes(fastify) {
   // ─────────────────────────────────────────────
   // 辅助
   // ─────────────────────────────────────────────
+
+  async function requireSaleReady(workId, reply) {
+    const readiness = await getCollabSaleReadiness(prisma, workId)
+    if (readiness.ready) return true
+    reply.code(409).send({
+      success: false,
+      message: '该作品尚未满足上架条件',
+      code: 'COLLAB_SALE_NOT_READY',
+      blockers: readiness.blockers,
+    })
+    return false
+  }
 
   function requireAdmin(req, reply, done) {
     try {

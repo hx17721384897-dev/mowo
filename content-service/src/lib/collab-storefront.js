@@ -13,6 +13,15 @@ export function publicCollabWorkWhere(extra = {}) {
     isOnShelf: true,
     shelfStatus: 'on_sale',
     isRevision: false,
+    animationAssetId: { not: null },
+    animationVersionId: { not: null },
+    coverUrl: { not: null },
+    saleSkus: {
+      some: {
+        isEnabled: true,
+        sku: { isActive: true, model: { isActive: true } },
+      },
+    },
     ...extra,
   }
 }
@@ -38,37 +47,12 @@ export function parseJsonArray(value, fallback = []) {
   }
 }
 
-export function parseJsonObject(value, fallback = {}) {
-  if (value && typeof value === 'object' && !Array.isArray(value)) return value
-  if (value == null || value === '') return fallback
-  try {
-    const parsed = JSON.parse(value)
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : fallback
-  } catch {
-    return fallback
-  }
-}
-
-export function collabFinalPrice(work, sku) {
-  const basePrice = Number(sku?.price)
-  if (!Number.isFinite(basePrice) || basePrice < 0) {
-    throw new CollabStorefrontError('INVALID_SKU_PRICE', '商品价格配置异常', 409)
-  }
-
-  const markups = parseJsonObject(work?.creatorMarkups)
-  const rawMarkup = markups[sku.id] ?? 0
-  const markup = Number(rawMarkup)
-  if (!Number.isFinite(markup) || markup < 0) {
+export function collabFinalPrice(saleConfig) {
+  const configuredPrice = Number(saleConfig?.finalPrice)
+  if (!Number.isFinite(configuredPrice) || configuredPrice < 0) {
     throw new CollabStorefrontError('INVALID_COLLAB_PRICE', '联名商品价格配置异常', 409)
   }
-
-  return Number((basePrice + markup).toFixed(2))
-}
-
-export function isSkuSupportedByCollabWork(work, sku) {
-  if (!sku?.id) return false
-  const supported = parseJsonArray(work?.supportedSkus)
-  return supported.includes(sku.id) || Boolean(sku.skuCode && supported.includes(sku.skuCode))
+  return Number(configuredPrice.toFixed(2))
 }
 
 export async function resolveCollabOffer(prisma, workId, skuId) {
@@ -79,14 +63,24 @@ export async function resolveCollabOffer(prisma, workId, skuId) {
       creatorId: true,
       title: true,
       coverUrl: true,
-      supportedSkus: true,
-      creatorMarkups: true,
       status: true,
       isOnShelf: true,
       shelfStatus: true,
       isRevision: true,
       animationAssetId: true,
       animationVersionId: true,
+      saleSkus: {
+        where: { skuId, isEnabled: true },
+        take: 1,
+        select: {
+          id: true,
+          skuId: true,
+          finalPrice: true,
+          fulfillmentMode: true,
+          leadTimeDays: true,
+          sortOrder: true,
+        },
+      },
     },
   })
   if (!isPubliclySaleableCollabWork(work)) {
@@ -100,13 +94,15 @@ export async function resolveCollabOffer(prisma, workId, skuId) {
   if (!sku || !sku.isActive || !sku.model?.isActive) {
     throw new CollabStorefrontError('SKU_NOT_FOR_SALE', '商品规格不存在或已停止销售', 404)
   }
-  if (!isSkuSupportedByCollabWork(work, sku)) {
+  const saleConfig = work.saleSkus?.[0]
+  if (!saleConfig) {
     throw new CollabStorefrontError('SKU_NOT_SUPPORTED', '该联名商品不支持所选规格', 409)
   }
 
   return {
     work,
     sku,
-    finalPrice: collabFinalPrice(work, sku),
+    saleConfig,
+    finalPrice: collabFinalPrice(saleConfig),
   }
 }

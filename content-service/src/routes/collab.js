@@ -6,7 +6,6 @@ import { linkCollabWorkToAnimation } from '../lib/collab-animation-asset.js'
 import { generateCoverThumb } from '../lib/thumbnail.js'
 import {
   collabFinalPrice,
-  parseJsonArray,
   publicCollabWorkWhere,
 } from '../lib/collab-storefront.js'
 
@@ -41,14 +40,23 @@ export default async function collabRoutes(fastify) {
           creatorId: true,
           title: true,
           description: true,
+          storefrontSummary: true,
           coverUrl: true,
           hoverGifUrl: true,
-          supportedSkus: true,
-          creatorMarkups: true,
           isNewbieWork: true,
           isExclusiveWork: true,
           approvedAt: true,
           createdAt: true,
+          saleSkus: {
+            where: { isEnabled: true, sku: { isActive: true, model: { isActive: true } } },
+            orderBy: { sortOrder: 'asc' },
+            select: {
+              finalPrice: true,
+              leadTimeDays: true,
+              fulfillmentMode: true,
+              sku: { select: { id: true, size: true } },
+            },
+          },
         },
       }),
       prisma.collabWork.count({ where }),
@@ -62,32 +70,13 @@ export default async function collabRoutes(fastify) {
     })
     const profileMap = Object.fromEntries(profiles.map(p => [p.userId, p]))
 
-    const skuRefs = [...new Set(works.flatMap(work => parseJsonArray(work.supportedSkus)))]
-    const skus = skuRefs.length
-      ? await prisma.machineModelSku.findMany({
-          where: {
-            isActive: true,
-            model: { isActive: true },
-            OR: [{ id: { in: skuRefs } }, { skuCode: { in: skuRefs } }],
-          },
-          select: { id: true, skuCode: true, size: true, price: true },
-        })
-      : []
-    const skuMap = new Map(skus.flatMap(sku => [[sku.id, sku], [sku.skuCode, sku]]).filter(([key]) => key))
-
     const result = works.map(work => {
-      const availableSkus = [...new Map(
-        parseJsonArray(work.supportedSkus)
-          .map(ref => skuMap.get(ref))
-          .filter(Boolean)
-          .map(sku => [sku.id, sku]),
-      ).values()]
-      const prices = availableSkus.map(sku => collabFinalPrice(work, sku))
+      const prices = work.saleSkus.map(offer => collabFinalPrice(offer))
       return {
         id: work.id,
         creatorId: work.creatorId,
         title: work.title,
-        description: work.description,
+        description: work.storefrontSummary || work.description,
         coverUrl: presignOrPassthrough(work.coverUrl, fastify, 3600),
         hoverGifUrl: presignOrNull(work.hoverGifUrl, fastify, 3600),
         isNewbieWork: work.isNewbieWork,
@@ -95,8 +84,9 @@ export default async function collabRoutes(fastify) {
         approvedAt: work.approvedAt,
         creator: profileMap[work.creatorId] ?? { userId: work.creatorId, nickname: '创作者', avatarUrl: null },
         minPrice: prices.length ? Math.min(...prices) : null,
-        availableSkuCount: availableSkus.length,
-        availableSizes: [...new Set(availableSkus.map(sku => sku.size).filter(Boolean))],
+        availableSkuCount: work.saleSkus.length,
+        availableSizes: [...new Set(work.saleSkus.map(offer => offer.sku.size).filter(Boolean))],
+        minLeadTimeDays: work.saleSkus.length ? Math.min(...work.saleSkus.map(offer => offer.leadTimeDays)) : null,
       }
     })
 
@@ -115,14 +105,18 @@ export default async function collabRoutes(fastify) {
         creatorId: true,
         title: true,
         description: true,
+        storefrontSummary: true,
         coverUrl: true,
         hoverGifUrl: true,
         animationFrames: true,
-        supportedSkus: true,
-        creatorMarkups: true,
         isNewbieWork: true,
         isExclusiveWork: true,
         approvedAt: true,
+        saleSkus: {
+          where: { isEnabled: true, sku: { isActive: true, model: { isActive: true } } },
+          orderBy: { sortOrder: 'asc' },
+          include: { sku: { include: { model: true } } },
+        },
       },
     })
     if (!work) {
@@ -135,32 +129,9 @@ export default async function collabRoutes(fastify) {
       select: { userId: true, nickname: true, avatarUrl: true },
     })
 
-    // 获取支持的SKU详情（含 exampleMedia + 加价后价格）
-    const skuRefs = parseJsonArray(work.supportedSkus)
-    const rawSkus = skuRefs.length
-      ? await prisma.machineModelSku.findMany({
-          where: {
-            isActive: true,
-            model: { isActive: true },
-            OR: [{ id: { in: skuRefs } }, { skuCode: { in: skuRefs } }],
-          },
-          select: {
-            id: true,
-            size: true,
-            material: true,
-            frameCount: true,
-            colorName: true,
-            colorHex: true,
-            price: true,
-            previewImage: true,
-            exampleMedia: true,
-            model: { select: { id: true, name: true } },
-          },
-        })
-      : []
-
-    // 为每个 SKU 附加 exampleMedia 预签名 URL 和最终价格（含创作者加价）
-    const skus = rawSkus.map(s => {
+    // 为每个正式销售 SKU 附加公开媒体、最终售价和交期。
+    const skus = work.saleSkus.map(offer => {
+      const s = offer.sku
       const exampleKeys = safeJson(s.exampleMedia, [])
       const exampleUrls = exampleKeys.map(k => presignOrPassthrough(k, fastify, 3600)).filter(Boolean)
       return {
@@ -173,7 +144,9 @@ export default async function collabRoutes(fastify) {
         colorName: s.colorName,
         colorHex: s.colorHex,
         previewImage: presignOrPassthrough(s.previewImage, fastify, 3600),
-        finalPrice: collabFinalPrice(work, s),
+        finalPrice: collabFinalPrice(offer),
+        fulfillmentMode: offer.fulfillmentMode,
+        leadTimeDays: offer.leadTimeDays,
         exampleMedia: exampleUrls,
       }
     })
@@ -195,6 +168,7 @@ export default async function collabRoutes(fastify) {
         creatorId: work.creatorId,
         title: work.title,
         description: work.description,
+        storefrontSummary: work.storefrontSummary,
         animationFrames: frameUrls,
         hoverGifUrl,
         coverUrl,

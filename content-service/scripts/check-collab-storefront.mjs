@@ -9,6 +9,8 @@ let userId = null
 let modelId = null
 let skuId = null
 let unsupportedSkuId = null
+let animationAssetId = null
+let animationVersionId = null
 
 function assert(condition, message) {
   if (!condition) throw new Error(message)
@@ -36,6 +38,8 @@ async function createWork(creatorId, suffix, overrides = {}) {
       animationFrames: '[]',
       supportedSkus: JSON.stringify([skuId]),
       creatorMarkups: JSON.stringify({ [skuId]: 17.25 }),
+      animationAssetId,
+      animationVersionId,
       status: 'approved',
       agreementSignedAt: new Date(),
       approvedAt: new Date(),
@@ -49,6 +53,17 @@ async function createWork(creatorId, suffix, overrides = {}) {
     },
   })
   workIds.push(work.id)
+  await prisma.collabSaleSku.create({
+    data: {
+      collabWorkId: work.id,
+      skuId,
+      finalPrice: 117.25,
+      fulfillmentMode: 'MAKE_TO_ORDER',
+      leadTimeDays: 7,
+      createdBy: creatorId,
+      updatedBy: creatorId,
+    },
+  })
   return work
 }
 
@@ -59,6 +74,8 @@ async function cleanup() {
     await prisma.cart.deleteMany({ where: { userId } })
   }
   if (workIds.length) await prisma.collabWork.deleteMany({ where: { id: { in: workIds } } })
+  if (animationVersionId) await prisma.animationAssetVersion.deleteMany({ where: { id: animationVersionId } })
+  if (animationAssetId) await prisma.animationAsset.deleteMany({ where: { id: animationAssetId } })
   if (userId) {
     await prisma.refreshToken.deleteMany({ where: { userId } })
     await prisma.smsCode.deleteMany({ where: { OR: [{ userId }, { phone }] } })
@@ -120,6 +137,35 @@ try {
   })
   unsupportedSkuId = unsupportedSku.id
 
+  const asset = await prisma.animationAsset.create({
+    data: {
+      assetNo: `ANM-TEST-${runId}`,
+      ownerUserId: user.id,
+      title: `联名商城验收动画-${runId}`,
+      sourceType: 'STAFF_CREATED',
+      sourceChannel: 'INTERNAL_CREATED',
+      usageType: 'COLLAB_SALE',
+      assetType: 'COLLAB',
+      collabStatus: 'AUTHORIZED',
+      rightsHolderType: 'COMPANY',
+      authorizationStatus: 'AUTHORIZED',
+      currentVersionNo: 1,
+    },
+  })
+  animationAssetId = asset.id
+  const version = await prisma.animationAssetVersion.create({
+    data: {
+      assetId: asset.id,
+      versionNo: 1,
+      sourceKey: `COLLAB_STOREFRONT_TEST:${runId}`,
+      sourceType: 'STAFF_CREATED',
+      frameKeys: ['test/frame-1.png'],
+      baseFrameCount: 1,
+      manifestHash: `collab-storefront-${runId}`,
+    },
+  })
+  animationVersionId = version.id
+
   const live = await createWork(user.id, 'live')
   const hidden = await createWork(user.id, 'hidden', { isOnShelf: false })
   const suspended = await createWork(user.id, 'suspended', { shelfStatus: 'suspended' })
@@ -128,7 +174,7 @@ try {
   const listResponse = await request(`/api/collab/works?creatorId=${encodeURIComponent(user.id)}&limit=50`)
   const listBody = await listResponse.json()
   assert(listResponse.ok && listBody.data.works.length === 1 && listBody.data.works[0].id === live.id, '公开列表只显示真正上架的正式版本')
-  assert(Number(listBody.data.works[0].minPrice) === 117.25, '列表最低价包含创作者加价')
+  assert(Number(listBody.data.works[0].minPrice) === 117.25, '列表最低价来自正式销售配置')
   assert(!('likeCount' in listBody.data.works[0]) && !('isLiked' in listBody.data.works[0]), '公开列表不再返回首版未启用的互动字段')
 
   const detailResponse = await request(`/api/collab/works/${live.id}`)

@@ -149,7 +149,7 @@
 
 1. 展示/确认页选择 `CollabWork` 和硬件 SKU。
 2. `/api/cart/add` 创建 `MARKET` 条目。
-3. 结算按 SKU 基础价计算金额并预锁 `quantity` 件硬件库存。
+3. 2026-09-04 起，列表、详情、加购和结算统一读取 `CollabSaleSku.finalPrice`；结算按服务端复核后的最终价计算金额，并预锁 `quantity` 件硬件库存。
 4. 支付回调创建一个 `CustomizeOrder`，再尝试创建 `CollabOrder`。
 5. 当前 `CollabOrder` 创建参数与 Schema 不匹配，错误被捕获后支付仍返回成功，因此分账链路实际中断。
 
@@ -163,8 +163,8 @@ Schema 注释的主状态为：
 
 ## 价格、数量和库存语义
 
-- 购物车金额是 `MachineModelSku.price * CartItem.quantity`。
-- 联名详情页展示价是 SKU 基础价加 `CollabWork.creatorMarkups[skuId]`，但购物车只取 SKU 基础价，未计创作者加价。
+- 私人定制商品当前以 `MachineModelSku.price` 为价格基础；联名商品以正式 `CollabSaleSku.finalPrice` 为唯一顾客成交价来源。
+- **已修复：**联名列表、详情、加入购物车、购物车读取和结算复核使用相同的正式最终价；旧 `creatorMarkups` 只作兼容镜像，不再由公开购买路线读取。
 - **已修复：**`CustomizeOrder` 明确表示单件生产任务；`SalesOrderItem.quantity` 保存购买数量，并按数量生成对应任务。
 - **已修复：**总金额保存在 `SalesOrder`，单价和行金额保存在 `SalesOrderItem`；生产任务不再承担用户订单金额。
 - 文档定义可用库存为 `currentStock - reservedStock - wipFrameQty - wipKitQty`。购物车结算使用了完整公式，但 `lib/inventory.js` 漏减 `wipKitQty`，旧下单和后台库存视图会高估可售量。

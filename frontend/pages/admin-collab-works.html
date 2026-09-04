@@ -127,6 +127,29 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
 .pack-table tr:last-child td{border-bottom:none;}
 .stock-stocked{background:#D6F5DC;color:#1B6B2F;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:800;}
 .stock-on-demand{background:#FFF3E0;color:#B94A00;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:800;}
+.sale-status{padding:10px 12px;border-radius:8px;font-size:12px;font-weight:800;line-height:1.6;margin-bottom:10px;}
+.sale-status.ready{background:#E8F7EB;color:#1B6B2F;}
+.sale-status.blocked{background:#FFF3E0;color:#8A4700;}
+.sale-status ul{margin:5px 0 0 18px;}
+.sale-modal{width:980px;max-height:88vh;display:flex;flex-direction:column;padding:0;overflow:hidden;}
+.sale-modal-head{padding:22px 24px 16px;border-bottom:1px solid var(--gray1);}
+.sale-modal-body{padding:18px 24px;overflow-y:auto;}
+.sale-modal-foot{padding:14px 24px;border-top:1px solid var(--gray1);display:flex;justify-content:flex-end;gap:8px;}
+.sale-form-grid{display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:12px;}
+.sale-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:18px 0 10px;}
+.sale-sku-list{display:flex;flex-direction:column;gap:8px;}
+.sale-sku-columns{display:grid;grid-template-columns:28px 52px minmax(220px,1fr) 130px 155px 95px 72px;gap:10px;padding:0 10px;color:var(--gray3);font-size:10px;font-weight:800;}
+.sale-sku-row{display:grid;grid-template-columns:28px 52px minmax(220px,1fr) 130px 155px 95px 72px;gap:10px;align-items:center;border:1px solid var(--gray1);border-radius:8px;padding:10px;background:var(--white);}
+.sale-sku-row.incompatible{opacity:.55;background:var(--cream);}
+.sale-sku-img{width:52px;height:52px;border-radius:6px;background:var(--gray1);overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--gray3);font-size:11px;}
+.sale-sku-img img{width:100%;height:100%;object-fit:cover;}
+.sale-sku-name{font-size:12px;font-weight:900;line-height:1.45;}
+.sale-sku-meta{font-size:10px;font-weight:700;color:var(--gray3);line-height:1.5;}
+.sale-sku-row .form-input,.sale-sku-row .form-select{height:34px;font-size:11px;padding:0 8px;border-radius:6px;}
+.sale-sku-settings{display:contents;}
+.sale-order{display:flex;gap:4px;}
+.sale-order button{width:30px;height:30px;border:1px solid var(--gray1);border-radius:6px;background:var(--white);font-weight:900;cursor:pointer;}
+.sale-empty{padding:24px;text-align:center;border:1px dashed var(--gray2);border-radius:8px;color:var(--gray3);font-size:12px;font-weight:800;}
 
 /* Modal */
 .modal-overlay{display:none;position:fixed;inset:0;z-index:300;background:rgba(17,17,16,.5);align-items:center;justify-content:center;}
@@ -157,6 +180,10 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
   .topbar,.content{padding-left:16px;padding-right:16px;}
   .menu-btn{display:flex;}
   .stats-grid{grid-template-columns:repeat(2,1fr);}
+  .sale-form-grid{grid-template-columns:1fr;}
+  .sale-sku-columns{display:none;}
+  .sale-sku-row{grid-template-columns:28px 46px minmax(160px,1fr);}
+  .sale-sku-settings{grid-column:2/-1;display:grid;grid-template-columns:1fr 1.2fr 90px 68px;gap:6px;}
 }
 </style>
 </head>
@@ -296,6 +323,46 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
   </div>
 </div>
 
+<!-- 联名商品销售配置 Modal -->
+<div class="modal-overlay" id="saleConfigModal">
+  <div class="modal sale-modal">
+    <div class="sale-modal-head">
+      <p class="modal-title">销售配置</p>
+      <p class="modal-sub" id="saleConfigSub" style="margin-bottom:0;">选择这件联名作品允许销售的真实 SKU。</p>
+    </div>
+    <div class="sale-modal-body">
+      <div id="saleConfigReadiness"></div>
+      <div class="sale-form-grid">
+        <div class="form-field">
+          <label class="form-label">货架简介</label>
+          <textarea class="form-textarea" id="saleSummary" maxlength="300" placeholder="用于商品列表的简短介绍，最多 300 字"></textarea>
+        </div>
+        <div class="form-field">
+          <label class="form-label">推荐顺序</label>
+          <input class="form-input" type="number" id="saleSortOrder" min="-10000" max="10000" value="0">
+        </div>
+      </div>
+      <div class="sale-toolbar">
+        <div>
+          <div style="font-size:13px;font-weight:900;">可售 SKU</div>
+          <div id="saleFrameHint" style="font-size:11px;font-weight:700;color:var(--gray3);margin-top:2px;"></div>
+        </div>
+        <label style="display:flex;align-items:center;gap:7px;font-size:11px;font-weight:800;color:var(--gray3);">
+          <input type="checkbox" id="showIncompatibleSkus" onchange="renderSaleSkus()"> 显示不兼容规格
+        </label>
+      </div>
+      <div class="sale-sku-columns" aria-hidden="true">
+        <span></span><span></span><span>SKU 规格</span><span>最终售价</span><span>供货方式</span><span>发货天数</span><span>顺序</span>
+      </div>
+      <div class="sale-sku-list" id="saleSkuList"></div>
+    </div>
+    <div class="sale-modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('saleConfigModal')">取消</button>
+      <button class="btn btn-black" id="saveSaleConfigBtn" onclick="saveSaleConfig()">保存销售配置</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -305,6 +372,9 @@ let _works = []
 let _filter = 'on_sale'
 let _activeWorkId = ''
 let _curSize = ''
+let _saleCandidates = []
+let _saleRows = []
+let _saleBaseFrameCount = 0
 
 window.addEventListener('DOMContentLoaded', async () => {
   _token = localStorage.getItem('mowo_token') || ''
@@ -414,12 +484,14 @@ function workCard(w) {
       <div class="work-meta">
         ${suspendDaysHtml(w)}
         ${sizes.map(s => `<span class="work-tag">${s}</span>`).join('')}
+        <span class="work-tag">${w.saleConfigCount || 0} 个可售 SKU</span>
         <span class="work-tag">分红 ${Math.round((w.revenueRate || 0) * 100)}%</span>
         ${w.isExclusiveWork ? '<span class="work-tag">独家</span>' : ''}
       </div>
       ${noticeHtml}
       <div class="work-actions">
         <button class="btn btn-ghost btn-sm" onclick="openDrawer('${w.id}')">详情</button>
+        <button class="btn btn-yellow btn-sm" onclick="openSaleConfig('${w.id}')">销售配置</button>
         ${actions}
       </div>
     </div>
@@ -579,6 +651,15 @@ function renderDrawer(w, packs) {
       </div>
     </div>
     <div class="detail-section">
+      <div class="detail-section-title">销售配置</div>
+      <div class="sale-status ${w.saleReadiness?.ready ? 'ready' : 'blocked'}">
+        ${w.saleReadiness?.ready
+          ? `已满足上架条件 · ${w.saleSkus?.length || 0} 个可售 SKU`
+          : `尚未满足上架条件${w.saleReadiness?.blockers?.length ? `<ul>${w.saleReadiness.blockers.map(item => `<li>${esc(item)}</li>`).join('')}</ul>` : ''}`}
+      </div>
+      <button class="btn btn-yellow btn-sm" onclick="openSaleConfig('${w.id}')">编辑销售配置</button>
+    </div>
+    <div class="detail-section">
       <div class="detail-section-title">帧图预览（前10帧）</div>
       ${frames.length
         ? `<div class="frames-grid">${frames.slice(0,10).map(url =>
@@ -612,6 +693,135 @@ function closeDrawer() {
   document.getElementById('drawer').classList.remove('open')
   document.getElementById('drawerOverlay').classList.remove('show')
   document.body.style.overflow = ''
+}
+
+// ── 销售配置 ──
+async function openSaleConfig(workId) {
+  _activeWorkId = workId
+  const work = _works.find(item => item.id === workId)
+  document.getElementById('saleConfigSub').textContent = `《${work?.title || ''}》 · 从现有款式中选择可售规格`
+  document.getElementById('saleConfigReadiness').innerHTML = '<div class="sale-empty">正在读取销售配置…</div>'
+  document.getElementById('saleSkuList').innerHTML = ''
+  document.getElementById('saleConfigModal').classList.add('show')
+  try {
+    const res = await fetch(`${API}/api/admin/collab/${workId}/sale-config`, { headers: { Authorization: `Bearer ${_token}` } })
+    const json = await res.json()
+    if (!json.success) throw new Error(json.message || '读取失败')
+    const data = json.data
+    _saleCandidates = data.candidates || []
+    _saleBaseFrameCount = data.baseFrameCount || 0
+    const selectedMap = new Map((data.selected || []).map(row => [row.skuId, row]))
+    _saleRows = (data.selected || []).sort((a,b) => a.sortOrder - b.sortOrder).map(row => ({ ...row }))
+    document.getElementById('saleSummary').value = data.storefrontSummary || ''
+    document.getElementById('saleSortOrder').value = data.storefrontSortOrder || 0
+    document.getElementById('showIncompatibleSkus').checked = false
+    document.getElementById('saleFrameHint').textContent = `当前动画 ${_saleBaseFrameCount || '—'} 个核心帧，只能选择帧数为其整数倍的 SKU。`
+    renderSaleReadiness(data.ready, data.blockers || [])
+    renderSaleSkus()
+  } catch (error) {
+    document.getElementById('saleConfigReadiness').innerHTML = `<div class="sale-status blocked">${esc(error.message || '读取失败')}</div>`
+  }
+}
+
+function renderSaleReadiness(ready, blockers) {
+  document.getElementById('saleConfigReadiness').innerHTML = ready
+    ? '<div class="sale-status ready">当前配置已满足上架条件</div>'
+    : `<div class="sale-status blocked">当前尚不能上架${blockers.length ? `<ul>${blockers.map(item => `<li>${esc(item)}</li>`).join('')}</ul>` : ''}</div>`
+}
+
+function renderSaleSkus() {
+  const showIncompatible = document.getElementById('showIncompatibleSkus').checked
+  const selectedMap = new Map(_saleRows.map(row => [row.skuId, row]))
+  const candidateMap = new Map(_saleCandidates.map(sku => [sku.id, sku]))
+  const ordered = [
+    ..._saleRows.map(row => candidateMap.get(row.skuId)).filter(Boolean),
+    ..._saleCandidates.filter(sku => !selectedMap.has(sku.id)),
+  ].filter(sku => sku.compatible || selectedMap.has(sku.id) || showIncompatible)
+
+  const list = document.getElementById('saleSkuList')
+  if (!ordered.length) {
+    list.innerHTML = '<div class="sale-empty">没有可选择的有效 SKU，请先到“款式管理”建立并启用 SKU。</div>'
+    return
+  }
+  list.innerHTML = ordered.map(sku => {
+    const row = selectedMap.get(sku.id)
+    const selected = Boolean(row)
+    const position = _saleRows.findIndex(item => item.skuId === sku.id)
+    const preview = sku.previewImage ? `<img src="${esc(sku.previewImage)}" alt="">` : '暂无图'
+    return `<div class="sale-sku-row${sku.compatible ? '' : ' incompatible'}">
+      <input type="checkbox" ${selected ? 'checked' : ''} ${sku.compatible || selected ? '' : 'disabled'} onchange="toggleSaleSku('${sku.id}',this.checked)">
+      <div class="sale-sku-img">${preview}</div>
+      <div>
+        <div class="sale-sku-name">${esc(sku.modelName)} · ${esc(sku.size)} · ${sku.frameCount}帧 · ${esc(sku.material)} · ${esc(sku.colorName)}</div>
+        <div class="sale-sku-meta">${esc(sku.skuCode || sku.id)} · 基础价 ¥${Number(sku.basePrice).toFixed(2)}${sku.compatible ? '' : ' · 帧数不兼容'}</div>
+      </div>
+      <div class="sale-sku-settings">
+        <input class="form-input" type="number" min="${sku.basePrice}" max="999999.99" step="0.01" title="最终售价" placeholder="最终售价" value="${selected ? row.finalPrice : sku.basePrice}" ${selected ? '' : 'disabled'} onchange="updateSaleField('${sku.id}','finalPrice',this.value)">
+        <select class="form-select" title="供货方式" ${selected ? '' : 'disabled'} onchange="updateSaleField('${sku.id}','fulfillmentMode',this.value)">
+          <option value="MAKE_TO_ORDER" ${selected && row.fulfillmentMode === 'MAKE_TO_ORDER' ? 'selected' : ''}>允许现做</option>
+          <option value="STOCK_ONLY" ${selected && row.fulfillmentMode === 'STOCK_ONLY' ? 'selected' : ''}>仅限现货</option>
+        </select>
+        <input class="form-input" type="number" min="1" max="60" title="预计发货天数" value="${selected ? row.leadTimeDays : 7}" ${selected ? '' : 'disabled'} onchange="updateSaleField('${sku.id}','leadTimeDays',this.value)">
+        <div class="sale-order">
+          <button type="button" title="上移" ${selected && position > 0 ? '' : 'disabled'} onclick="moveSaleSku('${sku.id}',-1)">↑</button>
+          <button type="button" title="下移" ${selected && position < _saleRows.length - 1 ? '' : 'disabled'} onclick="moveSaleSku('${sku.id}',1)">↓</button>
+        </div>
+      </div>
+    </div>`
+  }).join('')
+}
+
+function toggleSaleSku(skuId, checked) {
+  const sku = _saleCandidates.find(item => item.id === skuId)
+  if (!sku || (checked && !sku.compatible)) return
+  if (checked && !_saleRows.some(row => row.skuId === skuId)) {
+    _saleRows.push({ skuId, finalPrice: Number(sku.basePrice), fulfillmentMode: 'MAKE_TO_ORDER', leadTimeDays: 7, isEnabled: true })
+  } else if (!checked) {
+    _saleRows = _saleRows.filter(row => row.skuId !== skuId)
+  }
+  renderSaleSkus()
+}
+
+function updateSaleField(skuId, field, value) {
+  const row = _saleRows.find(item => item.skuId === skuId)
+  if (!row) return
+  row[field] = ['finalPrice','leadTimeDays'].includes(field) ? Number(value) : value
+}
+
+function moveSaleSku(skuId, delta) {
+  const from = _saleRows.findIndex(row => row.skuId === skuId)
+  const to = from + delta
+  if (from < 0 || to < 0 || to >= _saleRows.length) return
+  ;[_saleRows[from], _saleRows[to]] = [_saleRows[to], _saleRows[from]]
+  renderSaleSkus()
+}
+
+async function saveSaleConfig() {
+  if (!_saleRows.length) { showToast('请至少选择一个可售 SKU'); return }
+  const button = document.getElementById('saveSaleConfigBtn')
+  button.disabled = true
+  try {
+    const res = await fetch(`${API}/api/admin/collab/${_activeWorkId}/sale-config`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${_token}` },
+      body: JSON.stringify({
+        storefrontSummary: document.getElementById('saleSummary').value.trim(),
+        storefrontSortOrder: Number(document.getElementById('saleSortOrder').value || 0),
+        skus: _saleRows,
+      }),
+    })
+    const json = await res.json()
+    if (!json.success) {
+      showToast(json.message || '保存失败')
+      renderSaleReadiness(false, json.blockers || [json.message || '保存失败'])
+      return
+    }
+    showToast(json.message || '销售配置已保存')
+    closeModal('saleConfigModal')
+    await loadWorks()
+    if (document.getElementById('drawer').classList.contains('open')) await openDrawer(_activeWorkId)
+  } catch { showToast('网络错误') }
+  finally { button.disabled = false }
 }
 
 // ── 库存调整 ──
@@ -650,6 +860,7 @@ async function submitStock() {
 // ── 工具 ──
 function closeModal(id) { document.getElementById(id).classList.remove('show') }
 function safeJson(s) { try { return Array.isArray(s) ? s : JSON.parse(s || '[]') } catch { return [] } }
+function esc(value) { return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])) }
 
 let _toastTimer
 function showToast(msg) {

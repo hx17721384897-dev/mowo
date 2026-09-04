@@ -28,6 +28,7 @@
     "check:production-scan-ui": "node scripts/check-production-scan-ui.mjs",
     "check:production-scan-safety": "node scripts/check-production-scan-safety.mjs",
     "check:collab-storefront": "node scripts/check-collab-storefront.mjs",
+    "check:collab-sale-config": "node scripts/check-collab-sale-config.mjs",
     "assets:backfill": "node scripts/backfill-animation-assets.mjs",
     "assets:backfill-collab": "node scripts/backfill-collab-animation-assets.mjs",
     "sku-codes:backfill": "node scripts/backfill-sku-codes.mjs",

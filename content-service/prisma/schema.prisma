@@ -631,8 +631,9 @@ model MachineModelSku {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  model        MachineModel  @relation(fields: [modelId], references: [id])
-  printCutRule PrintCutRule?
+  model          MachineModel    @relation(fields: [modelId], references: [id])
+  printCutRule   PrintCutRule?
+  collabSaleSkus CollabSaleSku[]
 
   @@unique([modelId, size, material, frameCount, colorName])
   @@map("machine_model_skus")
@@ -803,61 +804,88 @@ model AftersaleRequest {
 // ================================================================
 
 model CollabWork {
-  id                 String    @id @default(uuid())
-  creatorId          String    @map("creator_id")
-  orderNo            String?   @map("order_no") // 可选：动画直接提交时为 null
-  title              String
-  description        String?
-  coverUrl           String?   @map("cover_url")
-  animationFrames    String    @map("animation_frames") // JSON数组 OSS objectKey
-  supportedSkus      String    @map("supported_skus") // JSON数组 SKU ID
-  sizes              String?   @db.Text // JSON数组 如["5x5cm","8x8cm"]
-  framePackOssPath   String?   @map("frame_pack_oss_path") @db.VarChar(500)
-  isNewbieWork       Boolean   @default(false) @map("is_newbie_work")
-  newbieExpiredAt    DateTime? @map("newbie_expired_at") // 审核通过后 +30天
-  activityId         String?   @map("activity_id")
-  isExclusiveWork    Boolean   @default(false) @map("is_exclusive_work")
-  status             String    @default("pending")
+  id                  String    @id @default(uuid())
+  creatorId           String    @map("creator_id")
+  orderNo             String?   @map("order_no") // 可选：动画直接提交时为 null
+  title               String
+  description         String?
+  coverUrl            String?   @map("cover_url")
+  animationFrames     String    @map("animation_frames") // JSON数组 OSS objectKey
+  supportedSkus       String    @map("supported_skus") // JSON数组 SKU ID
+  sizes               String?   @db.Text // JSON数组 如["5x5cm","8x8cm"]
+  framePackOssPath    String?   @map("frame_pack_oss_path") @db.VarChar(500)
+  isNewbieWork        Boolean   @default(false) @map("is_newbie_work")
+  newbieExpiredAt     DateTime? @map("newbie_expired_at") // 审核通过后 +30天
+  activityId          String?   @map("activity_id")
+  isExclusiveWork     Boolean   @default(false) @map("is_exclusive_work")
+  status              String    @default("pending")
   // pending / approved / rejected
-  rejectReason       String?   @map("reject_reason")
-  agreementSignedAt  DateTime  @map("agreement_signed_at")
-  approvedAt         DateTime? @map("approved_at")
-  approvedBy         String?   @map("approved_by")
-  revenueRate        Float     @default(0) @map("revenue_rate") // 审核时快照
-  isOnShelf          Boolean   @default(false) @map("is_on_shelf")
-  shelfAt            DateTime? @map("shelf_at")
-  shelfStatus        String    @default("on_sale") @map("shelf_status")
+  rejectReason        String?   @map("reject_reason")
+  agreementSignedAt   DateTime  @map("agreement_signed_at")
+  approvedAt          DateTime? @map("approved_at")
+  approvedBy          String?   @map("approved_by")
+  revenueRate         Float     @default(0) @map("revenue_rate") // 审核时快照
+  isOnShelf           Boolean   @default(false) @map("is_on_shelf")
+  shelfAt             DateTime? @map("shelf_at")
+  shelfStatus         String    @default("on_sale") @map("shelf_status")
   // on_sale / suspended / pending_delist / off_shelf
-  suspendedAt        DateTime? @map("suspended_at")
-  suspendedBy        String?   @map("suspended_by")
-  offShelfAt         DateTime? @map("off_shelf_at")
-  offShelfType       String?   @map("off_shelf_type") // platform_force / creator_request
-  offShelfReason     String?   @map("off_shelf_reason") @db.Text // 内部备注
-  offShelfNotice     String?   @map("off_shelf_notice") @db.Text // 发给创作者的通知
-  canResubmit        Boolean   @default(false) @map("can_resubmit")
-  delistRequestedAt  DateTime? @map("delist_requested_at")
-  delistReason       String?   @map("delist_reason") @db.Text
-  submissionBatchId  String?   @map("submission_batch_id") // 同批次提交的作品共享同一 batchId
-  isRevision         Boolean   @default(false) @map("is_revision") // 是否为修改版
-  originalWorkId     String?   @map("original_work_id") // 指向被修改的原作品 ID
-  changeLog          String?   @map("change_log") @db.Text // JSON diff: {title:{old,new},...}
-  hoverGifUrl        String?   @map("hover_gif_url") // 卡片 hover 用小 GIF OSS 路径
-  creatorMarkups     String?   @map("creator_markups") // JSON: {"skuId": decimalAmount}
-  animationAssetId   String?   @map("animation_asset_id")
-  animationVersionId String?   @map("animation_version_id")
-  createdAt          DateTime  @default(now()) @map("created_at")
-  updatedAt          DateTime  @updatedAt @map("updated_at")
+  suspendedAt         DateTime? @map("suspended_at")
+  suspendedBy         String?   @map("suspended_by")
+  offShelfAt          DateTime? @map("off_shelf_at")
+  offShelfType        String?   @map("off_shelf_type") // platform_force / creator_request
+  offShelfReason      String?   @map("off_shelf_reason") @db.Text // 内部备注
+  offShelfNotice      String?   @map("off_shelf_notice") @db.Text // 发给创作者的通知
+  canResubmit         Boolean   @default(false) @map("can_resubmit")
+  delistRequestedAt   DateTime? @map("delist_requested_at")
+  delistReason        String?   @map("delist_reason") @db.Text
+  submissionBatchId   String?   @map("submission_batch_id") // 同批次提交的作品共享同一 batchId
+  isRevision          Boolean   @default(false) @map("is_revision") // 是否为修改版
+  originalWorkId      String?   @map("original_work_id") // 指向被修改的原作品 ID
+  changeLog           String?   @map("change_log") @db.Text // JSON diff: {title:{old,new},...}
+  hoverGifUrl         String?   @map("hover_gif_url") // 卡片 hover 用小 GIF OSS 路径
+  creatorMarkups      String?   @map("creator_markups") // JSON: {"skuId": decimalAmount}
+  storefrontSummary   String?   @map("storefront_summary") @db.VarChar(300)
+  storefrontSortOrder Int       @default(0) @map("storefront_sort_order")
+  animationAssetId    String?   @map("animation_asset_id")
+  animationVersionId  String?   @map("animation_version_id")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
 
   framePacks       CollabFramePack[]
   collabOrders     CollabOrder[]
   animationAsset   AnimationAsset?        @relation(fields: [animationAssetId], references: [id], onDelete: SetNull)
   animationVersion AnimationAssetVersion? @relation(fields: [animationVersionId], references: [id], onDelete: SetNull)
+  saleSkus         CollabSaleSku[]
 
   @@index([submissionBatchId])
   @@index([originalWorkId])
   @@index([animationAssetId])
   @@index([animationVersionId])
   @@map("collab_works")
+}
+
+// 联名作品的正式销售规格。一条记录对应一个真实 SKU，公开货架和购物车以此表为准。
+model CollabSaleSku {
+  id              String   @id @default(uuid())
+  collabWorkId    String   @map("collab_work_id")
+  skuId           String   @map("sku_id")
+  finalPrice      Decimal  @map("final_price") @db.Decimal(10, 2)
+  fulfillmentMode String   @default("MAKE_TO_ORDER") @map("fulfillment_mode") @db.VarChar(24)
+  leadTimeDays    Int      @default(7) @map("lead_time_days")
+  sortOrder       Int      @default(0) @map("sort_order")
+  isEnabled       Boolean  @default(true) @map("is_enabled")
+  createdBy       String   @map("created_by")
+  updatedBy       String   @map("updated_by")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  collabWork CollabWork      @relation(fields: [collabWorkId], references: [id], onDelete: Cascade)
+  sku        MachineModelSku @relation(fields: [skuId], references: [id], onDelete: Restrict)
+
+  @@unique([collabWorkId, skuId])
+  @@index([collabWorkId, isEnabled, sortOrder])
+  @@index([skuId, isEnabled])
+  @@map("collab_sale_skus")
 }
 
 model CollabOrder {

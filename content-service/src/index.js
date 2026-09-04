@@ -146,14 +146,19 @@ async function start() {
       if (!request.user && !(request.staffPermission && isDenied)) return
 
       try {
+        const operationAudit = request.operationAudit || null
         await fastify.prisma.operationLog.create({
           data: {
             userId:   request.user?.userId || 'anonymous',
             userRole: request.user?.role ?? 0,
             method,
             path:     request.url.split('?')[0],
+            action:   operationAudit?.action || null,
+            target:   operationAudit?.target || null,
+            targetId: operationAudit?.targetId || null,
+            before:   serializeSafeAuditBody(operationAudit?.before),
             ip:       request.ip || null,
-            after:    serializeSafeAuditBody(request.body),
+            after:    serializeSafeAuditBody(operationAudit?.after ?? request.body),
             outcome:  auditOutcome(reply.statusCode),
             statusCode: reply.statusCode,
             sessionId: request.user?.sid || null,

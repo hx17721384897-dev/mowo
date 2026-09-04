@@ -823,10 +823,10 @@ type 可选：`pending_info` / `pending_sku` / 不传=全部异常
 ## 联名系统
 
 ### GET `/api/collab/works`
-公开联名作品列表（仅 isOnShelf=true）。无需登录。
+公开联名商品列表。无需登录。只返回审核通过、明确上架、销售中、非修改版、已关联动画资产/版本和封面，且至少有一个启用正式销售 SKU 的作品；响应为公开字段白名单。
 
 ### GET `/api/collab/works/:id`
-联名作品详情（含 supportedSkus/sizes/framePackOssPath）。无需登录。
+公开联名商品详情。无需登录。返回公开作品信息和正式可售 SKU（最终售价、供货方式、预计发货天数及公开规格）；不返回基础价拆分、分红、审批、私有对象键、帧包路径或下架备注。
 
 ### POST `/api/collab/works`
 创建联名作品申请。需登录（认证创作者）。
@@ -836,6 +836,12 @@ type 可选：`pending_info` / `pending_sku` / 不传=全部异常
 
 ### GET `/api/collab/my-earnings`
 创作者联名收益（含冷却期/可提现状态）。需登录。
+
+### GET `/api/admin/collab/:id/sale-config`
+读取联名作品销售配置、上架阻断原因和可选择的真实 SKU。需负责人或合作运营权限。
+
+### PUT `/api/admin/collab/:id/sale-config`
+保存联名作品公开简介、推荐顺序，以及各真实 SKU 的最终售价、供货方式、交期和顺序。服务端校验作品状态、SKU 启用状态、帧数兼容、底价和交期，并留下员工操作记录。需负责人或合作运营权限。
 
 ---
 
