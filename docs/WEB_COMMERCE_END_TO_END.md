@@ -405,6 +405,8 @@ paid -> locked -> processing -> producing -> shipped -> received
 
 完成标准：已上架联名款能加入服务器购物车；下架、暂停、错 SKU、超量和价格变化都会被服务器正确拦截。
 
+本批已于 2026-09-04 完成产品方案确认，详细页面、后台销售配置、接口白名单、浏览量、登录后继续操作和旧代码删除步骤见 `COLLAB_STOREFRONT_REMEDIATION_PLAN.md`。联名区首版定位为商品货架而非社区；保留瀑布流与现有视觉语言，互动代码从正式联名路线删除。
+
 ### 批次 2B：统一混合购物车和结算快照
 
 - 为 `CUSTOM` 与 `MARKET` 建立同一套服务端快照和复核器。
@@ -491,3 +493,4 @@ paid -> locked -> processing -> producing -> shipped -> received
 - `PRODUCTION_BATCH_WORKFLOW.md`：付款后生产批次与扫码流程。
 - `PRODUCTION_WORKFLOW_ACCEPTANCE.md`：当前生产验收和已知边界。
 - `RELEASE_SCOPE.md`：首发开放、关闭和延后范围。
+- `COLLAB_STOREFRONT_REMEDIATION_PLAN.md`：联名商品货架和唯一详情页的分步整改方案。

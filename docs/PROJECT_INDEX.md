@@ -22,14 +22,15 @@
 11. `docs/ACCOUNT_FILE_SECURITY_ACCEPTANCE.md`：账号、权限、文件、注销与首发安全的人工验收步骤。
 12. `docs/WEB_CUSTOMIZATION_ACCEPTANCE.md`：Web 定制首批的人工验收步骤与延后边界。
 13. `docs/WEB_COMMERCE_END_TO_END.md`：从联名/私人定制、混合购物车、小程序交接到付款后生产发货的统一全链路；同时列出当前已完成部分和 P0/P1 断点。
-14. `docs/TROUBLESHOOTING.md`：本地开发已经发生过的故障、识别方法和修复边界。
-15. 对应业务规划：`PRODUCTION.md`、`REVENUE.md`、`docs/USER_SCENARIOS.md` 等。
-16. `docs/ANIMATION_ORDER_PRODUCTION_FRAMEWORK.md`：动画资产、版本、订单商品、单件生产和材料追踪的已确认目标框架。
-17. `docs/STANDARD_KIT_INVENTORY.md`：三层库存、FIFO批次追溯、SKU材料清单、标准材料包组装、退回隔离检查和补发任务的当前实现。
-18. `docs/PRODUCTION_BATCH_WORKFLOW.md`：材料包款生产批次、帧素材与材料并行作业、阶段边界和验收记录。
-19. `docs/PRINT_PRODUCTION_PLANNING.md`：打印裁切组、Word 模板版本、无损拼接帧、生产文件、订单筛选和批次快照。
-20. `docs/PRODUCTION_WORKFLOW_ACCEPTANCE.md`：当前生产闭环的自动检查、人工验收范围和已知边界。
-21. `docs/PRODUCTION_MANUAL_TEST_PLAN_STANDARD_6SKU.md`：当前标准款六规格的正式端到端测试，使用四个订单覆盖地址、面单、多页打印、领料、配对、齐套装箱和发货；旧三订单方案保留在 `PRODUCTION_MANUAL_TEST_PLAN.md` 作为历史记录。
+14. `docs/COLLAB_STOREFRONT_REMEDIATION_PLAN.md`：联名商品瀑布流、唯一详情、后台 SKU 销售配置、公开字段白名单、浏览量热门和登录后继续购买的实施方案。
+15. `docs/TROUBLESHOOTING.md`：本地开发已经发生过的故障、识别方法和修复边界。
+16. 对应业务规划：`PRODUCTION.md`、`REVENUE.md`、`docs/USER_SCENARIOS.md` 等。
+17. `docs/ANIMATION_ORDER_PRODUCTION_FRAMEWORK.md`：动画资产、版本、订单商品、单件生产和材料追踪的已确认目标框架。
+18. `docs/STANDARD_KIT_INVENTORY.md`：三层库存、FIFO批次追溯、SKU材料清单、标准材料包组装、退回隔离检查和补发任务的当前实现。
+19. `docs/PRODUCTION_BATCH_WORKFLOW.md`：材料包款生产批次、帧素材与材料并行作业、阶段边界和验收记录。
+20. `docs/PRINT_PRODUCTION_PLANNING.md`：打印裁切组、Word 模板版本、无损拼接帧、生产文件、订单筛选和批次快照。
+21. `docs/PRODUCTION_WORKFLOW_ACCEPTANCE.md`：当前生产闭环的自动检查、人工验收范围和已知边界。
+22. `docs/PRODUCTION_MANUAL_TEST_PLAN_STANDARD_6SKU.md`：当前标准款六规格的正式端到端测试，使用四个订单覆盖地址、面单、多页打印、领料、配对、齐套装箱和发货；旧三订单方案保留在 `PRODUCTION_MANUAL_TEST_PLAN.md` 作为历史记录。
 
 ## 文档分层
 
