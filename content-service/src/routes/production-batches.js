@@ -327,6 +327,47 @@ export default async function productionBatchRoutes(fastify) {
       reprintsByUnit.set(reprint.productionUnitId, rows)
     }
     const pairingByUnit = new Map(pairings.map(pairing => [pairing.productionUnitId, pairing]))
+    const requesterIds = [...new Set(reprints.map(reprint => reprint.requestedBy))]
+    const requesters = requesterIds.length ? await fastify.prisma.user.findMany({
+      where: { id: { in: requesterIds } },
+      select: { id: true, profile: { select: { nickname: true } } }
+    }) : []
+    const requesterById = new Map(requesters.map(user => [user.id, user.profile?.nickname || '工作人员']))
+    const packById = new Map(framePacks.map(pack => [pack.id, pack]))
+    const taskInfoById = new Map()
+    for (const order of salesOrders) {
+      for (const item of order.items) {
+        for (const task of item.productionTasks) {
+          taskInfoById.set(task.id, {
+            orderNo: order.orderNo,
+            productionNo: task.orderNo,
+            specification: `${task.modelName} · ${task.frameCount}帧 · ${task.size} · ${task.material} · ${task.colorName}`
+          })
+        }
+      }
+    }
+    const reprintTimeline = reprints.map((reprint, index) => {
+      const task = taskInfoById.get(reprint.productionUnitId) || {}
+      const workflow = unitById.get(reprint.productionUnitId) || null
+      return {
+        id: reprint.id,
+        revisionNo: reprints.length - index,
+        orderNo: task.orderNo || '-',
+        productionNo: task.productionNo || reprint.productionUnitId,
+        specification: task.specification || '-',
+        oldFramePackCode: reprint.oldFramePackCode,
+        newFramePackCode: reprint.newFramePackCode,
+        requestedPages: reprint.requestedPages,
+        reason: reprint.reason,
+        requestedByName: requesterById.get(reprint.requestedBy) || '工作人员',
+        createdAt: reprint.createdAt,
+        newFramePackStatus: packById.get(reprint.newFramePackId)?.status || 'IN_PROGRESS',
+        frameStatus: workflow?.frameStatus || 'IN_PROGRESS',
+        pairingStatus: workflow?.pairingStatus || 'WAITING',
+        packageStatus: workflow?.packageStatus || 'WAITING',
+        productionPrintFileId: reprint.productionPrintFileId
+      }
+    })
 
     const orders = salesOrders.map(order => ({
       id: order.id,
@@ -373,6 +414,12 @@ export default async function productionBatchRoutes(fastify) {
         skuCount: batch.skuCount, warnings: batch.warningSnapshot || []
       },
       progress: summarizeUnits(batch.units),
+      ledgerCheck: {
+        currentMarker: `${batch.id} / 返工${reprints.length}次`,
+        reprintCount: reprints.length,
+        latestReprintAt: reprints[0]?.createdAt || null
+      },
+      reprintTimeline,
       materialDemand,
       productionFiles: await Promise.all(productionFiles.map(async file => ({
         id: file.id, displayName: file.displayName, targetFrameCount: file.targetFrameCount, sourceType: file.sourceType,

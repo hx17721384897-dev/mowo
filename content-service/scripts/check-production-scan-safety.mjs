@@ -26,10 +26,11 @@ async function cleanup() {
 
 try {
   const fixture = await prisma.productionFramePack.findFirst({
-    where: { isActive: true, status: { in: ['COMPLETED', 'PAIRED', 'PACKED'] } }, orderBy: { updatedAt: 'desc' }
+    where: { isActive: true, status: { in: ['COMPLETED', 'PAIRED', 'PACKED', 'SHIPPED'] } }, orderBy: { updatedAt: 'desc' }
   })
-  if (!fixture) throw new Error('没有可用于幂等检查的已完成帧包')
+  if (!fixture) throw new Error('没有可用于生产清单检查的帧包')
   const activeBatches = await prisma.productionBatch.findMany({ where: { status: { in: ['READY', 'IN_PROGRESS'] } }, select: { id: true } })
+  const fixtureBatchIsActive = activeBatches.some(batch => batch.id === fixture.batchId)
   const otherBatch = activeBatches.find(batch => batch.id !== fixture.batchId)
   const pick = await prisma.productionMaterialPick.findFirst({
     where: { batchId: fixture.batchId, status: 'ACTIVE', remainingQty: { gt: 0 } },
@@ -49,23 +50,27 @@ try {
   if (!loginResponse.ok || !login.success) throw new Error(login.message || '测试负责人登录失败')
   const headers = { Authorization: `Bearer ${login.data.accessToken}`, 'Content-Type': 'application/json' }
 
-  const beforeLogs = await prisma.operationLog.count({ where: { targetId: fixture.id, action: { contains: '完成裁切装袋' } } })
-  const duplicateResponse = await fetch(`${apiBase}/api/admin/production-workflow/frame-packs/${encodeURIComponent(fixture.code)}/complete`, {
-    method: 'POST', headers, body: JSON.stringify({ batchId: fixture.batchId })
-  })
-  const duplicate = await duplicateResponse.json()
-  assert(duplicateResponse.ok && duplicate.data?.reused === true && duplicate.data?.changed === false, '重复扫描已完成或已进入后续环节的 FP 返回提醒且不重复推进')
-  const afterLogs = await prisma.operationLog.count({ where: { targetId: fixture.id, action: { contains: '完成裁切装袋' } } })
-  assert(afterLogs === beforeLogs, '重复扫描不会新增“完成裁切装袋”成功日志')
+  if (fixtureBatchIsActive) {
+    const beforeLogs = await prisma.operationLog.count({ where: { targetId: fixture.id, action: { contains: '完成裁切装袋' } } })
+    const duplicateResponse = await fetch(`${apiBase}/api/admin/production-workflow/frame-packs/${encodeURIComponent(fixture.code)}/complete`, {
+      method: 'POST', headers, body: JSON.stringify({ batchId: fixture.batchId })
+    })
+    const duplicate = await duplicateResponse.json()
+    assert(duplicateResponse.ok && duplicate.data?.reused === true && duplicate.data?.changed === false, '重复扫描已完成或已进入后续环节的 FP 返回提醒且不重复推进')
+    const afterLogs = await prisma.operationLog.count({ where: { targetId: fixture.id, action: { contains: '完成裁切装袋' } } })
+    assert(afterLogs === beforeLogs, '重复扫描不会新增“完成裁切装袋”成功日志')
+  } else {
+    console.log('SKIP 当前只有已结束批次，不对真实已发货帧包执行重复扫码')
+  }
 
-  if (otherBatch) {
+  if (fixtureBatchIsActive && otherBatch) {
     const wrongResponse = await fetch(`${apiBase}/api/admin/production-workflow/frame-packs/${encodeURIComponent(fixture.code)}/complete`, {
       method: 'POST', headers, body: JSON.stringify({ batchId: otherBatch.id })
     })
     assert(wrongResponse.status === 409, '跨生产批次扫描 FP 会被服务器拒绝')
   }
 
-  if (pick) {
+  if (fixtureBatchIsActive && pick) {
     const sourceCode = pick.kitContainer?.code || pick.kitAssemblyBatch.batchNo
     const sourceResponse = await fetch(`${apiBase}/api/admin/production-workflow/pairing/material-source/${encodeURIComponent(sourceCode)}?batchId=${encodeURIComponent(fixture.batchId)}`, { headers })
     const source = await sourceResponse.json()
@@ -73,7 +78,7 @@ try {
   }
 
   const pairing = await prisma.productionUnitPairing.findUnique({ where: { productionUnitId: fixture.productionUnitId } })
-  if (pairing && pairing.status !== 'VOID') {
+  if (fixtureBatchIsActive && pairing && pairing.status !== 'VOID') {
     const [kitBatch, container] = await Promise.all([
       prisma.kitAssemblyBatch.findUnique({ where: { id: pairing.kitAssemblyBatchId } }),
       pairing.kitContainerId ? prisma.kitContainer.findUnique({ where: { id: pairing.kitContainerId } }) : null
@@ -97,8 +102,10 @@ try {
   const zip = new AdmZip(ledger)
   const workbook = zip.readAsText('xl/workbook.xml')
   const detail = zip.readAsText('xl/worksheets/sheet1.xml')
+  const reprintCount = await prisma.productionFrameReprint.count({ where: { batchId: fixture.batchId } })
   assert(ledgerResponse.ok && workbook.includes('单件生产明细') && workbook.includes('材料需求汇总'), '生产总表包含单件明细和材料需求两个工作表')
   assert(detail.includes('MOWO-SKU-') && !detail.includes('SKU编码缺失'), '生产总表展示正式 SKU 编码而不是数据库内部 ID')
+  assert(detail.includes('清单核对标记') && detail.includes(`${fixture.batchId} / 返工${reprintCount}次`), '生产总表打印后可用批次和返工次数与系统核对新旧')
   console.log('Production scan safety checks passed')
 } finally {
   await cleanup()

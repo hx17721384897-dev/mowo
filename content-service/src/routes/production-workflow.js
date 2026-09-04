@@ -61,7 +61,7 @@ async function loadBatchContext(prisma, batchId) {
 
 async function buildProductionWorkbook(fastify, context, printRows = []) {
   const tasks = orderedTaskRows(context)
-  const [units, packs, skus, picks, pairings] = await Promise.all([
+  const [units, packs, skus, picks, pairings, reprints] = await Promise.all([
     fastify.prisma.productionBatchUnit.findMany({ where: { batchId: context.batch.id }, orderBy: { printSequence: 'asc' } }),
     fastify.prisma.productionFramePack.findMany({ where: { batchId: context.batch.id, isActive: true } }),
     fastify.prisma.machineModelSku.findMany({
@@ -72,13 +72,21 @@ async function buildProductionWorkbook(fastify, context, printRows = []) {
       where: { batchId: context.batch.id, status: { in: ['ACTIVE', 'CONSUMED'] } },
       include: { kitAssemblyBatch: true, kitContainer: true }, orderBy: { pickedAt: 'asc' }
     }),
-    fastify.prisma.productionUnitPairing.findMany({ where: { batchId: context.batch.id, status: { not: 'VOID' } } })
+    fastify.prisma.productionUnitPairing.findMany({ where: { batchId: context.batch.id, status: { not: 'VOID' } } }),
+    fastify.prisma.productionFrameReprint.findMany({ where: { batchId: context.batch.id }, orderBy: { createdAt: 'asc' } })
   ])
   const unitMap = new Map(units.map(unit => [unit.productionUnitId, unit]))
   const skuMap = new Map(skus.map(sku => [sku.id, sku]))
   const packMap = new Map(packs.map(pack => [pack.productionUnitId, pack]))
   const pairingMap = new Map(pairings.map(pairing => [pairing.productionUnitId, pairing]))
+  const reprintsByUnit = new Map()
+  for (const reprint of reprints) {
+    const rows = reprintsByUnit.get(reprint.productionUnitId) || []
+    rows.push(reprint)
+    reprintsByUnit.set(reprint.productionUnitId, rows)
+  }
   const printMap = new Map(printRows.map(row => [row.row.task.id, row]))
+  const ledgerMarker = `${context.batch.id} / 返工${reprints.length}次`
   const kitBatchIds = [...new Set(pairings.map(pairing => pairing.kitAssemblyBatchId))]
   const containerIds = [...new Set(pairings.map(pairing => pairing.kitContainerId).filter(Boolean))]
   const [kitBatches, containers] = await Promise.all([
@@ -94,33 +102,37 @@ async function buildProductionWorkbook(fastify, context, printRows = []) {
     pickedSources.set(pick.skuId, rows)
   }
 
-  const detailHeaders = ['生产顺序','生产批次','总订单号','快递公司','快递单号','单件产品号','SKU编码','完整规格','动画资产','动画版本','帧包码','材料来源码','打印裁切组','打印页数','Word文件','帧包状态','领料状态','配对状态','装箱状态','异常状态']
+  const detailHeaders = ['清单核对标记','生产顺序','生产批次','总订单号','快递公司','快递单号','单件产品号','SKU编码','完整规格','动画资产','动画版本','帧包码','材料来源码','打印裁切组','打印页数','Word文件','帧包状态','领料状态','配对状态','装箱状态','异常状态','返工记录']
   const detailRows = tasks.map((row, index) => {
     const unit = unitMap.get(row.task.id)
     const sku = skuMap.get(row.task.skuId)
     const pack = packMap.get(row.task.id)
     const pairing = pairingMap.get(row.task.id)
     const print = printMap.get(row.task.id)
+    const taskReprints = reprintsByUnit.get(row.task.id) || []
+    const reprintSummary = taskReprints.length
+      ? taskReprints.map((item, itemIndex) => `第${itemIndex + 1}次：${item.oldFramePackCode}→${item.newFramePackCode}；重印第${(Array.isArray(item.requestedPages) ? item.requestedPages : []).join('、')}页；${item.reason}`).join(' | ')
+      : '无返工'
     const materialSource = pairing
       ? (pairing.kitContainerId ? containerMap.get(pairing.kitContainerId)?.code : kitBatchMap.get(pairing.kitAssemblyBatchId)?.batchNo)
       : ((pickedSources.get(row.task.skuId) || []).length ? `待配对（已领：${[...new Set(pickedSources.get(row.task.skuId))].join(' / ')}）` : '待领用')
     return [
-      unit?.printSequence || index + 1, context.batch.id, row.order.orderNo,
+      ledgerMarker, unit?.printSequence || index + 1, context.batch.id, row.order.orderNo,
       row.order.trackingCompany || '待绑定', row.order.trackingNo || '待绑定', row.task.orderNo,
       sku?.skuCode || 'SKU编码缺失',
       `${row.task.modelName} · ${row.task.size} · ${row.task.frameCount}帧 · ${row.task.material} · ${row.task.colorName}`,
       row.item.animationAssetId || '-', row.item.animationVersionId || '-', pack?.code || '待生成', materialSource || '待确认',
       unit?.printGroupName || '待配置', unit?.printPageCount || '-', print?.taskFileName || '-',
       workflowLabel(unit?.frameStatus), workflowLabel(unit?.materialStatus), workflowLabel(unit?.pairingStatus),
-      workflowLabel(unit?.packageStatus), workflowLabel(unit?.exceptionStatus)
+      workflowLabel(unit?.packageStatus), workflowLabel(unit?.exceptionStatus), reprintSummary
     ]
   })
-  const demandHeaders = ['SKU编码','款式','尺寸','帧数','材质','颜色','需要数量','已领数量','已配对数量','材料来源码']
+  const demandHeaders = ['清单核对标记','SKU编码','款式','尺寸','帧数','材质','颜色','需要数量','已领数量','已配对数量','材料来源码']
   const demandRows = context.batch.batchItems.map(item => {
     const sku = skuMap.get(item.skuId)
     const skuPicks = picks.filter(pick => pick.skuId === item.skuId)
     return [
-      sku?.skuCode || 'SKU编码缺失', sku?.model?.name || '-', sku?.size || '-', sku?.frameCount || '-',
+      ledgerMarker, sku?.skuCode || 'SKU编码缺失', sku?.model?.name || '-', sku?.size || '-', sku?.frameCount || '-',
       sku?.material || '-', sku?.colorName || '-', item.plannedQty,
       skuPicks.reduce((sum, pick) => sum + pick.quantity - pick.returnedQty, 0),
       skuPicks.reduce((sum, pick) => sum + pick.consumedQty, 0),
@@ -128,8 +140,8 @@ async function buildProductionWorkbook(fastify, context, printRows = []) {
     ]
   })
   return workbookBuffer([
-    { name: '单件生产明细', rows: [detailHeaders, ...detailRows], widths: [10,23,22,12,22,24,24,42,22,38,28,34,24,10,48,12,12,12,12,12] },
-    { name: '材料需求汇总', rows: [demandHeaders, ...demandRows], widths: [24,16,12,10,14,12,12,12,12,38] }
+    { name: '单件生产明细', rows: [detailHeaders, ...detailRows], widths: [34,10,23,22,12,22,24,24,42,22,38,28,34,24,10,48,12,12,12,12,12,72] },
+    { name: '材料需求汇总', rows: [demandHeaders, ...demandRows], widths: [34,24,16,12,10,14,12,12,12,12,38] }
   ])
 }
 
