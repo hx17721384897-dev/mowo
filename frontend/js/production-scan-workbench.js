@@ -2,6 +2,7 @@
   const S = window.MowoScan
   const BATCH_KEY = 'mowo_production_active_batch'
   const HISTORY_KEY = 'mowo_production_scan_history'
+  const PAGE_VERSION = '20260904-1'
   const stations = {
     overview: '扫码作业总览',
     frame: '帧包完成',
@@ -9,7 +10,10 @@
     pairing: '单件配对',
     packing: '装箱发货'
   }
-  const requestedStation = new URLSearchParams(location.search).get('station')
+  const legacyParams = new URLSearchParams(location.search)
+  const hashStation = location.hash.slice(1).toLowerCase()
+  const legacyStation = legacyParams.get('station') || (legacyParams.get('tab') === 'pair' ? 'pairing' : '')
+  const requestedStation = stations[hashStation] ? hashStation : legacyStation
   const state = {
     station: stations[requestedStation] ? requestedStation : 'overview',
     batchId: sessionStorage.getItem(BATCH_KEY) || '', overview: null, queue: null,
@@ -82,19 +86,19 @@
     document.querySelectorAll('.work-view').forEach(view => { view.hidden = view.dataset.view !== state.station })
     document.querySelectorAll('.work-tabs button').forEach(button => button.classList.toggle('active', button.dataset.station === state.station))
     el('stationTitle').textContent = stations[state.station]
-    if (push) history.replaceState(null, '', `production-scan.html?station=${state.station}`)
+    history.replaceState(null, '', `production-scan.html?v=${PAGE_VERSION}#${state.station}`)
     syncSidebarStation()
     const stationAtRender = state.station
     setTimeout(() => { if (state.station === stationAtRender) syncSidebarStation() }, 0)
     refreshStation().catch(error => S.toast(error.message, true))
   }
   function syncSidebarStation() {
-    const target = `production-scan.html?station=${state.station}`
+    const target = `production-scan.html?v=${PAGE_VERSION}#${state.station}`
     if (typeof window.__adminSidebarSetActive === 'function') {
       window.__adminSidebarSetActive(target)
       return
     }
-    document.querySelectorAll('.nav-third-item[href*="production-scan.html?station="]').forEach(link => {
+    document.querySelectorAll('.nav-third-item[href*="production-scan.html"]').forEach(link => {
       link.classList.toggle('active', link.getAttribute('href') === target)
     })
   }
@@ -318,12 +322,16 @@
     bindManual('packingManual', 'packingManualBtn')
     S.installScanner(dispatchScan)
     document.addEventListener('click', event => {
-      const link = event.target.closest('a[href*="production-scan.html?station="]')
+      const link = event.target.closest('a[href*="production-scan.html"]')
       if (!link) return
       event.preventDefault()
-      showStation(new URL(link.href, location.href).searchParams.get('station'))
+      showStation(new URL(link.href, location.href).hash.slice(1))
     })
     await loadOverview()
     showStation(state.station, false)
+  })
+  window.addEventListener('hashchange', () => {
+    const station = location.hash.slice(1).toLowerCase()
+    if (stations[station] && station !== state.station) showStation(station, false)
   })
 })()

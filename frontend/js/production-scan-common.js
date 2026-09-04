@@ -23,7 +23,7 @@
       if(event.key.length===1){buffer+=event.key;clearTimeout(timer);timer=setTimeout(()=>buffer='',180)}
     })
   }
-  async function ensureStaff(){try{const user=await fetchCurrentUser();if(!user?.staffRole)throw new Error();return user}catch{location.href='auth.html?redirect='+encodeURIComponent(location.pathname+location.search);return null}}
+  async function ensureStaff(){try{const user=await fetchCurrentUser();if(!user?.staffRole)throw new Error();return user}catch{const redirect=location.pathname+location.search+location.hash;location.href='index.html?auth=1&redirect='+encodeURIComponent(redirect);return null}}
   function manual(id,handler){const input=document.getElementById(id);const run=()=>{const code=input.value.trim();if(code){Promise.resolve(handler(code,classify(code))).catch(error=>{toast(error.message||'操作失败',true);beep(false)});input.value=''}};input?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();run()}});return run}
   function formatTime(value){return value?new Date(value).toLocaleString('zh-CN'):'-'}
   window.MowoScan={API,token,auth,request,esc,toast,beep,classify,installScanner,ensureStaff,manual,formatTime}

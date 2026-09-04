@@ -54,7 +54,7 @@
 4. 用户信息缓存在 `localStorage.mowo_user`，读取用户仍调用旧 `/api/auth/me`。
 5. 登出调用 v1 logout，然后清除本地缓存。
 
-`creator-animations.html`、`creator-collab.html`、`creator-notifications.html`、`production-scan.html` 没有加载 `auth.js`，所以没有统一静默刷新。前三页会在缺少缓存时跳到不存在的 `auth.html`。页面用缓存的 role/certifyStatus 只适合作为界面提示，不能替代后端实时鉴权。
+`creator-animations.html`、`creator-collab.html`、`creator-notifications.html` 没有加载 `auth.js`，所以没有统一静默刷新。扫码工作台已于 2026-09-04 接入 `auth.js` 和统一员工身份检查，登录返回地址同时保留当前 `#` 工序。前三个创作者页面仍需后续治理；页面缓存的 role/certifyStatus 只能作为界面提示，不能替代后端实时鉴权。
 
 ## 现行页面清单
 
@@ -122,7 +122,7 @@
 | `admin-users.html` | 用户角色/封禁 | role >= 2，改角色 role >= 3 | highlight 搜索契约差异见 D-056 |
 | `admin-account-deletions.html` | 注销任务状态、异常重试和暂停/恢复 | 运营客服只读；负责人可操作 | 手机号脱敏；无人工审批或强制删除 |
 | `admin-logs.html` | 审计日志 | role >= 3 | 前后端权限一致 |
-| `production-scan.html` | 查询与扫码发货 | role >= 1，部分闭环 | 不加载 auth.js；扫码持久化问题见 D-061/D-062 |
+| `production-scan.html` | 帧包、领料、配对与装箱统一工作台 | staffRole 员工，已接正式生产 API | 唯一页面；旧岗位文件和旧查询参数仅兼容跳转 |
 | `production-inventory.html` | 库存、入库、调整、批次进度 | 页面 role >= 1 | API 权限/字段/路由不匹配，见 D-069；失败跳转也错层级 |
 
 ## 旧版页面

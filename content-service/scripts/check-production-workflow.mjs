@@ -46,10 +46,11 @@ try {
   assert(orderPage.includes('/api/admin/production-workflow/orders') && orderPage.includes('/reprint'), '订单环节页只读取正式订单并提供返工入口')
   assert(batchPage.includes('进入当前订单环节') && !batchPage.includes('onclick="exportAddresses()"') && !batchPage.includes('onclick="exportProduction()"'), '生产批次页只做总览和环节跳转，不重复推进状态')
   assert(scanOverview.includes('data-view="frame"') && scanOverview.includes('data-view="material"') && scanOverview.includes('data-view="pairing"') && scanOverview.includes('data-view="packing"'), '扫码总览与四个岗位已经收拢为同一工作台')
-  assert(scanFrame.includes('station=frame') && scanMaterial.includes('station=material') && scanPairing.includes('station=pairing') && scanPacking.includes('station=packing'), '旧岗位地址只跳转到统一工作台，不保留重复业务系统')
+assert(scanFrame.includes('#frame') && scanMaterial.includes('#material') && scanPairing.includes('#pairing') && scanPacking.includes('#packing'), '旧岗位地址只跳转到统一工作台，不保留重复业务系统')
   assert(scanCommon.includes('installScanner') && scanCommon.includes("target?.matches?.('input,textarea,select"), '扫码枪无需点击输入框并保留手工输入备用')
-  assert(scanOverview.includes('批次打印队列') && scanOverview.includes('globalBatch') && scanOverview.includes('production-scan-workbench.js'), '统一工作台展示批次打印队列并只选择一次工作批次')
-  assert(sidebar.includes("key: 'scan'") && sidebar.includes('production-scan.html?station=packing'), '后台菜单以扫码作业二级菜单打开统一工作台的五个环节')
+assert(scanOverview.includes('打印队列') && scanOverview.includes('globalBatch') && scanOverview.includes('production-scan-workbench.js'), '统一工作台展示批次打印队列并只选择一次工作批次')
+assert(sidebar.includes("key: 'scan'") && sidebar.includes('production-scan.html?v=20260904-1#packing') && !sidebar.includes('production-scan-packing.html'), '后台菜单只通过统一工作台打开五个扫码环节')
+assert(scanCommon.includes("index.html?auth=1&redirect=") && scanCommon.includes('location.hash'), '扫码工作台未登录时使用真实登录弹窗并保留原工位')
   assert(routes.includes("if (frame.batchId !== batchId)") && routes.includes("if (!result.reused) await audit"), '帧包与配对强制校验当前批次且重复扫码不重复写成功日志')
   await Promise.all([
     prisma.productionFramePack.count(), prisma.productionUnitPairing.count(),

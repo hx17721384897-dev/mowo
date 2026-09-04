@@ -26,11 +26,11 @@
         {
           key: 'scan', icon: '⌁', label: '扫码作业',
           children: [
-            { href: 'production-scan.html?station=overview', icon: '▦', label: '作业总览', station: 'overview' },
-            { href: 'production-scan.html?station=frame',    icon: '1', label: '帧包完成', station: 'frame' },
-            { href: 'production-scan.html?station=material', icon: '2', label: '材料领用', station: 'material' },
-            { href: 'production-scan.html?station=pairing',  icon: '3', label: '单件配对', station: 'pairing' },
-            { href: 'production-scan.html?station=packing',  icon: '4', label: '装箱发货', station: 'packing' }
+            { href: 'production-scan.html?v=20260904-1#overview', icon: '▦', label: '作业总览', station: 'overview' },
+            { href: 'production-scan.html?v=20260904-1#frame',    icon: '1', label: '帧包完成', station: 'frame' },
+            { href: 'production-scan.html?v=20260904-1#material', icon: '2', label: '材料领用', station: 'material' },
+            { href: 'production-scan.html?v=20260904-1#pairing',  icon: '3', label: '单件配对', station: 'pairing' },
+            { href: 'production-scan.html?v=20260904-1#packing',  icon: '4', label: '装箱发货', station: 'packing' }
           ]
         },
         { href: 'admin-print-production.html',         icon: '↕', label: '打印与裁切设置' },
@@ -392,28 +392,6 @@
     </div>
   </div>
 </div>`;
-
-    const scanStations = [
-      { file:'production-scan.html', label:'作业总览', key:'overview' },
-      { file:'production-scan-frame.html', label:'帧包完成', key:'frame' },
-      { file:'production-scan-material.html', label:'材料领用', key:'material' },
-      { file:'production-scan-pairing.html', label:'单件配对', key:'pairing' },
-      { file:'production-scan-packing.html', label:'装箱发货', key:'packing' }
-    ];
-    const currentStation = scanStations.find(station => station.file === location.pathname.split('/').pop());
-    if (currentStation) {
-      document.body.dataset.station = currentStation.key;
-      document.querySelectorAll('.station-link').forEach(link => {
-        const station = scanStations.find(item => item.file === link.getAttribute('href'));
-        if (station) link.classList.add(station.key);
-      });
-      const content = document.querySelector('.main .content');
-      if (content && currentStation.key !== 'overview' && !content.querySelector('.station-tabs')) {
-        content.insertAdjacentHTML('afterbegin', `<nav class="station-tabs" aria-label="扫码岗位切换">${scanStations.map(station =>
-          `<a class="station-tab ${station.key}${station.key === currentStation.key ? ' active' : ''}" href="${station.file}">${station.label}</a>`
-        ).join('')}</nav>`);
-      }
-    }
 
     // 折叠按钮
     const toggleBtn = document.getElementById('sidebarToggle');
