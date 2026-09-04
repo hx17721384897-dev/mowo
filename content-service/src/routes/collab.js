@@ -40,9 +40,12 @@ export default async function collabRoutes(fastify) {
           id: true,
           creatorId: true,
           title: true,
+          storefrontTitle: true,
           description: true,
+          storefrontDescription: true,
           storefrontSummary: true,
           coverUrl: true,
+          storefrontCoverUrl: true,
           hoverGifUrl: true,
           isNewbieWork: true,
           isExclusiveWork: true,
@@ -78,9 +81,9 @@ export default async function collabRoutes(fastify) {
       return {
         id: work.id,
         creatorId: work.creatorId,
-        title: work.title,
-        description: work.storefrontSummary || work.description,
-        coverUrl: presignOrPassthrough(work.coverUrl, fastify, 3600),
+        title: work.storefrontTitle || work.title,
+        description: work.storefrontSummary || work.storefrontDescription || work.description,
+        coverUrl: presignOrPassthrough(work.storefrontCoverUrl || work.coverUrl, fastify, 3600),
         hoverGifUrl: presignOrNull(work.hoverGifUrl, fastify, 3600),
         isNewbieWork: work.isNewbieWork,
         isExclusiveWork: work.isExclusiveWork,
@@ -107,9 +110,15 @@ export default async function collabRoutes(fastify) {
         id: true,
         creatorId: true,
         title: true,
+        storefrontTitle: true,
+        storefrontMedia: true,
+        storefrontTags: true,
+        storefrontSeries: true,
         description: true,
+        storefrontDescription: true,
         storefrontSummary: true,
         coverUrl: true,
+        storefrontCoverUrl: true,
         hoverGifUrl: true,
         animationFrames: true,
         isNewbieWork: true,
@@ -168,16 +177,19 @@ export default async function collabRoutes(fastify) {
     const hoverGifUrl = presignOrNull(work.hoverGifUrl, fastify, 3600)
 
     // 封面图：data URI 直接透传，OSS key 才签名
-    const coverUrl = presignOrPassthrough(work.coverUrl, fastify, 3600)
+    const coverUrl = presignOrPassthrough(work.storefrontCoverUrl || work.coverUrl, fastify, 3600)
 
     return reply.send({
       success: true,
       data: {
         id: work.id,
         creatorId: work.creatorId,
-        title: work.title,
-        description: work.description,
+        title: work.storefrontTitle || work.title,
+        description: work.storefrontDescription || work.description,
         storefrontSummary: work.storefrontSummary,
+        storefrontMedia: safeJson(work.storefrontMedia).map(key => presignOrPassthrough(key, fastify, 3600)).filter(Boolean),
+        storefrontTags: safeJson(work.storefrontTags),
+        storefrontSeries: work.storefrontSeries,
         animationFrames: frameUrls,
         hoverGifUrl,
         coverUrl,

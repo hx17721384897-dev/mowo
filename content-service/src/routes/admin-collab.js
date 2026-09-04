@@ -10,6 +10,7 @@ import {
   isCollabSkuFrameCompatible,
   normalizeSaleConfigInput,
 } from '../lib/collab-sale-config.js'
+import { FILE_PURPOSE, linkFiles } from '../lib/private-files.js'
 
 export default async function adminCollabRoutes(fastify) {
   const { prisma } = fastify
@@ -515,15 +516,29 @@ export default async function adminCollabRoutes(fastify) {
   })
 
   // ─────────────────────────────────────────────
-  // 联名商品销售配置
+  // 联名商品编辑工作区：商品资料、媒体、销售 SKU、库存提示与审计记录共用一个入口。
   // ─────────────────────────────────────────────
 
-  fastify.get('/admin/collab/:id/sale-config', { preHandler: requireAdmin }, async (req, reply) => {
+  fastify.get('/admin/collab/:id/product-workspace', { preHandler: requireAdmin }, async (req, reply) => {
     const readiness = await getCollabSaleReadiness(prisma, req.params.id)
     if (!readiness.work) return reply.code(404).send({ success: false, message: '作品不存在' })
 
+    const work = await prisma.collabWork.findUnique({
+      where: { id: req.params.id },
+      include: {
+        animationAsset: { select: { assetNo: true, title: true } },
+        animationVersion: { select: { versionNo: true, baseFrameCount: true } },
+        saleSkus: { orderBy: { sortOrder: 'asc' } },
+      },
+    })
+
     const candidates = await prisma.machineModelSku.findMany({
-      where: { isActive: true, model: { isActive: true } },
+      where: {
+        OR: [
+          { isActive: true, model: { isActive: true } },
+          { collabSaleSkus: { some: { collabWorkId: req.params.id } } },
+        ],
+      },
       orderBy: [
         { model: { sortOrder: 'asc' } },
         { sortOrder: 'asc' },
@@ -533,25 +548,54 @@ export default async function adminCollabRoutes(fastify) {
       include: { model: { select: { id: true, name: true, isActive: true } } },
     })
 
+    const skuIds = candidates.map(sku => sku.id)
+    const inventories = skuIds.length ? await prisma.skuInventory.findMany({ where: { skuId: { in: skuIds } } }) : []
+    const inventoryMap = new Map(inventories.map(row => [row.skuId, row]))
     const imageUrl = key => presignAdminKey(key, fastify, 3600)
-    const selected = readiness.offers.map(offer => ({
+    const activeMap = new Map(candidates.map(sku => [sku.id, sku.isActive && sku.model.isActive]))
+    const selected = work.saleSkus.map(offer => ({
       id: offer.id,
       skuId: offer.skuId,
       finalPrice: Number(offer.finalPrice),
       fulfillmentMode: offer.fulfillmentMode,
       leadTimeDays: offer.leadTimeDays,
       sortOrder: offer.sortOrder,
-      isEnabled: offer.isEnabled,
+      isEnabled: offer.isEnabled && activeMap.get(offer.skuId) === true,
     }))
 
     return reply.send({
       success: true,
       data: {
-        storefrontSummary: readiness.work.storefrontSummary,
-        storefrontSortOrder: readiness.work.storefrontSortOrder,
+        productNo: work.productNo,
+        reviewStatus: work.status,
+        shelfStatus: work.shelfStatus,
+        isOnShelf: work.isOnShelf,
+        sourceTitle: work.title,
+        sourceDescription: work.description,
+        storefrontTitle: work.storefrontTitle || work.title,
+        storefrontSummary: work.storefrontSummary,
+        storefrontDescription: work.storefrontDescription || work.description,
+        storefrontMedia: await Promise.all(safeJson(work.storefrontMedia).map(async key => ({
+          key,
+          url: presignAdminKey(key, fastify, 3600),
+          kind: await mediaKind(prisma, key),
+        }))),
+        storefrontTags: safeJson(work.storefrontTags),
+        storefrontSeries: work.storefrontSeries,
+        storefrontKeywords: work.storefrontKeywords,
+        storefrontSortOrder: work.storefrontSortOrder,
+        coverUrl: presignAdminKey(work.storefrontCoverUrl || work.coverUrl, fastify, 3600),
+        coverKey: work.storefrontCoverUrl || work.coverUrl,
+        hoverGifUrl: presignAdminKey(work.hoverGifUrl, fastify, 3600),
+        asset: work.animationAsset ? {
+          assetNo: work.animationAsset.assetNo,
+          title: work.animationAsset.title,
+          versionNo: work.animationVersion?.versionNo || null,
+        } : null,
         baseFrameCount: readiness.baseFrameCount,
         ready: readiness.ready,
         blockers: readiness.blockers,
+        readinessGroups: groupReadiness(readiness.blockers),
         selected,
         candidates: candidates.map(sku => ({
           id: sku.id,
@@ -566,21 +610,32 @@ export default async function adminCollabRoutes(fastify) {
           basePrice: Number(sku.price),
           previewImage: imageUrl(sku.previewImage),
           compatible: isCollabSkuFrameCompatible(readiness.baseFrameCount, sku.frameCount),
+          isActive: sku.isActive && sku.model.isActive,
+          inventory: inventorySummary(inventoryMap.get(sku.id)),
         })),
       },
     })
   })
 
-  fastify.put('/admin/collab/:id/sale-config', { preHandler: requireAdmin }, async (req, reply) => {
+  fastify.put('/admin/collab/:id/product-workspace', { preHandler: requireAdmin }, async (req, reply) => {
     const work = await prisma.collabWork.findUnique({
       where: { id: req.params.id },
       select: {
         id: true,
+        productNo: true,
         title: true,
         status: true,
         isRevision: true,
         storefrontSummary: true,
+        storefrontTitle: true,
+        storefrontDescription: true,
+        storefrontCoverUrl: true,
+        storefrontMedia: true,
+        storefrontTags: true,
+        storefrontSeries: true,
+        storefrontKeywords: true,
         storefrontSortOrder: true,
+        coverUrl: true,
         animationFrames: true,
         animationVersion: { select: { baseFrameCount: true } },
         saleSkus: { orderBy: { sortOrder: 'asc' } },
@@ -592,14 +647,52 @@ export default async function adminCollabRoutes(fastify) {
     }
 
     const config = normalizeSaleConfigInput(req.body)
+    const storefrontTitle = String(req.body?.storefrontTitle || '').trim()
+    const storefrontDescription = String(req.body?.storefrontDescription || '').trim()
+    const storefrontSeries = String(req.body?.storefrontSeries || '').trim()
+    const storefrontKeywords = String(req.body?.storefrontKeywords || '').trim()
+    const storefrontTags = normalizeTextArray(req.body?.storefrontTags)
+    const storefrontMedia = normalizeKeyArray(req.body?.storefrontMedia)
+    const coverKey = String(req.body?.coverKey || '').trim()
+    if (storefrontTitle.length < 2 || storefrontTitle.length > 120) {
+      return reply.code(400).send({ success: false, message: '商品标题需为 2 至 120 个字' })
+    }
     if (config.storefrontSummary && config.storefrontSummary.length > 300) {
       return reply.code(400).send({ success: false, message: '货架简介最多 300 个字' })
     }
+    if (storefrontDescription.length > 5000) return reply.code(400).send({ success: false, message: '商品详情最多 5000 个字' })
+    if (storefrontSeries.length > 80) return reply.code(400).send({ success: false, message: '系列名称最多 80 个字' })
+    if (storefrontKeywords.length > 300) return reply.code(400).send({ success: false, message: '内部搜索词最多 300 个字' })
+    if (storefrontTags.length > 10 || storefrontTags.some(tag => tag.length > 20)) {
+      return reply.code(400).send({ success: false, message: '最多设置 10 个标签，每个不超过 20 个字' })
+    }
+    if (storefrontMedia.length > 8) return reply.code(400).send({ success: false, message: '商品展示素材最多 8 个' })
+    const previousMedia = safeJson(work.storefrontMedia)
+    const incomingMedia = storefrontMedia.filter(key => !previousMedia.includes(key))
+    const mediaFiles = incomingMedia.length ? await prisma.privateFile.findMany({
+      where: {
+        objectKey: { in: incomingMedia },
+        ownerUserId: req.user.userId,
+        purpose: FILE_PURPOSE.COLLAB_STOREFRONT_MEDIA,
+        status: 'READY',
+        deletedAt: null,
+        OR: [
+          { linkedResourceId: null },
+          { linkedResourceType: 'COLLAB_WORK', linkedResourceId: work.id },
+        ],
+      },
+    }) : []
+    if (mediaFiles.length !== incomingMedia.length) {
+      return reply.code(409).send({ success: false, message: '展示素材不存在、尚未上传完成或不属于当前商品' })
+    }
+    const uploadedMedia = mediaFiles.filter(file => !file.linkedResourceId)
+    const allowedCovers = new Set([work.storefrontCoverUrl, work.coverUrl, ...storefrontMedia].filter(Boolean))
+    if (coverKey && !allowedCovers.has(coverKey)) return reply.code(400).send({ success: false, message: '商品封面必须来自当前展示素材' })
     if (config.storefrontSortOrder < -10000 || config.storefrontSortOrder > 10000) {
       return reply.code(400).send({ success: false, message: '推荐顺序必须在 -10000 到 10000 之间' })
     }
-    if (!config.skus.length || config.skus.length > 100) {
-      return reply.code(400).send({ success: false, message: '请选择 1 至 100 个可售 SKU' })
+    if (config.skus.length > 100) {
+      return reply.code(400).send({ success: false, message: '最多配置 100 个销售 SKU' })
     }
     const uniqueSkuIds = [...new Set(config.skus.map(row => row.skuId))]
     if (uniqueSkuIds.length !== config.skus.length || uniqueSkuIds.some(id => !id)) {
@@ -607,8 +700,8 @@ export default async function adminCollabRoutes(fastify) {
     }
 
     const skus = await prisma.machineModelSku.findMany({
-      where: { id: { in: uniqueSkuIds }, isActive: true, model: { isActive: true } },
-      include: { model: { select: { name: true } } },
+      where: { id: { in: uniqueSkuIds } },
+      include: { model: { select: { name: true, isActive: true } } },
     })
     if (skus.length !== uniqueSkuIds.length) {
       return reply.code(409).send({ success: false, message: '部分 SKU 不存在、款式已停用或 SKU 已停用' })
@@ -620,6 +713,9 @@ export default async function adminCollabRoutes(fastify) {
     for (const row of config.skus) {
       const sku = skuMap.get(row.skuId)
       const label = sku.skuCode || `${sku.model.name} ${sku.size} ${sku.frameCount}帧`
+      if (row.isEnabled && (!sku.isActive || !sku.model.isActive)) {
+        return reply.code(409).send({ success: false, message: `${label} 已停用，只能保留为停售历史规格` })
+      }
       if (!isCollabSkuFrameCompatible(baseFrameCount, sku.frameCount)) {
         return reply.code(409).send({ success: false, message: `${label} 与 ${baseFrameCount} 个核心帧不兼容` })
       }
@@ -636,6 +732,14 @@ export default async function adminCollabRoutes(fastify) {
 
     const before = {
       storefrontSummary: work.storefrontSummary,
+      storefrontTitle: work.storefrontTitle,
+      storefrontMedia: safeJson(work.storefrontMedia),
+      storefrontTags: safeJson(work.storefrontTags),
+      storefrontSeries: work.storefrontSeries,
+      storefrontKeywords: work.storefrontKeywords,
+      description: work.description,
+      storefrontDescription: work.storefrontDescription,
+      storefrontCoverUrl: work.storefrontCoverUrl,
       storefrontSortOrder: work.storefrontSortOrder,
       skus: work.saleSkus.map(row => ({
         skuId: row.skuId,
@@ -652,12 +756,22 @@ export default async function adminCollabRoutes(fastify) {
       Number((row.finalPrice - Number(skuMap.get(row.skuId).price)).toFixed(2)),
     ]))
 
+    const productNo = work.productNo || makeProductNo(work.id)
     await prisma.$transaction(async tx => {
       await tx.collabWork.update({
         where: { id: work.id },
         data: {
+          productNo,
+          storefrontTitle,
           storefrontSummary: config.storefrontSummary,
+          storefrontDescription: storefrontDescription || null,
+          storefrontMedia: JSON.stringify(storefrontMedia),
+          storefrontTags: JSON.stringify(storefrontTags),
+          storefrontSeries: storefrontSeries || null,
+          storefrontKeywords: storefrontKeywords || null,
           storefrontSortOrder: config.storefrontSortOrder,
+          storefrontUpdatedBy: operatorId,
+          storefrontCoverUrl: coverKey || work.storefrontCoverUrl || work.coverUrl,
           supportedSkus: JSON.stringify(config.skus.map(row => row.skuId)),
           creatorMarkups: JSON.stringify(legacyMarkups),
         },
@@ -672,21 +786,36 @@ export default async function adminCollabRoutes(fastify) {
           update: { updatedBy: operatorId, ...row },
         })
       }
+      await linkFiles(tx, uploadedMedia, 'COLLAB_WORK', work.id)
     })
 
     const readiness = await getCollabSaleReadiness(prisma, work.id)
     req.operationAudit = {
-      action: `更新联名作品《${work.title}》销售配置`,
-      target: 'COLLAB_SALE_CONFIG',
+      action: `更新联名商品《${storefrontTitle}》`,
+      target: 'COLLAB_PRODUCT',
       targetId: work.id,
       before,
-      after: config,
+      after: { productNo, storefrontTitle, storefrontDescription, storefrontSummary: config.storefrontSummary, storefrontMedia, storefrontTags, storefrontSeries, storefrontKeywords, storefrontSortOrder: config.storefrontSortOrder, skus: config.skus },
     }
     return reply.send({
       success: true,
-      message: readiness.ready ? '销售配置已保存，可以上架' : '销售配置已保存，但仍有上架阻断项',
-      data: { ready: readiness.ready, blockers: readiness.blockers },
+      message: readiness.ready ? '商品资料已保存，可以上架' : '商品资料已保存，但仍有上架阻断项',
+      data: { productNo, ready: readiness.ready, blockers: readiness.blockers, readinessGroups: groupReadiness(readiness.blockers) },
     })
+  })
+
+  fastify.get('/admin/collab/:id/product-history', { preHandler: requireAdmin }, async (req, reply) => {
+    const limit = Math.min(50, Math.max(1, Number.parseInt(req.query.limit, 10) || 20))
+    const rows = await prisma.operationLog.findMany({
+      where: { targetId: req.params.id, target: { in: ['COLLAB_PRODUCT', 'COLLAB_SALE_CONFIG'] } },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      select: { id: true, userId: true, action: true, outcome: true, createdAt: true },
+    })
+    const userIds = [...new Set(rows.map(row => row.userId))]
+    const profiles = await prisma.userProfile.findMany({ where: { userId: { in: userIds } }, select: { userId: true, nickname: true } })
+    const names = new Map(profiles.map(profile => [profile.userId, profile.nickname]))
+    return reply.send({ success: true, data: rows.map(row => ({ ...row, operatorName: names.get(row.userId) || row.userId })) })
   })
 
   // ─────────────────────────────────────────────
@@ -945,4 +1074,47 @@ function presignAdminKey(key, fastify, expires = 3600) {
   if (!key) return null
   if (key.startsWith('data:') || key.startsWith('http')) return key
   return fastify.ossPresignGet(key, expires)
+}
+
+function normalizeTextArray(value) {
+  const rows = Array.isArray(value) ? value : String(value || '').split(/[,，\n]/)
+  return [...new Set(rows.map(item => String(item).trim()).filter(Boolean))]
+}
+
+function normalizeKeyArray(value) {
+  if (!Array.isArray(value)) return []
+  return [...new Set(value.map(item => String(item || '').trim()).filter(key => key && !key.startsWith('data:')))]
+}
+
+function makeProductNo(id) {
+  return `COL-${String(id || '').replaceAll('-', '').slice(0, 12).toUpperCase()}`
+}
+
+function inventorySummary(row) {
+  if (!row) return { current: 0, reserved: 0, available: 0, safety: 0, status: 'NO_RECORD' }
+  const available = Math.max(0, row.currentStock - row.reservedStock - row.wipFrameQty - row.wipKitQty)
+  return {
+    current: row.currentStock,
+    reserved: row.reservedStock,
+    available,
+    safety: row.safetyStock,
+    status: available <= 0 ? 'OUT' : available <= row.safetyStock ? 'LOW' : 'ENOUGH',
+  }
+}
+
+function groupReadiness(blockers) {
+  const groups = { content: [], sale: [], asset: [] }
+  for (const blocker of blockers || []) {
+    if (/SKU|售价|发货|供货/.test(blocker)) groups.sale.push(blocker)
+    else if (/动画|核心帧|版本/.test(blocker)) groups.asset.push(blocker)
+    else groups.content.push(blocker)
+  }
+  return groups
+}
+
+async function mediaKind(prisma, key) {
+  if (!key) return 'image'
+  const file = await prisma.privateFile.findUnique({ where: { objectKey: key }, select: { detectedMimeType: true, declaredMimeType: true } })
+  const mime = file?.detectedMimeType || file?.declaredMimeType || ''
+  return mime.startsWith('video/') ? 'video' : 'image'
 }

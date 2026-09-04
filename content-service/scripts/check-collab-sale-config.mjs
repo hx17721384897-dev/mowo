@@ -11,6 +11,8 @@ let incompatibleSkuId = null
 let assetId = null
 let versionId = null
 let workId = null
+let mediaFileId = null
+let mediaObjectKey = null
 
 function assert(condition, message) {
   if (!condition) throw new Error(message)
@@ -30,6 +32,7 @@ async function request(path, token, options = {}) {
 
 async function cleanup() {
   if (workId) await prisma.collabWork.deleteMany({ where: { id: workId } })
+  if (mediaFileId) await prisma.privateFile.deleteMany({ where: { id: mediaFileId } })
   if (versionId) await prisma.animationAssetVersion.deleteMany({ where: { id: versionId } })
   if (assetId) await prisma.animationAsset.deleteMany({ where: { id: assetId } })
   const skuIds = [compatibleSkuId, incompatibleSkuId].filter(Boolean)
@@ -127,6 +130,23 @@ try {
   })
   workId = work.id
 
+  const mediaFile = await prisma.privateFile.create({
+    data: {
+      ownerUserId: userId,
+      purpose: 'COLLAB_STOREFRONT_MEDIA',
+      objectKey: `private/collab_storefront_media/${userId}/${runId}.png`,
+      originalName: 'product-cover.png',
+      declaredMimeType: 'image/png',
+      detectedMimeType: 'image/png',
+      declaredSizeBytes: 128,
+      sizeBytes: 128,
+      status: 'READY',
+      uploadedAt: new Date(),
+    },
+  })
+  mediaFileId = mediaFile.id
+  mediaObjectKey = mediaFile.objectKey
+
   await prisma.smsCode.create({ data: { userId, phone, code: '123456', purpose: 'LOGIN', expiresAt: new Date(Date.now() + 300000) } })
   const loginResponse = await request('/api/v1/auth/sms/verify', null, {
     method: 'POST', body: JSON.stringify({ phone, code: '123456', mode: 'LOGIN' }),
@@ -142,28 +162,35 @@ try {
   const relistBeforeBody = await relistBefore.json()
   assert(relistBefore.status === 409 && relistBeforeBody.blockers?.some(item => item.includes('SKU')), '缺少销售配置时服务器阻止上架并返回原因')
 
-  const configResponse = await request(`/api/admin/collab/${workId}/sale-config`, token)
+  const configResponse = await request(`/api/admin/collab/${workId}/product-workspace`, token)
   const configBody = await configResponse.json()
   const compatibleCandidate = configBody.data.candidates.find(item => item.id === compatibleSkuId)
   const incompatibleCandidate = configBody.data.candidates.find(item => item.id === incompatibleSkuId)
   assert(configResponse.ok && compatibleCandidate?.compatible === true && incompatibleCandidate?.compatible === false, '后台候选 SKU 正确标记帧数兼容性')
 
-  const invalidFrame = await request(`/api/admin/collab/${workId}/sale-config`, token, {
+  const invalidFrame = await request(`/api/admin/collab/${workId}/product-workspace`, token, {
     method: 'PUT',
-    body: JSON.stringify({ storefrontSummary: '测试', skus: [{ skuId: incompatibleSkuId, finalPrice: 130, fulfillmentMode: 'MAKE_TO_ORDER', leadTimeDays: 7 }] }),
+    body: JSON.stringify({ storefrontTitle: '测试商品', storefrontSummary: '测试', storefrontDescription: '测试商品详情', skus: [{ skuId: incompatibleSkuId, finalPrice: 130, fulfillmentMode: 'MAKE_TO_ORDER', leadTimeDays: 7 }] }),
   })
   assert(invalidFrame.status === 409, '服务器拒绝帧数不兼容的 SKU')
 
-  const invalidPrice = await request(`/api/admin/collab/${workId}/sale-config`, token, {
+  const invalidPrice = await request(`/api/admin/collab/${workId}/product-workspace`, token, {
     method: 'PUT',
-    body: JSON.stringify({ storefrontSummary: '测试', skus: [{ skuId: compatibleSkuId, finalPrice: 99, fulfillmentMode: 'MAKE_TO_ORDER', leadTimeDays: 7 }] }),
+    body: JSON.stringify({ storefrontTitle: '测试商品', storefrontSummary: '测试', storefrontDescription: '测试商品详情', skus: [{ skuId: compatibleSkuId, finalPrice: 99, fulfillmentMode: 'MAKE_TO_ORDER', leadTimeDays: 7 }] }),
   })
   assert(invalidPrice.status === 400, '服务器拒绝低于 SKU 基础价的最终售价')
 
-  const saveResponse = await request(`/api/admin/collab/${workId}/sale-config`, token, {
+  const saveResponse = await request(`/api/admin/collab/${workId}/product-workspace`, token, {
     method: 'PUT',
     body: JSON.stringify({
       storefrontSummary: '一款用于验收的联名商品',
+      storefrontTitle: '完整联名测试商品',
+      storefrontDescription: '用于检查联名商品工作区保存与上架流程。',
+      storefrontSeries: '自动验收系列',
+      storefrontTags: ['测试', '联名'],
+      storefrontKeywords: '自动 验收',
+      storefrontMedia: [mediaObjectKey],
+      coverKey: mediaObjectKey,
       storefrontSortOrder: 20,
       skus: [{ skuId: compatibleSkuId, finalPrice: 128.5, fulfillmentMode: 'MAKE_TO_ORDER', leadTimeDays: 9 }],
     }),
@@ -173,6 +200,10 @@ try {
 
   const stored = await prisma.collabWork.findUnique({ where: { id: workId }, include: { saleSkus: true } })
   assert(stored.saleSkus.length === 1 && Number(stored.saleSkus[0].finalPrice) === 128.5, '正式销售配置按作品与 SKU 独立保存')
+  assert(stored.storefrontTitle === '完整联名测试商品' && stored.productNo?.startsWith('COL-'), '商品资料与稳定商品编号正确保存')
+  assert(stored.description === '自动验收作品' && stored.storefrontDescription.includes('工作区'), '销售详情独立保存，不覆盖创作者审核原说明')
+  const linkedMedia = await prisma.privateFile.findUnique({ where: { id: mediaFileId } })
+  assert(linkedMedia.linkedResourceType === 'COLLAB_WORK' && linkedMedia.linkedResourceId === workId, '商品展示素材校验所有权后绑定到当前联名商品')
   assert(JSON.parse(stored.supportedSkus)[0] === compatibleSkuId, '旧 SKU 字段由正式配置自动同步而不是独立维护')
 
   const relist = await request(`/api/admin/collab/${workId}/relist`, token, { method: 'PUT', body: '{}' })
@@ -180,7 +211,7 @@ try {
 
   const publicAfter = await request(`/api/collab/works/${workId}`)
   const publicBody = await publicAfter.json()
-  assert(publicAfter.ok && Number(publicBody.data.supportedSkus[0].finalPrice) === 128.5, '顾客端读取正式销售配置中的最终价格')
+  assert(publicAfter.ok && publicBody.data.title === '完整联名测试商品' && Number(publicBody.data.supportedSkus[0].finalPrice) === 128.5, '顾客端读取正式商品标题与最终价格')
   assert(publicBody.data.supportedSkus[0].leadTimeDays === 9, '顾客端获得已配置的预计发货天数')
 
   await prisma.collabSaleSku.create({
@@ -206,14 +237,31 @@ try {
   await prisma.collabSaleSku.delete({ where: { collabWorkId_skuId: { collabWorkId: workId, skuId: incompatibleSkuId } } })
 
   const log = await prisma.operationLog.findFirst({
-    where: { userId, targetId: workId, target: 'COLLAB_SALE_CONFIG' },
+    where: { userId, targetId: workId, target: 'COLLAB_PRODUCT' },
     orderBy: { createdAt: 'desc' },
   })
-  assert(log?.action?.includes('销售配置') && log.outcome === 'SUCCESS', '保存销售配置留下员工操作记录')
+  assert(log?.action?.includes('联名商品') && log.outcome === 'SUCCESS', '保存商品工作区留下员工操作记录')
 
   await prisma.machineModelSku.update({ where: { id: compatibleSkuId }, data: { isActive: false } })
   const publicDisabled = await request(`/api/collab/works/${workId}`)
   assert(publicDisabled.status === 404, 'SKU 停用后作品立即停止公开销售')
+
+  const disabledWorkspaceResponse = await request(`/api/admin/collab/${workId}/product-workspace`, token)
+  const disabledWorkspace = await disabledWorkspaceResponse.json()
+  assert(disabledWorkspace.data.selected[0].isEnabled === false && disabledWorkspace.data.candidates.find(row => row.id === compatibleSkuId)?.isActive === false, '停用 SKU 在工作区保留历史配置并明确标为停售')
+  const preserveDisabled = await request(`/api/admin/collab/${workId}/product-workspace`, token, {
+    method: 'PUT',
+    body: JSON.stringify({
+      storefrontTitle: '完整联名测试商品',
+      storefrontSummary: '一款用于验收的联名商品',
+      storefrontDescription: '用于检查联名商品工作区保存与上架流程。',
+      storefrontMedia: [mediaObjectKey],
+      coverKey: mediaObjectKey,
+      skus: [{ skuId: compatibleSkuId, finalPrice: 128.5, fulfillmentMode: 'MAKE_TO_ORDER', leadTimeDays: 9, isEnabled: false }],
+    }),
+  })
+  const preservedRow = await prisma.collabSaleSku.findUnique({ where: { collabWorkId_skuId: { collabWorkId: workId, skuId: compatibleSkuId } } })
+  assert(preserveDisabled.ok && preservedRow?.isEnabled === false, '停售 SKU 保存时不会被删除，历史配置继续保留')
 
   console.log('Collab sale configuration checks passed')
 } finally {

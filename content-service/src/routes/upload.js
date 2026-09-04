@@ -43,6 +43,9 @@ async function createPendingFile(fastify, request, input) {
   if ([FILE_PURPOSE.LIBRARY_SOURCE, FILE_PURPOSE.LIBRARY_FRAME].includes(purpose) && !['OWNER', 'PRODUCTION'].includes(request.user?.staffRole)) {
     return { error: '只有工作人员可以上传帧图资产库素材' }
   }
+  if (purpose === FILE_PURPOSE.COLLAB_STOREFRONT_MEDIA && !['OWNER', 'COLLAB_OPS'].includes(request.user?.staffRole)) {
+    return { error: '只有负责人或联名运营可以上传联名商品素材' }
+  }
 
   const ownerUserId = request.user?.userId || null
   const anonymousHash = ownerUserId ? null : anonymousOwnerHash(

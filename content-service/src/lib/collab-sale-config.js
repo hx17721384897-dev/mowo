@@ -39,6 +39,11 @@ export async function getCollabSaleReadiness(prisma, workId) {
       status: true,
       isRevision: true,
       coverUrl: true,
+      storefrontTitle: true,
+      description: true,
+      storefrontDescription: true,
+      storefrontCoverUrl: true,
+      storefrontMedia: true,
       animationFrames: true,
       animationAssetId: true,
       animationVersionId: true,
@@ -61,7 +66,10 @@ export async function getCollabSaleReadiness(prisma, workId) {
   if (work.isRevision) blockers.push('修改中的影子版本不能上架')
   if (!work.animationAssetId || !work.animationVersionId) blockers.push('尚未关联正式动画资产与版本')
   if (!baseFrameCount) blockers.push('没有可用的核心帧')
-  if (!work.coverUrl) blockers.push('尚未设置商品封面')
+  if (!(work.storefrontCoverUrl || work.coverUrl)) blockers.push('尚未设置商品封面')
+  if (!work.storefrontTitle?.trim()) blockers.push('尚未填写顾客看到的商品标题')
+  if (!work.storefrontSummary?.trim()) blockers.push('尚未填写商品卖点简介')
+  if (!(work.storefrontDescription || work.description)?.trim()) blockers.push('尚未填写商品详情')
   if (!work.saleSkus.length) blockers.push('尚未配置可售 SKU')
 
   for (const offer of work.saleSkus) {

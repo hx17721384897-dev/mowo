@@ -844,8 +844,17 @@ model CollabWork {
   changeLog           String?   @map("change_log") @db.Text // JSON diff: {title:{old,new},...}
   hoverGifUrl         String?   @map("hover_gif_url") // 卡片 hover 用小 GIF OSS 路径
   creatorMarkups      String?   @map("creator_markups") // JSON: {"skuId": decimalAmount}
+  productNo           String?   @unique @map("product_no") @db.VarChar(40)
+  storefrontTitle     String?   @map("storefront_title") @db.VarChar(120)
   storefrontSummary   String?   @map("storefront_summary") @db.VarChar(300)
+  storefrontDescription String? @map("storefront_description") @db.Text
+  storefrontCoverUrl  String?   @map("storefront_cover_url") @db.VarChar(500)
+  storefrontMedia     String    @default("[]") @map("storefront_media") @db.Text
+  storefrontTags      String    @default("[]") @map("storefront_tags") @db.Text
+  storefrontSeries    String?   @map("storefront_series") @db.VarChar(80)
+  storefrontKeywords  String?   @map("storefront_keywords") @db.VarChar(300)
   storefrontSortOrder Int       @default(0) @map("storefront_sort_order")
+  storefrontUpdatedBy String?   @map("storefront_updated_by")
   animationAssetId    String?   @map("animation_asset_id")
   animationVersionId  String?   @map("animation_version_id")
   createdAt           DateTime  @default(now()) @map("created_at")

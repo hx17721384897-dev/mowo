@@ -837,11 +837,14 @@ type 可选：`pending_info` / `pending_sku` / 不传=全部异常
 ### GET `/api/collab/my-earnings`
 创作者联名收益（含冷却期/可提现状态）。需登录。
 
-### GET `/api/admin/collab/:id/sale-config`
-读取联名作品销售配置、上架阻断原因和可选择的真实 SKU。需负责人或合作运营权限。
+### GET `/api/admin/collab/:id/product-workspace`
+读取联名商品工作区：审核原资料、独立销售展示资料、稳定商品编号、动画资产版本、展示素材、分组上架检查、正式销售 SKU 候选及库存摘要。需负责人或合作运营权限。
 
-### PUT `/api/admin/collab/:id/sale-config`
-保存联名作品公开简介、推荐顺序，以及各真实 SKU 的最终售价、供货方式、交期和顺序。服务端校验作品状态、SKU 启用状态、帧数兼容、底价和交期，并留下员工操作记录。需负责人或合作运营权限。
+### PUT `/api/admin/collab/:id/product-workspace`
+统一保存顾客标题、简介、详情、系列、标签、内部搜索词、推荐顺序、展示素材/封面，以及各真实 SKU 的最终售价、供货方式、交期、启用状态和顺序。服务端校验文件归属、作品状态、SKU 启用状态、帧数兼容、底价和交期，并留下员工操作记录；保存不会自动上架。需负责人或合作运营权限。
+
+### GET `/api/admin/collab/:id/product-history`
+读取该联名商品最近的工作区修改记录，包括操作人、结果和时间。需负责人或合作运营权限。
 
 ---
 
