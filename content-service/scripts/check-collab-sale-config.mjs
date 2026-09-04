@@ -167,6 +167,20 @@ try {
   const compatibleCandidate = configBody.data.candidates.find(item => item.id === compatibleSkuId)
   const incompatibleCandidate = configBody.data.candidates.find(item => item.id === incompatibleSkuId)
   assert(configResponse.ok && compatibleCandidate?.compatible === true && incompatibleCandidate?.compatible === false, '后台候选 SKU 正确标记帧数兼容性')
+  assert(configBody.data.readinessGroups.content.some(item => item.includes('重新上传商品封面')), '旧版内嵌封面会明确要求重新上传')
+
+  const incompleteDraft = await request(`/api/admin/collab/${workId}/product-workspace`, token, {
+    method: 'PUT',
+    body: JSON.stringify({
+      storefrontTitle: '待补封面的商品草稿',
+      storefrontSummary: '尚未上传正式封面',
+      storefrontDescription: '允许先保存其他商品资料。',
+      skus: [],
+    }),
+  })
+  const incompleteDraftBody = await incompleteDraft.json()
+  const draftStored = await prisma.collabWork.findUnique({ where: { id: workId }, select: { storefrontCoverUrl: true } })
+  assert(incompleteDraft.ok && incompleteDraftBody.data.ready === false && draftStored.storefrontCoverUrl === null, '草稿保存不会把旧版内嵌封面复制进正式商品字段')
 
   const invalidFrame = await request(`/api/admin/collab/${workId}/product-workspace`, token, {
     method: 'PUT',

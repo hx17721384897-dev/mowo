@@ -22,5 +22,6 @@ assert(html.includes("showIssueFeedback(issues,'预览')") && html.includes("sho
 assert(html.includes("issues.filter(issue=>issue.blockSave)"), '草稿保存仅阻止无效格式，不强迫一次填完')
 assert(html.includes('scrollIntoView') && html.includes('field-error'), '检查项可以定位并标记对应填写位置')
 assert(html.includes("rows.filter(r=>r.isEnabled)") && html.includes("media.find(item=>item.key===data.coverKey)"), '顾客预览只展示启用规格并使用选定封面')
+assert(html.includes('isLegacyCover(data.coverKey)') && html.includes('旧版封面不能用于正式商品，请重新上传'), '旧版内嵌封面不会继续进入正式商品流程')
 
 console.log('Collab product editor UI checks passed')

@@ -8,6 +8,7 @@ import {
   COLLAB_FULFILLMENT_MODE,
   getCollabSaleReadiness,
   isCollabSkuFrameCompatible,
+  isLegacyInlineCollabCover,
   normalizeSaleConfigInput,
 } from '../lib/collab-sale-config.js'
 import { FILE_PURPOSE, linkFiles } from '../lib/private-files.js'
@@ -688,6 +689,9 @@ export default async function adminCollabRoutes(fastify) {
     const uploadedMedia = mediaFiles.filter(file => !file.linkedResourceId)
     const allowedCovers = new Set([work.storefrontCoverUrl, work.coverUrl, ...storefrontMedia].filter(Boolean))
     if (coverKey && !allowedCovers.has(coverKey)) return reply.code(400).send({ success: false, message: '商品封面必须来自当前展示素材' })
+    if (isLegacyInlineCollabCover(coverKey)) {
+      return reply.code(400).send({ success: false, message: '旧版封面不能用于正式商品，请在“展示素材与封面”中重新上传' })
+    }
     if (config.storefrontSortOrder < -10000 || config.storefrontSortOrder > 10000) {
       return reply.code(400).send({ success: false, message: '推荐顺序必须在 -10000 到 10000 之间' })
     }
@@ -757,6 +761,8 @@ export default async function adminCollabRoutes(fastify) {
     ]))
 
     const productNo = work.productNo || makeProductNo(work.id)
+    const previousCover = work.storefrontCoverUrl || work.coverUrl
+    const nextStorefrontCover = coverKey || (isLegacyInlineCollabCover(previousCover) ? null : previousCover)
     await prisma.$transaction(async tx => {
       await tx.collabWork.update({
         where: { id: work.id },
@@ -771,7 +777,7 @@ export default async function adminCollabRoutes(fastify) {
           storefrontKeywords: storefrontKeywords || null,
           storefrontSortOrder: config.storefrontSortOrder,
           storefrontUpdatedBy: operatorId,
-          storefrontCoverUrl: coverKey || work.storefrontCoverUrl || work.coverUrl,
+          storefrontCoverUrl: nextStorefrontCover,
           supportedSkus: JSON.stringify(config.skus.map(row => row.skuId)),
           creatorMarkups: JSON.stringify(legacyMarkups),
         },

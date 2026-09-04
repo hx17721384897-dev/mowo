@@ -13,6 +13,10 @@ export function isCollabSkuFrameCompatible(baseFrameCount, targetFrameCount) {
     && targetFrameCount % baseFrameCount === 0
 }
 
+export function isLegacyInlineCollabCover(value) {
+  return /^data:/i.test(String(value || '').trim())
+}
+
 export function normalizeSaleConfigInput(body) {
   const summary = String(body?.storefrontSummary || '').trim()
   const storefrontSortOrder = Number.parseInt(body?.storefrontSortOrder, 10)
@@ -66,7 +70,9 @@ export async function getCollabSaleReadiness(prisma, workId) {
   if (work.isRevision) blockers.push('修改中的影子版本不能上架')
   if (!work.animationAssetId || !work.animationVersionId) blockers.push('尚未关联正式动画资产与版本')
   if (!baseFrameCount) blockers.push('没有可用的核心帧')
-  if (!(work.storefrontCoverUrl || work.coverUrl)) blockers.push('尚未设置商品封面')
+  const effectiveCover = work.storefrontCoverUrl || work.coverUrl
+  if (!effectiveCover) blockers.push('尚未设置商品封面')
+  else if (isLegacyInlineCollabCover(effectiveCover)) blockers.push('旧版内嵌封面不能用于正式商品，请重新上传商品封面')
   if (!work.storefrontTitle?.trim()) blockers.push('尚未填写顾客看到的商品标题')
   if (!work.storefrontSummary?.trim()) blockers.push('尚未填写商品卖点简介')
   if (!(work.storefrontDescription || work.description)?.trim()) blockers.push('尚未填写商品详情')
