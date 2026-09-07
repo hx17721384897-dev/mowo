@@ -279,20 +279,6 @@ quantity 范围：1-100。
 
 ---
 
-### POST `/api/cart/merge`
-游客购物车合并（登录后将本地缓存同步到服务端）。需登录。
-
-**Body：**
-```json
-{
-  "items": [
-    { "itemType": "CUSTOM", "contentId": "...", "hardwareSkuId": "...", "quantity": 1 }
-  ]
-}
-```
-
----
-
 ### POST `/api/cart/checkout`
 结算：创建 PreOrder，10分钟库存预锁。需登录。
 

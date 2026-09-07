@@ -178,6 +178,15 @@ export default async function collabRoutes(fastify) {
 
     // 封面图：data URI 直接透传，OSS key 才签名
     const coverUrl = presignOrPassthrough(work.storefrontCoverUrl || work.coverUrl, fastify, 3600)
+    const storefrontMediaKeys = safeJson(work.storefrontMedia)
+    const storefrontMediaFiles = storefrontMediaKeys.length ? await prisma.privateFile.findMany({
+      where: { objectKey: { in: storefrontMediaKeys }, status: 'READY', deletedAt: null },
+      select: { objectKey: true, detectedMimeType: true, declaredMimeType: true },
+    }) : []
+    const storefrontMediaKinds = new Map(storefrontMediaFiles.map(file => [
+      file.objectKey,
+      (file.detectedMimeType || file.declaredMimeType || '').startsWith('video/') ? 'video' : 'image',
+    ]))
 
     return reply.send({
       success: true,
@@ -187,7 +196,10 @@ export default async function collabRoutes(fastify) {
         title: work.storefrontTitle || work.title,
         description: work.storefrontDescription || work.description,
         storefrontSummary: work.storefrontSummary,
-        storefrontMedia: safeJson(work.storefrontMedia).map(key => presignOrPassthrough(key, fastify, 3600)).filter(Boolean),
+        storefrontMedia: storefrontMediaKeys.map(key => ({
+          url: presignOrPassthrough(key, fastify, 3600),
+          kind: storefrontMediaKinds.get(key) || 'image',
+        })).filter(item => item.url),
         storefrontTags: safeJson(work.storefrontTags),
         storefrontSeries: work.storefrontSeries,
         animationFrames: frameUrls,

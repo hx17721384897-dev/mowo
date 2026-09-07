@@ -23,7 +23,7 @@ export function publicCollabWorkWhere(extra = {}) {
     isRevision: false,
     animationAssetId: { not: null },
     animationVersionId: { not: null },
-    coverUrl: { not: null },
+    storefrontCoverUrl: { not: null },
     saleSkus: {
       some: {
         isEnabled: true,
@@ -71,6 +71,8 @@ export async function resolveCollabOffer(prisma, workId, skuId) {
       creatorId: true,
       title: true,
       coverUrl: true,
+      storefrontTitle: true,
+      storefrontCoverUrl: true,
       status: true,
       isOnShelf: true,
       shelfStatus: true,

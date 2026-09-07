@@ -11,6 +11,7 @@ let skuId = null
 let unsupportedSkuId = null
 let animationAssetId = null
 let animationVersionId = null
+let mediaFileId = null
 
 function assert(condition, message) {
   if (!condition) throw new Error(message)
@@ -35,6 +36,12 @@ async function createWork(creatorId, suffix, overrides = {}) {
       title: `联名商城验收-${runId}-${suffix}`,
       description: '仅用于自动验收',
       coverUrl: 'data:image/png;base64,iVBORw0KGgo=',
+      storefrontTitle: `正式商品-${runId}-${suffix}`,
+      storefrontSummary: '顾客可见卖点',
+      storefrontDescription: '顾客可见完整详情',
+      storefrontCoverUrl: `private/collab_storefront_media/${userId || creatorId}/${runId}-${suffix}-cover.png`,
+      storefrontMedia: JSON.stringify([`private/collab_storefront_media/${userId || creatorId}/${runId}-${suffix}-video.mp4`]),
+      storefrontTags: JSON.stringify(['自动验收', '联名商品']),
       animationFrames: '[]',
       supportedSkus: JSON.stringify([skuId]),
       creatorMarkups: JSON.stringify({ [skuId]: 17.25 }),
@@ -74,6 +81,7 @@ async function cleanup() {
     await prisma.cart.deleteMany({ where: { userId } })
   }
   if (workIds.length) await prisma.collabWork.deleteMany({ where: { id: { in: workIds } } })
+  if (mediaFileId) await prisma.privateFile.deleteMany({ where: { id: mediaFileId } })
   if (animationVersionId) await prisma.animationAssetVersion.deleteMany({ where: { id: animationVersionId } })
   if (animationAssetId) await prisma.animationAsset.deleteMany({ where: { id: animationAssetId } })
   if (userId) {
@@ -167,6 +175,21 @@ try {
   animationVersionId = version.id
 
   const live = await createWork(user.id, 'live')
+  const mediaFile = await prisma.privateFile.create({
+    data: {
+      ownerUserId: user.id,
+      purpose: 'COLLAB_STOREFRONT_MEDIA',
+      objectKey: `private/collab_storefront_media/${user.id}/${runId}-live-video.mp4`,
+      originalName: 'detail-video.mp4',
+      declaredMimeType: 'video/mp4',
+      detectedMimeType: 'video/mp4',
+      declaredSizeBytes: 128,
+      sizeBytes: 128,
+      status: 'READY',
+      uploadedAt: new Date(),
+    },
+  })
+  mediaFileId = mediaFile.id
   const hidden = await createWork(user.id, 'hidden', { isOnShelf: false })
   const suspended = await createWork(user.id, 'suspended', { shelfStatus: 'suspended' })
   const revision = await createWork(user.id, 'revision', { isRevision: true })
@@ -181,6 +204,8 @@ try {
   const detailBody = await detailResponse.json()
   const detail = detailBody.data
   assert(detailResponse.ok && Number(detail.supportedSkus[0].finalPrice) === 117.25, '详情页规格价格使用统一最终价')
+  assert(detail.title.startsWith('正式商品-') && detail.description === '顾客可见完整详情' && detail.storefrontTags.length === 2, '详情页读取后台配置的正式标题、详情和标签')
+  assert(detail.storefrontMedia.length === 1 && detail.storefrontMedia[0].url && detail.storefrontMedia[0].kind === 'video', '详情页轮播素材只返回签名地址和正确媒体类型')
   for (const field of ['creatorMarkups', 'revenueRate', 'approvedBy', 'offShelfReason', 'changeLog']) {
     assert(!(field in detail), `公开详情不暴露内部字段 ${field}`)
   }
@@ -208,6 +233,19 @@ try {
   })
   const added = await addResponse.json()
   assert(addResponse.ok && Number(added.data.snapshotPrice) === 117.25, '加入购物车保存统一最终价快照')
+  assert(added.data.snapshotTitle.startsWith('正式商品-') && added.data.coverUrl?.includes('collab_storefront_media'), '购物车保存顾客看到的正式标题和封面')
+
+  const invalidQuantity = await request('/api/cart/add', token, {
+    method: 'POST',
+    body: JSON.stringify({ itemType: 'MARKET', contentId: live.id, hardwareSkuId: skuId, quantity: 11 }),
+  })
+  assert(invalidQuantity.status === 400, '直接请求也不能让单个商品数量超过 10 件')
+
+  const mergedOverflow = await request('/api/cart/add', token, {
+    method: 'POST',
+    body: JSON.stringify({ itemType: 'MARKET', contentId: live.id, hardwareSkuId: skuId, quantity: 10 }),
+  })
+  assert(mergedOverflow.status === 400, '重复加入购物车后的合计数量也不能超过 10 件')
 
   const hiddenAdd = await request('/api/cart/add', token, {
     method: 'POST',

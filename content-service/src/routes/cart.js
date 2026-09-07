@@ -125,12 +125,16 @@ export default async function cartRoutes(fastify) {
   }, async (req, reply) => {
     const userId = req.user.userId
     const { itemType, contentId, hardwareSkuId, quantity = 1, sessionGroupId = null } = req.body
+    const requestedQuantity = Number(quantity)
 
     if (!itemType || !contentId || !hardwareSkuId) {
       return reply.code(400).send({ success: false, message: '缺少必要参数' })
     }
     if (!['MARKET', 'CUSTOM'].includes(itemType)) {
       return reply.code(400).send({ success: false, message: 'itemType 必须是 MARKET 或 CUSTOM' })
+    }
+    if (!Number.isInteger(requestedQuantity) || requestedQuantity < 1 || requestedQuantity > 10) {
+      return reply.code(400).send({ success: false, message: '单个商品购买数量需为 1 至 10 件' })
     }
 
     // 查询 SKU
@@ -226,8 +230,8 @@ export default async function cartRoutes(fastify) {
       }
       const work = offer.work
 
-      snapshotTitle = work.title || '联名作品'
-      coverUrl = work.coverUrl || null
+      snapshotTitle = work.storefrontTitle || work.title || '联名作品'
+      coverUrl = work.storefrontCoverUrl || work.coverUrl || null
       creatorId = work.creatorId || null
       resolvedPrice = offer.finalPrice
     }
@@ -239,10 +243,13 @@ export default async function cartRoutes(fastify) {
       where: { cartId: cart.id, contentId, hardwareSkuId, status: { not: 'invalid' } }
     })
     if (existing) {
+      if (existing.quantity + requestedQuantity > 10) {
+        return reply.code(400).send({ success: false, message: '同一商品在购物车中最多保留 10 件' })
+      }
       const updated = await prisma.cartItem.update({
         where: { id: existing.id },
         data: {
-          quantity: existing.quantity + parseInt(quantity),
+          quantity: existing.quantity + requestedQuantity,
           snapshotPrice: resolvedPrice,
           status: 'normal',
         }
@@ -265,7 +272,7 @@ export default async function cartRoutes(fastify) {
         coverUrl,
         configSnapshotJson,
         snapshotPrice,
-        quantity: parseInt(quantity),
+        quantity: requestedQuantity,
         selected: true,
         creatorId,
         status: 'normal',
@@ -386,106 +393,7 @@ export default async function cartRoutes(fastify) {
     return reply.send({ success: true, message: '购物车已清空' })
   })
 
-  // ── C.6 POST /api/cart/merge — 游客购物车合并 ──
-  fastify.post('/merge', {
-    preHandler: [fastify.authenticate]
-  }, async (req, reply) => {
-    const userId = req.user.userId
-    const { items: guestItems } = req.body // [{ itemType, contentId, hardwareSkuId, quantity }]
-
-    if (!Array.isArray(guestItems) || guestItems.length === 0) {
-      return reply.send({ success: true, message: '无需合并', mergedCount: 0 })
-    }
-
-    const cart = await getOrCreateCart(prisma, userId)
-    const mergedItems = []
-    const failedItems = []
-
-    for (const gi of guestItems) {
-      try {
-        const { itemType, contentId, hardwareSkuId, quantity = 1 } = gi
-        if (!itemType || !contentId || !hardwareSkuId) continue
-
-        if (itemType !== 'MARKET') {
-          failedItems.push({ ...gi, reason: '游客购物车只支持联名商品' })
-          continue
-        }
-
-        const sku = await prisma.machineModelSku.findUnique({
-          where: { id: hardwareSkuId },
-          include: { model: { select: { isActive: true } } },
-        })
-        if (!sku?.isActive || !sku.model?.isActive) {
-          failedItems.push({ ...gi, reason: 'SKU不存在或已停用' })
-          continue
-        }
-
-        let offer
-        try {
-          offer = await resolveCollabOffer(prisma, contentId, hardwareSkuId)
-        } catch (error) {
-          if (error instanceof CollabStorefrontError) {
-            failedItems.push({ ...gi, reason: error.message })
-            continue
-          }
-          throw error
-        }
-
-        // 检查总件数限制
-        const totalQty = cart.items.reduce((s, i) => s + i.quantity, 0)
-        if (totalQty + parseInt(quantity) > 100) {
-          failedItems.push({ ...gi, reason: '购物车已达100件上限' })
-          continue
-        }
-
-        // 相同商品叠加
-        const existing = cart.items.find(i => i.contentId === contentId && i.hardwareSkuId === hardwareSkuId)
-        if (existing) {
-          await prisma.cartItem.update({
-            where: { id: existing.id },
-            data: {
-              quantity: existing.quantity + parseInt(quantity),
-              snapshotPrice: offer.finalPrice,
-              status: 'normal',
-            }
-          })
-        } else {
-          const work = offer.work
-
-          await prisma.cartItem.create({
-            data: {
-              cartId: cart.id,
-              itemType,
-              contentId,
-              hardwareSkuId,
-              hardwareSkuCode: sku.skuCode || null,
-              snapshotTitle: work.title || '联名作品',
-              coverUrl: work.coverUrl || null,
-              snapshotPrice: offer.finalPrice,
-              quantity: parseInt(quantity),
-              selected: true,
-              creatorId: work.creatorId || null,
-              status: 'normal'
-            }
-          })
-        }
-        mergedItems.push(gi)
-      } catch (e) {
-        failedItems.push({ ...gi, reason: e.message })
-      }
-    }
-
-    await prisma.cart.update({ where: { id: cart.id }, data: { updatedAt: new Date() } })
-
-    return reply.send({
-      success: true,
-      message: failedItems.length > 0 ? '部分商品价格或库存已更新，请检查' : '合并成功',
-      mergedCount: mergedItems.length,
-      unmergedItems: failedItems
-    })
-  })
-
-  // ── C.7 POST /api/cart/checkout — 结算（幂等，库存预锁）──
+  // ── C.6 POST /api/cart/checkout — 结算（幂等，库存预锁）──
   fastify.post('/checkout', {
     preHandler: [fastify.authenticate]
   }, async (req, reply) => {

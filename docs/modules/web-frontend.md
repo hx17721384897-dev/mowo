@@ -69,9 +69,8 @@
 | `products.html` | 产品系列 | 无 | 静态硬编码，产品主体使用 CSS mock 图，不是后台款式数据 |
 | `faq.html` | FAQ 搜索/分类 | 本地 FAQ + CDN Fuse.js | 静态；注释规划 `/api/faq`，后端无该路由 |
 | `contact.html` | 六类联络、附件上传 | `/api/upload/presign`、`/api/contact` | 已接 API；前端要求登录，后端公开；附件风险见内容模块 |
-| `showcase.html` | 联名作品列表 | `/api/collab/works` | 已接 API；展示与购物保留，社区关闭时不显示/查询点赞 |
-| `showcase-confirm.html` | 联名详情、选 SKU、购物车/结算 | collab/users/cart | 当前主入口；互动按社区开关隐藏；无 workId 仍展示 Demo 商品，推荐卡仍可能跳 v2 |
-| `showcase-confirm-v2.html` | 另一套联名详情 | 与上页基本相同 | 互动按社区开关隐藏；两页并存问题尚未解决 |
+| `showcase.html` | 唯一联名商品列表 | `/api/collab/works` | 已接正式上架数据；保留瀑布流和商品进入口，正式页不包含社区互动代码 |
+| `showcase-detail.html` | 唯一联名商品详情、素材轮播、动画播放、选 SKU 与加购 | collab/cart | 2026-09-07 完成；仅展示后台正式资料和真实可售 SKU，未登录操作在登录后重新校验并继续 |
 
 ### 定制、购物车与用户中心
 
@@ -80,7 +79,7 @@
 | `customize-start.html` | 选择款式/SKU、配额检查 | 已接 machine-models/custom-products | 无真实图时显示 CSS 占位；中间数据写 localStorage |
 | `customize-editor.html` | 上传/筛帧、草稿创建与编辑 | 已接 custom-products | 约 2196 行；多段重复 API base；客户端保存帧 URL/流程状态 |
 | `customize-confirm.html` | 选配、创建/更新定制品、加购/立即购买 | 已接 custom-products/cart | 实物图为占位；依赖多组 local/session storage 状态 |
-| `cart.html` | 服务端购物车 | 已接 cart | 只加载登录购物车；联名详情写入的 `mowo_guest_cart` 没有合并/消费代码 |
+| `cart.html` | 服务端购物车 | 已接 cart | 只加载登录购物车；未登录购买由详情页保留短期操作意图，登录后重新校验并写入服务端 |
 | `checkout.html` | 地址、创建预订单、轮询支付 | 已接 cart/addresses/payment | 真实支付发起未闭环；localhost 显示 Mock 支付 |
 | `orders.html` | 我的订单与确认收货 | 已接 orders | 空状态已改为联名作品入口 |
 | `order-detail.html` | 订单详情、取消、收货、售后、凭证上传 | 已接 orders/upload | 固定 localhost；社区导航已改为联名作品 |
@@ -145,7 +144,7 @@
 
 ```text
 index / products / showcase
-├─ showcase-confirm(.html / -v2.html)
+├─ showcase-detail
 │  └─ cart -> checkout -> orders -> order-detail
 └─ customize-start -> customize-editor -> customize-confirm
    └─ cart -> checkout
@@ -181,15 +180,15 @@ auth.js user menu
 | P1 | 注册协议、隐私、退换等正式文本没有独立页面 | 无法形成清晰同意证据和消费者告知 | 建立版本化法律文档、同意版本/时间记录和可访问入口 | 中 |
 | P1 | CDN 脚本无 SRI，页面无 CSP | 供应链篡改或 XSS 的影响面扩大 | 自托管或固定版本+SRI，部署 CSP/安全响应头 | 中 |
 | P2 | 页面巨型内联脚本和重复 API client | 修复需多页同步，契约漂移频繁 | 先抽配置/API/会话/输出安全，不必立刻重写框架 | 中高 |
-| P2 | 两套联名详情和独立/设置地址重复能力 | 同功能行为逐渐不一致 | 确定唯一主页面/共享模块，旧入口受控重定向 | 中 |
-| P2 | guest cart 只写不读 | 未登录用户看到“已加入”，登录后购物车为空 | 决定是否支持游客购物车；登录后服务端合并或直接要求登录 | 中 |
+| 已解决 | 两套联名详情 | 2026-09-07 已删除旧页并统一到 `showcase-detail.html` | 用静态检查禁止旧引用回流 | 低 |
+| 已解决 | guest cart 只写不读 | 已删除游客购物车与合并接口 | 未登录时只保留短期操作意图，登录后服务端重新校验 | 低 |
 | P2 | 旧页移动后路径失效、现行页仍链接旧文件名 | 深链接和空状态出现 404 | 生成路由/链接清单，CI 检查静态引用，旧页显式归档 | 低中 |
 | P2 | 大量 Google Fonts 和大图直接加载 | 中国网络可用性、首屏性能和隐私外联不稳定 | 字体自托管/系统字体降级，图片响应式压缩和缓存 | 中 |
 | P2 | 无前端测试、构建、lint、类型检查 | 页面组合错误只能人工发现 | 最低先建静态链接检查、API 契约测试和 Playwright 核心流程 | 中高 |
 
 ## 待确认事项
 
-产品决策集中在 `docs/OPEN_QUESTIONS.md`。已确认：首发关闭社区与互动；未登录可浏览、上传和简单预览，正式提交/购买时登录；不支持游客购物车；Web 不直接收款，订单转微信小程序。仍待确认的宏观项是两套联名详情保留哪一套、法律文本责任和正式部署域名；字段、页面细节留到对应功能开发时讨论。纯技术故障不需要产品选择，可在整改阶段直接修复。
+产品决策集中在 `docs/OPEN_QUESTIONS.md`。已确认：首发关闭社区与互动；未登录可浏览，正式提交/购买时登录；不支持游客购物车；联名详情已统一为 `showcase-detail.html`；Web 不直接收款，订单转微信小程序。仍待确认的宏观项是法律文本责任和正式部署域名；字段、页面细节留到对应功能开发时讨论。
 
 ## 相关文档
 

@@ -44,7 +44,7 @@ button{font-family:var(--font);cursor:pointer;border:none;background:none;}
 
 /* ── CONTROL BAR（搜索+标签+排序，sticky） ── */
 .control-bar{
-  position:sticky;top:64px;z-index:700;
+  position:sticky;top:64px;z-index:80;
   background:rgba(245,243,239,.97);
   backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
   border-bottom:1px solid var(--gray1);
@@ -135,11 +135,6 @@ button{font-family:var(--font);cursor:pointer;border:none;background:none;}
 .author-avatar img{width:100%;height:100%;object-fit:cover;}
 .author-name{font-weight:800;font-size:11px;color:var(--gray3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px;transition:color .2s;}
 .card-actions{display:flex;align-items:center;gap:4px;flex-shrink:0;}
-.card-like{display:flex;align-items:center;gap:4px;font-weight:800;font-size:11px;color:var(--gray3);padding:4px 7px;border-radius:999px;transition:all .2s;min-height:28px;flex-shrink:0;}
-.card-like:hover{background:var(--cream);color:#C03030;}
-.card-like.liked{color:#C03030;}
-.like-icon{font-size:12px;transition:transform .2s var(--ease);}
-.card-like:hover .like-icon,.card-like.liked .like-icon{transform:scale(1.25);}
 .card-cart{
   width:28px;height:28px;border-radius:8px;
   display:flex;align-items:center;justify-content:center;
@@ -270,7 +265,6 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
     <div class="control-sort">
       <div class="sort-tabs">
         <button class="sort-tab active" onclick="setSort('latest',this)">最新</button>
-        <button class="sort-tab" onclick="setSort('popular',this)">热门</button>
       </div>
       <a href="contact.html" class="incentive-link">
         联系我们，了解创作者合作方式 →
@@ -346,7 +340,6 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
 </footer>
 
 <script src="../js/auth.js"></script>
-<script src="../js/feature-flags.js"></script>
 <script>
 const API = (location.hostname === '127.0.0.1' ? 'http://127.0.0.1:3001' : 'http://localhost:3001')
 
@@ -436,9 +429,6 @@ function applyFilters() {
       (w.creator?.nickname || '').toLowerCase().includes(q)
     )
   }
-  if (currentSort === 'popular') {
-    list = [...list].sort((a, b) => (b.likeCount || 0) - (a.likeCount || 0))
-  }
   filteredWorks = list
   displayCount = PAGE_SIZE
   renderWorks(true)
@@ -489,10 +479,6 @@ function buildCard(w) {
     ? `<img src="${esc(avatarUrl)}" alt="avatar">`
     : initial
 
-  const liked = w.isLiked ? 'liked' : ''
-  const likeIcon = w.isLiked ? '♥' : '♡'
-  const likeCount = fmtCount(w.likeCount || 0)
-
   const mediaCover = cover
     ? `<img class="card-cover-img" src="${esc(cover)}" alt="${esc(w.title || '')}">`
     : `<div class="card-media-placeholder">🎨</div>`
@@ -512,48 +498,13 @@ function buildCard(w) {
           <span class="author-name">@${name}</span>
         </div>
         <div class="card-actions">
-          ${window.mowoFeatures?.community ? `<button class="card-like ${liked}" onclick="event.stopPropagation();toggleLike(this,'${esc(w.id)}')">
-            <span class="like-icon">${likeIcon}</span>
-            <span class="like-count">${likeCount}</span>
-          </button>` : ''}
-          <a class="card-cart" href="./showcase-confirm.html?workId=${esc(w.id)}" onclick="event.stopPropagation()" aria-label="查看购买">
+          <a class="card-cart" href="./showcase-detail.html?workId=${esc(w.id)}" onclick="event.stopPropagation()" aria-label="查看购买">
             <svg viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
           </a>
         </div>
       </div>
     </div>
   </div>`
-}
-
-/* ── 点赞 ── */
-async function toggleLike(btn, workId) {
-  const token = localStorage.getItem('mowo_token')
-  if (!token) { if (typeof openAuthModal === 'function') openAuthModal(); return }
-  const liked = btn.classList.toggle('liked')
-  const icon = btn.querySelector('.like-icon')
-  const countEl = btn.querySelector('.like-count')
-  icon.textContent = liked ? '♥' : '♡'
-  let n = parseCount(countEl.textContent)
-  n = liked ? n + 1 : Math.max(0, n - 1)
-  countEl.textContent = fmtCount(n)
-  try {
-    await fetch(`${API}/api/collab/works/${workId}/like`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` }
-    })
-  } catch {
-    btn.classList.toggle('liked')
-    icon.textContent = liked ? '♡' : '♥'
-  }
-}
-
-function parseCount(s) {
-  if (!s) return 0
-  return s.includes('k') ? parseFloat(s) * 1000 : parseInt(s) || 0
-}
-function fmtCount(n) {
-  if (!n) return '0'
-  return n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : String(n)
 }
 
 /* ── 帧动画叠层 ── */
@@ -626,7 +577,7 @@ function _stopCycle(state) {
 
 /* ── 跳转 ── */
 function goDetail(id) {
-  window.location.href = `./showcase-confirm.html?workId=${encodeURIComponent(id)}`
+  window.location.href = `./showcase-detail.html?workId=${encodeURIComponent(id)}`
 }
 function goCreator(userId) {
   if (!userId) return
