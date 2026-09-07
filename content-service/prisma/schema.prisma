@@ -2186,6 +2186,7 @@ model PreOrder {
   id                     String      @id @default(uuid())
   userId                 String      @map("user_id")
   cartItemIds            String      @map("cart_item_ids") @db.Text // JSON 数组，幂等校验用
+  checkoutSnapshot       Json?       @map("checkout_snapshot") // 付款前冻结的整单商品、动画版本、SKU、数量和价格
   checkoutIdempotencyKey String      @unique @map("checkout_idempotency_key")
   status                 String      @default("pending_payment") // pending_payment|paid|expired|cancelled
   orderType              String      @default("normal") @map("order_type") // normal|presale
@@ -2401,8 +2402,13 @@ model SalesOrderItem {
   snapshotPreviewUrl String?  @map("snapshot_preview_url") @db.Text
   configSnapshotJson String?  @map("config_snapshot_json") @db.Text
   unitPrice          Decimal  @map("unit_price") @db.Decimal(10, 2)
+  baseUnitPrice      Decimal? @map("base_unit_price") @db.Decimal(10, 2)
+  priceAdjustment    Decimal? @map("price_adjustment") @db.Decimal(10, 2)
   quantity           Int
   lineTotal          Decimal  @map("line_total") @db.Decimal(10, 2)
+  productNo          String?  @map("product_no") @db.VarChar(40)
+  fulfillmentMode    String?  @map("fulfillment_mode") @db.VarChar(24)
+  leadTimeDays       Int?     @map("lead_time_days")
   status             String   @default("paid") @db.VarChar(20)
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")

@@ -7,6 +7,7 @@ import {
   createSalesOrderItemNo,
   createSalesOrderNo
 } from '../lib/sales-orders.js'
+import { closePreOrderAndRelease, readCheckoutSnapshot } from '../lib/checkout-snapshot.js'
 
 export default async function paymentRoutes(fastify) {
   const { prisma } = fastify
@@ -39,15 +40,21 @@ export default async function paymentRoutes(fastify) {
     }
 
     if (paySuccess === false || paySuccess === 'false') {
-      // 支付失败
-      await prisma.preOrder.update({
-        where: { id: preOrderId },
-        data: { status: 'cancelled' }
-      })
+      await closePreOrderAndRelease(prisma, preOrder, 'cancelled')
       return reply.send({ success: true, message: '支付失败已记录' })
     }
 
-    // 支付成功：一次支付创建一个用户订单，商品按数量展开为单件生产任务。
+    let checkoutSnapshot
+    try {
+      checkoutSnapshot = readCheckoutSnapshot(preOrder.checkoutSnapshot)
+    } catch (error) {
+      return reply.code(409).send({ success: false, message: error.message })
+    }
+    if (Math.abs(Number(checkoutSnapshot.totalAmount) - Number(preOrder.totalAmount)) > 0.01) {
+      return reply.code(409).send({ success: false, message: '付款金额与结算快照不一致' })
+    }
+
+    // 支付成功：只读取付款前冻结快照，不再依赖可变的购物车。
     let salesOrder
     try {
       salesOrder = await prisma.$transaction(async tx => {
@@ -60,18 +67,6 @@ export default async function paymentRoutes(fastify) {
         const processing = new Error('支付通知已由其他请求处理')
         processing.code = 'PAYMENT_ALREADY_PROCESSING'
         throw processing
-      }
-
-      // 取出 CartItem
-      let cartItemIds = []
-      try { cartItemIds = JSON.parse(preOrder.cartItemIds) } catch {}
-      cartItemIds = [...new Set(cartItemIds.map(id => String(id || '').trim()).filter(Boolean))]
-
-      const items = await tx.cartItem.findMany({
-        where: { id: { in: cartItemIds } }
-      })
-      if (!items.length || items.length !== cartItemIds.length) {
-        throw new Error('结算商品已变化，无法创建完整订单')
       }
 
       const orderNo = createSalesOrderNo()
@@ -91,43 +86,37 @@ export default async function paymentRoutes(fastify) {
         }
       })
 
-      for (let itemIndex = 0; itemIndex < items.length; itemIndex += 1) {
-        const item = items[itemIndex]
-
-        // 查询 SKU + 关联 model，补全 CustomizeOrder 必填字段
-        const sku = await tx.machineModelSku.findUnique({
-          where: { id: item.hardwareSkuId },
-          include: { model: true }
-        })
-
-        // 帧图 URL：优先从 customProduct 取 animationFrames
-        let frameUrls = '[]'
-        let customProduct = null
-        if (item.customProductId) {
-          customProduct = await tx.customProduct.findUnique({ where: { id: item.customProductId } })
-          if (customProduct?.animationFrames) frameUrls = customProduct.animationFrames
+      for (let itemIndex = 0; itemIndex < checkoutSnapshot.items.length; itemIndex += 1) {
+        const item = checkoutSnapshot.items[itemIndex]
+        const sku = item.sku
+        const unitPrice = Number(item.unitPrice)
+        const quantity = Number(item.quantity)
+        if (!sku?.id || !Number.isInteger(quantity) || quantity < 1 || quantity > 10 || !Number.isFinite(unitPrice)) {
+          throw new Error('结算快照中的商品数据不完整')
         }
-
-        const unitPrice = Number(item.snapshotPrice || sku?.price || 0)
-        const quantity = Math.max(1, Number(item.quantity || 1))
         const orderItem = await tx.salesOrderItem.create({
           data: {
             itemNo: createSalesOrderItemNo(orderNo, itemIndex + 1),
             salesOrderId: order.id,
-            cartItemId: item.id,
+            cartItemId: item.cartItemId || null,
             itemType: item.itemType,
             contentId: item.contentId,
             customProductId: item.customProductId,
-            animationAssetId: customProduct?.animationAssetId || null,
-            animationVersionId: customProduct?.animationVersionId || null,
-            skuId: item.hardwareSkuId,
-            skuCode: item.hardwareSkuCode || sku?.skuCode || null,
-            snapshotTitle: item.snapshotTitle,
-            snapshotPreviewUrl: item.snapshotPreviewUrl || item.coverUrl || null,
-            configSnapshotJson: item.configSnapshotJson,
+            animationAssetId: item.animationAssetId,
+            animationVersionId: item.animationVersionId,
+            skuId: sku.id,
+            skuCode: sku.code || null,
+            snapshotTitle: item.title,
+            snapshotPreviewUrl: item.previewUrl || null,
+            configSnapshotJson: item.config ? JSON.stringify(item.config) : null,
             unitPrice: unitPrice.toFixed(2),
+            baseUnitPrice: Number(item.baseUnitPrice).toFixed(2),
+            priceAdjustment: Number(item.priceAdjustment).toFixed(2),
             quantity,
             lineTotal: (unitPrice * quantity).toFixed(2),
+            productNo: item.productNo || null,
+            fulfillmentMode: item.fulfillmentMode || null,
+            leadTimeDays: item.leadTimeDays ?? null,
             status: 'paid'
           }
         })
@@ -138,19 +127,19 @@ export default async function paymentRoutes(fastify) {
             data: {
               orderNo: createProductionUnitNo(),
               userId: preOrder.userId,
-              skuId: item.hardwareSkuId,
-              modelId: sku?.modelId || '',
-              modelName: sku?.model?.name || '',
-              frameCount: sku?.frameCount || 0,
-              size: sku?.size || '',
-              material: sku?.material || '',
-              color: sku?.colorHex || '',
-              colorName: sku?.colorName || '',
+              skuId: sku.id,
+              modelId: sku.modelId || '',
+              modelName: sku.modelName || '',
+              frameCount: sku.frameCount || 0,
+              size: sku.size || '',
+              material: sku.material || '',
+              color: sku.colorHex || '',
+              colorName: sku.colorName || '',
               ossPath: '',
               status: 'paid',
               sourceType: item.itemType === 'MARKET' ? 'collab' : 'custom',
               collabWorkId: item.itemType === 'MARKET' ? item.contentId : null,
-              frameUrls,
+              frameUrls: JSON.stringify(item.frameKeys || []),
               receiverName: preOrder.receiverName || '',
               receiverPhone: preOrder.receiverPhone || '',
               receiverAddress: preOrder.receiverAddress || '',
@@ -168,7 +157,7 @@ export default async function paymentRoutes(fastify) {
         }
 
         // CUSTOM 品状态 → ordered
-        if (item.customProductId) {
+        if (item.itemType === 'CUSTOM' && item.customProductId) {
           await tx.customProduct.update({
             where: { id: item.customProductId },
             data: { status: 'ordered' }
@@ -177,6 +166,7 @@ export default async function paymentRoutes(fastify) {
       }
 
       // 支付成功：从购物车直接删除已下单的条目
+      const cartItemIds = checkoutSnapshot.items.map(item => item.cartItemId).filter(Boolean)
       await tx.cartItem.deleteMany({
         where: { id: { in: cartItemIds } }
       }).catch(() => {})

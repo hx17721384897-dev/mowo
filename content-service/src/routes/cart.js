@@ -7,6 +7,34 @@ import {
   CollabStorefrontError,
   resolveCollabOffer,
 } from '../lib/collab-storefront.js'
+import {
+  buildCheckoutItemSnapshot,
+  closePreOrderAndRelease,
+  createCheckoutSnapshot,
+  reserveCheckoutInventory,
+} from '../lib/checkout-snapshot.js'
+
+function validateCheckoutAddress({ receiverName, receiverPhone, receiverAddress, receiverCity }) {
+  const name = String(receiverName || '').trim()
+  const phone = String(receiverPhone || '').trim()
+  const address = String(receiverAddress || '').trim()
+  const city = String(receiverCity || '').trim()
+  if (name.length < 1 || name.length > 50) return '收件人姓名需为 1 至 50 个字符'
+  if (!/^1[3-9]\d{9}$/.test(phone)) return '收件手机号格式不正确'
+  if (city.length < 1 || city.length > 80) return '请填写正确的收件城市'
+  if (address.length < 5 || address.length > 500) return '收件地址需为 5 至 500 个字符'
+  return null
+}
+
+function preOrderResponse(preOrder) {
+  return {
+    id: preOrder.id,
+    status: preOrder.status,
+    totalAmount: preOrder.totalAmount,
+    expiresAt: preOrder.expiresAt,
+    createdAt: preOrder.createdAt,
+  }
+}
 
 // ── 计算商品当前价格 ──
 async function getItemCurrentPrice(prisma, item) {
@@ -74,16 +102,18 @@ export default async function cartRoutes(fastify) {
         }
       }
 
-      // 检查库存（MARKET 类型）
-      if (item.itemType === 'MARKET' && status !== 'invalid') {
+      // 两类实物都要占用对应 SKU 材料包库存。
+      if (status !== 'invalid') {
         const inv = await prisma.skuInventory.findFirst({ where: { skuId: item.hardwareSkuId } })
-        if (inv) {
-          const available = inv.currentStock - inv.reservedStock
-            - (inv.wipFrameQty || 0) - (inv.wipKitQty || 0)
-          if (available < item.quantity && status === 'normal') {
-            status = 'stock_out'
-            await prisma.cartItem.update({ where: { id: item.id }, data: { status } })
-          }
+        const available = inv
+          ? inv.currentStock - inv.reservedStock - (inv.wipFrameQty || 0) - (inv.wipKitQty || 0)
+          : 0
+        if (available < item.quantity && status === 'normal') {
+          status = 'stock_out'
+          await prisma.cartItem.update({ where: { id: item.id }, data: { status } })
+        } else if (available >= item.quantity && status === 'stock_out') {
+          status = 'normal'
+          await prisma.cartItem.update({ where: { id: item.id }, data: { status } })
         }
       }
 
@@ -246,6 +276,7 @@ export default async function cartRoutes(fastify) {
       if (existing.quantity + requestedQuantity > 10) {
         return reply.code(400).send({ success: false, message: '同一商品在购物车中最多保留 10 件' })
       }
+      await cancelPendingPreOrdersForItems(prisma, userId, [existing.id])
       const updated = await prisma.cartItem.update({
         where: { id: existing.id },
         data: {
@@ -304,13 +335,15 @@ export default async function cartRoutes(fastify) {
 
     const updateData = {}
     if (quantity !== undefined) {
-      const qty = parseInt(quantity)
-      if (qty < 1) return reply.code(400).send({ success: false, message: '数量不能小于1' })
-      if (qty > 100) return reply.code(400).send({ success: false, message: '单次最多购买100件' })
+      const qty = Number(quantity)
+      if (!Number.isInteger(qty) || qty < 1 || qty > 10) {
+        return reply.code(400).send({ success: false, message: '单个商品数量需为 1 至 10 件' })
+      }
       updateData.quantity = qty
     }
     if (selected !== undefined) updateData.selected = Boolean(selected)
 
+    await cancelPendingPreOrdersForItems(prisma, userId, [item.id])
     const updated = await prisma.cartItem.update({ where: { id }, data: updateData })
     return reply.send({ success: true, data: updated })
   })
@@ -416,6 +449,9 @@ export default async function cartRoutes(fastify) {
       return reply.code(400).send({ success: false, message: '请选择要结算的商品' })
     }
 
+    const addressProblem = validateCheckoutAddress({ receiverName, receiverPhone, receiverAddress, receiverCity })
+    if (addressProblem) return reply.code(400).send({ success: false, message: addressProblem })
+
     // 幂等 key
     const checkoutKey = idempotencyKey || crypto.createHash('sha256')
       .update(`${userId}_${[...uniqueCartItemIds].sort().join(',')}_${Date.now()}`)
@@ -428,147 +464,105 @@ export default async function cartRoutes(fastify) {
     if (existingOrder) {
       return reply.send({
         success: true,
-        data: existingOrder,
+        data: preOrderResponse(existingOrder),
         idempotent: true,
         message: '订单已存在，请完成支付'
       })
     }
 
-    // 取出选定的购物车条目
-    const items = await prisma.cartItem.findMany({
-      where: {
-        id: { in: uniqueCartItemIds },
-        cart: { userId }
-      }
-    })
-    if (items.length !== uniqueCartItemIds.length) {
-      return reply.code(400).send({ success: false, message: '部分购物车条目不存在或不属于当前账号' })
-    }
-
-    // 全量校验：结算时重新读取商品状态和价格，不能信任购物车页面之前的结果。
-    const problems = []
-    const currentPrices = new Map()
-    for (const item of items) {
-      const currentPrice = await getItemCurrentPrice(prisma, item)
-      currentPrices.set(item.id, currentPrice)
-      if (currentPrice === null) {
-        problems.push({ id: item.id, reason: '商品或所选规格已停止销售' })
-        continue
-      }
-      const priceChanged = item.snapshotPrice === null
-        || Math.abs(Number(currentPrice) - Number(item.snapshotPrice)) > 0.01
-      if (priceChanged) problems.push({ id: item.id, reason: '价格已变动，请确认后再结算' })
-      else if (item.status === 'stock_out') problems.push({ id: item.id, reason: '商品库存不足' })
-    }
-    if (problems.length > 0) {
-      return reply.code(400).send({ success: false, message: '部分商品有问题，请处理后再结算', problems })
-    }
-
-    // 计算总价
-    let totalAmount = 0
-    for (const item of items) {
-      totalAmount += Number(currentPrices.get(item.id)) * item.quantity
-    }
-
-    // 库存预锁（MARKET 普通品）
-    const lockedSkus = []
     try {
-      for (const item of items) {
-        if (item.itemType === 'MARKET') {
-          // 使用原子操作预锁
-          const result = await prisma.$executeRaw`
-            UPDATE sku_inventory
-            SET reserved_stock = reserved_stock + ${item.quantity}
-            WHERE sku_id = ${item.hardwareSkuId}
-              AND (current_stock - reserved_stock - COALESCE(wip_frame_qty,0) - COALESCE(wip_kit_qty,0)) >= ${item.quantity}
-          `
-          if (result === 0) {
-            // 回滚已锁定的 SKU
-            for (const locked of lockedSkus) {
-              await prisma.skuInventory.updateMany({
-                where: { skuId: locked.skuId },
-                data: { reservedStock: { decrement: locked.qty } }
-              })
+      const preOrder = await prisma.$transaction(async tx => {
+        const items = await tx.cartItem.findMany({
+          where: { id: { in: uniqueCartItemIds }, cart: { userId } },
+        })
+        if (items.length !== uniqueCartItemIds.length) {
+          const error = new Error('部分购物车条目不存在或不属于当前账号')
+          error.code = 'INVALID_CART_ITEMS'
+          throw error
+        }
+
+        const snapshotItems = []
+        const problems = []
+        for (const item of items) {
+          try {
+            const snapshotItem = await buildCheckoutItemSnapshot(tx, item, userId)
+            if (item.snapshotPrice === null || Math.abs(snapshotItem.unitPrice - Number(item.snapshotPrice)) > 0.01) {
+              problems.push({ id: item.id, reason: '价格已变动，请返回购物车确认' })
+            } else {
+              snapshotItems.push(snapshotItem)
             }
-            return reply.code(400).send({
-              success: false,
-              message: `商品「${item.snapshotTitle}」库存不足，请减少数量`,
-              itemId: item.id
-            })
+          } catch (error) {
+            problems.push({ id: item.id, reason: error.message })
           }
-          lockedSkus.push({ skuId: item.hardwareSkuId, qty: item.quantity })
         }
-      }
-    } catch (e) {
-      // 回滚
-      for (const locked of lockedSkus) {
-        await prisma.skuInventory.updateMany({
-          where: { skuId: locked.skuId },
-          data: { reservedStock: { decrement: locked.qty } }
-        }).catch(() => {})
-      }
-      throw e
-    }
-
-    // 创建预订单
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000) // 10分钟
-    const preOrder = await prisma.preOrder.create({
-      data: {
-        userId,
-        cartItemIds: JSON.stringify(uniqueCartItemIds),
-        checkoutIdempotencyKey: checkoutKey,
-        status: 'pending_payment',
-        totalAmount: totalAmount.toFixed(2),
-        receiverName: receiverName || null,
-        receiverPhone: receiverPhone || null,
-        receiverAddress: receiverAddress || null,
-        receiverCity: receiverCity || null,
-        expiresAt
-      }
-    })
-
-    // 生命周期保护：延长关联 CustomProduct 的 draft_expires_at
-    for (const item of items) {
-      if (item.customProductId) {
-        const cp = await prisma.customProduct.findUnique({ where: { id: item.customProductId } })
-        if (cp) {
-          const newExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24小时
-          const extended = cp.draftExpiresAt && cp.draftExpiresAt > newExpiry
-            ? cp.draftExpiresAt : newExpiry
-          await prisma.customProduct.update({
-            where: { id: item.customProductId },
-            data: { draftExpiresAt: extended }
-          }).catch(() => {})
+        if (problems.length) {
+          const error = new Error('部分商品无法结算')
+          error.code = 'CHECKOUT_VALIDATION_FAILED'
+          error.problems = problems
+          throw error
         }
+
+        const checkoutSnapshot = createCheckoutSnapshot(snapshotItems)
+        const id = crypto.randomUUID()
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
+        await reserveCheckoutInventory(tx, checkoutSnapshot, id, checkoutKey)
+        const created = await tx.preOrder.create({ data: {
+          id,
+          userId,
+          cartItemIds: JSON.stringify(uniqueCartItemIds),
+          checkoutSnapshot,
+          checkoutIdempotencyKey: checkoutKey,
+          status: 'pending_payment',
+          totalAmount: checkoutSnapshot.totalAmount.toFixed(2),
+          receiverName: String(receiverName).trim(),
+          receiverPhone: String(receiverPhone).trim(),
+          receiverAddress: String(receiverAddress).trim(),
+          receiverCity: String(receiverCity).trim(),
+          expiresAt,
+          wxPayParams: JSON.stringify({ mock: true, preOrderId: id, totalAmount: checkoutSnapshot.totalAmount, expiresAt }),
+        } })
+
+        const newExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000)
+        for (const item of snapshotItems.filter(row => row.customProductId)) {
+          await tx.customProduct.updateMany({
+            where: { id: item.customProductId, OR: [{ draftExpiresAt: null }, { draftExpiresAt: { lt: newExpiry } }] },
+            data: { draftExpiresAt: newExpiry },
+          })
+        }
+        return created
+      }, { timeout: 15000 })
+
+      return reply.send({ success: true, data: preOrderResponse(preOrder) })
+    } catch (error) {
+      if (error.code === 'P2002') {
+        const reused = await prisma.preOrder.findUnique({ where: { checkoutIdempotencyKey: checkoutKey } })
+        if (reused?.userId === userId && reused.status === 'pending_payment') {
+          return reply.send({ success: true, data: preOrderResponse(reused), idempotent: true, message: '订单已存在' })
+        }
+        return reply.code(409).send({ success: false, message: '本次提交已结束，请返回购物车重新提交' })
       }
+      if (error.code === 'CHECKOUT_VALIDATION_FAILED') {
+        return reply.code(400).send({ success: false, message: error.message, problems: error.problems })
+      }
+      if (['INVALID_CART_ITEMS', 'INVALID_QUANTITY', 'INSUFFICIENT_STOCK'].includes(error.code)) {
+        return reply.code(400).send({ success: false, message: error.message })
+      }
+      throw error
     }
-
-    // TODO: 调用微信支付 API（预留，当前 mock）
-    const wxPayParams = {
-      mock: true,
-      preOrderId: preOrder.id,
-      totalAmount,
-      expiresAt
-    }
-
-    await prisma.preOrder.update({
-      where: { id: preOrder.id },
-      data: { wxPayParams: JSON.stringify(wxPayParams) }
-    })
-
-    return reply.send({
-      success: true,
-      data: { ...preOrder, wxPayParams }
-    })
   })
 
-  // ── C.8 POST /api/cart/price-changes/confirm-all — 一键接受所有价格变动 ──
+  // ── C.7 POST /api/cart/price-changes/confirm-all — 一键接受所有价格变动 ──
   fastify.post('/price-changes/confirm-all', {
     preHandler: [fastify.authenticate]
   }, async (req, reply) => {
     const userId = req.user.userId
     const cart = await prisma.cart.findUnique({ where: { userId } })
     if (!cart) return reply.send({ success: true, updatedCount: 0 })
+
+    const changed = await prisma.cartItem.findMany({
+      where: { cartId: cart.id, status: 'price_changed' }, select: { id: true },
+    })
+    await cancelPendingPreOrdersForItems(prisma, userId, changed.map(item => item.id))
 
     const result = await prisma.cartItem.updateMany({
       where: { cartId: cart.id, status: 'price_changed' },
@@ -613,26 +607,15 @@ export default async function cartRoutes(fastify) {
 
 // ── 取消预订单并释放库存（内部函数）──
 async function cancelPreOrder(prisma, preOrder) {
-  if (preOrder.status !== 'pending_payment') return
+  await closePreOrderAndRelease(prisma, preOrder, 'cancelled')
+}
 
-  // 释放库存
-  try {
-    const cartItemIds = JSON.parse(preOrder.cartItemIds)
-    const items = await prisma.cartItem.findMany({
-      where: { id: { in: cartItemIds } }
-    })
-    for (const item of items) {
-      if (item.itemType === 'MARKET') {
-        await prisma.skuInventory.updateMany({
-          where: { skuId: item.hardwareSkuId },
-          data: { reservedStock: { decrement: item.quantity } }
-        }).catch(() => {})
-      }
-    }
-  } catch {}
-
-  await prisma.preOrder.update({
-    where: { id: preOrder.id },
-    data: { status: 'cancelled' }
-  }).catch(() => {})
+async function cancelPendingPreOrdersForItems(prisma, userId, itemIds) {
+  if (!itemIds.length) return
+  const pending = await prisma.preOrder.findMany({ where: { userId, status: 'pending_payment' } })
+  for (const preOrder of pending) {
+    let linkedIds = []
+    try { linkedIds = JSON.parse(preOrder.cartItemIds) } catch {}
+    if (itemIds.some(id => linkedIds.includes(id))) await cancelPreOrder(prisma, preOrder)
+  }
 }

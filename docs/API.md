@@ -265,7 +265,7 @@ itemType 为 `MARKET` 时 contentId 填 collab_work.id。
 ```json
 { "quantity": 2, "selected": true }
 ```
-quantity 范围：1-100。
+quantity 范围：1-10。修改数量或选中状态会取消依赖该条目的旧待付款记录并释放其预留库存，用户需重新提交订单。
 
 ---
 
@@ -280,7 +280,7 @@ quantity 范围：1-100。
 ---
 
 ### POST `/api/cart/checkout`
-结算：创建 PreOrder，10分钟库存预锁。需登录。
+混合结算：一次提交 `CUSTOM` 与 `MARKET` 条目，创建一份不可变 `PreOrder` 快照，并在同一事务内预锁全部 SKU 材料包库存。需登录。
 
 **Body：**
 ```json
@@ -289,9 +289,12 @@ quantity 范围：1-100。
   "receiverName": "张三",
   "receiverPhone": "13800138000",
   "receiverAddress": "北京市朝阳区某街道某楼",
-  "receiverCity": "北京市"
+  "receiverCity": "北京市",
+  "idempotencyKey": "checkout_浏览器本次提交生成的稳定随机编号"
 }
 ```
+
+`idempotencyKey` 在同一次页面提交和网络重试期间必须保持不变；相同用户用同一个键重试会返回原待付款记录，不会重复锁库存。服务端会重新核验每个商品的在售状态、归属、动画版本、SKU、帧数、最终价和数量，并校验收件人、手机号、城市和详细地址。任一条目失败则整笔事务回滚。
 
 **Response data：**
 ```json
@@ -302,6 +305,8 @@ quantity 范围：1-100。
   "status": "pending_payment"
 }
 ```
+
+响应不会返回内部冻结帧文件或完整结算快照。支付落单只读取服务器保存的快照，购物车后来发生变化不会改变已提交订单。
 
 ---
 

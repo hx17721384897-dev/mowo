@@ -280,7 +280,7 @@ async function orderRoutes(fastify, opts) {
         await tx.salesOrderItem.updateMany({ where: { salesOrderId: id }, data: { status: 'cancelled' } })
         await tx.salesOrder.update({ where: { id }, data: { status: 'cancelled', cancelledAt: new Date() } })
       })
-      for (const item of salesOrder.items.filter(item => item.itemType === 'MARKET')) {
+      for (const item of salesOrder.items) {
         try {
           await unlockInventory(prisma, item.skuId, item.quantity, id, `sales_order_cancel_${id}_${item.id}`)
         } catch (error) {

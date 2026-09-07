@@ -9,6 +9,8 @@
 
 > 2026-08-22 实施更新：当前 Web 主流程已经建立 `SalesOrder -> SalesOrderItem -> CustomizeOrder` 三层结构。一次支付只生成一个用户订单；购物车每种商品形成一条订单商品；每条商品再按购买数量展开为单件生产任务。本文后面标注为“调查时风险”的旧结论用于保留历史原因，最新代码事实以“聚合订单实施结果”为准。
 
+> 2026-09-07 混合结算更新：`CUSTOM` 与 `MARKET` 已使用同一套服务端结算快照、库存预占和支付落单构建器。`PreOrder.checkoutSnapshot` 冻结商品、动画版本、SKU、价格、数量、地址和帧文件；两类商品在同一事务内共同预占材料包库存。支付成功只读取冻结快照，建立一个 `SO`、多条 `SalesOrderItem` 和按数量展开的 `PU`。本文后面与此冲突的“调查时风险”只保留历史背景，不再代表当前实现。
+
 ## 聚合订单实施结果（2026-08-22）
 
 | 层级 | 当前模型/编号 | 用户或员工看到什么 |
@@ -23,18 +25,20 @@
 
 数据库迁移为 `prisma/migrations/20260822150000_add_sales_order_structure/migration.sql`，已于 2026-08-22 应用到本地开发库；正式环境发布时仍需纳入受控迁移和回滚流程。
 
+混合结算新增迁移为 `prisma/migrations/20260907150000_add_checkout_snapshot/migration.sql`，增加付款前 JSON 快照和订单商品价格/供货字段。由于本地历史迁移表仍存在早期失败记录，本次只对当前开发库执行了该增量 SQL；正式发布前必须先完成数据库基线整理，再用全新空库验证完整 `migrate deploy`，不能把本地直接执行 SQL 当作正式发布流程。
+
 ## 模块职责
 
 这一业务域负责从“可销售内容 + 硬件规格”到“支付订单 + 生产履约”的完整链路：
 
 1. 管理员维护机型、SKU、价格、展示图和库存。
 2. 用户创建自己的动画定制品，或选择已上架的联名作品。
-3. 商品加入购物车，结算时形成 10 分钟有效的预订单并预锁库存。
+3. 商品加入购物车，结算时形成 10 分钟有效的不可变预订单快照，并原子预锁本单全部 SKU 库存。
 4. 支付回调创建一个 `SalesOrder`，把购物车条目转换为 `SalesOrderItem`，再按数量展开生产使用的 `CustomizeOrder`。
 5. 用户查看订单、取消、确认收货或申请售后。
 6. 生产/管理员管理硬件库存、材料和预制帧包。
 
-当前代码并不是一条统一链路，而是新旧两代商品和下单方式并存。
+当前 Web 正式购买已统一走购物车、`PreOrder` 和聚合订单链路；旧动画商品和旧直接下单路由仍是后续代码退役事项，不能再作为新功能入口。
 
 ## 技术实现
 
@@ -64,7 +68,8 @@
 | `routes/products.js` | 旧商品发布、审核状态查询、修改、软删除 | `Product`、`Animation`、用户认证状态 |
 | `routes/customize-orders.js` | 旧式直接创建/查询/取消定制订单 | `CustomizeOrder`、`lib/inventory.js` |
 | `routes/custom-products.js` | 用户定制草稿、配额、重命名和预览再生成 | `CustomProduct`、`MachineModelSku` |
-| `routes/cart.js` | 购物车、游客合并、实时价格/库存、结算和预锁 | `Cart`、`CartItem`、`PreOrder`、`CollabWork`、`CustomProduct`、SKU 库存 |
+| `routes/cart.js` | 登录购物车、实时价格/库存、混合结算、地址校验和事务化预锁 | `Cart`、`CartItem`、`PreOrder`、结算快照、SKU 库存 |
+| `lib/checkout-snapshot.js` | 统一复核 `CUSTOM/MARKET`、冻结不可变快照、汇总预锁及释放库存 | 联名公开销售服务、动画资产、SKU 和库存日志 |
 | `routes/payment.js` | 支付通知、状态轮询、开发 Mock、支付后建立订单头/商品/单件任务 | `PreOrder`、`SalesOrder`、`SalesOrderItem`、`CustomizeOrder`、`CustomProduct` |
 | `routes/orders.js` | 聚合订单列表/详情、取消、收货和售后；兼容旧单件订单 | `SalesOrder`、`SalesOrderItem`、`CustomizeOrder`、`AftersaleRequest`、库存服务 |
 | `lib/sales-orders.js` | 生成 `SO`、订单商品和 `PU` 编号，按单件任务汇总用户订单状态 | 聚合订单和生产任务 |
@@ -116,9 +121,9 @@
 | `MachineModelSku` | 可销售规格 | 尺寸、材质、帧数、颜色、价格、图片、SKU 编码、条码和授权状态 |
 | `CustomProduct` | 用户 DIY 草稿 | `draft -> in_cart -> ordered/removed`，默认 7 天过期 |
 | `Cart` / `CartItem` | 用户购物车 | 条目类型 `MARKET` 或 `CUSTOM`，保存数量、加购时价格和当前选中状态 |
-| `PreOrder` | 支付前快照 | 总金额、地址快照、购物车条目 ID JSON、唯一幂等键、10 分钟过期 |
+| `PreOrder` | 支付前整单快照 | 总金额、地址、完整商品/动画/SKU/价格/帧文件快照、唯一幂等键、10 分钟过期 |
 | `SalesOrder` | 用户订单头 | 一次支付一条；保存总金额、地址、支付时间和用户侧状态 |
-| `SalesOrderItem` | 订单商品 | 锁定动画资产/版本、SKU、规格、单价、数量和行金额 |
+| `SalesOrderItem` | 订单商品 | 锁定动画资产/版本、SKU、规格、基础价、价格调整、最终单价、数量、行金额、供货方式和交期 |
 | `CustomizeOrder` | 单件生产任务 | 每件实物一条，关联订单商品，保存生产编号、SKU、帧、批次和履约状态 |
 | `AftersaleRequest` | 售后单 | 退款/质量问题、凭证图、审核状态；每单申请次数上限由路由控制 |
 | `CollabOrder` | 联名销售和分账快照 | 必填创作者、成交价、分红率和分红金额；支付回调当前无法按 Schema 创建 |
@@ -127,7 +132,7 @@
 
 | 库存 | 模型 | 用途 | 当前连接情况 |
 |---|---|---|---|
-| 硬件 SKU 四态库存 | `SkuInventory`、`InventoryLog`、`InventorySnapshot`、`ChannelQuota` | 现货、支付/订单锁定、帧制在制、料制在制 | MARKET 购物车结算会预锁；CUSTOM 购物车不会预锁 |
+| 硬件 SKU 四态库存 | `SkuInventory`、`InventoryLog`、`InventorySnapshot`、`ChannelQuota` | 现货、支付/订单锁定、帧制在制、料制在制 | `MARKET` 与 `CUSTOM` 混合结算共同预锁；可用量扣除两种在制数量 |
 | 零件与材料包库存 | `MaterialItem`、`MaterialReceipt`、`MaterialPreparationBatch`、`MaterialSkuBinding`、`KitAssemblyBatch`、`KitContainer` | 实收入库、分装、SKU材料清单和标准材料包组装 | 组装入库已原子扣零件并增加材料包；生产任务领料和采购批次精确分配待完成 |
 | 帧包库存 | `FramePackWork`、`FramePackVariant`、`FramePackLog` | 联名作品帧包预制备货 | 目前主要是后台独立维护，未接入购物车配额或销售消耗 |
 
@@ -142,16 +147,16 @@
 3. `customize-confirm.html` 把草稿加入 `CUSTOM` 购物车。
 4. `cart.html` 修改数量和选择状态。
 5. `checkout.html` 选择地址并调用 `/api/cart/checkout`。
-6. 后端创建 `PreOrder`；当前只为 `MARKET` 条目预锁硬件库存。
+6. 后端在同一事务中复核全部条目、创建不可变 `PreOrder` 快照并预锁两类商品共同使用的 SKU 库存。
 7. Mock 或真实支付回调创建一个 `SalesOrder`；每个购物车条目形成 `SalesOrderItem`，再按数量展开单件 `CustomizeOrder`。
 
 ### 联名作品
 
 1. 展示/确认页选择 `CollabWork` 和硬件 SKU。
 2. `/api/cart/add` 创建 `MARKET` 条目。
-3. 2026-09-04 起，列表、详情、加购和结算统一读取 `CollabSaleSku.finalPrice`；结算按服务端复核后的最终价计算金额，并预锁 `quantity` 件硬件库存。
-4. 支付回调创建一个 `CustomizeOrder`，再尝试创建 `CollabOrder`。
-5. 当前 `CollabOrder` 创建参数与 Schema 不匹配，错误被捕获后支付仍返回成功，因此分账链路实际中断。
+3. 2026-09-04 起，列表、详情、加购和结算统一读取 `CollabSaleSku.finalPrice`；结算冻结基础价、价格调整和最终价。
+4. 支付回调从快照建立聚合 `SalesOrder`，并为联名商品写入动画资产、版本、帧文件和单件生产任务。
+5. 首发线上分红仍关闭；`CollabOrder` 旧分账路径不作为本轮交易成功条件，未来收益系统须单独重构。
 
 ### 订单状态
 
@@ -167,7 +172,7 @@ Schema 注释的主状态为：
 - **已修复：**联名列表、详情、加入购物车、购物车读取和结算复核使用相同的正式最终价；旧 `creatorMarkups` 只作兼容镜像，不再由公开购买路线读取。
 - **已修复：**`CustomizeOrder` 明确表示单件生产任务；`SalesOrderItem.quantity` 保存购买数量，并按数量生成对应任务。
 - **已修复：**总金额保存在 `SalesOrder`，单价和行金额保存在 `SalesOrderItem`；生产任务不再承担用户订单金额。
-- 文档定义可用库存为 `currentStock - reservedStock - wipFrameQty - wipKitQty`。购物车结算使用了完整公式，但 `lib/inventory.js` 漏减 `wipKitQty`，旧下单和后台库存视图会高估可售量。
+- 可用库存统一为 `currentStock - reservedStock - wipFrameQty - wipKitQty`；2026-09-07 已修复公共库存函数漏减材料线在制数量的问题。
 
 ## 已确认的文档与代码差异
 
@@ -218,7 +223,7 @@ Schema 注释的主状态为：
 
 - 地址 CRUD 会检查归属，每用户限制 20 条，并用事务维护唯一默认地址。
 - 结算会复制收货地址快照，后续修改地址簿不会改变历史预订单。
-- 购物车数量“更新”接口限制为 1 到 100；问题集中在首次加入和游客合并入口。
+- 购物车首次加入、已有条目累加和数量更新均限制为 1 到 10；直接请求也不能绕过。
 - 支付建生产订单和删除购物车条目位于 Prisma 事务内；联名订单异常被吞掉是这一事务保护的例外。
 - `inventory_logs.idempotencyKey` 和 `PreOrder.checkoutIdempotencyKey` 有唯一约束，数据库基础能力已具备，只需修正键和调用方式。
 - 定制草稿处于购物车时不会被 7 天清理任务误删。

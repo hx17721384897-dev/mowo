@@ -62,11 +62,6 @@ input,select{font-family:var(--font);}
 .cost-row.free{color:var(--accent-g);}
 
 /* CUSTOM CONFIRM */
-.custom-confirm-box{background:#FFF8E1;border:1.5px solid #FFD54F;border-radius:14px;padding:14px 16px;margin-bottom:16px;display:flex;gap:10px;align-items:flex-start;}
-.custom-confirm-icon{font-size:20px;flex-shrink:0;}
-.custom-confirm-text{font-size:12px;font-weight:700;color:#856404;line-height:1.5;}
-.custom-confirm-check{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;font-weight:800;color:var(--black);}
-.custom-confirm-check input{width:16px;height:16px;accent-color:var(--black);}
 
 /* PAY BUTTON */
 .btn-pay{width:100%;background:var(--black);color:var(--white);font-weight:900;font-size:16px;padding:16px;border-radius:16px;transition:background .2s,transform .1s;}
@@ -205,6 +200,7 @@ let preOrderId = null
 let pollTimer = null
 let savedAddresses = []
 let selectedAddressId = null
+let checkoutIdempotencyKey = null
 
 document.addEventListener('DOMContentLoaded', async () => {
   const token = localStorage.getItem('mowo_token')
@@ -366,7 +362,6 @@ window.doCheckoutSmartParse = function() {
 }
 
 function renderCheckoutPage() {
-  const hasCustom = cartItems.some(i => i.itemType === 'CUSTOM')
   const totalAmount = cartItems.reduce((s, i) => {
     const p = i.currentPrice !== null && i.currentPrice !== undefined ? Number(i.currentPrice) : Number(i.snapshotPrice || 0)
     return s + p * i.quantity
@@ -415,25 +410,10 @@ function renderCheckoutPage() {
     <div class="cost-row total"><span>合计</span><span id="checkoutTotal">¥${totalAmount.toFixed(2)}</span></div>
   </div>`
 
-  // 定制品确认提示
-  if (hasCustom) {
-    html += `
-    <div class="custom-confirm-box">
-      <span class="custom-confirm-icon">⚠️</span>
-      <div>
-        <div class="custom-confirm-text">您的订单包含 DIY 定制款。定制品一旦开始生产，原则上不支持退款。请在付款前确认您的动画内容和规格选择无误。</div>
-        <label class="custom-confirm-check">
-          <input type="checkbox" id="customConfirmCheck" onchange="checkPayable()">
-          我已确认定制内容无误
-        </label>
-      </div>
-    </div>`
-  }
-
-  // 付款按钮
+  // Web 只生成待付款订单，真实付款由微信小程序承接。
   html += `
-  <button class="btn-pay" id="btnPay" onclick="submitPayment()" ${hasCustom ? 'disabled' : ''}>
-    立即支付 ¥${totalAmount.toFixed(2)}
+  <button class="btn-pay" id="btnPay" onclick="submitPayment()">
+    提交订单 ¥${totalAmount.toFixed(2)}
   </button>
   <button class="btn-mock-pay" id="btnMockPay" onclick="mockPay()">
     🧪 开发模式：模拟支付成功
@@ -450,11 +430,6 @@ function renderCheckoutPage() {
   if (savedAddresses.length === 0 && window._initCheckoutCascade) {
     window._initCheckoutCascade()
   }
-}
-
-function checkPayable() {
-  const check = document.getElementById('customConfirmCheck')
-  document.getElementById('btnPay').disabled = check ? !check.checked : false
 }
 
 async function submitPayment() {
@@ -503,6 +478,10 @@ async function submitPayment() {
   const btn = document.getElementById('btnPay')
   btn.disabled = true
   btn.textContent = '提交中...'
+  if (!checkoutIdempotencyKey) {
+    checkoutIdempotencyKey = window.crypto?.randomUUID?.()
+      || `checkout_${Date.now()}_${Math.random().toString(36).slice(2)}`
+  }
 
   try {
     const res = await fetch(`${API}/api/cart/checkout`, {
@@ -513,14 +492,15 @@ async function submitPayment() {
         receiverName:    receiverName || null,
         receiverPhone:   receiverPhone || null,
         receiverAddress: receiverAddress || null,
-        receiverCity:    receiverCity || null
+        receiverCity:    receiverCity || null,
+        idempotencyKey:  checkoutIdempotencyKey
       })
     })
     const data = await res.json()
     if (!data.success) {
       showToast(data.message || '提交失败')
       btn.disabled = false
-      btn.textContent = `立即支付`
+      btn.textContent = `提交订单`
       return
     }
 
@@ -542,11 +522,11 @@ function renderPaymentPending(preOrder) {
   <div class="card">
     <div class="pay-status-box">
       <div class="pay-status-icon">⏳</div>
-      <div class="pay-status-title">等待支付</div>
-      <div class="pay-status-desc">订单金额 ¥${Number(totalAmount).toFixed(2)}<br>请在 10 分钟内完成支付</div>
+      <div class="pay-status-title">订单已生成</div>
+      <div class="pay-status-desc">订单金额 ¥${Number(totalAmount).toFixed(2)}<br>请在 10 分钟内完成付款</div>
       <div class="pay-timer" id="payTimer">剩余时间: 计算中...</div>
       <p style="margin-top:16px;font-size:12px;font-weight:700;color:var(--gray3);">
-        实际支付请前往小程序完成（微信支付集成中）
+        微信小程序付款入口将在后续阶段接入
       </p>
       <button class="btn-mock-pay" id="btnMockPay2" onclick="mockPay()" style="${(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'display:block' : 'display:none'}">
         🧪 开发模式：模拟支付成功
@@ -594,6 +574,7 @@ function renderPaymentPending(preOrder) {
 function renderPaymentSuccess() {
   clearInterval(pollTimer)
   sessionStorage.removeItem('mowo_checkout_items')
+  checkoutIdempotencyKey = null
   // 支付完成后清除定制流程临时数据，防止下次进入 confirm 页时复用已 ordered 的 product_map
   localStorage.removeItem('mowo_customize_product_map')
   localStorage.removeItem('mowo_customize_draft_id')
@@ -604,7 +585,7 @@ function renderPaymentSuccess() {
     <div class="pay-status-box">
       <div class="pay-status-icon">🎉</div>
       <div class="pay-status-title">支付成功！</div>
-      <div class="pay-status-desc">您的订单已提交，我们将尽快安排生产～<br>请关注客服微信获取生产进度</div>
+      <div class="pay-status-desc">付款结果已确认，可在“我的订单”中查看订单和生产进度。</div>
       <a href="./customize-start.html" class="btn-secondary">继续定制</a>
       <a href="./showcase.html" class="btn-secondary" style="margin-left:8px">看看联名作品</a>
     </div>

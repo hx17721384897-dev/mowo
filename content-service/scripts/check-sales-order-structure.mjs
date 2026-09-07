@@ -10,6 +10,9 @@ let assetId
 let versionId
 let cartId
 let preOrderId
+let modelId
+let skuId
+let collabWorkId
 const productIds = []
 let browser
 
@@ -40,6 +43,7 @@ async function cleanup() {
   if (userCarts.length) await prisma.cartItem.deleteMany({ where: { cartId: { in: userCarts.map(cart => cart.id) } } })
   await prisma.cart.deleteMany({ where: { userId } })
   await prisma.customProduct.deleteMany({ where: { userId } })
+  if (collabWorkId) await prisma.collabWork.deleteMany({ where: { id: collabWorkId } })
   await prisma.animationAssetVersion.deleteMany({ where: { asset: { ownerUserId: userId } } })
   await prisma.animationAsset.deleteMany({ where: { ownerUserId: userId } })
   await prisma.smsCode.deleteMany({ where: { userId } })
@@ -49,6 +53,10 @@ async function cleanup() {
   await prisma.userProfile.deleteMany({ where: { userId } })
   await prisma.creditScore.deleteMany({ where: { userId } })
   await prisma.user.deleteMany({ where: { id: userId } })
+  if (skuId) await prisma.inventoryLog.deleteMany({ where: { skuId } })
+  if (skuId) await prisma.skuInventory.deleteMany({ where: { skuId } })
+  if (skuId) await prisma.machineModelSku.deleteMany({ where: { id: skuId } })
+  if (modelId) await prisma.machineModel.deleteMany({ where: { id: modelId } })
 }
 
 async function cleanupHistoricalUsers() {
@@ -67,10 +75,17 @@ async function cleanupHistoricalUsers() {
 
 try {
   await cleanupHistoricalUsers()
-  const sku = await prisma.machineModelSku.findFirst({
-    where: { isActive: true, model: { isActive: true } }, include: { model: true }
-  })
-  assert(Boolean(sku), '测试库存在可用 SKU')
+  const model = await prisma.machineModel.create({ data: {
+    name: `订单结构测试款-${runId}`, ratios: '["1:1"]', frameOptions: '[12]', sizes: '["5x5cm"]'
+  } })
+  modelId = model.id
+  const sku = await prisma.machineModelSku.create({ data: {
+    modelId, size: '5x5cm', material: '椴木板', frameCount: 12,
+    colorName: '原色', colorHex: '#E8D6B0', price: 100, skuCode: `TEST-ORDER-${runId}`
+  } })
+  skuId = sku.id
+  await prisma.skuInventory.create({ data: { skuId, currentStock: 20, safetyStock: 0 } })
+  assert(Boolean(sku), '测试库存在可用 SKU 和材料包库存')
 
   const phone = `196${runId}`
   const user = await prisma.user.create({ data: {
@@ -108,11 +123,30 @@ try {
   } })
   versionId = version.id
 
+  const collabWork = await prisma.collabWork.create({ data: {
+    creatorId: userId,
+    title: `联名原资料-${runId}`,
+    storefrontTitle: `混合订单联名商品-${runId}`,
+    storefrontSummary: '混合订单验收',
+    storefrontDescription: '混合订单验收详情',
+    storefrontCoverUrl: `private/test/${runId}-cover.png`,
+    animationFrames: '[]', supportedSkus: JSON.stringify([sku.id]),
+    animationAssetId: assetId, animationVersionId: versionId,
+    status: 'approved', agreementSignedAt: new Date(), approvedAt: new Date(),
+    isOnShelf: true, shelfStatus: 'on_sale', productNo: `COLLAB-${runId}`,
+  } })
+  collabWorkId = collabWork.id
+  await prisma.collabSaleSku.create({ data: {
+    collabWorkId, skuId: sku.id, finalPrice: 120,
+    fulfillmentMode: 'MAKE_TO_ORDER', leadTimeDays: 7,
+    createdBy: userId, updatedBy: userId,
+  } })
+
   for (let index = 0; index < 2; index += 1) {
     const product = await prisma.customProduct.create({ data: {
       userId,
       animationFrames: JSON.stringify(['private/test/frame.png']),
-      configJson: JSON.stringify({ modelId: sku.modelId, modelName: sku.model.name, frameCount: 1 }),
+      configJson: JSON.stringify({ modelId: sku.modelId, modelName: model.name, frameCount: 1 }),
       hardwareSkuId: sku.id,
       frameCount: 1,
       animationAssetId: assetId,
@@ -132,13 +166,25 @@ try {
     hardwareSkuId: sku.id,
     hardwareSkuCode: sku.skuCode,
     snapshotTitle: `测试商品 ${index + 1}`,
-    configSnapshotJson: JSON.stringify({ modelName: sku.model.name, skuFrameCount: sku.frameCount }),
-    snapshotPrice: index === 0 ? '10.00' : '20.00',
+    configSnapshotJson: JSON.stringify({ modelName: model.name, skuFrameCount: sku.frameCount }),
+    snapshotPrice: '100.00',
     quantity: index === 0 ? 1 : 2
   } })))
+  cartItems.push(await prisma.cartItem.create({ data: {
+    cartId,
+    itemType: 'MARKET',
+    contentId: collabWorkId,
+    hardwareSkuId: sku.id,
+    hardwareSkuCode: sku.skuCode,
+    snapshotTitle: collabWork.storefrontTitle,
+    coverUrl: collabWork.storefrontCoverUrl,
+    snapshotPrice: '120.00',
+    quantity: 1,
+    creatorId: userId,
+  } }))
   const checkoutResponse = await request('/api/cart/checkout', token, {
     method: 'POST', body: JSON.stringify({
-      cartItemIds: [cartItems[0].id, cartItems[1].id, cartItems[1].id],
+      cartItemIds: [cartItems[0].id, cartItems[1].id, cartItems[2].id, cartItems[1].id],
       receiverName: '订单测试', receiverPhone: phone,
       receiverAddress: '测试地址 1 号', receiverCity: '测试市',
       idempotencyKey: `sales-order-test-${runId}`
@@ -148,7 +194,27 @@ try {
   const preOrder = (await checkoutResponse.json()).data
   preOrderId = preOrder.id
   const savedPreOrder = await prisma.preOrder.findUnique({ where: { id: preOrder.id } })
-  assert(JSON.parse(savedPreOrder.cartItemIds).length === 2, '预订单只保存去重后的购物车条目，商品数量保留在条目中')
+  assert(JSON.parse(savedPreOrder.cartItemIds).length === 3, '预订单只保存去重后的购物车条目，商品数量保留在条目中')
+  assert(savedPreOrder.checkoutSnapshot?.items?.length === 3, '预订单冻结联名和私人定制商品快照')
+  assert(new Set(savedPreOrder.checkoutSnapshot.items.map(item => item.itemType)).size === 2, '一张付款前订单同时包含 MARKET 和 CUSTOM')
+  const reserved = await prisma.skuInventory.findUnique({ where: { skuId } })
+  assert(reserved.reservedStock === 4, '联名和私人定制共同预锁 4 份材料包库存')
+
+  const duplicateCheckout = await request('/api/cart/checkout', token, {
+    method: 'POST', body: JSON.stringify({
+      cartItemIds: [cartItems[0].id, cartItems[1].id, cartItems[2].id],
+      receiverName: '订单测试', receiverPhone: phone,
+      receiverAddress: '测试地址 1 号', receiverCity: '测试市',
+      idempotencyKey: `sales-order-test-${runId}`,
+    }),
+  })
+  const duplicateBody = await duplicateCheckout.json()
+  assert(duplicateCheckout.ok && duplicateBody.data.id === preOrder.id, '同一提交编号重试返回原付款前订单')
+  assert((await prisma.skuInventory.findUnique({ where: { skuId } })).reservedStock === 4, '网络重试不会重复锁定库存')
+
+  await prisma.cartItem.update({
+    where: { id: cartItems[2].id }, data: { snapshotTitle: '被篡改的购物车标题', snapshotPrice: '1.00' },
+  })
 
   const payResponses = await Promise.all([1, 2].map(() => request('/api/payment/callback', null, {
     method: 'POST', body: JSON.stringify({ preOrderId: preOrder.id, success: true })
@@ -159,16 +225,20 @@ try {
     include: { items: { include: { productionTasks: true } } }
   })
   assert(Boolean(order) && /^SO-\d{8}-[A-Z2-9]{8}$/.test(order.orderNo), '一次支付只生成一个 SO 用户订单')
-  assert(order.items.length === 2, '两个购物车条目生成两条订单商品')
-  assert(order.items.reduce((sum, item) => sum + item.quantity, 0) === 3, '订单商品完整保存购买数量')
+  assert(order.items.length === 3, '三个购物车条目生成三条订单商品')
+  assert(order.items.reduce((sum, item) => sum + item.quantity, 0) === 4, '订单商品完整保存购买数量')
   const tasks = order.items.flatMap(item => item.productionTasks)
-  assert(tasks.length === 3 && tasks.every(task => /^PU-\d{8}-[A-Z2-9]{8}$/.test(task.orderNo)), '三件实物生成三个独立 PU 生产任务')
+  assert(tasks.length === 4 && tasks.every(task => /^PU-\d{8}-[A-Z2-9]{8}$/.test(task.orderNo)), '四件实物生成四个独立 PU 生产任务')
   assert(order.items.every(item => item.animationAssetId === assetId && item.animationVersionId === versionId), '每条订单商品锁定成交动画及版本')
+  const marketItem = order.items.find(item => item.itemType === 'MARKET')
+  assert(marketItem.snapshotTitle === collabWork.storefrontTitle && Number(marketItem.unitPrice) === 120, '付款只读取冻结快照，不受后续购物车变化影响')
+  assert(Number(marketItem.baseUnitPrice) === 100 && Number(marketItem.priceAdjustment) === 20, '联名订单保存基础价、价格调整和最终成交价')
+  assert(tasks.filter(task => task.sourceType === 'collab').every(task => JSON.parse(task.frameUrls).length === 1), '联名 PU 获得冻结动画版本的帧文件')
 
   const retry = await request(`/api/payment/mock-pay/${preOrder.id}`, token, { method: 'POST' })
   assert(retry.status === 200, '重复支付通知安全返回')
   assert(await prisma.salesOrder.count({ where: { preOrderId: preOrder.id } }) === 1, '重复支付不会创建第二个用户订单')
-  assert(await prisma.customizeOrder.count({ where: { salesOrderItem: { salesOrderId: order.id } } }) === 3, '重复支付不会创建额外生产任务')
+  assert(await prisma.customizeOrder.count({ where: { salesOrderItem: { salesOrderId: order.id } } }) === 4, '重复支付不会创建额外生产任务')
 
   const brokenPreOrder = await prisma.preOrder.create({ data: {
     userId, cartItemIds: JSON.stringify(['missing-cart-item']),
@@ -182,10 +252,50 @@ try {
   const listResponse = await request('/api/orders/mine?tab=all', token)
   const list = (await listResponse.json()).data.orders
   const listed = list.find(item => item.id === order.id)
-  assert(Boolean(listed) && listed.items.length === 2 && listed.totalQuantity === 3, '订单列表以一张卡片返回两种商品和三件数量')
+  assert(Boolean(listed) && listed.items.length === 3 && listed.totalQuantity === 4, '订单列表以一张卡片返回混合商品和四件数量')
   const detailResponse = await request(`/api/orders/${order.id}`, token)
   const detail = (await detailResponse.json()).data
-  assert(detail.items.length === 2 && detail.items.flatMap(item => item.productionTasks).length === 3, '订单详情返回完整商品和单件任务关系')
+  assert(detail.items.length === 3 && detail.items.flatMap(item => item.productionTasks).length === 4, '订单详情返回完整混合商品和单件任务关系')
+
+  const cancellableProduct = await prisma.customProduct.create({ data: {
+    userId, animationFrames: JSON.stringify(['private/test/frame.png']),
+    configJson: JSON.stringify({ modelId, modelName: model.name, frameCount: 1 }),
+    hardwareSkuId: sku.id, frameCount: 1, animationAssetId: assetId,
+    animationVersionId: versionId, status: 'in_cart',
+  } })
+  productIds.push(cancellableProduct.id)
+  const cancellableItem = await prisma.cartItem.create({ data: {
+    cartId, itemType: 'CUSTOM', contentId: cancellableProduct.id,
+    customProductId: cancellableProduct.id, hardwareSkuId: sku.id,
+    hardwareSkuCode: sku.skuCode, snapshotTitle: '待取消快照测试',
+    snapshotPrice: '100.00', quantity: 2,
+  } })
+  const cancellableCheckout = await request('/api/cart/checkout', token, {
+    method: 'POST', body: JSON.stringify({
+      cartItemIds: [cancellableItem.id], receiverName: '订单测试', receiverPhone: phone,
+      receiverAddress: '测试地址 1 号', receiverCity: '测试市',
+      idempotencyKey: `sales-order-cancel-${runId}`,
+    }),
+  })
+  const cancellablePreOrder = (await cancellableCheckout.json()).data
+  assert(cancellableCheckout.ok && (await prisma.skuInventory.findUnique({ where: { skuId } })).reservedStock === 6, '新待付款订单继续准确预锁库存')
+  const updateCart = await request(`/api/cart/item/${cancellableItem.id}/update`, token, {
+    method: 'POST', body: JSON.stringify({ quantity: 1 }),
+  })
+  assert(updateCart.ok && (await prisma.preOrder.findUnique({ where: { id: cancellablePreOrder.id } })).status === 'cancelled', '修改购物车时旧待付款订单自动取消')
+  assert((await prisma.skuInventory.findUnique({ where: { skuId } })).reservedStock === 4, '旧待付款订单取消后准确释放已锁库存')
+  await prisma.skuInventory.update({ where: { skuId }, data: { currentStock: 5 } })
+  await prisma.cartItem.update({ where: { id: cancellableItem.id }, data: { quantity: 2 } })
+  const insufficientCheckout = await request('/api/cart/checkout', token, {
+    method: 'POST', body: JSON.stringify({
+      cartItemIds: [cancellableItem.id], receiverName: '订单测试', receiverPhone: phone,
+      receiverAddress: '测试地址 1 号', receiverCity: '测试市',
+      idempotencyKey: `sales-order-insufficient-${runId}`,
+    }),
+  })
+  assert(insufficientCheckout.status === 400, '材料包库存不足时整笔结算被拦截')
+  assert((await prisma.skuInventory.findUnique({ where: { skuId } })).reservedStock === 4, '库存不足时不留下部分锁定')
+  assert(await prisma.preOrder.count({ where: { checkoutIdempotencyKey: `sales-order-insufficient-${runId}` } }) === 0, '库存锁定失败时不留下空的付款前订单')
 
   browser = await chromium.launch({
     headless: true,
@@ -198,10 +308,10 @@ try {
   const card = page.locator('.order-card').filter({ hasText: order.orderNo })
   await card.waitFor({ timeout: 10000 })
   assert(await page.locator('.order-card').count() === 1, '订单页只显示一张用户订单卡片')
-  assert(await card.getByText('测试商品 1').count() === 1 && await card.getByText('测试商品 2').count() === 1, '一张订单卡片同时展示两种商品')
+  assert(await card.getByText('测试商品 1').count() === 1 && await card.getByText('混合订单联名商品', { exact: false }).count() === 1, '一张订单卡片同时展示私人定制和联名商品')
   await page.goto(`${webBase}/order-detail.html?id=${encodeURIComponent(order.id)}`, { waitUntil: 'networkidle' })
   await page.locator('.order-item').first().waitFor({ timeout: 10000 })
-  assert(await page.locator('.order-item').count() === 2, '订单详情页展示两条订单商品')
+  assert(await page.locator('.order-item').count() === 3, '订单详情页展示三条订单商品')
   assert(await page.getByText(/已生成 2 个生产任务/).count() === 1, '数量二正确展示为两个生产任务')
   await context.close()
 

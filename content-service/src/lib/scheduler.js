@@ -11,6 +11,7 @@ import {
   cleanupExpiredCustomizationDrafts
 } from './private-file-cleanup.js'
 import { processDueAccountDeletions } from './account-deletion.js'
+import { closePreOrderAndRelease } from './checkout-snapshot.js'
 
 export function startScheduler(fastify) {
   const log = fastify.log
@@ -335,28 +336,7 @@ export function startScheduler(fastify) {
       if (!expired.length) return
 
       for (const po of expired) {
-        // 释放 reservedStock
-        let cartItemIds = []
-        try { cartItemIds = JSON.parse(po.cartItemIds) } catch {}
-
-        if (cartItemIds.length) {
-          const items = await fastify.prisma.cartItem.findMany({
-            where: { id: { in: cartItemIds } }
-          })
-          for (const item of items) {
-            if (item.itemType === 'MARKET') {
-              await fastify.prisma.skuInventory.updateMany({
-                where: { skuId: item.hardwareSkuId },
-                data: { reservedStock: { decrement: item.quantity } }
-              }).catch(() => {})
-            }
-          }
-        }
-
-        await fastify.prisma.preOrder.update({
-          where: { id: po.id },
-          data: { status: 'expired' }
-        }).catch(() => {})
+        await closePreOrderAndRelease(fastify.prisma, po, 'expired')
       }
 
       if (expired.length > 0) {

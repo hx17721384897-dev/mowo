@@ -16,6 +16,7 @@
     "check:customization-flow": "node scripts/check-customization-flow.mjs",
     "check:customization-ui": "node scripts/check-customization-ui.mjs",
     "check:sales-order-structure": "node scripts/check-sales-order-structure.mjs",
+    "check:mixed-checkout-ui": "node scripts/check-mixed-checkout-ui.mjs",
     "check:standard-kit-inventory": "node scripts/check-standard-kit-inventory.mjs",
     "check:inventory-traceability": "node scripts/check-inventory-traceability.mjs",
     "check:production-batches": "node scripts/check-production-batches.mjs",

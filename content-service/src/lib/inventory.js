@@ -8,7 +8,7 @@ import crypto from 'crypto'
 // 工具：计算当前 available_qty
 // ---------------------------------------------------------------
 export function calcAvailable(inv) {
-  return inv.currentStock - inv.reservedStock - inv.wipFrameQty
+  return inv.currentStock - inv.reservedStock - inv.wipFrameQty - inv.wipKitQty
 }
 
 // ---------------------------------------------------------------
@@ -62,7 +62,7 @@ export async function lockInventory(prisma, skuId, qty, orderId, idempotencyKey)
       SET reserved_stock = reserved_stock + ${qty},
           updated_at = NOW()
       WHERE sku_id = ${skuId}
-        AND (current_stock - reserved_stock - wip_frame_qty) >= ${qty}
+        AND (current_stock - reserved_stock - wip_frame_qty - wip_kit_qty) >= ${qty}
     `
     if (result === 0) throw new Error('INSUFFICIENT_STOCK')
 
