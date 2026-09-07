@@ -854,6 +854,7 @@ model CollabWork {
   storefrontSeries    String?   @map("storefront_series") @db.VarChar(80)
   storefrontKeywords  String?   @map("storefront_keywords") @db.VarChar(300)
   storefrontSortOrder Int       @default(0) @map("storefront_sort_order")
+  storefrontViewCount Int       @default(0) @map("storefront_view_count")
   storefrontUpdatedBy String?   @map("storefront_updated_by")
   animationAssetId    String?   @map("animation_asset_id")
   animationVersionId  String?   @map("animation_version_id")
@@ -865,12 +866,31 @@ model CollabWork {
   animationAsset   AnimationAsset?        @relation(fields: [animationAssetId], references: [id], onDelete: SetNull)
   animationVersion AnimationAssetVersion? @relation(fields: [animationVersionId], references: [id], onDelete: SetNull)
   saleSkus         CollabSaleSku[]
+  storefrontViews  CollabStorefrontView[]
 
   @@index([submissionBatchId])
   @@index([originalWorkId])
   @@index([animationAssetId])
   @@index([animationVersionId])
+  @@index([status, isOnShelf, shelfStatus, isRevision, storefrontSortOrder], map: "collab_works_storefront_recommended_idx")
+  @@index([status, isOnShelf, shelfStatus, isRevision, storefrontViewCount], map: "collab_works_storefront_popular_idx")
   @@map("collab_works")
+}
+
+// 顾客端联名商品有效浏览去重记录。只保存服务端哈希，不保存明文访客标识、IP 或 UA。
+model CollabStorefrontView {
+  id              String   @id @default(uuid())
+  collabWorkId    String   @map("collab_work_id")
+  fingerprintHash String   @map("fingerprint_hash") @db.VarChar(64)
+  viewDate        DateTime @map("view_date") @db.Date
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  collabWork CollabWork @relation(fields: [collabWorkId], references: [id], onDelete: Cascade)
+
+  @@unique([collabWorkId, fingerprintHash, viewDate])
+  @@index([collabWorkId, createdAt])
+  @@index([createdAt])
+  @@map("collab_storefront_views")
 }
 
 // 联名作品的正式销售规格。一条记录对应一个真实 SKU，公开货架和购物车以此表为准。

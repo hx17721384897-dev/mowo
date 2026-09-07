@@ -1,6 +1,7 @@
 // src/routes/collab.js — 联名系统路由
 // 公开接口 + 创作者申请
 
+import crypto from 'crypto'
 import { calcRevenueRate } from '../lib/revenue.js'
 import { linkCollabWorkToAnimation } from '../lib/collab-animation-asset.js'
 import { isCollabSkuFrameCompatible } from '../lib/collab-sale-config.js'
@@ -9,6 +10,7 @@ import {
   collabFinalPrice,
   publicCollabWorkWhere,
 } from '../lib/collab-storefront.js'
+import { enforceRateLimit } from '../lib/rate-limit.js'
 
 export default async function collabRoutes(fastify) {
   const { prisma } = fastify
@@ -20,22 +22,46 @@ export default async function collabRoutes(fastify) {
   /**
    * GET /api/collab/works
    * 联名商品列表（只返回当前公开销售的字段）
-   * 查询参数：page / limit / creatorId
+   * 查询参数：page / limit / creatorId / q / sort(recommended|latest|popular)
    */
   fastify.get('/collab/works', async (req, reply) => {
-    const { page = 1, limit = 12, creatorId } = req.query
+    const { page = 1, limit = 12, creatorId = '', q = '', sort = 'recommended' } = req.query
     const pageNumber = Math.max(1, Number.parseInt(page, 10) || 1)
-    const limitNumber = Math.min(50, Math.max(1, Number.parseInt(limit, 10) || 12))
+    const limitNumber = Math.min(24, Math.max(1, Number.parseInt(limit, 10) || 12))
     const skip = (pageNumber - 1) * limitNumber
+    const creatorFilter = String(creatorId || '').trim()
+    const query = String(q || '').trim().slice(0, 100)
+    const sortMode = ['recommended', 'latest', 'popular'].includes(sort) ? sort : 'recommended'
 
-    const where = publicCollabWorkWhere(creatorId ? { creatorId } : {})
+    const creatorMatches = query ? await prisma.userProfile.findMany({
+      where: { nickname: { contains: query, mode: 'insensitive' } },
+      select: { userId: true },
+      take: 50,
+    }) : []
+    const search = query ? {
+      OR: [
+        { storefrontTitle: { contains: query, mode: 'insensitive' } },
+        { storefrontSummary: { contains: query, mode: 'insensitive' } },
+        { storefrontDescription: { contains: query, mode: 'insensitive' } },
+        { storefrontSeries: { contains: query, mode: 'insensitive' } },
+        { storefrontKeywords: { contains: query, mode: 'insensitive' } },
+        { storefrontTags: { contains: query, mode: 'insensitive' } },
+        { creatorId: { in: creatorMatches.map(profile => profile.userId) } },
+      ],
+    } : {}
+    const where = publicCollabWorkWhere({ ...(creatorFilter ? { creatorId: creatorFilter } : {}), ...search })
+    const orderBy = sortMode === 'popular'
+      ? [{ storefrontViewCount: 'desc' }, { approvedAt: 'desc' }, { id: 'asc' }]
+      : sortMode === 'latest'
+        ? [{ approvedAt: 'desc' }, { createdAt: 'desc' }, { id: 'asc' }]
+        : [{ storefrontSortOrder: 'desc' }, { approvedAt: 'desc' }, { id: 'asc' }]
 
-    const [works, total] = await Promise.all([
+    const [works, total, creatorRows] = await Promise.all([
       prisma.collabWork.findMany({
         where,
         skip,
         take: limitNumber,
-        orderBy: { approvedAt: 'desc' },
+        orderBy,
         select: {
           id: true,
           creatorId: true,
@@ -51,7 +77,7 @@ export default async function collabRoutes(fastify) {
           isExclusiveWork: true,
           approvedAt: true,
           createdAt: true,
-          animationVersion: { select: { baseFrameCount: true } },
+          animationVersion: { select: { baseFrameCount: true, frameKeys: true } },
           saleSkus: {
             where: { isEnabled: true, sku: { isActive: true, model: { isActive: true } } },
             orderBy: { sortOrder: 'asc' },
@@ -65,6 +91,12 @@ export default async function collabRoutes(fastify) {
         },
       }),
       prisma.collabWork.count({ where }),
+      pageNumber === 1 ? prisma.collabWork.findMany({
+        where: publicCollabWorkWhere(),
+        distinct: ['creatorId'],
+        select: { creatorId: true },
+        orderBy: { creatorId: 'asc' },
+      }) : Promise.resolve([]),
     ])
 
     // 为每个作品附上创作者基础信息
@@ -93,10 +125,75 @@ export default async function collabRoutes(fastify) {
         availableSkuCount: saleSkus.length,
         availableSizes: [...new Set(saleSkus.map(offer => offer.sku.size).filter(Boolean))],
         minLeadTimeDays: saleSkus.length ? Math.min(...saleSkus.map(offer => offer.leadTimeDays)) : null,
+        previewFrames: (Array.isArray(work.animationVersion?.frameKeys) ? work.animationVersion.frameKeys : [])
+          .slice(0, 12)
+          .map(key => presignOrPassthrough(key, fastify, 3600))
+          .filter(Boolean),
       }
     }).filter(work => work.availableSkuCount > 0)
 
-    return reply.send({ success: true, data: { works: result, total, page: pageNumber, limit: limitNumber } })
+    const filterCreatorIds = creatorRows.map(row => row.creatorId)
+    const filterProfiles = filterCreatorIds.length ? await prisma.userProfile.findMany({
+      where: { userId: { in: filterCreatorIds } },
+      select: { userId: true, nickname: true },
+    }) : []
+    const filterProfileMap = new Map(filterProfiles.map(profile => [profile.userId, profile.nickname]))
+    const creators = creatorRows.map(row => ({
+      id: row.creatorId,
+      name: filterProfileMap.get(row.creatorId) || '创作者',
+    }))
+
+    return reply.send({
+      success: true,
+      data: {
+        works: result,
+        total,
+        page: pageNumber,
+        limit: limitNumber,
+        hasMore: skip + works.length < total,
+        sort: sortMode,
+        creators,
+      },
+    })
+  })
+
+  // 顾客真实停留后由详情页上报；同一匿名访客每天只为同一商品计数一次。
+  fastify.post('/collab/works/:id/view', async (req, reply) => {
+    if (!await enforceRateLimit(fastify, req, reply, {
+      scope: 'COLLAB_VIEW_IP_HOURLY', subject: req.ip, windowMs: 60 * 60 * 1000,
+      limit: 120, message: '浏览记录提交过于频繁',
+    })) return
+
+    const visitorId = String(req.body?.visitorId || '').trim()
+    if (!/^[A-Za-z0-9._-]{16,100}$/.test(visitorId)) {
+      return reply.code(400).send({ success: false, message: '浏览标识无效' })
+    }
+    const work = await prisma.collabWork.findFirst({
+      where: publicCollabWorkWhere({ id: req.params.id }),
+      select: { id: true },
+    })
+    if (!work) return reply.code(404).send({ success: false, message: '商品不存在或已下架' })
+
+    const fingerprintHash = crypto.createHmac('sha256', fastify.config.storage.signingSecret)
+      .update(visitorId)
+      .digest('hex')
+    const now = new Date()
+    const viewDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+    let counted = false
+    try {
+      await prisma.$transaction(async tx => {
+        await tx.collabStorefrontView.create({
+          data: { collabWorkId: work.id, fingerprintHash, viewDate },
+        })
+        await tx.collabWork.update({
+          where: { id: work.id }, data: { storefrontViewCount: { increment: 1 } },
+        })
+      })
+      counted = true
+    } catch (error) {
+      if (error?.code !== 'P2002') throw error
+    }
+    return reply.send({ success: true, data: { counted } })
   })
 
   /**

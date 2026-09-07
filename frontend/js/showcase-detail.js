@@ -1,5 +1,6 @@
 const DETAIL_API = location.hostname === '127.0.0.1' ? 'http://127.0.0.1:3001' : 'http://localhost:3001'
 const PURCHASE_KEY = 'mowo_pending_purchase'
+const VISITOR_KEY = 'mowo_storefront_visitor'
 const workId = new URLSearchParams(location.search).get('workId')
 let work = null
 let selectedSku = null
@@ -20,6 +21,7 @@ async function initDetail() {
     work = json.data
     selectedSku = work.supportedSkus?.[0] || null
     renderProduct()
+    scheduleValidView()
     await loadMoreProducts()
   } catch (error) {
     renderError(error.message)
@@ -52,7 +54,7 @@ function renderProduct() {
       <h1 class="title">${escapeHtml(work.title)}</h1>
       <p class="summary">${escapeHtml(work.storefrontSummary || '')}</p>
       ${tags ? `<div class="tags">${tags}</div>` : ''}
-      <div class="creator"><div class="creator-avatar">${avatar}</div><div><div class="creator-label">联名创作者</div><div class="creator-name">${escapeHtml(creatorName)}</div></div></div>
+      <a class="creator" href="showcase.html?creatorId=${encodeURIComponent(work.creatorId)}"><div class="creator-avatar">${avatar}</div><div><div class="creator-label">联名创作者</div><div class="creator-name">${escapeHtml(creatorName)}</div></div></a>
       <div class="price-line"><span class="price" id="mainPrice">${formatPrice(selectedSku?.finalPrice)}</span><span class="price-note">按所选款式计价</span></div>
       <div class="section-label">选择完整款式</div>
       <div class="sku-list">${(work.supportedSkus || []).map(renderSku).join('')}</div>
@@ -255,6 +257,40 @@ async function loadMoreProducts() {
     document.getElementById('moreGrid').innerHTML = items.map(item => `<a class="more-card" href="showcase-detail.html?workId=${encodeURIComponent(item.id)}"><div class="more-image">${item.coverUrl ? `<img src="${escapeHtml(item.coverUrl)}" alt="">` : ''}</div><div class="more-body"><div class="more-title">${escapeHtml(item.title)}</div><div class="more-price">${formatPrice(item.minPrice)} 起</div></div></a>`).join('')
     document.getElementById('moreSection').hidden = false
   } catch {}
+}
+
+function getStorefrontVisitorId() {
+  let visitorId = localStorage.getItem(VISITOR_KEY) || ''
+  if (!/^[A-Za-z0-9._-]{16,100}$/.test(visitorId)) {
+    visitorId = window.crypto?.randomUUID?.() || `visitor_${Date.now()}_${Math.random().toString(36).slice(2)}`
+    localStorage.setItem(VISITOR_KEY, visitorId)
+  }
+  return visitorId
+}
+
+function scheduleValidView() {
+  let visibleSince = document.visibilityState === 'visible' ? Date.now() : null
+  let visibleMs = 0
+  const timer = setInterval(async () => {
+    const now = Date.now()
+    if (document.visibilityState !== 'visible') {
+      if (visibleSince !== null) visibleMs += now - visibleSince
+      visibleSince = null
+      return
+    }
+    if (visibleSince === null) visibleSince = now
+    if (visibleMs + now - visibleSince < 3000) return
+    clearInterval(timer)
+    try {
+      await fetch(`${DETAIL_API}/api/collab/works/${encodeURIComponent(workId)}/view`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ visitorId: getStorefrontVisitorId() }),
+        keepalive: true,
+      })
+    } catch {}
+  }, 500)
+  setTimeout(() => clearInterval(timer), 30000)
 }
 
 function renderError(message) {

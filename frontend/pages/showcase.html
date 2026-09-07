@@ -128,6 +128,10 @@ button{font-family:var(--font);cursor:pointer;border:none;background:none;}
 .badge-new{font-weight:900;font-size:10px;letter-spacing:.06em;padding:4px 10px;border-radius:999px;background:var(--accent-o);color:var(--white);}
 .card-body{padding:12px 14px 14px;}
 .card-title{font-weight:900;font-size:13px;letter-spacing:-.01em;color:var(--black);margin-bottom:6px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.card-summary{font-size:11px;line-height:1.5;color:var(--gray3);margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.card-sale{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-bottom:9px;}
+.card-price{font-size:15px;font-weight:900;color:#c53d22;white-space:nowrap;}
+.card-spec{font-size:10px;font-weight:700;color:var(--gray3);text-align:right;line-height:1.4;}
 .card-footer{display:flex;align-items:center;justify-content:space-between;}
 .card-author{display:flex;align-items:center;gap:7px;cursor:pointer;flex:1;min-width:0;}
 .card-author:hover .author-name{color:var(--black);}
@@ -264,7 +268,9 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
     <!-- 第二行：排序 + 激励入口 -->
     <div class="control-sort">
       <div class="sort-tabs">
-        <button class="sort-tab active" onclick="setSort('latest',this)">最新</button>
+        <button class="sort-tab active" data-sort="recommended" onclick="setSort('recommended',this)">推荐</button>
+        <button class="sort-tab" data-sort="latest" onclick="setSort('latest',this)">最新</button>
+        <button class="sort-tab" data-sort="popular" onclick="setSort('popular',this)">热门</button>
       </div>
       <a href="contact.html" class="incentive-link">
         联系我们，了解创作者合作方式 →
@@ -344,12 +350,18 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
 const API = (location.hostname === '127.0.0.1' ? 'http://127.0.0.1:3001' : 'http://localhost:3001')
 
 let allWorks = []
-let filteredWorks = []
-let currentCreatorId = ''
-let currentSort = 'latest'
-let searchQuery = ''
-let displayCount = 12
+const initialParams = new URLSearchParams(location.search)
+let currentCreatorId = initialParams.get('creatorId') || ''
+let currentSort = ['recommended','latest','popular'].includes(initialParams.get('sort')) ? initialParams.get('sort') : 'recommended'
+let searchQuery = (initialParams.get('q') || '').slice(0, 100)
+let currentPage = 1
+let totalWorks = 0
+let hasMore = false
+let loadingWorks = false
+let listRequestSequence = 0
+let creatorOptions = []
 const PAGE_SIZE = 12
+let searchTimer = null
 
 /* ── 滚动 sticky 增强（标题离屏后 control-bar 加阴影） ── */
 const _cbObs = new IntersectionObserver(([e]) => {
@@ -358,6 +370,8 @@ const _cbObs = new IntersectionObserver(([e]) => {
 document.addEventListener('DOMContentLoaded', () => {
   const ph = document.getElementById('pageHeader')
   if (ph) _cbObs.observe(ph)
+  document.getElementById('searchInput').value = searchQuery
+  document.querySelectorAll('.sort-tab').forEach(button => button.classList.toggle('active', button.dataset.sort === currentSort))
 })
 
 /* ── 骨架屏 ── */
@@ -382,35 +396,63 @@ function renderSkeletons(n = 8) {
 }
 
 /* ── 加载数据 ── */
-async function loadWorks() {
-  renderSkeletons()
+async function loadWorks(reset = true) {
+  if (!reset && loadingWorks) return
+  const requestSequence = ++listRequestSequence
+  loadingWorks = true
+  if (reset) {
+    currentPage = 1
+    allWorks = []
+    renderSkeletons()
+  }
+  const button = document.getElementById('loadMoreBtn')
+  if (button) button.disabled = true
   try {
     if (typeof getMowoFeatureFlags === 'function') await getMowoFeatureFlags()
     const token = localStorage.getItem('mowo_token') || ''
     const headers = token ? { Authorization: `Bearer ${token}` } : {}
-    const res = await fetch(`${API}/api/collab/works?status=approved&limit=200`, { headers })
+    const params = new URLSearchParams({ page: String(currentPage), limit: String(PAGE_SIZE), sort: currentSort })
+    if (currentCreatorId) params.set('creatorId', currentCreatorId)
+    if (searchQuery) params.set('q', searchQuery)
+    const res = await fetch(`${API}/api/collab/works?${params}`, { headers })
     const data = await res.json()
-    if (!data.success) throw new Error()
-    allWorks = data.data?.works || []
-    buildCreatorTags()
-    applyFilters()
-  } catch {
+    if (!res.ok || !data.success) throw new Error(data.message || '加载失败')
+    if (requestSequence !== listRequestSequence) return
+    const pageWorks = data.data?.works || []
+    allWorks = reset ? pageWorks : allWorks.concat(pageWorks)
+    totalWorks = Number(data.data?.total || 0)
+    hasMore = Boolean(data.data?.hasMore)
+    if (reset && Array.isArray(data.data?.creators)) {
+      creatorOptions = data.data.creators
+      buildCreatorTags()
+    }
+    renderWorks(reset)
+    syncListUrl()
+  } catch (error) {
+    if (requestSequence !== listRequestSequence) return
     document.getElementById('masonryGrid').innerHTML =
       '<p style="color:var(--gray3);font-weight:700;padding:40px;text-align:center;grid-column:1/-1">加载失败，请刷新重试</p>'
     document.getElementById('resultInfo').textContent = ''
+  } finally {
+    if (requestSequence === listRequestSequence) {
+      loadingWorks = false
+      if (button) button.disabled = !hasMore
+    }
   }
 }
 
 /* ── 创作者标签 ── */
 function buildCreatorTags() {
-  const seen = new Map()
-  allWorks.forEach(w => {
-    if (!seen.has(w.creatorId)) seen.set(w.creatorId, w.creator?.nickname || w.creatorId.slice(0, 6))
-  })
   const row = document.getElementById('tagsRow')
-  seen.forEach((name, id) => {
+  row.innerHTML = ''
+  const allButton = document.createElement('button')
+  allButton.className = `tag-pill${currentCreatorId ? '' : ' active'}`
+  allButton.textContent = '全部'
+  allButton.onclick = () => setCreator('', allButton)
+  row.appendChild(allButton)
+  creatorOptions.forEach(({ id, name }) => {
     const btn = document.createElement('button')
-    btn.className = 'tag-pill'
+    btn.className = `tag-pill${currentCreatorId === id ? ' active' : ''}`
     btn.dataset.creatorId = id
     btn.textContent = `@ ${name}`
     btn.onclick = () => setCreator(id, btn)
@@ -418,28 +460,11 @@ function buildCreatorTags() {
   })
 }
 
-/* ── 筛选 + 排序 ── */
-function applyFilters() {
-  let list = allWorks
-  if (currentCreatorId) list = list.filter(w => w.creatorId === currentCreatorId)
-  if (searchQuery) {
-    const q = searchQuery.toLowerCase()
-    list = list.filter(w =>
-      (w.title || '').toLowerCase().includes(q) ||
-      (w.creator?.nickname || '').toLowerCase().includes(q)
-    )
-  }
-  filteredWorks = list
-  displayCount = PAGE_SIZE
-  renderWorks(true)
-}
-
 /* ── 渲染卡片 ── */
 function renderWorks(reset = false) {
   const grid = document.getElementById('masonryGrid')
-  const slice = filteredWorks.slice(0, displayCount)
 
-  if (filteredWorks.length === 0) {
+  if (allWorks.length === 0) {
     grid.innerHTML = ''
     document.getElementById('emptyState').classList.add('show')
     document.getElementById('resultInfo').textContent = '共 0 件作品'
@@ -448,12 +473,12 @@ function renderWorks(reset = false) {
   }
 
   document.getElementById('emptyState').classList.remove('show')
-  document.getElementById('resultInfo').textContent = ''
+  document.getElementById('resultInfo').textContent = `共 ${totalWorks} 件联名商品`
 
   if (reset) grid.innerHTML = ''
 
   const startIdx = reset ? 0 : grid.querySelectorAll('.work-card').length
-  slice.slice(startIdx).forEach(work => {
+  allWorks.slice(startIdx).forEach(work => {
     const div = document.createElement('div')
     div.innerHTML = buildCard(work).trim()
     const card = div.firstChild
@@ -467,7 +492,7 @@ function renderWorks(reset = false) {
   grid.querySelectorAll('.reveal:not(.on)').forEach(el => obs.observe(el))
 
   const wrap = document.getElementById('loadMoreWrap')
-  wrap.style.display = displayCount < filteredWorks.length ? 'flex' : 'none'
+  wrap.style.display = hasMore ? 'flex' : 'none'
 }
 
 function buildCard(w) {
@@ -482,6 +507,10 @@ function buildCard(w) {
   const mediaCover = cover
     ? `<img class="card-cover-img" src="${esc(cover)}" alt="${esc(w.title || '')}">`
     : `<div class="card-media-placeholder">🎨</div>`
+  const sizeText = (w.availableSizes || []).slice(0, 2).join(' / ')
+  const specText = `${sizeText || '多种尺寸'} · ${w.availableSkuCount || 0} 种款式`
+  const deliveryText = Number(w.minLeadTimeDays) > 0 ? `最快 ${w.minLeadTimeDays} 天内发出` : ''
+  const minPrice = Number.isFinite(Number(w.minPrice)) ? Number(w.minPrice) : 0
 
   return `<div class="work-card reveal" data-id="${esc(w.id)}" onclick="goDetail('${esc(w.id)}')">
     <div class="card-media"
@@ -492,8 +521,10 @@ function buildCard(w) {
     </div>
     <div class="card-body">
       <p class="card-title">${esc(w.title || '未命名作品')}</p>
+      ${w.description ? `<p class="card-summary">${esc(w.description)}</p>` : ''}
+      <div class="card-sale"><span class="card-price">¥${minPrice.toFixed(2)} 起</span><span class="card-spec">${esc(specText)}${deliveryText ? `<br>${esc(deliveryText)}` : ''}</span></div>
       <div class="card-footer">
-        <div class="card-author" onclick="event.stopPropagation();goCreator('${esc(w.creatorId)}')">
+        <div class="card-author" onclick="event.stopPropagation();filterByCreator('${esc(w.creatorId)}')">
           <div class="author-avatar">${avatarHtml}</div>
           <span class="author-name">@${name}</span>
         </div>
@@ -522,11 +553,8 @@ async function cardHoverStart(mediaDiv) {
   if (state === 'loading') return
   _animState.set(workId, 'loading')
   try {
-    const token   = localStorage.getItem('mowo_token') || ''
-    const headers = token ? { Authorization: `Bearer ${token}` } : {}
-    const res     = await fetch(`${API}/api/collab/works/${workId}`, { headers })
-    const json    = await res.json()
-    const urls    = (json.data?.animationFrames || []).filter(Boolean)
+    const product = allWorks.find(item => item.id === workId)
+    const urls = (product?.previewFrames || []).filter(Boolean)
     if (!urls.length) { _animState.delete(workId); return }
     const wrap = document.createElement('div')
     wrap.className = 'card-anim-wrap'
@@ -579,36 +607,49 @@ function _stopCycle(state) {
 function goDetail(id) {
   window.location.href = `./showcase-detail.html?workId=${encodeURIComponent(id)}`
 }
-function goCreator(userId) {
+function filterByCreator(userId) {
   if (!userId) return
-  window.location.href = `./creator-profile.html?id=${encodeURIComponent(userId)}`
+  const button = [...document.querySelectorAll('.tag-pill')].find(item => item.dataset.creatorId === userId)
+  setCreator(userId, button)
 }
 
 /* ── 控件 ── */
 function setSort(sort, btn) {
   currentSort = sort
   document.querySelectorAll('.sort-tab').forEach(b => b.classList.remove('active'))
-  btn.classList.add('active')
-  applyFilters()
+  btn?.classList.add('active')
+  loadWorks(true)
 }
 function setCreator(creatorId, btn) {
   currentCreatorId = creatorId
   document.querySelectorAll('.tag-pill').forEach(p => p.classList.remove('active'))
-  btn.classList.add('active')
-  applyFilters()
+  btn?.classList.add('active')
+  loadWorks(true)
 }
 function handleSearch() {
-  searchQuery = document.getElementById('searchInput').value.toLowerCase().trim()
-  applyFilters()
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    searchQuery = document.getElementById('searchInput').value.trim().slice(0, 100)
+    loadWorks(true)
+  }, 300)
 }
-function loadMore() {
+async function loadMore() {
   const btn = document.getElementById('loadMoreBtn')
   btn.classList.add('loading')
   btn.querySelector('span:last-child').textContent = '加载中…'
-  displayCount += PAGE_SIZE
-  renderWorks(false)
+  const previousPage = currentPage
+  currentPage = previousPage + 1
+  await loadWorks(false)
+  if (allWorks.length <= previousPage * PAGE_SIZE) currentPage = previousPage
   btn.classList.remove('loading')
   btn.querySelector('span:last-child').textContent = '加载更多'
+}
+function syncListUrl() {
+  const params = new URLSearchParams()
+  if (currentSort !== 'recommended') params.set('sort', currentSort)
+  if (currentCreatorId) params.set('creatorId', currentCreatorId)
+  if (searchQuery) params.set('q', searchQuery)
+  history.replaceState(null, '', `${location.pathname}${params.size ? `?${params}` : ''}`)
 }
 function esc(s) {
   if (!s) return ''
