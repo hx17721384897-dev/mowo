@@ -273,3 +273,5 @@
 > 模型—迁移漂移复核（2026-09-08）：以独立 `mowo_b1_shadow` 执行 `prisma migrate diff --from-migrations ... --to-schema-datamodel ...`，仍发现当前 Prisma Schema 相比 51 份迁移终态缺少一组正式迁移：账户安全/会话与手机号字段、售后和订单扩展、库存与 SKU 扩展、部分机型字段、若干库存/生产辅助表，以及早期创作者平台遗留的联名货架字段、通知表和外键差异。此结果说明“迁移链可执行”不等于“迁移终态等于当前模型”；不得将 `mowo_b1_test` 误记为可覆盖全部业务的最终测试库。后续需单独设计、分域审查并生成一份可回放的 Schema 对齐迁移，先在隔离库验证，再决定现有 `mowo_db` 的备份、重建或数据迁移方案。状态：**P0 阻断，进行中**。
 
 > P0-A 账户安全 Schema 基线（2026-09-08）：已新增 `20260908103000_add_account_security_schema`，补足当前 v1 账户实际读取/写入的用户状态与隐私字段、资料安全字段、短信用途/计数、刷新会话、二次验证、Token 黑名单与审计结构。`mowo_b1_test` 现已从零完整应用 52/52 份迁移；在该隔离库上实际通过短信 Mock 注册、`GET /api/v1/account/me` 和 `POST /api/v1/auth/logout`。本切片没有放宽 `users.phone`、删除外键或修改旧库；其余账户 diff 与交易、库存等结构差异仍按 `SCHEMA_MIGRATION_ALIGNMENT_INVENTORY.md` 分域处理。
+
+> P0-B 交易工作区 Schema 基线（2026-09-08）：已新增 `20260908120000_add_transaction_workspace_schema`，将 `carts`、`cart_items`、`user_addresses`、`aftersale_requests` 以及当前订单导入/锁单/售后计数所需字段纳入迁移，并在 Schema 中补回用户到购物车、预订单、定制草稿的关系，避免误删历史外键。`mowo_b1_test` 已从零完整应用 53/53 份迁移；在该库上通过地址创建、读取和删除。结算与支付仍由 `ONLINE_CHECKOUT_ENABLED=false` 阻断；剩余收货/发货时间和订单类型定义将在交易状态机审计后单独处理。

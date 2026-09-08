@@ -112,6 +112,9 @@ model User {
 
   // 收货地址
   addresses UserAddress[]
+  carts     Cart[]
+  preOrders PreOrder[]
+  customProducts CustomProduct[]
 
   // 创作者通知
   notifications                 CreatorNotification[]
@@ -1786,6 +1789,7 @@ model Cart {
   userId    String     @unique @map("user_id")
   createdAt DateTime   @default(now()) @map("created_at")
   updatedAt DateTime   @updatedAt @map("updated_at")
+  user      User       @relation(fields: [userId], references: [id], onDelete: Restrict)
   items     CartItem[]
 
   @@map("carts")
@@ -1838,6 +1842,7 @@ model CustomProduct {
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
+  user                    User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
   animationAsset          AnimationAsset?         @relation(fields: [animationAssetId], references: [id], onDelete: SetNull)
   animationVersion        AnimationAssetVersion?  @relation("CustomProductAnimationVersion", fields: [animationVersionId], references: [id], onDelete: SetNull)
   sourceAnimationVersions AnimationAssetVersion[] @relation("AnimationVersionSourceCustomProduct")
@@ -2220,6 +2225,7 @@ model PreOrder {
   expiresAt              DateTime    @map("expires_at") // 创建时间 + 10分钟
   wxPayParams            String?     @map("wx_pay_params") @db.Text // 微信支付参数 JSON
   createdAt              DateTime    @default(now()) @map("created_at")
+  user                   User        @relation(fields: [userId], references: [id], onDelete: Restrict)
   salesOrder             SalesOrder?
 
   @@index([userId, status])
