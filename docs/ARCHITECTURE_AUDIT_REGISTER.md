@@ -109,6 +109,8 @@
 | 模拟创作者认证 | `/api/certify` 映射到 `mockCertification`。 | 关闭但保留 | 核对页面是否误导为真实认证、历史申请数据和未来供应商接入边界。 |
 | 创作者自助联名 | 我的联名作品、申请和创作者联名路径映射到 `creatorCollabSelfService`。 | 关闭但保留 | 核对后台联名运营是否独立可用，避免关闭自助入口时误伤内部工作流。 |
 
+> 运行时证据：2026-09-08 对本地 API 的 `GET /api/config/features` 读取结果中，`community`、`creatorFinance`、`bullSystem`、`mockCertification`、`creatorCollabSelfService` 与 `passwordLogin` 均为 `false`。这只证明当前实例的公开开关状态，不替代对旁路接口、静态页面入口和数据任务的核对。
+
 ## 7. 初始风险与待核对清单
 
 | ID | 发现 | 标签 | 影响 | 推荐动作 | 状态 |
