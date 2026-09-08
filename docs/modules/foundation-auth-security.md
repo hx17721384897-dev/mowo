@@ -6,6 +6,7 @@
 > 2026-08-13 更新：注销跨域约束、到期执行和统一账号状态检查已完成首版；隐私设置的公开查询语义仍待社区启用前核对。
 > 2026-08-13 安全收尾：验证码、联络和上传已接入数据库限流；用户协议/隐私政策改为可阅读页面并保存独立版本记录；首发功能开关和基础安全响应头已启用。
 > 2026-08-13 头像显示修正：普通 API 继续使用 `Cross-Origin-Resource-Policy: same-site`；仅公开头像和带签名的临时文件读取地址使用 `cross-origin`，保证本地静态网页与 API 分端口运行时可以显示图片。该例外不绕过文件归属、业务绑定或签名校验。
+> 2026-09-08 迁移基线更新：`20260908103000_add_account_security_schema` 已将 v1 账户所需的账户状态、资料安全、短信、会话和审计结构纳入可重放迁移；空库 52/52 重放及注册/账户读取/当前设备退出冒烟通过。本文较早的调查记录保留为审计背景，涉及 Schema 对齐的剩余范围以 `SCHEMA_MIGRATION_ALIGNMENT_INVENTORY.md` 为准。
 
 ## 模块职责
 
@@ -139,7 +140,7 @@
 
 ## 首发功能与响应安全
 
-- `COMMUNITY_ENABLED`、`CREATOR_FINANCE_ENABLED`、`BULL_SYSTEM_ENABLED`、`MOCK_CERTIFICATION_ENABLED`、`CREATOR_COLLAB_SELF_SERVICE_ENABLED` 默认均为 `false`。
+- `COMMUNITY_ENABLED`、`CREATOR_FINANCE_ENABLED`、`BULL_SYSTEM_ENABLED`、`MOCK_CERTIFICATION_ENABLED` 默认均为 `false`；创作者自助联名已从 B1 源码移除，不再保留该功能开关。
 - 服务端先拒绝关闭功能的 API，前端 `feature-flags.js` 再隐藏入口并拦截旧页面直达。前端隐藏不是权限边界。
 - API 统一返回 `nosniff`、禁止 iframe、Referrer Policy、Permissions Policy 和缓存控制；生产额外返回 HSTS。CSP 及静态站点响应头仍需由正式 Web 服务器配置。
 - 自动验收命令为 `npm run check:launch-safety`。

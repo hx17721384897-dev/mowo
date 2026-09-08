@@ -271,3 +271,5 @@
 > 空库迁移链修复（2026-09-08）：在**只重建**的 `mowo_b1_test` 中反复验证后，51 份迁移现已全部成功应用，`prisma migrate status` 返回数据库为最新；`npm run check` 也通过（环境、103 个 JS 语法文件、Prisma Schema）。本轮补回四类未被历史迁移创建/兼容的前置依赖：`custom_products`、`pre_orders`、物料基础表，以及缺失 SQL 文件的 `20260905190000_expand_collab_storefront_cover`；同时使联名销售 SKU 回填兼容没有 `sku_code` 的早期 SKU 表，并补齐货架索引依赖的 `shelf_status`、`is_revision`。这些修复只保证**空库迁移链**可重放，未对 `mowo_db` 执行迁移或结构修改。
 
 > 模型—迁移漂移复核（2026-09-08）：以独立 `mowo_b1_shadow` 执行 `prisma migrate diff --from-migrations ... --to-schema-datamodel ...`，仍发现当前 Prisma Schema 相比 51 份迁移终态缺少一组正式迁移：账户安全/会话与手机号字段、售后和订单扩展、库存与 SKU 扩展、部分机型字段、若干库存/生产辅助表，以及早期创作者平台遗留的联名货架字段、通知表和外键差异。此结果说明“迁移链可执行”不等于“迁移终态等于当前模型”；不得将 `mowo_b1_test` 误记为可覆盖全部业务的最终测试库。后续需单独设计、分域审查并生成一份可回放的 Schema 对齐迁移，先在隔离库验证，再决定现有 `mowo_db` 的备份、重建或数据迁移方案。状态：**P0 阻断，进行中**。
+
+> P0-A 账户安全 Schema 基线（2026-09-08）：已新增 `20260908103000_add_account_security_schema`，补足当前 v1 账户实际读取/写入的用户状态与隐私字段、资料安全字段、短信用途/计数、刷新会话、二次验证、Token 黑名单与审计结构。`mowo_b1_test` 现已从零完整应用 52/52 份迁移；在该隔离库上实际通过短信 Mock 注册、`GET /api/v1/account/me` 和 `POST /api/v1/auth/logout`。本切片没有放宽 `users.phone`、删除外键或修改旧库；其余账户 diff 与交易、库存等结构差异仍按 `SCHEMA_MIGRATION_ALIGNMENT_INVENTORY.md` 分域处理。
