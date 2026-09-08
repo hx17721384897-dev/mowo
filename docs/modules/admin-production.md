@@ -1,5 +1,7 @@
 # 管理后台与材料包款生产
 
+> 2026-09-08 迁移基线更新：`20260908150000_add_frame_pack_schema` 已把后台帧包白名单、规格变体、变体库存日志和批量导出使用的 `FrameInstance` 纳入可重放迁移；隔离空库 56/56 重放及帧包层级读写通过。联名作品与订单在这些表中的关联仍是 Schema 明确保留的软引用，尚未为消除差异而猜测外键或删除策略；生产批次/扫码履约的状态机仍待专项审计。
+
 > 最近复核：2026-09-08。
 >
 > 本文记录当前正式生产代码。详细工艺、编号、员工步骤和验收分别见 `../PRODUCTION_BATCH_WORKFLOW.md`、`../PRINT_PRODUCTION_PLANNING.md` 和 `../PRODUCTION_WORKFLOW_ACCEPTANCE.md`。
