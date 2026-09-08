@@ -21,6 +21,7 @@
           bullSystem: false,
           mockCertification: false,
           creatorCollabSelfService: false,
+          onlineCheckout: false,
           passwordLogin: false
         }));
     }

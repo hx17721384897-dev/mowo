@@ -129,6 +129,12 @@ export function loadConfig(env = process.env) {
     'CREATOR_COLLAB_SELF_SERVICE_ENABLED',
     errors
   )
+  const onlineCheckoutEnabled = parseBoolean(
+    env.ONLINE_CHECKOUT_ENABLED,
+    false,
+    'ONLINE_CHECKOUT_ENABLED',
+    errors
+  )
   const avatarRetentionHours = parsePositiveInteger(
     env.AVATAR_ORPHAN_RETENTION_HOURS,
     24,
@@ -248,6 +254,7 @@ export function loadConfig(env = process.env) {
       bullSystem: bullSystemEnabled,
       mockCertification: mockCertificationEnabled,
       creatorCollabSelfService: creatorCollabSelfServiceEnabled,
+      onlineCheckout: onlineCheckoutEnabled,
       passwordLogin: passwordLoginEnabled
     }),
     rateLimits: Object.freeze({

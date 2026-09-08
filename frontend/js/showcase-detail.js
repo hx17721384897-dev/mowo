@@ -7,6 +7,7 @@ let selectedSku = null
 let quantity = 1
 let slides = []
 let currentSlide = 0
+let onlineCheckoutEnabled = false
 const framePlayer = { frames: [], index: 0, timer: null, fps: 10 }
 
 document.addEventListener('DOMContentLoaded', initDetail)
@@ -15,6 +16,10 @@ window.addEventListener('mowoLoginCompleted', resumePendingPurchase)
 async function initDetail() {
   if (!workId) return renderError('缺少商品编号，请返回联名作品列表重新选择')
   try {
+    if (typeof getMowoFeatureFlags === 'function') {
+      const flags = await getMowoFeatureFlags()
+      onlineCheckoutEnabled = flags.onlineCheckout === true
+    }
     const response = await fetch(`${DETAIL_API}/api/collab/works/${encodeURIComponent(workId)}`)
     const json = await parseApiJson(response, '商品详情暂时无法加载，请稍后重试')
     if (!response.ok || !json.success) throw new Error(json.message || '商品不存在或已经下架')
@@ -59,7 +64,9 @@ function renderProduct() {
       <div class="section-label">选择完整款式</div>
       <div class="sku-list">${(work.supportedSkus || []).map(renderSku).join('')}</div>
       <div class="quantity"><b>数量</b><div class="stepper"><button onclick="changeQuantity(-1)" aria-label="减少数量">-</button><input id="quantityInput" value="1" inputmode="numeric" onchange="setQuantity(this.value)" aria-label="购买数量"><button onclick="changeQuantity(1)" aria-label="增加数量">+</button></div></div>
-      <div class="actions"><button class="action cart" onclick="requestPurchase('cart')">加入购物车</button><button class="action buy" onclick="requestPurchase('buy')">立即购买</button></div>
+      ${onlineCheckoutEnabled
+        ? '<div class="actions"><button class="action cart" onclick="requestPurchase(\'cart\')">加入购物车</button><button class="action buy" onclick="requestPurchase(\'buy\')">立即购买</button></div>'
+        : '<div class="actions single-action"><a class="action buy cta" href="contact.html">联系工作人员了解邀请测试订购安排</a></div>'}
       <div class="selection-hint" id="selectionHint"></div>
     </section>
   </div>`
@@ -67,7 +74,7 @@ function renderProduct() {
   document.getElementById('crumbTitle').textContent = work.title
   document.getElementById('detailCopy').textContent = work.description || ''
   document.getElementById('detailBand').hidden = false
-  document.getElementById('purchaseBar').hidden = false
+  document.getElementById('purchaseBar').hidden = !onlineCheckoutEnabled
   document.getElementById('barTitle').textContent = work.title
   bindGalleryImageFallbacks(root)
   updateSelection()
