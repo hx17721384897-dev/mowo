@@ -356,7 +356,6 @@ let currentCreatorId = initialParams.get('creatorId') || ''
 let currentSort = ['recommended','latest','popular'].includes(initialParams.get('sort')) ? initialParams.get('sort') : 'recommended'
 let searchQuery = (initialParams.get('q') || '').slice(0, 100)
 let currentPage = 1
-let totalWorks = 0
 let hasMore = false
 let loadingWorks = false
 let listRequestSequence = 0
@@ -398,7 +397,7 @@ function renderSkeletons(n = 8) {
 
 /* ── 加载数据 ── */
 async function loadWorks(reset = true) {
-  if (!reset && loadingWorks) return
+  if (!reset && loadingWorks) return false
   const requestSequence = ++listRequestSequence
   loadingWorks = true
   if (reset) {
@@ -418,10 +417,9 @@ async function loadWorks(reset = true) {
     const res = await fetch(`${API}/api/collab/works?${params}`, { headers })
     const data = await parseApiJson(res, '联名作品暂时无法加载，请稍后重试')
     if (!res.ok || !data.success) throw new Error(data.message || '加载失败')
-    if (requestSequence !== listRequestSequence) return
+    if (requestSequence !== listRequestSequence) return false
     const pageWorks = data.data?.works || []
     allWorks = reset ? pageWorks : allWorks.concat(pageWorks)
-    totalWorks = Number(data.data?.total || 0)
     hasMore = Boolean(data.data?.hasMore)
     if (reset && Array.isArray(data.data?.creators)) {
       creatorOptions = data.data.creators
@@ -429,11 +427,13 @@ async function loadWorks(reset = true) {
     }
     renderWorks(reset)
     syncListUrl()
+    return true
   } catch (error) {
-    if (requestSequence !== listRequestSequence) return
+    if (requestSequence !== listRequestSequence) return false
     document.getElementById('masonryGrid').innerHTML =
       '<p style="color:var(--gray3);font-weight:700;padding:40px;text-align:center;grid-column:1/-1">加载失败，请刷新重试</p>'
     document.getElementById('resultInfo').textContent = ''
+    return false
   } finally {
     if (requestSequence === listRequestSequence) {
       loadingWorks = false
@@ -467,14 +467,16 @@ function renderWorks(reset = false) {
 
   if (allWorks.length === 0) {
     grid.innerHTML = ''
-    document.getElementById('emptyState').classList.add('show')
-    document.getElementById('resultInfo').textContent = '共 0 件作品'
-    document.getElementById('loadMoreWrap').style.display = 'none'
+    document.getElementById('emptyState').classList.toggle('show', !hasMore)
+    document.getElementById('resultInfo').textContent = hasMore ? '正在筛选可展示作品…' : '共 0 件作品'
+    document.getElementById('loadMoreWrap').style.display = hasMore ? 'flex' : 'none'
     return
   }
 
   document.getElementById('emptyState').classList.remove('show')
-  document.getElementById('resultInfo').textContent = `共 ${totalWorks} 件联名商品`
+  document.getElementById('resultInfo').textContent = hasMore
+    ? `已展示 ${allWorks.length} 件联名商品`
+    : `共 ${allWorks.length} 件联名商品`
 
   if (reset) grid.innerHTML = ''
 
@@ -660,8 +662,8 @@ async function loadMore() {
   btn.querySelector('span:last-child').textContent = '加载中…'
   const previousPage = currentPage
   currentPage = previousPage + 1
-  await loadWorks(false)
-  if (allWorks.length <= previousPage * PAGE_SIZE) currentPage = previousPage
+  const loaded = await loadWorks(false)
+  if (!loaded && currentPage === previousPage + 1) currentPage = previousPage
   btn.classList.remove('loading')
   btn.querySelector('span:last-child').textContent = '加载更多'
 }
