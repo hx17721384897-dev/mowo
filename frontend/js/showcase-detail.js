@@ -16,7 +16,7 @@ async function initDetail() {
   if (!workId) return renderError('缺少商品编号，请返回联名作品列表重新选择')
   try {
     const response = await fetch(`${DETAIL_API}/api/collab/works/${encodeURIComponent(workId)}`)
-    const json = await response.json()
+    const json = await parseApiJson(response, '商品详情暂时无法加载，请稍后重试')
     if (!response.ok || !json.success) throw new Error(json.message || '商品不存在或已经下架')
     work = json.data
     selectedSku = work.supportedSkus?.[0] || null
@@ -69,8 +69,27 @@ function renderProduct() {
   document.getElementById('detailBand').hidden = false
   document.getElementById('purchaseBar').hidden = false
   document.getElementById('barTitle').textContent = work.title
+  bindGalleryImageFallbacks(root)
   updateSelection()
   renderSpecTable()
+}
+
+function bindGalleryImageFallbacks(root) {
+  root.querySelectorAll('.slide img').forEach(image => {
+    image.addEventListener('error', () => {
+      const message = document.createElement('strong')
+      message.textContent = '该素材暂时不可用'
+      image.replaceWith(message)
+    }, { once: true })
+  })
+}
+
+async function parseApiJson(response, fallbackMessage) {
+  try {
+    return await response.json()
+  } catch {
+    throw new Error(fallbackMessage)
+  }
 }
 
 function buildSlides(product) {
@@ -230,7 +249,7 @@ async function executePurchase(intent) {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ itemType: 'MARKET', contentId: intent.workId, hardwareSkuId: intent.skuId, quantity: intent.quantity }),
     })
-    const json = await response.json()
+    const json = await parseApiJson(response, '相关推荐暂时无法加载')
     if (!response.ok || !json.success) throw new Error(json.message || '商品状态已变化，请重新确认')
     localStorage.removeItem(PURCHASE_KEY)
     if (intent.action === 'buy') {

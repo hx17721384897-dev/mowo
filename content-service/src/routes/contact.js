@@ -56,7 +56,27 @@ export default async function contactRoutes(fastify) {
   // ══════════════════════════════════════════
   // POST /api/contact — 提交联络表单
   // ══════════════════════════════════════════
-  fastify.post('/', { preHandler: [fastify.optionalAuthenticate] }, async (request, reply) => {
+  fastify.post('/', {
+    schema: {
+      body: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['type', 'name', 'contact', 'message'],
+        properties: {
+          type: { type: 'string', enum: ['artist', 'channel', 'media', 'join', 'feedback', 'factory'] },
+          name: { type: 'string', minLength: 1, maxLength: MAX_LENGTHS.name },
+          contact: { type: 'string', minLength: 1, maxLength: MAX_LENGTHS.contact },
+          message: { type: 'string', minLength: 1, maxLength: MAX_LENGTHS.message },
+          extra: { type: 'object', additionalProperties: true },
+          attachments: {
+            type: 'array', maxItems: 6,
+            items: { type: 'string', minLength: 1, maxLength: 500 }
+          }
+        }
+      }
+    },
+    preHandler: [fastify.optionalAuthenticate]
+  }, async (request, reply) => {
     const ip = request.ip || 'unknown'
     const today = new Date().toISOString().slice(0, 10)
 
@@ -93,6 +113,9 @@ export default async function contactRoutes(fastify) {
     if (!checkLength(name,    MAX_LENGTHS.name))    return reply.code(400).send({ success: false, message: '姓名过长' })
     if (!checkLength(contact, MAX_LENGTHS.contact)) return reply.code(400).send({ success: false, message: '联系方式过长' })
     if (!checkLength(message, MAX_LENGTHS.message)) return reply.code(400).send({ success: false, message: `内容不能超过 ${MAX_LENGTHS.message} 字` })
+    if (extra && !checkLength(JSON.stringify(extra), MAX_LENGTHS.extra)) {
+      return reply.code(400).send({ success: false, message: '补充信息过长' })
+    }
 
     const attachmentKeys = Array.isArray(attachments) ? attachments : []
     const allowedPurposes = type === 'artist'
@@ -195,8 +218,7 @@ export default async function contactRoutes(fastify) {
 
     return reply.send({
       success: true,
-      message: '提交成功，我们会尽快与你联系',
-      data:    { id: submission.id }
+      message: '提交成功，我们会尽快与你联系'
     })
   })
 

@@ -284,6 +284,13 @@ export default async function collabRoutes(fastify) {
       file.objectKey,
       (file.detectedMimeType || file.declaredMimeType || '').startsWith('video/') ? 'video' : 'image',
     ]))
+    // 受管对象必须仍是 READY 文件才可生成读取地址；保留 data/http 媒体，
+    // 以兼容已明确作为公开资源配置的历史内容。
+    const publicStorefrontMediaKeys = storefrontMediaKeys.filter(key => (
+      typeof key === 'string' && (
+        key.startsWith('data:') || key.startsWith('http://') || key.startsWith('https://') || storefrontMediaKinds.has(key)
+      )
+    ))
 
     return reply.send({
       success: true,
@@ -293,7 +300,7 @@ export default async function collabRoutes(fastify) {
         title: work.storefrontTitle || work.title,
         description: work.storefrontDescription || work.description,
         storefrontSummary: work.storefrontSummary,
-        storefrontMedia: storefrontMediaKeys.map(key => ({
+        storefrontMedia: publicStorefrontMediaKeys.map(key => ({
           url: presignOrPassthrough(key, fastify, 3600),
           kind: storefrontMediaKinds.get(key) || 'image',
         })).filter(item => item.url),
