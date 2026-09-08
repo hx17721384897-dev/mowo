@@ -98,6 +98,24 @@
 | 应用启动请求 `/api/notifications/unread-count` | 服务端仅注册创作者通知 `/api/creator/notifications/*`，本轮未发现该通用通知路径。 | 未完成；启动时会静默失败，未读数不能可靠显示。 |
 | 401 刷新 | 请求层用 HttpOnly Cookie 调 `/api/v1/auth/refresh`，并设置 `withCredentials`。 | 待验证；与 Web Cookie 会话设计相同，但小程序没有专用刷新凭证/微信会话交换，不能据此假定真机续期可用。 |
 
+### 4.4 服务端路由模块—业务层地图
+
+该表穷举 `content-service/src/routes/` 的 44 个模块；“消费者”记录当前代码层面的主要入口，而不是端点级可用性承诺。端点、字段和权限的细查会在对应业务批次继续下钻。
+
+| 业务分组 | 路由模块 | 主路径前缀 | 主要消费者/责任 | B1 初始状态 |
+|---|---|---|---|---|
+| 身份与账户 | `auth-v1`、`account`、`auth`、`users` | `/api/v1/auth`、`/api/v1/account`、`/api/auth`、`/api/users` | Web `auth.js`、`settings.js`、后台当前用户读取、小程序登录 | v1 为现行候选；旧资料接口保留兼容，见 P0-006。 |
+| 公开展示与社区 | `products`、`collab`、`articles`、`feed`、`certify` | `/api/products`、`/api/collab`、`/api/articles`、`/api/feed`、`/api/certify` | `showcase*`、`creator-profile`、历史社区页 | 联名展示/商品候选；社区与模拟认证关闭保留。 |
+| 定制与文件 | `customization-requests`、`custom-products`、`animation-assets`、`upload`、`animations`、`customize-orders` | `/api/customization-requests`、`/api/custom-products`、`/api/animation-assets`、`/api/upload`、`/api/animations`、`/api/customize-orders` | 定制三步页、我的定制/动画、后台审核工作台 | B1 主链路候选；文件、归属和人工审核在批次 2 深查。 |
+| 购物与订单 | `cart`、`payment`、`addresses`、`orders` | `/api/cart`、`/api/payment`、`/api/addresses`、`/api/orders` | 购物车、结算、地址、订单页；小程序购物车骨架 | Web 交易准备可测；真实支付阻断，见 P0-028。 |
+| 联名运营 | `admin-collab`、`creator`、`contracts`、`notifications` | `/api/admin/collab`、`/api/creator/collab`、`/api/admin/contracts`、`/api/creator/notifications` | 联名后台、创作者工作区、合同/通知页 | 内部联名运营候选；创作者自助联名关闭保留。 |
+| 创作者财务与增长 | `earnings`、`settlement`、`revenue-config`、`bull`、`links` | `/api/earnings`、`/api/*settlement`、`/api/admin/revenue`、`/api/*bull`、`/api/*links` | 创作者收益/链接页、后台结算/牛量/收入配置页 | 关闭但保留；全局功能开关抽样已验证。 |
+| 通用后台运营 | `admin`、`admin-contact`、`contact`、`admin-customization-requests` | `/api/admin`、`/api/admin/contact`、`/api/contact`、`/api/admin/customization-requests` | 后台订单、用户、日志、账号删除、联络、定制审核；公开联系页 | B0/B1 内部运营候选；岗位矩阵和旧中间件冲突待逐端点收敛。 |
+| 库存、SKU 与物料 | `inventory`、`materials`、`machine-models`、`platform-sku`、`frame-packs` | `/api/inventory`、`/api/materials`、`/api/machine-models`、`/api/admin/sku-mapping`、`/api/frame-packs` | 后台库存/机型/导入、生产库存页、帧包管理 | B1 内部履约候选；需批次 6 做库存事实和并发核对。 |
+| 生产与帧图 | `production-batches`、`production-workflow`、`print-production`、`frame-library`、`frame-making`、`frame-imports`、`import` | `/api/admin/production-*`、`/api/admin/print-production`、`/api/admin/frame-*`、`/api/admin/import` | 批次、打印、扫码、帧图库/制作/导入后台与生产页 | B0/B1 内部演练候选；需批次 5/6 做权限、物料与实物流转验收。 |
+
+> 模块数说明：上表九组覆盖 44 个模块；`auth-v1` 同时导出 `/api/v1/user` 的退役注销兼容入口。所有模块均由 `src/index.js` 显式注册，没有发现动态路由装载。
+
 ## 5. 运行与测试入口
 
 | 能力 | 当前事实 | 状态 | 证据/后续 |
@@ -188,12 +206,20 @@
 
 ## 8. 批次 0 进度
 
+> 收口口径：下表的“已完成（基线）”只表示已完成横切审计、代码地图和风险定位，**不**表示对应风险已修复、更不表示可以邀请用户。修复、端点级矩阵和业务流程验收归入后续功能批次，并必须回写本台账。
+
 | 子项 | 状态 | 说明 |
 |---|---|---|
-| 0.1 仓库、Git、依赖和临时目录 | 进行中 | 已发现小程序未纳入 Git、临时目录未忽略。 |
-| 0.2 服务入口、配置和功能开关 | 进行中 | 已确认配置校验、服务端功能拦截、岗位检查、审计脱敏、双认证注册和进程内 Scheduler。 |
-| 0.3 数据库 Schema 与迁移 | 进行中 | 已确认当前模型/表/迁移记录显著漂移；空库基线与消费者核对尚未开始。 |
-| 0.4 Web 页面与公共脚本 | 进行中 | 已盘点页面分层、共享脚本、API 字面量和静态链接；确认运行时 API 地址、会话实现、现行断链和历史页路径问题；页面—接口矩阵尚未完成。 |
-| 0.5 小程序与 API 契约 | 进行中 | 已确认 Git、发布配置、占位页、会话模型和购物车字段的初始问题；服务端 DTO 逐项对照尚未完成。 |
-| 0.6 路由、权限与消费者矩阵 | 进行中 | 已确认全局岗位映射与契约覆盖静态基线；端点—页面—小程序消费者矩阵尚未完成。 |
-| 0.7 测试、部署与运行能力 | 进行中 | 已确认测试脚本、CI/部署资产缺口、基础健康响应与进程内 Scheduler；监控、备份和脚本清理细节待继续核对。 |
+| 0.1 仓库、Git、依赖和临时目录 | 已完成（基线） | 已确认主仓库边界、同级小程序未纳入 Git、根目录无前端构建清单、CRMEB 只有 `.gitkeep`、临时目录未忽略。后续只处理已确认归属的目录。 |
+| 0.2 服务入口、配置和功能开关 | 已完成（基线） | 已确认生产配置校验、全局功能拦截、岗位检查、审计脱敏、认证双轨和进程内 Scheduler；关闭功能代表路径已做运行时抽样。 |
+| 0.3 数据库 Schema 与迁移 | 已完成（基线） | 已确认 111 模型/112 表/51 迁移目录与当前迁移记录显著漂移、其中 37 份未应用及一个空迁移目录。空库基线修复是后续阻断项，不在本批次直接操作现有库。 |
+| 0.4 Web 页面与公共脚本 | 已完成（基线） | 已完成 58 页分层、共享脚本和主要 API/会话/静态链接取证；定位 API Origin、登录入口、相对路径、外部 CDN、遗留页面和支付文案问题。逐页业务验收在批次 1—3 执行。 |
+| 0.5 小程序与 API 契约 | 已完成（基线） | 已确认 Git、发布配置、占位页、会话模型及登录/购物车/通知的具体 DTO 断点；小程序不进入 B1 必经链路，细化重建在批次 4。 |
+| 0.6 路由、权限与消费者矩阵 | 已完成（模块级） | 已完成 44 路由模块—业务层—主要消费者地图，确认全局岗位模型与旧数字角色中间件重叠。477 个端点的字段/权限矩阵不在横切基线中假装完成，将随业务批次逐组落地。 |
+| 0.7 测试、部署与运行能力 | 已完成（基线） | 已确认基础检查通过、专项脚本会写当前数据库、CI/部署/恢复资产缺口、健康检查和 Scheduler 生命周期限制。B1 运行准备在批次 7 落地。 |
+
+### 批次 0 结论与后续入口
+
+- **批次 0 已完成“先了解、后改造”的基线目标。** 当前系统不是空白原型：账号会话、定制、购物车快照、订单/生产资料和部分内部生产流程已有可用基础；但没有一项可因“存在代码”直接视为 B1 已就绪。
+- **必须先处理的 B1 阻断簇：** 数据库迁移基线（P0-003/P0-010）、可部署 API Origin 与最小运行资产（P0-011/P0-021）、真实/伪造支付隔离（P0-028）、小程序不作为 B1 主链路（P0-001/P0-016—P0-019）。
+- **下一批次按计划进入官网展示层。** 它将逐页确认公开入口、实际 API Origin、展示数据白名单、FAQ/协议文案和关闭功能入口；不以全站 Vue 重写或删除历史代码作为开始条件。
