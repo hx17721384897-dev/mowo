@@ -822,14 +822,7 @@ type 可选：`pending_info` / `pending_sku` / 不传=全部异常
 ### POST `/api/collab/works/:id/view`
 登记一次有效详情浏览。无需登录，请求体为 `{ "visitorId": "浏览器生成的随机标识" }`。页面可见 3 秒后调用；同一匿名指纹对同一商品按 UTC 自然日最多增加一次，后台预览不调用。服务端只对随机标识计算并保存 HMAC，不保存明文访客标识、IP 或浏览器信息；IP 仅由通用限流器做哈希频率限制。响应中的 `counted` 表示本次是否新增计数，原始浏览总数不向顾客端公开。
 
-### POST `/api/collab/works`
-创建联名作品申请。需登录（认证创作者）。
-
-### GET `/api/collab/my-works`
-创作者自己的联名作品列表。需登录。
-
-### GET `/api/collab/my-earnings`
-创作者联名收益（含冷却期/可提现状态）。需登录。
+> B1 状态：创作者自助申请、我的作品和线上收益入口均不提供。`/api/collab/apply` 与 `/api/collab/my-works` 已从服务端移除；联名上架资料由授权员工在后台人工管理。未来若恢复创作者平台，接口以届时的独立规格为准。
 
 ### GET `/api/admin/collab/:id/product-workspace`
 读取联名商品工作区：审核原资料、独立销售展示资料、稳定商品编号、动画资产版本、展示素材、分组上架检查、正式销售 SKU 候选及库存摘要。需负责人或合作运营权限。
@@ -871,12 +864,12 @@ type 可选：`pending_info` / `pending_sku` / 不传=全部异常
 
 ## 开发工具
 
-### Mock支付（本地开发专用）
+### Mock支付（历史开发工具，B1 禁用）
 ```
 POST /api/payment/mock-pay/:preOrderId
 Authorization: Bearer <token>
 ```
-仅在 `hostname === 'localhost'` 或 `127.0.0.1` 时可用，生产环境返回403。
+当前 `ONLINE_CHECKOUT_ENABLED=false` 时，该接口与所有支付入口均被服务端拒绝；未来支付链完成验签、金额核验与回调防重放后才可重新启用。
 
 ### 私有批量上传
 ```

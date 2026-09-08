@@ -123,12 +123,6 @@ export function loadConfig(env = process.env) {
   const creatorFinanceEnabled = parseBoolean(env.CREATOR_FINANCE_ENABLED, false, 'CREATOR_FINANCE_ENABLED', errors)
   const bullSystemEnabled = parseBoolean(env.BULL_SYSTEM_ENABLED, false, 'BULL_SYSTEM_ENABLED', errors)
   const mockCertificationEnabled = parseBoolean(env.MOCK_CERTIFICATION_ENABLED, false, 'MOCK_CERTIFICATION_ENABLED', errors)
-  const creatorCollabSelfServiceEnabled = parseBoolean(
-    env.CREATOR_COLLAB_SELF_SERVICE_ENABLED,
-    false,
-    'CREATOR_COLLAB_SELF_SERVICE_ENABLED',
-    errors
-  )
   const onlineCheckoutEnabled = parseBoolean(
     env.ONLINE_CHECKOUT_ENABLED,
     false,
@@ -253,7 +247,6 @@ export function loadConfig(env = process.env) {
       creatorFinance: creatorFinanceEnabled,
       bullSystem: bullSystemEnabled,
       mockCertification: mockCertificationEnabled,
-      creatorCollabSelfService: creatorCollabSelfServiceEnabled,
       onlineCheckout: onlineCheckoutEnabled,
       passwordLogin: passwordLoginEnabled
     }),

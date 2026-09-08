@@ -24,12 +24,6 @@ const GATES = [
   },
   { feature: 'mockCertification', match: path => path.startsWith('/api/certify') },
   {
-    feature: 'creatorCollabSelfService',
-    match: path => path.startsWith('/api/collab/my-works') ||
-      path.startsWith('/api/collab/apply') ||
-      path.startsWith('/api/creator/collab')
-  },
-  {
     feature: 'onlineCheckout',
     match: path => path === '/api/cart/checkout' || path.startsWith('/api/payment/')
   }
@@ -46,7 +40,6 @@ export function publicFeatureFlags(config) {
     creatorFinance: config.features.creatorFinance,
     bullSystem: config.features.bullSystem,
     mockCertification: config.features.mockCertification,
-    creatorCollabSelfService: config.features.creatorCollabSelfService,
     onlineCheckout: config.features.onlineCheckout,
     passwordLogin: config.features.passwordLogin
   }

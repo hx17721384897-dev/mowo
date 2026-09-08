@@ -5,6 +5,7 @@
 > 已完成：逐路由与辅助模块阅读、Prisma Schema 与已有迁移对照、Web 消费者检索、`REVENUE.md`、`API.md`、`DATABASE.md`、`FRONTEND.md`、`USER_SCENARIOS.md` 对照。
 > 验证结果：`npx prisma validate` 通过；这只证明 Schema 语法有效，不证明路由参数、迁移和运行数据库一致。
 > 工作区提醒：调查时 `schema.prisma`、`collab.js`、`admin-collab.js`、联名管理页及违约政策页存在未提交修改。本文件记录的是当前工作区事实，不把这些改动视为已上线版本。
+> 2026-09-08 更新：B1 已移除创作者主页、认证、自助联名申请/我的作品、通知、线上收益、牛量和推广的前端及专用路由。下文 2026-08 的创作者端清单保留为历史审计资料，不代表当前可用接口；当前保留公开货架与员工后台联名运营，未来重建要求见 `DEFERRED_CREATOR_PLATFORM.md`。
 
 ## 模块职责
 
@@ -85,15 +86,9 @@
 - `GET /api/collab/works`、`GET /api/collab/works/:id`：联名作品展示。
 - `POST /api/collab/works/:id/view`：匿名有效浏览登记；同一商品、指纹和 UTC 日期只计一次，不保存明文身份或 IP。
 
-### 认证创作者
+### 创作者端（B1 已移除）
 
-- `/api/collab/apply`、`/api/collab/my-works`：批量申请和自己的作品。
-- `/api/creator/collab/*`：作品详情、修改版、加价、帧包和统计。
-- `/api/creator/notifications/*`：通知。
-- `/api/creator/settlement/*`：联名分红和储备金查询。
-- `/api/creator/bull/*`：牛量状态、变动日志和推广链接。
-- `/api/creator/links/social`：外部视频链接。
-- `/api/earnings/*`：旧收益余额、提现和提现记录。
+上述 `/api/collab/apply`、`/api/collab/my-works` 以及创作者后台专用路由已移除，不作为 B1 接口。历史设计仅为重建参考，不能据此接入新消费者。
 
 创作者身份校验有两种实现：部分接口只看 Token 的 `role >= 1`，部分只看 `certifyStatus === 2`。封禁、限制和认证撤销不会统一实时查询数据库，继承第一批认证模块的状态缓存风险。
 

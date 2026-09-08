@@ -1,3 +1,47 @@
+-- 物料基础表此前只存在于运行库，缺少建表迁移；先建立空库所需的最小基线。
+CREATE TABLE IF NOT EXISTS "material_items" (
+    "id" TEXT NOT NULL,
+    "name" VARCHAR(100) NOT NULL,
+    "unit" VARCHAR(20) NOT NULL DEFAULT '个',
+    "current_stock" INTEGER NOT NULL DEFAULT 0,
+    "safety_stock" INTEGER NOT NULL DEFAULT 10,
+    "lead_time" INTEGER NOT NULL DEFAULT 7,
+    "note" VARCHAR(200),
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "created_by" TEXT NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+    CONSTRAINT "material_items_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE IF NOT EXISTS "material_logs" (
+    "id" TEXT NOT NULL,
+    "material_id" TEXT NOT NULL,
+    "type" VARCHAR(30) NOT NULL,
+    "quantity" INTEGER NOT NULL,
+    "before_qty" INTEGER NOT NULL,
+    "after_qty" INTEGER NOT NULL,
+    "operator_id" TEXT NOT NULL,
+    "note" VARCHAR(200),
+    "order_id" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "material_logs_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "material_logs_material_id_fkey" FOREIGN KEY ("material_id") REFERENCES "material_items"("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS "material_logs_material_id_idx" ON "material_logs"("material_id");
+
+CREATE TABLE IF NOT EXISTS "material_sku_bindings" (
+    "id" TEXT NOT NULL,
+    "material_id" TEXT NOT NULL,
+    "sku_id" TEXT NOT NULL,
+    "qty_per_unit" INTEGER NOT NULL DEFAULT 1,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "material_sku_bindings_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "material_sku_bindings_material_id_sku_id_key" UNIQUE ("material_id", "sku_id"),
+    CONSTRAINT "material_sku_bindings_material_id_fkey" FOREIGN KEY ("material_id") REFERENCES "material_items"("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
 ALTER TABLE "machine_model_skus" ADD COLUMN "bom_version" INTEGER NOT NULL DEFAULT 0;
 
 ALTER TABLE "material_items" ADD COLUMN "item_code" VARCHAR(50);

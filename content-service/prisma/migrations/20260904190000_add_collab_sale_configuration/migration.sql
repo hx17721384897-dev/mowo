@@ -59,5 +59,7 @@ SELECT
 FROM "collab_works" work
 CROSS JOIN LATERAL jsonb_array_elements_text(COALESCE(NULLIF(work."supported_skus", ''), '[]')::jsonb)
   WITH ORDINALITY AS item(sku_ref, ordinality)
-JOIN "machine_model_skus" sku ON sku."id" = item.sku_ref OR sku."sku_code" = item.sku_ref
+-- 部分早期库尚未拥有 sku_code；从行 JSON 读取可兼容两种历史结构。
+JOIN "machine_model_skus" sku ON sku."id" = item.sku_ref
+  OR COALESCE(to_jsonb(sku) ->> 'sku_code', to_jsonb(sku) ->> 'sku_barcode') = item.sku_ref
 ON CONFLICT ("collab_work_id", "sku_id") DO NOTHING;

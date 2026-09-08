@@ -1,3 +1,9 @@
+-- 货架状态字段曾通过 db push 落在运行库，未进入历史迁移；
+-- 以下索引与后台货架管理均依赖它们，因此空库初始化时先补齐。
+ALTER TABLE "collab_works"
+  ADD COLUMN IF NOT EXISTS "shelf_status" VARCHAR(30) NOT NULL DEFAULT 'on_sale',
+  ADD COLUMN IF NOT EXISTS "is_revision" BOOLEAN NOT NULL DEFAULT false;
+
 ALTER TABLE "collab_works"
   ADD COLUMN "storefront_view_count" INTEGER NOT NULL DEFAULT 0;
 

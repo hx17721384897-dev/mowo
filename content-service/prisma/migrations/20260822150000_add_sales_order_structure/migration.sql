@@ -1,3 +1,28 @@
+-- pre_orders 同样缺少历史建表迁移；销售订单依赖它，空库必须先创建。
+CREATE TABLE IF NOT EXISTS "pre_orders" (
+    "id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "cart_item_ids" TEXT NOT NULL,
+    "checkout_idempotency_key" TEXT NOT NULL,
+    "status" VARCHAR(30) NOT NULL DEFAULT 'pending_payment',
+    "order_type" VARCHAR(30) NOT NULL DEFAULT 'normal',
+    "discount_adjustment" DECIMAL(10,2),
+    "total_amount" DECIMAL(10,2) NOT NULL,
+    "receiver_name" TEXT,
+    "receiver_phone" TEXT,
+    "receiver_address" TEXT,
+    "receiver_city" TEXT,
+    "expires_at" TIMESTAMP(3) NOT NULL,
+    "wx_pay_params" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "pre_orders_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "pre_orders_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS "pre_orders_checkout_idempotency_key_key" ON "pre_orders"("checkout_idempotency_key");
+CREATE INDEX IF NOT EXISTS "pre_orders_user_id_status_idx" ON "pre_orders"("user_id", "status");
+CREATE INDEX IF NOT EXISTS "pre_orders_expires_at_idx" ON "pre_orders"("expires_at");
+
 CREATE TABLE "sales_orders" (
     "id" TEXT NOT NULL,
     "order_no" VARCHAR(32) NOT NULL,

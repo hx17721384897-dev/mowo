@@ -1,3 +1,25 @@
+-- custom_products 曾只在应用代码中存在，未进入任何历史迁移；
+-- 本迁移首次引用它前必须建立表，确保空库可以完整初始化。
+CREATE TABLE IF NOT EXISTS "custom_products" (
+  "id" TEXT NOT NULL,
+  "user_id" TEXT NOT NULL,
+  "animation_frames" TEXT NOT NULL,
+  "draft_data" TEXT,
+  "draft_expires_at" TIMESTAMP(3),
+  "preview_url" TEXT,
+  "static_preview_url" TEXT,
+  "config_json" TEXT,
+  "hardware_sku_id" TEXT,
+  "frame_count" INTEGER,
+  "status" VARCHAR(30) NOT NULL DEFAULT 'draft',
+  "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" TIMESTAMP(3) NOT NULL,
+  CONSTRAINT "custom_products_pkey" PRIMARY KEY ("id"),
+  CONSTRAINT "custom_products_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS "custom_products_user_id_status_idx" ON "custom_products"("user_id", "status");
+
 CREATE TABLE IF NOT EXISTS "animation_assets" (
   "id" TEXT NOT NULL,
   "asset_no" VARCHAR(32) NOT NULL,
