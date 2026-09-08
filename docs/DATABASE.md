@@ -5,7 +5,7 @@
 > ORM：Prisma 5 — schema 位于 `content-service/prisma/schema.prisma`
 > 连接串：`DATABASE_URL=postgresql://postgres:***@localhost:5432/mowo_db`
 
-> **阅读提示（2026-08-13）：本文是历史设计说明。** 文中“63 张表”与当前 `schema.prisma` 的 75 个模型不一致，历史迁移也不能从空库完整复现当前 Schema。社区、分红、牛量、提现等表存在不代表首发启用对应功能。准确模型、迁移缺口和数据风险见 `modules/database-schema.md`；产品启用范围见 `RELEASE_SCOPE.md`。
+> **文档状态：历史设计说明，禁止作为当前表结构清单。** 2026-09-08 当前 `schema.prisma` 为 111 个模型、4 个枚举，本文“63 张表”和后续字段表均已过期。社区、分红、牛量、提现等模型存在也不代表首发启用。准确结构必须读取 Prisma Schema；领域关系和迁移风险见 `modules/database-schema.md`，产品范围见 `RELEASE_SCOPE.md`。本文件将在数据库专项把仍有价值的一致性原则迁出后压缩或删除。
 
 ---
 
@@ -88,7 +88,7 @@
 | 67 | `rate_limit_buckets` | 账户安全 | 哈希标识的跨实例频率计数固定窗口 |
 | 68 | `consent_records` | 账户安全 | 用户协议与隐私政策的版本化同意证据 |
 
-> 本清单仍是历史主表说明，不包含当前全部 75 个模型；缺失项和完整分组以 `modules/database-schema.md` 及 Prisma Schema 为准。
+> 本清单是历史快照，不包含当前 111 个模型；不得据此新增接口或迁移。
 
 ---
 

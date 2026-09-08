@@ -2,9 +2,9 @@
 
 > 目标：让新加入的开发者或 AI 先读少量入口文档，再按业务域深入，不必重新猜测代码结构。
 >
-> 调查基准：2026-08-13，进度更新：2026-09-04。本文档区分“已核对代码事实”“原规划”“待确认”，不把规划自动视为已实现。
+> 调查基准：2026-08-13，进度更新：2026-09-07。本文档区分“已核对代码事实”“原规划”“待确认”，不把规划自动视为已实现。
 
-> 当前进度：账号与文件安全已完成；Web 定制、动画资产复购/V2、聚合订单 `SO` 与单件生产任务 `PU` 已建立。后台帧图资产总库已统一收纳网站、线下、联名和内部动画；“帧图制作”可用视频/GIF/图片组建立 `FD` 草稿并复用完整筛帧器，“批量导入”可把第一层多个已编辑序列帧文件夹经过 `FI` 预检和批量资料填写后分别生成 `ANM + V1`。库存已实现散装零件、分装小包、标准材料包、FIFO 批次和退回隔离。打印裁切、生产批次、指定页返工和四岗位扫码已形成可测试闭环。公开上线前的正式 OSS、恶意文件扫描、数据库迁移基线、备份恢复、监控与压测仍未完成。
+> 当前进度：账号与文件安全已完成；联名货架、私人定制、动画资产复购/V2、混合购物车、冻结交易快照、聚合订单 `SO` 与单件生产任务 `PU` 已建立。两类商品会共同预留库存，并在模拟付款后进入同一生产系统。后台帧图总库、库存三层结构、打印裁切、生产批次、指定页返工和四岗位扫码已形成可测试闭环。下一条主线是 Web 到微信小程序的一次性安全领取和真实微信支付；正式 OSS、恶意文件扫描、退款售后、备份恢复、监控与压测仍未完成。
 
 ## 建议阅读顺序
 
@@ -17,20 +17,21 @@
 7. `docs/modules/README.md`：按代码模块进入详细说明。
    员工岗位与安全记录见 `docs/modules/staff-permissions-audit.md`；本地/OSS私有上传与文件权限见 `docs/modules/private-file-security.md`；Web 定制首批事实见 `docs/modules/web-customization.md`；后台统一帧图资料见 `docs/modules/frame-asset-library.md`。
 8. `docs/DOC_CODE_DIFFERENCES.md`：文档与代码不一致、风险和过渡状态。
-9. `docs/OPEN_QUESTIONS.md`：待确认问题，以及已从问题台账收敛出的阶段性产品决策。
-10. `docs/ACCOUNT_DELETION_POLICY.md`：账号注销的法规参考、建议规则和数据处理边界。
-11. `docs/ACCOUNT_FILE_SECURITY_ACCEPTANCE.md`：账号、权限、文件、注销与首发安全的人工验收步骤。
-12. `docs/WEB_CUSTOMIZATION_ACCEPTANCE.md`：Web 定制首批的人工验收步骤与延后边界。
-13. `docs/WEB_COMMERCE_END_TO_END.md`：从联名/私人定制、混合购物车、小程序交接到付款后生产发货的统一全链路；同时列出当前已完成部分和 P0/P1 断点。
-14. `docs/COLLAB_STOREFRONT_REMEDIATION_PLAN.md`：联名商品瀑布流、唯一详情、后台 SKU 销售配置、公开字段白名单、浏览量热门和登录后继续购买的实施方案。
-15. `docs/TROUBLESHOOTING.md`：本地开发已经发生过的故障、识别方法和修复边界。
-16. 对应业务规划：`PRODUCTION.md`、`REVENUE.md`、`docs/USER_SCENARIOS.md` 等。
-17. `docs/ANIMATION_ORDER_PRODUCTION_FRAMEWORK.md`：动画资产、版本、订单商品、单件生产和材料追踪的已确认目标框架。
-18. `docs/STANDARD_KIT_INVENTORY.md`：三层库存、FIFO批次追溯、SKU材料清单、标准材料包组装、退回隔离检查和补发任务的当前实现。
-19. `docs/PRODUCTION_BATCH_WORKFLOW.md`：材料包款生产批次、帧素材与材料并行作业、阶段边界和验收记录。
-20. `docs/PRINT_PRODUCTION_PLANNING.md`：打印裁切组、Word 模板版本、无损拼接帧、生产文件、订单筛选和批次快照。
-21. `docs/PRODUCTION_WORKFLOW_ACCEPTANCE.md`：当前生产闭环的自动检查、人工验收范围和已知边界。
-22. `docs/PRODUCTION_MANUAL_TEST_PLAN_STANDARD_6SKU.md`：当前标准款六规格的正式端到端测试，使用四个订单覆盖地址、面单、多页打印、领料、配对、齐套装箱和发货；旧三订单方案保留在 `PRODUCTION_MANUAL_TEST_PLAN.md` 作为历史记录。
+9. `docs/DOCUMENTATION_STATUS.md`：每份 Markdown 的当前身份、可信范围、候选删除项和复核进度。
+10. `docs/OPEN_QUESTIONS.md`：待确认问题，以及已从问题台账收敛出的阶段性产品决策。
+11. `docs/ACCOUNT_DELETION_POLICY.md`：账号注销的法规参考、建议规则和数据处理边界。
+12. `docs/ACCOUNT_FILE_SECURITY_ACCEPTANCE.md`：账号、权限、文件、注销与首发安全的人工验收步骤。
+13. `docs/WEB_CUSTOMIZATION_ACCEPTANCE.md`：Web 定制首批的人工验收步骤与延后边界。
+14. `docs/WEB_COMMERCE_END_TO_END.md`：从联名/私人定制、混合购物车、小程序交接到付款后生产发货的统一全链路；同时列出当前已完成部分和 P0/P1 断点。
+15. `docs/COLLAB_STOREFRONT_REMEDIATION_PLAN.md`：联名商品瀑布流、唯一详情、后台 SKU 销售配置、公开字段白名单、浏览量热门和登录后继续购买的实施方案。
+16. `docs/TROUBLESHOOTING.md`：本地开发已经发生过的故障、识别方法和修复边界。
+17. 对应业务规划：`PRODUCTION.md`、`REVENUE.md`、`docs/USER_SCENARIOS.md` 等。
+18. `docs/ANIMATION_ORDER_PRODUCTION_FRAMEWORK.md`：动画资产、版本、订单商品、单件生产和材料追踪的已确认目标框架。
+19. `docs/STANDARD_KIT_INVENTORY.md`：三层库存、FIFO批次追溯、SKU材料清单、标准材料包组装、退回隔离检查和补发任务的当前实现。
+20. `docs/PRODUCTION_BATCH_WORKFLOW.md`：材料包款生产批次、帧素材与材料并行作业、阶段边界和验收记录。
+21. `docs/PRINT_PRODUCTION_PLANNING.md`：打印裁切组、Word 模板版本、无损拼接帧、生产文件、订单筛选和批次快照。
+22. `docs/PRODUCTION_WORKFLOW_ACCEPTANCE.md`：当前生产闭环的自动检查、人工验收范围和已知边界。
+23. `docs/PRODUCTION_MANUAL_TEST_PLAN_STANDARD_6SKU.md`：当前标准款六规格的正式端到端测试，使用四个订单覆盖地址、面单、多页打印、领料、配对、齐套装箱和发货。
 
 ## 文档分层
 
@@ -84,9 +85,9 @@
 
 ## 数据库规模（已核对）
 
-`content-service/prisma/schema.prisma` 当前定义（2026-08-26 后台帧图制作完成后）：
+`content-service/prisma/schema.prisma` 当前定义（2026-09-07）：
 
-- 98 个 Prisma `model`。
+- 111 个 Prisma `model`。
 - 4 个 Prisma `enum`：`UserStatus`、`SmsPurpose`、`ActionType`、`StaffRole`。
 - 数据表覆盖用户、内容社交、动画/商品、定制订单、联名、库存生产、结算、牛量、合同链接、账户安全、购物车地址和材料等领域。
 
@@ -102,7 +103,7 @@
 | 3 | 联名、创作者、收益、结算、牛量、合同、链接 | 已完成第一轮代码核对 |
 | 4 | 内容社区、用户、认证申请、通知、联络表单 | 已完成第一轮代码核对 |
 | 5 | 管理后台、生产、导入、批次、扫码、定时任务 | 已完成第一轮代码核对 |
-| 6 | Web 前端逐页面与公共脚本 | 已完成第一轮代码核对（44 个现行页 + 9 个旧版页） |
+| 6 | Web 前端逐页面与公共脚本 | 旧版完成过第一轮核对；当前共有 58 个 HTML 页面，需按正式入口重新复核 |
 | 7 | 小程序页面、Store、请求层与主后端契约 | 已完成第一轮代码核对（14 个页面、3 个 Store、请求层与后端契约） |
 | 8 | 环境、部署、迁移、测试、监控、安全和容量总评估 | 已完成第一轮代码与本地数据库核对 |
 
@@ -118,13 +119,14 @@
 
 - 每个调查批次开始时，先向项目负责人复述本次持续遵守的需求和边界，避免长任务中遗漏目标。
 - 每批都要同时核对代码、现有 Markdown、数据模型、接口、前端消费者和文件依赖，并主动识别安全、并发、性能、一致性与改造复杂度。
-- 主入口只保留稳定简要信息，详细事实写入 `docs/modules/`；不删除历史信息，冲突内容进入差异台账。
+- 主入口只保留稳定简要信息，详细事实写入 `docs/modules/`。有独立追溯价值的历史内容标明身份；完全重复、已经失效且没有独立价值的文档在修复引用后可以删除。
 - 只凭代码无法确定的产品规则进入 `docs/OPEN_QUESTIONS.md`，不擅自修改业务实现。
 - 业务讨论先保证问题覆盖全面，只在当前阶段确认首发范围、核心业务边界、数据责任与安全底线；字段、按钮、审批级数、状态细分和金额公式等实现细节，记录后延迟到开发对应模块时结合完整流程确认。
 
 ## 维护约定
 
 - 新增或改变功能时，先更新对应 `docs/modules/*.md` 的代码事实，再更新总览状态。
+- 每次文档复核同步更新 `DOCUMENTATION_STATUS.md`，防止旧规划重新被误读为当前实现。
 - 接口清单以路由代码为最终事实，`docs/API.md` 用于对外说明，但两者差异必须记录。
 - 数据结构以当前 Prisma Schema 为应用层事实；数据库实际状态还需用迁移记录和生产库核验。
 - 不删除历史规划。规划已过时或与代码冲突时，保留原文并在差异文档注明。
