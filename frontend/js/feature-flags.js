@@ -17,10 +17,6 @@
         })
         .catch(() => ({
           community: false,
-          creatorFinance: false,
-          bullSystem: false,
-          mockCertification: false,
-          creatorCollabSelfService: false,
           onlineCheckout: false,
           passwordLogin: false
         }));
@@ -36,24 +32,12 @@
     const flags = await load();
     window.mowoFeatures = flags;
 
-    if (!flags.creatorFinance) hideLinks('creator-earnings.html');
-    if (!flags.bullSystem) hideLinks('creator-links.html');
-    if (!flags.creatorCollabSelfService) hideLinks('creator-collab.html');
     if (!flags.community) {
       document.querySelectorAll('[data-feature-community]').forEach(element => element.remove());
     }
 
     const page = location.pathname.split('/').pop().toLowerCase();
     const disabledPages = {
-      'creator-earnings.html': !flags.creatorFinance,
-      'creator-links.html': !flags.bullSystem,
-      'creator-certify.html': !flags.mockCertification,
-      'creator-collab.html': !flags.creatorCollabSelfService,
-      'creator-dashboard.html': !flags.creatorFinance && !flags.bullSystem && !flags.creatorCollabSelfService,
-      'admin-settlement.html': !flags.creatorFinance,
-      'admin-revenue-config.html': !flags.creatorFinance,
-      'admin-bull.html': !flags.bullSystem,
-      'admin-links.html': !flags.bullSystem
     };
     if (!disabledPages[page]) return flags;
 

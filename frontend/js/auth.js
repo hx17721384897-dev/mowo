@@ -515,7 +515,6 @@ function navGoTo(page) {
     customizations:'my-customizations.html',
     addresses:     'my-addresses.html',
     myAnimations:  'my-animations.html',
-    creatorCenter: 'creator-dashboard.html',
     settings:      'settings.html',
     help:          'contact.html',
     admin:         'admin-orders.html',
@@ -543,7 +542,7 @@ async function navLogout() {
   document.getElementById('mowoDropdown')?.classList.remove('open');
   document.getElementById('mowoNavAvatarBtn')?.classList.remove('open');
   await logoutSession('current');
-  const protected_ = ['orders','cart','my-animations','settings','my-addresses','creator-dashboard','creator-earnings','creator-animations','creator-collab','creator-links'];
+  const protected_ = ['orders','cart','my-animations','settings','my-addresses'];
   const cur = window.location.pathname.split('/').pop().replace('.html','');
   if (protected_.includes(cur)) window.location.replace('index.html');
 }

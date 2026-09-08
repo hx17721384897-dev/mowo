@@ -69,14 +69,6 @@
       ]
     },
     {
-      key: 'creator', label: '创作者', icon: '🐄',
-      items: [
-        { href: 'admin-settlement.html', icon: '💰', label: '结算管理', feature: 'creatorFinance' },
-        { href: 'admin-bull.html',       icon: '📈', label: '牛量管理', feature: 'bullSystem' },
-        { href: 'admin-links.html',      icon: '🔗', label: '引流链接', feature: 'bullSystem' }
-      ]
-    },
-    {
       key: 'ops', label: '运营', icon: '💌',
       items: [
         { href: 'admin-contact.html', icon: '📨', label: '联络留言' }

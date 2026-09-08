@@ -73,10 +73,6 @@ const Router = {
     this.go(`/pages/product-detail.html?id=${id}`)
   },
 
-  toCreatorProfile(id) {
-    this.go(`/pages/creator-profile.html?id=${id}`)
-  },
-
   // ─────────────────────────────────────────
   // 定制流程
   // ─────────────────────────────────────────
@@ -122,44 +118,6 @@ const Router = {
   },
 
   // ─────────────────────────────────────────
-  // 创作者后台
-  // ─────────────────────────────────────────
-
-  toCreatorWorks() {
-    this.go('/pages/creator-works.html')
-  },
-
-  toCreatorEarnings() {
-    this.go('/pages/creator-earnings.html')
-  },
-
-  toCreatorCertify() {
-    this.go('/pages/creator-certify.html')
-  },
-
-  toCreatorArticleStats(id) {
-    this.go(`/pages/creator-article-stats.html?id=${id}`)
-  },
-
-  toCreatorProductStats(id) {
-    this.go(`/pages/creator-product-stats.html?id=${id}`)
-  },
-
-  // 新建商品（从动画出发，带 animationId）
-  toCreatorProductEdit(animationId = null, productId = null) {
-    if (productId) {
-      // 编辑已有商品
-      this.go(`/pages/creator-product-edit.html?productId=${productId}`)
-    } else if (animationId) {
-      // 从动画新建商品
-      this.go(`/pages/creator-product-edit.html?animationId=${animationId}`)
-    } else {
-      // 直接进入新建模式
-      this.go('/pages/creator-product-edit.html')
-    }
-  },
-
-  // ─────────────────────────────────────────
   // 工具方法
   // ─────────────────────────────────────────
 
@@ -198,22 +156,6 @@ const Router = {
     return true
   },
 
-  // 检查是否为认证创作者
-  // 需要配合 API 使用，这里只做本地快速判断
-  requireCreator() {
-    const userStr = localStorage.getItem('mowo_user')
-    if (!userStr) {
-      this.toAuth(window.location.pathname)
-      return false
-    }
-    const user = JSON.parse(userStr)
-    if (user.certifyStatus !== 2) {
-      // 弹出提示，不跳转
-      alert('请先完成创作者认证')
-      return false
-    }
-    return true
-  }
 }
 
 // 当前项目通过普通 <script> 标签加载本文件，因此直接挂到网页全局使用。
