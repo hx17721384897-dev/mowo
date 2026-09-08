@@ -615,6 +615,7 @@ footer {
 </style>
 </head>
 <body>
+<script src="../js/runtime-config.js"></script>
 <script src="../js/nav.js"></script>
 
 <!-- ══ HERO ══ -->
@@ -1260,7 +1261,7 @@ function handleFileArtist(input){
 }
 
 /* ── Submit — 真实API调用 ── */
-const API_BASE = (location.hostname==='127.0.0.1'?'http://127.0.0.1:3001':'http://localhost:3001')
+const API_BASE = window.MOWO_API_BASE
 const CONTACT_UPLOAD_SESSION_KEY = 'mowo_contact_upload_session'
 function contactUploadSession() {
   let value = sessionStorage.getItem(CONTACT_UPLOAD_SESSION_KEY)

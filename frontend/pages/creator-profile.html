@@ -393,9 +393,10 @@ footer{background:var(--black);color:rgba(255,255,255,.4);padding:48px var(--pad
 
 <div class="toast" id="toast"></div>
 
+<script src="../js/runtime-config.js"></script>
 <script src="../js/feature-flags.js"></script>
 <script>
-const MOWO_API = (location.hostname==='127.0.0.1'?'http://127.0.0.1:3001':'http://localhost:3001');
+const MOWO_API = window.MOWO_API_BASE;
 
 /* ══════════════════════════════
    工具函数

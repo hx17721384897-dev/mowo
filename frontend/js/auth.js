@@ -2,7 +2,11 @@
 // 所有页面共用：登录弹窗 + 导航栏状态管理 + 下拉菜单
 // 每个页面在 </body> 前引入：<script src="../js/auth.js"></script>
 
-var MOWO_API_BASE = (location.hostname==='127.0.0.1' ? 'http://127.0.0.1:3001' : 'http://localhost:3001');
+var MOWO_API_BASE = typeof window.MOWO_API_BASE === 'string'
+  ? window.MOWO_API_BASE
+  : ((location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? location.protocol + '//' + location.hostname + ':3001'
+      : '');
 const TOKEN_KEY = 'mowo_token';
 const USER_KEY  = 'mowo_user';
 

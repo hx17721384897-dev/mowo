@@ -1,6 +1,10 @@
 // 首发功能开关由服务端统一提供；本文件只负责隐藏入口和处理旧页面直达。
 (function () {
-  const API = location.hostname === '127.0.0.1' ? 'http://127.0.0.1:3001' : 'http://localhost:3001';
+  const API = typeof window.MOWO_API_BASE === 'string'
+    ? window.MOWO_API_BASE
+    : ((location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+        ? location.protocol + '//' + location.hostname + ':3001'
+        : '');
   let promise;
 
   function load() {

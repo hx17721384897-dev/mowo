@@ -1,4 +1,4 @@
-const DETAIL_API = location.hostname === '127.0.0.1' ? 'http://127.0.0.1:3001' : 'http://localhost:3001'
+const DETAIL_API = window.MOWO_API_BASE
 const PURCHASE_KEY = 'mowo_pending_purchase'
 const VISITOR_KEY = 'mowo_storefront_visitor'
 const workId = new URLSearchParams(location.search).get('workId')
