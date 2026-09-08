@@ -228,6 +228,7 @@ Vue 3 + TypeScript 适合逐步承接购物车、结算、订单、定制编辑�
 | `DOC_CODE_DIFFERENCES.md` | 已验证的文档/代码不一致与迁移边界。 |
 | `modules/*.md` | 各业务模块的当前代码事实、依赖、风险和消费者。 |
 | `LAUNCH_READINESS.md` | B0/B1/C/D 的发布门槛与组织责任。 |
+| `FUTURE_CHANGE_GUARDRAILS.md` | 此后新增功能必须遵守的 Schema/迁移、测试隔离、接口、前端、文档和 Git 约束。 |
 
 ## 10. 下一步
 
