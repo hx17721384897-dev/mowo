@@ -839,10 +839,10 @@ footer {
       </div>
       <p class="foot-desc">让每帧热爱，都能被触摸。专注动画机定制与创作者联名合作。</p>
       <div class="foot-socials">
-        <a class="foot-social-btn" href="#" title="微博">微</a>
-        <a class="foot-social-btn" href="#" title="B站">B</a>
-        <a class="foot-social-btn" href="#" title="小红书">红</a>
-        <a class="foot-social-btn" href="#" title="抖音">抖</a>
+        <span class="foot-social-btn" title="微博暂未开通">微</span>
+        <span class="foot-social-btn" title="B站暂未开通">B</span>
+        <span class="foot-social-btn" title="小红书暂未开通">红</span>
+        <span class="foot-social-btn" title="抖音暂未开通">抖</span>
       </div>
     </div>
     <div class="foot-col">
@@ -850,7 +850,7 @@ footer {
       <div class="foot-col-links">
         <a href="about.html">品牌故事</a>
         <a href="about.html">团队介绍</a>
-        <a href="#">新闻动态</a>
+        <a href="about.html">品牌近况</a>
       </div>
     </div>
     <div class="foot-col">
@@ -873,9 +873,9 @@ footer {
       <p class="foot-col-title">帮助中心</p>
       <div class="foot-col-links">
         <a href="faq.html">常见问题</a>
-        <a href="#">使用教程</a>
+        <a href="contact.html">使用咨询</a>
         <a href="contact.html">联络我们</a>
-        <a href="#">售后服务</a>
+        <a href="contact.html">售后咨询</a>
       </div>
     </div>
   </div>
@@ -933,51 +933,51 @@ const FAQ_DATA = [
   {
     id: 6, category: 'order', categoryLabel: '订单与支付',
     question: '订单多久可以发货？',
-    answer: '现货产品通常在下单后 48 小时内发货；定制产品需要 5–10 个工作日制作完成后发货。下单后你可以在「我的订单」中实时查看订单状态和制作进度。',
+    answer: '邀请测试期间，只有经工作人员确认可生产的测试订单才会进入履约。制作和发货安排会以订单页面及工作人员的确认信息为准。',
     sort: 6
   },
   {
     id: 7, category: 'order', categoryLabel: '订单与支付',
     question: '如何查询我的订单状态？',
-    answer: '登录账号后，点击右上角头像，在下拉菜单中选择「我的订单」即可查看所有订单的状态、物流信息和预计到达时间。也可直接访问「我的订单」页面。',
+    answer: '已形成订单后，登录账号可在「我的订单」查看系统已同步的订单与物流状态；测试中的人工确认信息以工作人员通知为准。',
     sort: 7
   },
   {
     id: 8, category: 'order', categoryLabel: '订单与支付',
     question: '支持哪些支付方式？',
-    answer: '目前支持微信支付、支付宝两种主流支付方式。下单后请在 30 分钟内完成支付，超时订单将自动取消。如需其他支付方式，请联系客服。',
+    answer: '邀请测试阶段不开放网页自动支付，也不应向页面外的陌生账户付款。若你受邀参与交易测试，请仅按工作人员提供的合规指引操作。',
     sort: 8
   },
   // 配送与物流
   {
     id: 9, category: 'shipping', categoryLabel: '配送与物流',
     question: '配送范围包括哪些地区？',
-    answer: '目前主要配送中国大陆全境，部分偏远地区运费和时效可能有所不同。港澳台及海外地区如有配送需求，请联系客服确认可达性及运费。',
+    answer: '邀请测试只在工作人员确认可履约的地区安排发货；具体配送范围请在参与测试前通过联络页面确认。',
     sort: 9
   },
   {
     id: 10, category: 'shipping', categoryLabel: '配送与物流',
     question: '运费是如何计算的？',
-    answer: '中国大陆地区订单满 199 元包邮；未满 199 元运费按重量计算，一般为 8–15 元。港澳台及海外运费以下单时实际显示为准。',
+    answer: '邀请测试阶段不展示自动运费结算。涉及实物交付时，费用和安排以工作人员确认的信息为准。',
     sort: 10
   },
   {
     id: 11, category: 'shipping', categoryLabel: '配送与物流',
     question: '发货后多久能收到？',
-    answer: '中国大陆主要城市一般 2–4 个工作日送达，偏远地区可能需要 5–7 个工作日。发货后你会收到快递单号通知，可自行在快递公司官网查询进度。',
+    answer: '发货后，订单页面会在系统已同步物流信息时展示单号和状态；实际时效受承运服务与地区影响，以物流记录为准。',
     sort: 11
   },
   // 售后与退款
   {
     id: 12, category: 'aftersale', categoryLabel: '售后与退款',
     question: '产品质量有问题怎么办？',
-    answer: '哞屋产品享有一年质量保修服务。如收到产品有损坏或质量问题，请在「我的订单」中申请售后并上传照片，或联系客服，我们会在 24 小时内为你处理。',
+    answer: '如收到产品有损坏或质量问题，请通过「我的订单」或联络页面提交照片和订单信息。邀请测试中的处理方式由工作人员记录并确认。',
     sort: 12
   },
   {
     id: 13, category: 'aftersale', categoryLabel: '售后与退款',
     question: '支持退换货吗？退款流程是怎样的？',
-    answer: '支持 7 天无理由退换货（定制产品除外，质量问题不限）。申请退货后请保持产品完好，联系客服获取退货地址并寄回，我们收货验货后 3 个工作日内退款至原支付渠道。',
+    answer: '邀请测试阶段尚未开放自动退款和退换货流程。任何测试订单的取消、退货或补偿，均须先由工作人员确认并留存处理记录。',
     sort: 13
   },
   // 创作与使用
@@ -1016,7 +1016,7 @@ const FAQ_DATA = [
   {
     id: 19, category: 'business', categoryLabel: '商务合作',
     question: '商务合作需要联系谁？',
-    answer: '所有商务合作请通过「联络我们」页面对应分类（画师联名 / 媒体博主 / 线下渠道 / 厂家合作等）提交意向表单，商务团队会在 3 个工作日内回复你。',
+    answer: '请通过「联络我们」页面的对应分类提交合作意向。邀请测试期间，回复时间和方式以工作人员实际确认的信息为准。',
     sort: 19
   },
   {
