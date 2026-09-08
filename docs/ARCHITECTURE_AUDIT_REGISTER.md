@@ -275,3 +275,5 @@
 > P0-A 账户安全 Schema 基线（2026-09-08）：已新增 `20260908103000_add_account_security_schema`，补足当前 v1 账户实际读取/写入的用户状态与隐私字段、资料安全字段、短信用途/计数、刷新会话、二次验证、Token 黑名单与审计结构。`mowo_b1_test` 现已从零完整应用 52/52 份迁移；在该隔离库上实际通过短信 Mock 注册、`GET /api/v1/account/me` 和 `POST /api/v1/auth/logout`。本切片没有放宽 `users.phone`、删除外键或修改旧库；其余账户 diff 与交易、库存等结构差异仍按 `SCHEMA_MIGRATION_ALIGNMENT_INVENTORY.md` 分域处理。
 
 > P0-B 交易工作区 Schema 基线（2026-09-08）：已新增 `20260908120000_add_transaction_workspace_schema`，将 `carts`、`cart_items`、`user_addresses`、`aftersale_requests` 以及当前订单导入/锁单/售后计数所需字段纳入迁移，并在 Schema 中补回用户到购物车、预订单、定制草稿的关系，避免误删历史外键。`mowo_b1_test` 已从零完整应用 53/53 份迁移；在该库上通过地址创建、读取和删除。结算与支付仍由 `ONLINE_CHECKOUT_ENABLED=false` 阻断；剩余收货/发货时间和订单类型定义将在交易状态机审计后单独处理。
+
+> P0-B 订单状态切片（2026-09-08）：已新增 `20260908130000_add_order_fulfillment_timestamps`，补入 `CustomizeOrder.shippedAt/receivedAt`，使用户确认收货、后台/生产发货和自动收货不再依赖运行库的隐式字段。空库 54/54 重放后两列存在。审计同时确认总订单、成交快照和单件生产任务的三层职责；真实支付未启用，预订单状态/类型与草稿状态的最终约束仍待交易专项处理。
