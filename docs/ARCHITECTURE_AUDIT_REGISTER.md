@@ -264,7 +264,7 @@
 
 > 本地启动证据（2026-09-08）：API 根路径通过 `http://localhost:3001/` 返回运行状态，功能开关接口返回社区、支付与创作者自助能力均为关闭；静态前端通过 `http://localhost:5500/mowo/frontend/pages/showcase.html` 返回 HTTP 200 并加载运行时 API 配置。此电脑的 API 未在 `127.0.0.1:3001` 响应，故本地浏览器验证统一使用 `localhost` 主机名。产品决定：`settings.html` 是正式账户设置页，必须保留；它不能再被列为创作者历史页面或删除候选。已获授权的后续删除范围仅为创作者自助联名端点，其他删除须先确认。
 
-> 本地运行与迁移复核（2026-09-08）：在移除前，无认证请求实际访问 `/api/collab/my-works` 和 `/api/collab/apply` 均返回 `404 FEATURE_NOT_AVAILABLE`。经产品授权，随后已物理移除这两个自助端点、仅供它们使用的上传/缩略图逻辑，以及无消费者的功能开关配置；公开货架和员工后台联名运营未受影响。以只读 `prisma migrate status` 复核本地 `mowo_db`：仓库有 51 份迁移，当前有 37 份未应用（从 `20260320114039_add_machine_models` 至 `20260907190000_add_collab_storefront_views`）。不得对这个既有开发库直接执行 `migrate dev/deploy`；下一步应建立名称明确的独立本地测试数据库，在空库验证迁移链、种子与核心脚本，再决定旧库的迁移/重建方案。
+> 本地运行与迁移复核（2026-09-08）：在移除前，无认证请求实际访问 `/api/collab/my-works` 和 `/api/collab/apply` 均返回 `404 FEATURE_NOT_AVAILABLE`。经产品授权，随后已物理移除这两个自助端点、仅供它们使用的上传/缩略图逻辑，以及无消费者的功能开关配置；公开货架和员工后台联名运营未受影响。重启到当前提交后的本地 API 再次验证：根路径为 HTTP 200、两个已移除端点均为 HTTP 404、`/api/config/features` 不再包含 `creatorCollabSelfService`；静态 `showcase.html` 仍为 HTTP 200 且加载运行时 API 配置。以只读 `prisma migrate status` 复核本地 `mowo_db`：仓库有 51 份迁移，当前有 37 份未应用（从 `20260320114039_add_machine_models` 至 `20260907190000_add_collab_storefront_views`）。不得对这个既有开发库直接执行 `migrate dev/deploy`；下一步应建立名称明确的独立本地测试数据库，在空库验证迁移链、种子与核心脚本，再决定旧库的迁移/重建方案。
 
 > 空库迁移验证（2026-09-08）：已创建独立本地库 `mowo_b1_test`，未修改 `mowo_db`。在该空库执行 51 份迁移时，`20260821150000_add_animation_assets_and_versions` 因依赖不存在的 `custom_products` 表失败（PostgreSQL `42P01`）；后续 22 份迁移未应用。此为可复现的 B1 本地阻断项：必须修复迁移链或建立经审计的空库基线，不能对旧开发库直接补迁移。
 
