@@ -11,6 +11,7 @@
     "check:syntax": "node scripts/check-syntax.mjs",
     "check:prisma": "prisma validate",
     "check:staff-security": "node scripts/check-staff-security.mjs",
+    "check:feature-gates": "node scripts/check-feature-gates.mjs",
     "check:admin-runtime-config": "node scripts/check-admin-runtime-config.mjs",
     "check:private-files": "node scripts/check-private-files.mjs",
     "check:account-deletion": "node scripts/check-account-deletion.mjs",

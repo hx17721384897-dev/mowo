@@ -1,5 +1,8 @@
 import { PrismaClient } from '@prisma/client'
+import { requireIsolatedTestDatabase } from './test-db-guard.mjs'
 
+// 会清理限流桶并创建测试用户，只允许连接隔离测试库。
+requireIsolatedTestDatabase()
 const prisma = new PrismaClient()
 const apiBase = process.env.TEST_API_BASE || 'http://127.0.0.1:3001'
 const run = String(Date.now()).slice(-8)
@@ -61,8 +64,8 @@ try {
   const signedFileProbe = await request('/api/storage/local')
   assert(signedFileProbe.headers.get('cross-origin-resource-policy') === 'cross-origin', 'signed local file responses can render from the static frontend origin')
   const flags = (await flagsResponse.json()).data
-  for (const feature of ['community', 'creatorFinance', 'bullSystem', 'mockCertification', 'creatorCollabSelfService']) {
-    assert(flags[feature] === false, `${feature} is disabled for invitation testing`)
+  for (const feature of ['community', 'creatorFinance', 'bullSystem', 'mockCertification', 'onlineCheckout']) {
+    assert(flags[feature] === false, `${feature} is disabled for local baseline testing`)
   }
 
   const closedPaths = [
@@ -70,14 +73,19 @@ try {
     '/api/feed',
     '/api/earnings',
     '/api/admin/bull/configs',
-    '/api/certify/status',
-    '/api/collab/my-works'
+    '/api/certify/status'
   ]
   for (const path of closedPaths) {
     const response = await request(path)
     const body = await response.json()
     assert(response.status === 404 && body.code === 'FEATURE_NOT_AVAILABLE', `${path} is denied by the server gate`)
   }
+  const removedSelfService = await request('/api/collab/my-works')
+  const removedSelfServiceBody = await removedSelfService.json()
+  assert(
+    removedSelfService.status === 404 && removedSelfServiceBody.statusCode === 404,
+    'removed creator collaboration self-service route is not registered'
+  )
   assert((await request('/api/collab/works?limit=1')).status === 200, 'approved collaboration showcase remains available')
 
   for (let index = 0; index < smsTestPhones.length; index += 1) {
@@ -104,7 +112,10 @@ try {
   for (let index = 0; index < 6; index += 1) {
     const response = await request('/api/contact', {
       method: 'POST',
-      body: JSON.stringify({ type: 'invalid-test' })
+      body: JSON.stringify({
+        type: 'feedback', name: '限流测试', contact: 'test@example.invalid',
+        message: '仅验证限流，不写入留言', attachments: ['feedback-does-not-allow-attachments']
+      })
     })
     const expected = index < 5 ? 400 : 429
     assert(response.status === expected, `contact attempt ${index + 1} returns ${expected}`)
