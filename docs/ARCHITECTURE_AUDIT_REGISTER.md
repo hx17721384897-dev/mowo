@@ -299,3 +299,5 @@
 > B2-007 客户端 API Origin 收敛（2026-09-09）：地址、我的动画、定制开始、编辑和确认页曾各自把非 `127.0.0.1` 解释为 `localhost:3001`，与已存在的部署同源运行时配置冲突。现统一在业务脚本前加载 `runtime-config.js`，使用 `window.MOWO_API_BASE`：本机保留同机 3001，部署默认空 Origin（同源 `/api`），也允许在页面最早执行前通过 `MOWO_RUNTIME_API_BASE` 指向独立 API 域。已重新扫描这五页，不含旧硬编码地址；`npm run check` 通过。
 
 > B2-008 私人页登录与首页路径收敛（2026-09-09）：`my-addresses.html` 曾链接不存在的 `frontend/index.html`，定制开始与确认页在复用素材但未登录时仍跳至不存在的 `auth.html`。现统一链接当前 `pages/index.html`；需认证时通过 `auth=1` 打开首页登录弹窗，定制页保留只接受站内路径的返回地址。对地址、动画、我的定制和三步定制共六页扫描，未发现剩余 `auth.html` 或错误上级首页引用；`npm run check` 通过。
+
+> B2-009 创作者自助编辑残留清理（2026-09-09）：`customize-editor.html` 仍含无现行消费者的 `mode=creator` 分支：会上传 `CREATOR_FRAME`、读写旧 `custom-products` 草稿并默认跳向已删除的 `creator-animations.html`。根据已确认的“首发不开放创作者自助平台”边界，已删除该分支及其按钮/缓存特殊处理；普通私人动画编辑、自己筛帧草稿和后台人工筛帧路径不变。全仓现行前端目录对该编辑器已无 `mode=creator`、`CREATOR_FRAME` 或旧创作者返回页引用；`npm run check` 通过。

@@ -959,12 +959,6 @@ if (machineType === 'dual') {
   });
 }
 
-/* Creator 模式：更新按钮文字 */
-if (new URLSearchParams(location.search).get('mode') === 'creator') {
-  const btn = document.getElementById('btnNextStep');
-  btn.textContent = btn.dataset.creatorLabel || '确认 →';
-}
-
 /* 渲染底部目标帧数 */
 document.getElementById('targetTxt').textContent = allowedFrames.join(' / ') + ' 帧';
 const ebarTargets = document.getElementById('ebarTargets');
@@ -992,8 +986,7 @@ goState(S.UPLOAD);
 
 /* ══════════════════════════════════════════
    「重新编辑」草稿加载
-   URL 参数 editId（creator-animations）或
-            productId（my-animations）均支持
+   URL 参数 editId 或 productId 均支持
 ══════════════════════════════════════════ */
 ;(async function loadDraftIfNeeded() {
   const params  = new URLSearchParams(location.search);
@@ -1393,7 +1386,7 @@ async function checkQuotaBeforeUpload() {
 function handleFiles(files) {
   if (!files.length) return;
   const modeParams = new URLSearchParams(location.search);
-  if (!modeParams.get('adminRequestId') && !modeParams.get('reviewRequestId') && modeParams.get('mode') !== 'creator') {
+  if (!modeParams.get('adminRequestId') && !modeParams.get('reviewRequestId')) {
     sessionStorage.removeItem('mowo_customize_request_draft_key');
     sessionStorage.removeItem('mowo_customize_request_draft_owner');
     localStorage.removeItem('mowo_customize_request_draft_id');
@@ -2404,58 +2397,6 @@ document.getElementById('btnNextStep').addEventListener('click', async ()=>{
       button.textContent = `保存为 V${baseVersion.versionNo + 1}`;
     }
     return;
-  }
-
-  /* ── Creator 模式：保存到动画作品库后跳回 ── */
-  const urlParams  = new URLSearchParams(location.search);
-  const editorMode = urlParams.get('mode');
-  if (editorMode === 'creator') {
-    const editId   = urlParams.get('editId');
-    const returnTo = urlParams.get('returnTo') || 'creator-animations.html';
-    const token    = localStorage.getItem('mowo_token');
-    const CAPI = window.MOWO_API_BASE || '';
-    const selectedUrls = cl.map(i => frames[i]);
-
-    document.getElementById('btnNextStep').disabled = true;
-    document.getElementById('btnNextStep').textContent = '保存中…';
-
-    try {
-      const uploadedKeys = await window.MowoPrivateUpload.uploadSources({
-        sources: selectedUrls,
-        token,
-        purpose: 'CREATOR_FRAME',
-        onProgress: (done, total) => {
-          document.getElementById('btnNextStep').textContent = `上传 ${done}/${total}`;
-        }
-      });
-      if (editId) {
-        // 更新已有动画
-        const res = await fetch(`${CAPI}/api/custom-products/${encodeURIComponent(editId)}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ animationFrames: JSON.stringify(uploadedKeys), frameCount: cnt }),
-        });
-        const json = await res.json();
-        if (!json.success) throw new Error(json.message || '动画保存失败');
-        location.href = returnTo;
-      } else {
-        // 新建动画
-        const res  = await fetch(`${CAPI}/api/custom-products`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ animationFrames: JSON.stringify(uploadedKeys), frameCount: cnt }),
-        });
-        const json = await res.json();
-        if (!json.success) throw new Error(json.message || '动画保存失败');
-        const savedId = json.data?.id || '';
-        location.href = `${returnTo}${returnTo.includes('?') ? '&' : '?'}savedProductId=${savedId}`;
-      }
-    } catch(e) {
-      alert('保存失败：' + (e.message || '请重试'));
-      document.getElementById('btnNextStep').disabled = false;
-      document.getElementById('btnNextStep').textContent = '确认 →';
-    }
-    return; /* 不走买家流程 */
   }
 
   /* ── 买家自己筛选：登录后保存原素材、筛选帧和云端草稿 ── */
