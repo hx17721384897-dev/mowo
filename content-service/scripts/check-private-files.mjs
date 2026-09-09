@@ -70,6 +70,10 @@ async function localStorageDelete(objectKey) {
 }
 
 async function cleanup() {
+  // 匿名联络接口刻意不返回内部记录 ID；仅清理由本自检固定文案产生的残留记录。
+  await prisma.contactSubmission.deleteMany({ where: {
+    type: 'join', contact: 'test@example.com', message: 'Private file security test submission'
+  } })
   const ids = createdUsers.map(item => item.id)
   const phones = createdUsers.map(item => item.phone)
   if (createdKeys.length) {
@@ -260,13 +264,14 @@ try {
     })
   })
   assertStatus('anonymous resume binds to contact', contactResponse.status, 200)
-  const contactBody = await contactResponse.json()
+  await contactResponse.json()
   const boundResume = await prisma.privateFile.findUnique({ where: { objectKey: anonymousData.objectKey } })
-  if (boundResume?.linkedResourceType !== 'CONTACT_SUBMISSION' || boundResume.linkedResourceId !== contactBody.data.id) {
+  const contactId = boundResume?.linkedResourceType === 'CONTACT_SUBMISSION' ? boundResume.linkedResourceId : null
+  if (!contactId || !(await prisma.contactSubmission.findUnique({ where: { id: contactId }, select: { id: true } }))) {
     throw new Error('anonymous resume was not linked to its contact submission')
   }
   console.log('PASS anonymous resume ownership and business binding')
-  await prisma.contactSubmission.delete({ where: { id: contactBody.data.id } })
+  await prisma.contactSubmission.delete({ where: { id: contactId } })
   console.log('Private file security checks passed')
 } finally {
   await cleanup()
