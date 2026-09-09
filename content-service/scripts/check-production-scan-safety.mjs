@@ -8,6 +8,7 @@ const apiBase = process.env.TEST_API_BASE || 'http://127.0.0.1:3001'
 const runId = String(Date.now()).slice(-8)
 const phone = `194${runId}`
 let userId = null
+const fixtureIds = {}
 
 function assert(condition, message) {
   if (!condition) throw new Error(message)
@@ -15,6 +16,22 @@ function assert(condition, message) {
 }
 
 async function cleanup() {
+  if (fixtureIds.taskId) await prisma.productionUnitPairing.deleteMany({ where: { productionUnitId: fixtureIds.taskId } }).catch(() => {})
+  if (fixtureIds.batchId) await prisma.productionMaterialPick.deleteMany({ where: { batchId: fixtureIds.batchId } }).catch(() => {})
+  if (fixtureIds.taskId) await prisma.productionFramePack.deleteMany({ where: { productionUnitId: fixtureIds.taskId } }).catch(() => {})
+  if (fixtureIds.batchId) await prisma.productionBatchUnit.deleteMany({ where: { batchId: fixtureIds.batchId } }).catch(() => {})
+  if (fixtureIds.batchId) await prisma.batchItem.deleteMany({ where: { batchId: fixtureIds.batchId } }).catch(() => {})
+  if (fixtureIds.batchId) await prisma.productionBatchOrder.deleteMany({ where: { batchId: fixtureIds.batchId } }).catch(() => {})
+  if (fixtureIds.batchId) await prisma.productionBatch.deleteMany({ where: { id: fixtureIds.batchId } }).catch(() => {})
+  if (fixtureIds.otherBatchId) await prisma.productionBatch.deleteMany({ where: { id: fixtureIds.otherBatchId } }).catch(() => {})
+  if (fixtureIds.taskId) await prisma.customizeOrder.deleteMany({ where: { id: fixtureIds.taskId } }).catch(() => {})
+  if (fixtureIds.itemId) await prisma.salesOrderItem.deleteMany({ where: { id: fixtureIds.itemId } }).catch(() => {})
+  if (fixtureIds.orderId) await prisma.salesOrder.deleteMany({ where: { id: fixtureIds.orderId } }).catch(() => {})
+  if (fixtureIds.preOrderId) await prisma.preOrder.deleteMany({ where: { id: fixtureIds.preOrderId } }).catch(() => {})
+  if (fixtureIds.kitBatchId) await prisma.kitAssemblyBatch.deleteMany({ where: { id: fixtureIds.kitBatchId } }).catch(() => {})
+  if (fixtureIds.containerId) await prisma.kitContainer.deleteMany({ where: { id: fixtureIds.containerId } }).catch(() => {})
+  if (fixtureIds.skuId) await prisma.machineModelSku.deleteMany({ where: { id: fixtureIds.skuId } }).catch(() => {})
+  if (fixtureIds.modelId) await prisma.machineModel.deleteMany({ where: { id: fixtureIds.modelId } }).catch(() => {})
   if (userId) {
     await prisma.operationLog.deleteMany({ where: { userId } })
     await prisma.refreshToken.deleteMany({ where: { userId } })
@@ -27,23 +44,89 @@ async function cleanup() {
 }
 
 try {
-  const fixture = await prisma.productionFramePack.findFirst({
-    where: { isActive: true, status: { in: ['COMPLETED', 'PAIRED', 'PACKED', 'SHIPPED'] } }, orderBy: { updatedAt: 'desc' }
-  })
-  if (!fixture) throw new Error('没有可用于生产清单检查的帧包')
-  const activeBatches = await prisma.productionBatch.findMany({ where: { status: { in: ['READY', 'IN_PROGRESS'] } }, select: { id: true } })
-  const fixtureBatchIsActive = activeBatches.some(batch => batch.id === fixture.batchId)
-  const otherBatch = activeBatches.find(batch => batch.id !== fixture.batchId)
-  const pick = await prisma.productionMaterialPick.findFirst({
-    where: { batchId: fixture.batchId, status: 'ACTIVE', remainingQty: { gt: 0 } },
-    include: { kitAssemblyBatch: true, kitContainer: true }
-  })
-
   const user = await prisma.user.create({ data: {
-    phone, role: 2, staffRole: 'OWNER', privacyAgreedAt: new Date(), privacyPolicyVersion: 'scan-safety-test',
+    phone, role: 3, staffRole: 'OWNER', privacyAgreedAt: new Date(), privacyPolicyVersion: 'scan-safety-test',
     profile: { create: { nickname: `scan-safety-${runId}` } }, creditScore: { create: { score: 100 } }
   } })
   userId = user.id
+
+  const model = await prisma.machineModel.create({ data: {
+    name: `扫码测试款-${runId}`, ratios: '["1:1"]', frameOptions: '[12]', sizes: '["5×5cm"]'
+  } })
+  fixtureIds.modelId = model.id
+  const sku = await prisma.machineModelSku.create({ data: {
+    modelId: model.id, size: '5×5cm', material: '扫码测试材料', frameCount: 12,
+    colorName: '测试白', colorHex: '#FFFFFF', skuCode: `MOWO-SKU-SCAN-${runId}`
+  } })
+  fixtureIds.skuId = sku.id
+  const preOrder = await prisma.preOrder.create({ data: {
+    userId, cartItemIds: '[]', checkoutIdempotencyKey: `scan-${runId}`, status: 'paid',
+    totalAmount: '10.00', receiverName: '扫码测试', receiverPhone: phone,
+    receiverAddress: '隔离测试地址', receiverCity: '测试市', expiresAt: new Date(Date.now() + 600000)
+  } })
+  fixtureIds.preOrderId = preOrder.id
+  const order = await prisma.salesOrder.create({ data: {
+    orderNo: `SO-SCAN-${runId}`, userId, preOrderId: preOrder.id, status: 'paid',
+    fulfillmentStatus: 'PRODUCING', totalAmount: '10.00', receiverName: '扫码测试',
+    receiverPhone: phone, receiverAddress: '隔离测试地址', receiverCity: '测试市', paidAt: new Date()
+  } })
+  fixtureIds.orderId = order.id
+  const item = await prisma.salesOrderItem.create({ data: {
+    itemNo: `SO-SCAN-${runId}-01`, salesOrderId: order.id, itemType: 'CUSTOM',
+    contentId: `scan-fixture-${runId}`, skuId: sku.id, skuCode: sku.skuCode,
+    snapshotTitle: '扫码测试商品', unitPrice: '10.00', quantity: 1, lineTotal: '10.00'
+  } })
+  fixtureIds.itemId = item.id
+  const task = await prisma.customizeOrder.create({ data: {
+    orderNo: `PU-SCAN-${runId}`, userId, modelId: model.id, modelName: model.name,
+    frameCount: 12, size: sku.size, material: sku.material, color: sku.colorHex,
+    colorName: sku.colorName, skuId: sku.id, ossPath: '', frameUrls: '[]', status: 'producing',
+    sourceType: 'custom', salesOrderItemId: item.id, unitIndex: 1
+  } })
+  fixtureIds.taskId = task.id
+  const batchId = `PB-SCAN-${runId}`
+  const otherBatchId = `PB-SCAN-OTHER-${runId}`
+  fixtureIds.batchId = batchId
+  fixtureIds.otherBatchId = otherBatchId
+  await prisma.productionBatch.createMany({ data: [
+    { id: batchId, operatorId: userId, status: 'IN_PROGRESS', salesOrderCount: 1, productionUnitCount: 1, skuCount: 1 },
+    { id: otherBatchId, operatorId: userId, status: 'READY' }
+  ] })
+  await prisma.productionBatchOrder.create({ data: {
+    batchId, salesOrderId: order.id, orderNoSnapshot: order.orderNo, status: 'PRODUCING'
+  } })
+  await prisma.productionBatchUnit.create({ data: {
+    batchId, productionUnitId: task.id, salesOrderId: order.id, skuId: sku.id,
+    productionNoSnapshot: task.orderNo, printSequence: 1, printPageCount: 1,
+    frameStatus: 'COMPLETED', materialStatus: 'PICKED', pairingStatus: 'COMPLETED'
+  } })
+  await prisma.batchItem.create({ data: { batchId, skuId: sku.id, skuCode: sku.skuCode, plannedQty: 1, actualQty: 1 } })
+  const container = await prisma.kitContainer.create({ data: {
+    code: `KC-SCAN-${runId}`, skuId: sku.id, currentQty: 1, reservedQty: 1, location: '隔离测试区'
+  } })
+  fixtureIds.containerId = container.id
+  const kitBatch = await prisma.kitAssemblyBatch.create({ data: {
+    batchNo: `KB-SCAN-${runId}`, skuId: sku.id, quantity: 2, availableQty: 1, reservedQty: 1,
+    bomVersion: 1, bomSnapshot: '{}', containerId: container.id, operatorId: userId
+  } })
+  fixtureIds.kitBatchId = kitBatch.id
+  const pick = await prisma.productionMaterialPick.create({ data: {
+    batchId, skuId: sku.id, kitAssemblyBatchId: kitBatch.id, kitContainerId: container.id,
+    quantity: 2, remainingQty: 1, consumedQty: 1, pickedBy: userId
+  }, include: { kitAssemblyBatch: true, kitContainer: true } })
+  const fixture = await prisma.productionFramePack.create({ data: {
+    code: `FP-SCAN-${runId}-01`, productionUnitId: task.id, salesOrderId: order.id,
+    batchId, skuId: sku.id, targetFrameCount: 12, size: sku.size,
+    status: 'PAIRED', isActive: true, createdBy: userId
+  } })
+  await prisma.productionUnitPairing.create({ data: {
+    productionUnitId: task.id, salesOrderId: order.id, batchId, framePackId: fixture.id,
+    skuId: sku.id, kitAssemblyBatchId: kitBatch.id, kitContainerId: container.id,
+    pairedBy: userId
+  } })
+
+  const fixtureBatchIsActive = true
+  const otherBatch = { id: otherBatchId }
   await prisma.smsCode.create({ data: { userId, phone, code: '123456', purpose: 'LOGIN', expiresAt: new Date(Date.now() + 300000) } })
   const loginResponse = await fetch(`${apiBase}/api/v1/auth/sms/verify`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, code: '123456', mode: 'LOGIN' })
