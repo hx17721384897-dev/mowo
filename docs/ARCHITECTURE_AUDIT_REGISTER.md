@@ -301,3 +301,5 @@
 > B2-008 私人页登录与首页路径收敛（2026-09-09）：`my-addresses.html` 曾链接不存在的 `frontend/index.html`，定制开始与确认页在复用素材但未登录时仍跳至不存在的 `auth.html`。现统一链接当前 `pages/index.html`；需认证时通过 `auth=1` 打开首页登录弹窗，定制页保留只接受站内路径的返回地址。对地址、动画、我的定制和三步定制共六页扫描，未发现剩余 `auth.html` 或错误上级首页引用；`npm run check` 通过。
 
 > B2-009 创作者自助编辑残留清理（2026-09-09）：`customize-editor.html` 仍含无现行消费者的 `mode=creator` 分支：会上传 `CREATOR_FRAME`、读写旧 `custom-products` 草稿并默认跳向已删除的 `creator-animations.html`。根据已确认的“首发不开放创作者自助平台”边界，已删除该分支及其按钮/缓存特殊处理；普通私人动画编辑、自己筛帧草稿和后台人工筛帧路径不变。全仓现行前端目录对该编辑器已无 `mode=creator`、`CREATOR_FRAME` 或旧创作者返回页引用；`npm run check` 通过。
+
+> B2-010 地址页会话消费者收敛（2026-09-09）：地址页此前只在首次加载时读取 `mowo_token`，而公共认证脚本会在续期时刷新本地令牌，导致地址页后续请求可能先带旧 Token 触发一次无意义 401。现监听页面级 `mowoTokenRefreshed` 事件同步局部令牌；无登录 Token 时跳至首页登录弹窗并传递站内返回地址。`npm run check` 通过；令牌自然续期需在浏览器按 B2 台账第 10 步回归。

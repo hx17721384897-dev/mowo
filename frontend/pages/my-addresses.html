@@ -254,7 +254,8 @@ let addresses = []
 document.addEventListener('DOMContentLoaded', async () => {
   token = localStorage.getItem('mowo_token') || ''
   if (!token) {
-    window.location.href = 'index.html?auth=1'
+    const redirect = location.pathname + location.search
+    window.location.href = `index.html?auth=1&redirect=${encodeURIComponent(redirect)}`
     return
   }
 
@@ -271,6 +272,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   })
 
   await loadAddresses()
+})
+
+window.addEventListener('mowoTokenRefreshed', () => {
+  token = localStorage.getItem('mowo_token') || ''
 })
 
 // ── 加载地址列表 ──────────────────────────────────────────────────
