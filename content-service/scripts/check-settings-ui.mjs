@@ -1,4 +1,5 @@
 import { chromium } from 'file:///C:/Users/25839/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs'
+import fs from 'node:fs/promises'
 import { PrismaClient } from '@prisma/client'
 import { requireIsolatedTestDatabase } from './test-db-guard.mjs'
 
@@ -12,6 +13,11 @@ const phone = `198${runId}1`
 const replacementPhone = `199${runId}1`
 let userId = null
 let browser = null
+
+const PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+X7S0WQAAAABJRU5ErkJggg==',
+  'base64'
+)
 
 async function api(path, token, options = {}) {
   return fetch(`${apiBase}${path}`, {
@@ -41,7 +47,9 @@ async function chooseFirstRegion(page, selector) {
 async function cleanup() {
   if (browser) await browser.close().catch(() => {})
   if (userId) {
+    const privateFiles = await prisma.privateFile.findMany({ where: { ownerUserId: userId }, select: { objectKey: true } })
     await prisma.userAddress.deleteMany({ where: { userId } })
+    await prisma.privateFile.deleteMany({ where: { ownerUserId: userId } })
     await prisma.operationLog.deleteMany({ where: { userId } })
     await prisma.auditLog.deleteMany({ where: { userId } })
     await prisma.refreshToken.deleteMany({ where: { userId } })
@@ -50,6 +58,7 @@ async function cleanup() {
     await prisma.creditScore.deleteMany({ where: { userId } })
     await prisma.userProfile.deleteMany({ where: { userId } })
     await prisma.user.deleteMany({ where: { id: userId } })
+    await Promise.all(privateFiles.map((file) => fs.rm(new URL(`../storage/private/${file.objectKey}`, import.meta.url), { force: true }).catch(() => {})))
   }
   await prisma.$disconnect()
 }
@@ -82,6 +91,17 @@ try {
   await page.addInitScript((token) => localStorage.setItem('mowo_token', token), login.data.accessToken)
   await page.goto(`${webBase}/settings.html`, { waitUntil: 'networkidle' })
   await page.locator('#nicknameInput').waitFor({ timeout: 10000 })
+
+  await page.locator('#avatarFileInput').setInputFiles({ name: 'settings-avatar.png', mimeType: 'image/png', buffer: PNG })
+  await page.locator('#cropperModal.open').waitFor({ timeout: 15000 })
+  await page.getByRole('button', { name: '确认上传' }).click()
+  await waitForToast(page, '头像已更新')
+  const uploadedAvatar = await prisma.privateFile.findFirst({ where: { ownerUserId: userId, purpose: 'AVATAR', status: 'READY' } })
+  const profileAfterAvatar = await prisma.userProfile.findUnique({ where: { userId } })
+  if (!uploadedAvatar || !profileAfterAvatar?.avatarUrl?.includes(uploadedAvatar.id)) {
+    throw new Error('avatar upload was not adopted by the account profile')
+  }
+  console.log('PASS settings browser crops, uploads and adopts an avatar')
 
   const nickname = `设置验收${runId}`
   await page.locator('#nicknameInput').fill(nickname)
