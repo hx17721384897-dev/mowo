@@ -287,3 +287,5 @@
 > P0-F 约束收口（2026-09-09）：`20260909100000_align_confirmed_schema_constraints` 已依据“动画直接提交时联名作品没有订单号”的现有产品说明，使 `collab_works.order_no` 与 Schema 一致可空；同时将库存日志、草稿、预订单和货架状态的 Schema 长度标注收敛到已有迁移结构，避免无意义的类型变更。`mowo_b1_test` 从零重放 58/58 迁移、`npm run check` 通过。仍保留为待决策而未动的差异：手机号是否为微信登录预留而可空、`animation_assets.owner_user_id` 的删除策略、各 `updated_at` 默认值，以及仅名称不同的索引/外键；这些不能通过自动 diff 直接删除或修改。
 
 > B2-A 账户入口初查（2026-09-09）：当前正式 `settings.html` 保留并调用 v1 账户、上传和地址接口，认证展示不再与已下线的创作者平台联动。发现 `my-customizations.html` 未登录时曾跳转不存在的 `auth.html`，现已改为同目录首页的统一登录弹窗，并传递只接受以 `/` 开头的返回路径；页面同时接入运行时 API Origin。静态页和隔离测试 API（`mowo_b1_test`）健康检查均返回 200，`npm run check` 通过；仍需产品按 `BATCH_2_ACCOUNT_CUSTOMIZATION_AUDIT.md` 的第 1—4 步在浏览器确认登录后返回、设置页和退出行为。
+
+> B2-B 地址所有权验证（2026-09-09）：`routes/addresses.js` 的列表、编辑、删除和默认地址切换均以当前设备会话的 `userId` 为边界。隔离库双账号实际验证：用户 B 读取不到用户 A 的地址；B 删除 A 的地址返回 404；A 本人删除返回 200。测试仅使用 `mowo_b1_test`。注销申请/撤销会改变账号状态，留待在专用测试账号上按人工步骤验证，不自动执行。
