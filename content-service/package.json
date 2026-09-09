@@ -15,6 +15,7 @@
     "check:account-deletion": "node scripts/check-account-deletion.mjs",
     "check:customization-flow": "node scripts/check-customization-flow.mjs",
     "check:customization-ui": "node scripts/check-customization-ui.mjs",
+    "check:settings-ui": "node scripts/check-settings-ui.mjs",
     "check:sales-order-structure": "node scripts/check-sales-order-structure.mjs",
     "check:mixed-checkout-ui": "node scripts/check-mixed-checkout-ui.mjs",
     "check:standard-kit-inventory": "node scripts/check-standard-kit-inventory.mjs",
