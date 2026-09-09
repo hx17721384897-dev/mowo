@@ -10,13 +10,13 @@
 | B6-001 | 生产批次、打印排产、帧图库、帧图制作/导入、生产资料、生产工作流、扫码安全/UI 等 9 个检查脚本会写入数据库；此前均未检查目标库名。 | P0：本地运行时可能误写 `mowo_db`。 | **已修复：** 全部在创建 Prisma Client 前调用 `requireIsolatedTestDatabase()`，仅允许 `mowo_b1_test`。 |
 | B6-002 | 旧 `CustomizeOrder` 订单/批次/扫码/验证码路由仍与正式 `SalesOrder` 和新生产工作流并存。 | P0：新旧模型混用会使库存、履约和追溯失真。 | 进行中：先列消费者、状态与数据迁移依赖，再决定封闭或迁移。 |
 | B6-003 | 生产操作包含导出地址、生产文件、帧包、领料、配对、装箱、发货与返工。 | P0：这些具有副作用，必须检查幂等、事务、扫码重复和审计。 | 待按状态机和写入入口逐项回归。 |
-| B6-004 | `check-production-scan-safety` 会从数据库寻找已有活跃帧包，而不创建自己的生产夹具。 | P0：空隔离库无法独立复现扫码安全回归，测试结果依赖执行顺序和历史残留。 | 已确认，待修复为自建/自清理夹具；不是当前业务接口故障。 |
+| B6-004 | `check-production-scan-safety` 曾从数据库寻找已有活跃帧包，而不创建自己的生产夹具。 | P0：空隔离库无法独立复现扫码安全回归，测试结果依赖执行顺序和历史残留。 | **已修复并验证：** 脚本自行创建/清理订单、SKU、双批次、帧包、材料和配对；空隔离库专项通过，残留计数为 0。 |
 
 ## 本轮记录
 
 - 已保护脚本：`check-production-batches`、`check-print-production`、`check-frame-library`、`check-frame-making`、`check-frame-imports`、`check-production-artifacts`、`check-production-workflow`、`check-production-scan-safety`、`check-production-scan-ui`。
 - 未运行这些脚本，直到临时 API 实例明确连接 `mowo_b1_test`；保护本身已由 `npm run check:syntax` 验证。
-- `check-production-workflow` 已在空隔离库通过，验证正式生产模型、帧包、材料、返工、装箱、发货、旧入口收口和扫码工作台结构。`check-production-scan-safety` 首次运行被正确的空隔离库暴露出夹具依赖：没有既有帧包即退出。临时 3002 服务已关闭，未触碰开发库。
+- `check-production-workflow` 已在空隔离库通过，验证正式生产模型、帧包、材料、返工、装箱、发货、旧入口收口和扫码工作台结构。`check-production-scan-safety` 已改为自建/自清理夹具并在一次性 3002 服务通过，覆盖重复完成、跨批次拒绝、材料来源、重复配对不扣库存/不重复记日志及生产总表；结束后四类夹具残留计数均为 0，未触碰开发库。
 - B6 不删除旧路由；旧域处理必须先完成页面/API 消费者清单、历史数据兼容和可回退迁移设计。
 
 ## 后续顺序
