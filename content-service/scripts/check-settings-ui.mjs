@@ -134,6 +134,21 @@ try {
   }
   console.log('PASS settings browser creates the first default address')
 
+  await page.getByRole('button', { name: '编辑', exact: true }).click()
+  await page.locator('#addressModal.open').waitFor({ timeout: 10000 })
+  await page.locator('#addrFPhone').fill('')
+  await page.getByRole('button', { name: '保存地址' }).click()
+  await waitForToast(page, '请填写正确的手机号')
+  await page.locator('#addrFPhone').fill('13900139000')
+  await page.locator('#addrFDetail').fill('测试大道 99 号 602 室')
+  await page.getByRole('button', { name: '保存地址' }).click()
+  await waitForToast(page, '地址已更新')
+  const editedAddress = await prisma.userAddress.findFirst({ where: { userId } })
+  if (editedAddress?.phone !== '13900139000' || editedAddress.detail !== '测试大道 99 号 602 室') {
+    throw new Error('address edit was not persisted')
+  }
+  console.log('PASS settings browser validates and edits an address')
+
   if (pageErrors.length) throw new Error(`settings page errors: ${pageErrors.join(' | ')}`)
   console.log('Settings browser UI checks passed')
 } finally {
