@@ -1,7 +1,9 @@
 import { PrismaClient } from '@prisma/client'
+import { requireIsolatedTestDatabase } from './test-db-guard.mjs'
 import { readFileSync } from 'node:fs'
 import { parse } from 'acorn'
 
+requireIsolatedTestDatabase()
 const prisma = new PrismaClient()
 const apiBase = process.env.TEST_API_BASE || 'http://127.0.0.1:3001'
 const runId = String(Date.now()).slice(-8)

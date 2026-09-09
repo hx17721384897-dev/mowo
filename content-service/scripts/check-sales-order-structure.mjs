@@ -1,6 +1,8 @@
 import { PrismaClient } from '@prisma/client'
 import { chromium } from 'file:///C:/Users/25839/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs'
+import { requireIsolatedTestDatabase } from './test-db-guard.mjs'
 
+requireIsolatedTestDatabase()
 const prisma = new PrismaClient()
 const apiBase = process.env.TEST_API_BASE || 'http://127.0.0.1:3001'
 const webBase = process.env.TEST_WEB_BASE || 'http://127.0.0.1:5500/mowo/frontend/pages'
@@ -303,7 +305,10 @@ try {
   })
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
   const page = await context.newPage()
-  await page.addInitScript(value => localStorage.setItem('mowo_token', value), token)
+  await page.addInitScript(({ token, apiBase }) => {
+    window.MOWO_RUNTIME_API_BASE = apiBase
+    localStorage.setItem('mowo_token', token)
+  }, { token, apiBase })
   await page.goto(`${webBase}/orders.html`, { waitUntil: 'networkidle' })
   const card = page.locator('.order-card').filter({ hasText: order.orderNo })
   await card.waitFor({ timeout: 10000 })
