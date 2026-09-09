@@ -920,10 +920,11 @@ html.admin-frame-mode #mowo-mobile-overlay { display: none !important; }
   👆 点图片预览 · 长按或点「勾选」进入选择模式
 </div>
 
+<script src="../js/runtime-config.js"></script>
 <script src="../js/private-upload.js"></script>
 <script>
 'use strict';
-const CAPI_BASE = location.hostname === '127.0.0.1' ? 'http://127.0.0.1:3001' : 'http://localhost:3001';
+const CAPI_BASE = window.MOWO_API_BASE || '';
 
 function safeStorageSet(key, value) {
   try { localStorage.setItem(key, value); return true; }
@@ -1004,7 +1005,7 @@ goState(S.UPLOAD);
   if (!token) return;
 
   goState(S.LOAD);  // 显示加载动画
-  const CAPI = location.hostname === '127.0.0.1' ? 'http://127.0.0.1:3001' : 'http://localhost:3001';
+  const CAPI = window.MOWO_API_BASE || '';
   try {
     if (assetId) {
       const assetResponse = await fetch(`${CAPI}/api/animation-assets/${encodeURIComponent(assetId)}`, {
@@ -1374,7 +1375,7 @@ async function checkQuotaBeforeUpload() {
   const token = localStorage.getItem('mowo_token');
   if (!token) return true; /* 未登录，让后续步骤兜底 */
 
-  const CAPI = location.hostname === '127.0.0.1' ? 'http://127.0.0.1:3001' : 'http://localhost:3001';
+  const CAPI = window.MOWO_API_BASE || '';
   try {
     const res  = await fetch(`${CAPI}/api/custom-products/quota`, {
       headers: { Authorization: `Bearer ${token}` }
@@ -2412,7 +2413,7 @@ document.getElementById('btnNextStep').addEventListener('click', async ()=>{
     const editId   = urlParams.get('editId');
     const returnTo = urlParams.get('returnTo') || 'creator-animations.html';
     const token    = localStorage.getItem('mowo_token');
-    const CAPI     = (location.hostname==='127.0.0.1'?'http://127.0.0.1:3001':'http://localhost:3001');
+    const CAPI = window.MOWO_API_BASE || '';
     const selectedUrls = cl.map(i => frames[i]);
 
     document.getElementById('btnNextStep').disabled = true;

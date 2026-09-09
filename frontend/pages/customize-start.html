@@ -610,8 +610,9 @@ footer{background:var(--black);color:rgba(255,255,255,.45);padding:80px var(--pa
   </div>
 </footer>
 
+<script src="../js/runtime-config.js"></script>
 <script>
-const MOWO_API = (location.hostname==='127.0.0.1'?'http://127.0.0.1:3001':'http://localhost:3001')
+const MOWO_API = window.MOWO_API_BASE || ''
 let _models = [], _selectedId = null
 let _curDetailModel = null, _skuSales = {}
 let _fSize='', _fMaterial='', _fFrame='', _fColor='', _sortPrice='', _sortPopular=false
@@ -832,7 +833,7 @@ function clearSelection() {
 }
 
 // ══ 下一步（配额检查）══
-const CAPI = location.hostname === '127.0.0.1' ? 'http://127.0.0.1:3001' : 'http://localhost:3001'
+const CAPI = window.MOWO_API_BASE || ''
 
 async function goNext(e) {
   e.preventDefault()

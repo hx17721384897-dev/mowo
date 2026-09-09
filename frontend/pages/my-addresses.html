@@ -240,10 +240,11 @@ a{text-decoration:none;color:inherit;}
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<script src="../js/runtime-config.js"></script>
 <script type="module">
 import { smartParseAddress, initCascadeSelects, fillAddressForm } from '../js/address-utils.js'
 
-const API = (location.hostname==='127.0.0.1'?'http://127.0.0.1:3001':'http://localhost:3001')
+const API = window.MOWO_API_BASE || ''
 let token = ''
 let regions = null
 let editingId = null
