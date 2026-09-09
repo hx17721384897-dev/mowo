@@ -118,6 +118,7 @@ input,select{font-family:var(--font);}
 </head>
 <body>
 
+<script src="../js/runtime-config.js"></script>
 <script src="../js/nav.js"></script>
 
 <main class="main">
@@ -193,7 +194,7 @@ window._smartParseCheckout = async function(text) {
 }
 </script>
 <script>
-const API = (location.hostname==='127.0.0.1'?'http://127.0.0.1:3001':'http://localhost:3001')
+const API = window.MOWO_API_BASE || ''
 let cartItemIds = []
 let cartItems = []
 let preOrderId = null

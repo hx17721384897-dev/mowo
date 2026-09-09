@@ -319,3 +319,5 @@
 > B2-016 密码开关与手机号换绑入口（2026-09-09）：`settings.html` 中手机号行误用 `passwordSecurityRow` ID，`renderPasswordStatus` 在 `PASSWORD_LOGIN_ENABLED=false` 时因而把手机号换绑入口隐藏。修复为独立 `phoneSecurityRow` 与实际密码行 ID；密码功能继续按开关隐藏。扩展设置页隔离浏览器验收后，旧短信验证、动作凭据、新号码验证码、手机号更新、旧设备会话撤销和新手机号重新登录均通过；资料、通知、隐私、地址回归也一并通过。测试账号在 finally 清理。
 
 > B2-017 设置头像裁剪上传回归（2026-09-09）：`check-settings-ui` 以一次性 1 像素 PNG 在真实页面完成选图、Cropper 裁剪确认、私有文件上传、原子采用为头像和资料地址复核；脚本 cleanup 同时删除自身私有文件记录与本地对象。结果通过。结合已通过的私有文件专项，头像的上传内容校验、所有者采用、替换清理及公开读取边界均有运行证据。B2 核心自动验收至此完成；真实素材的视觉体验属于邀请前可选产品验收，不应与安全/状态机通过混淆。
+
+> B3-001 交易页 API Origin 与付款关闭边界（2026-09-09）：购物车、结算、订单列表及订单详情页曾各自硬编码本机 API 地址；现均在业务脚本前加载 `runtime-config.js` 并使用 `window.MOWO_API_BASE`，本机仍调用同机 3001、部署默认同源 `/api`。定向扫描无旧 Origin，四页静态响应均为 200。交易代码中仍保留未验签的 mock 付款回调，故 `ONLINE_CHECKOUT_ENABLED=false` 是当前必要安全闸门：实际请求 `/api/cart/checkout` 与 `/api/payment/callback` 均为 404 `FEATURE_NOT_AVAILABLE`，未进入建单逻辑。真实支付不能因此判为完成。

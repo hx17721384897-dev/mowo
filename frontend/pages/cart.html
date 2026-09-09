@@ -161,6 +161,7 @@ a{text-decoration:none;}
 </head>
 <body>
 
+<script src="../js/runtime-config.js"></script>
 <script src="../js/nav.js"></script>
 
 <!-- PAGE -->
@@ -230,7 +231,7 @@ a{text-decoration:none;}
 
 <script>
 
-const MOWO_API = location.hostname === '127.0.0.1' ? 'http://127.0.0.1:3001' : 'http://localhost:3001';
+const MOWO_API = window.MOWO_API_BASE || '';
 
 /* ─── STATE ─── */
 let groups = [];        // [{groupId, type, previewUrl, label, subLabel, creatorAvatar, items:[...]}]

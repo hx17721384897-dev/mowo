@@ -179,6 +179,7 @@ a{text-decoration:none;}
 <body>
 
 <!-- Mobile overlay menu -->
+<script src="../js/runtime-config.js"></script>
 <script src="../js/nav.js"></script>
 
 <!-- PAGE -->
@@ -205,7 +206,7 @@ a{text-decoration:none;}
 <div class="toast" id="toast"></div>
 
 <script>
-const CAPI = 'http://localhost:3001'
+const CAPI = window.MOWO_API_BASE || ''
 
 const STATUS_STEPS = ['待付款','制作中','运输中','已完成']
 const STATUS_IDX = {
