@@ -12,9 +12,14 @@ import {
   normalizeSaleConfigInput,
 } from '../lib/collab-sale-config.js'
 import { FILE_PURPOSE, linkFiles } from '../lib/private-files.js'
+import { PERMISSION } from '../lib/permissions.js'
 
 export default async function adminCollabRoutes(fastify) {
   const { prisma } = fastify
+  // 旧版本在此自行解码 JWT 并覆盖 req.user，导致路由处理器可能读到
+  // token 内的历史岗位，而不是 authenticate 已从数据库确认的当前岗位。
+  // 保留局部 preHandler 作为路由自说明，但复用唯一的命名权限校验。
+  const requireAdmin = fastify.requirePermission(PERMISSION.COLLAB)
 
   // ─────────────────────────────────────────────
   // 联名作品审核
@@ -1049,20 +1054,6 @@ export default async function adminCollabRoutes(fastify) {
     return false
   }
 
-  function requireAdmin(req, reply, done) {
-    try {
-      const token = req.headers.authorization?.replace('Bearer ', '') || ''
-      const user = fastify.jwt.decode(token)
-      fastify.jwt.verify(token)
-      if (!user || user.role < 2) {
-        return reply.code(403).send({ success: false, message: '权限不足' })
-      }
-      req.user = user
-      done()
-    } catch {
-      reply.code(401).send({ success: false, message: '未登录或token已过期' })
-    }
-  }
 }
 
 function safeJson(str) {

@@ -135,6 +135,9 @@ try {
     method: 'POST'
   })).status, 200)
   assertStatus('support cannot read security logs', (await request('/api/admin/logs', support.token)).status, 403)
+  assertStatus('collab can read collab work queue', (await request('/api/admin/collab/works', collab.token)).status, 200)
+  assertStatus('support cannot read collab work queue', (await request('/api/admin/collab/works', support.token)).status, 403)
+  assertStatus('production cannot read collab work queue', (await request('/api/admin/collab/works', production.token)).status, 403)
   assertStatus('collab cannot access contact submissions', (await request('/api/admin/contact', collab.token)).status, 403)
   assertStatus('production cannot access contact submissions', (await request('/api/admin/contact', production.token)).status, 403)
   assertStatus('support cannot delete contact submissions', (await request('/api/admin/contact/not-a-real-id', support.token, {
