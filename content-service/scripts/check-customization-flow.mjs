@@ -1,11 +1,13 @@
 import fs from 'fs/promises'
 import { PrismaClient } from '@prisma/client'
+import { requireIsolatedTestDatabase } from './test-db-guard.mjs'
 import { getAccountDeletionBlockers } from '../src/lib/account-deletion.js'
 import {
   cleanupAbandonedCustomizationFiles,
   cleanupExpiredCustomizationDrafts
 } from '../src/lib/private-file-cleanup.js'
 
+requireIsolatedTestDatabase()
 const prisma = new PrismaClient()
 const apiBase = process.env.TEST_API_BASE || 'http://127.0.0.1:3001'
 const runId = String(Date.now()).slice(-7)
