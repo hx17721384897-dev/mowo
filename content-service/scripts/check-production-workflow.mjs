@@ -1,6 +1,8 @@
 import fs from 'node:fs/promises'
 import { PrismaClient } from '@prisma/client'
+import { requireIsolatedTestDatabase } from './test-db-guard.mjs'
 
+requireIsolatedTestDatabase()
 const prisma = new PrismaClient()
 const root = new URL('../', import.meta.url)
 
