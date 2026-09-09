@@ -37,6 +37,7 @@
 - 联名后台此前会在统一鉴权后再次手工解码 JWT 并覆盖 `req.user`。现已改为 `PERMISSION.COLLAB` 的命名权限校验，处理器不再可能读到 Token 内的历史岗位。新增回归：合作运营可查看联名审核队列，客服/生产人员被拒绝。
 - 在一次性 `mowo_b1_test` 的本地 3002 服务执行员工权限回归，全部通过；完成后已关闭该服务。已验证：未登录拒绝、客服仅读用户/注销任务、合作运营仅读联名审核队列、生产仅访问库存、联络留言最小权限、负责人日志权限、岗位变更后旧会话失效，以及操作日志正文脱敏。
 - 用户/注销路由首轮确认：`/api/admin/account-deletions` 已区分客服只读与负责人处置，用户岗位变更会撤销目标用户会话。旧 `admin.js` 同时保留历史订单、批次、扫码和验证码路由；这些不是 B5 可直接删除的“冗余页面”，而是 B6 必须按消费者和数据兼容逐项收口的旧生产域。
+- B5-E 首个页面组已收敛：`admin-sidebar.js` 优先读取 `window.MOWO_API_BASE`；`admin-collab.html`、`admin-collab-works.html`、`admin-collab-activities.html` 在最早位置加载 `runtime-config.js`，并使用 `/api/v1/account/me` 的当前 `staffRole` 做前端预判。服务端仍是唯一授权边界。`npm run check:syntax` 已通过；其余后台页待按组浏览器回归后迁移。
 
 ## 3.1 后台菜单与首发边界
 

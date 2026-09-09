@@ -290,7 +290,7 @@
     try {
       features = typeof window.getMowoFeatureFlags === 'function'
         ? await window.getMowoFeatureFlags()
-        : await fetch(`${location.hostname === '127.0.0.1' ? 'http://127.0.0.1:3001' : 'http://localhost:3001'}/api/config/features`)
+        : await fetch(`${window.MOWO_API_BASE || ''}/api/config/features`)
             .then(res => res.json()).then(json => json.data || {});
     } catch (_) {}
     const allowedGroups = new Set(STAFF_GROUPS[staffRole] || []);

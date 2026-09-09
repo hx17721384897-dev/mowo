@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<script src="../js/runtime-config.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>联名作品管理 — 哞屋后台</title>
@@ -303,7 +304,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
 <div class="toast" id="toast"></div>
 
 <script>
-const API = location.hostname === '127.0.0.1' ? 'http://127.0.0.1:3001' : 'http://localhost:3001'
+const API = window.MOWO_API_BASE || ''
 let _token = ''
 let _works = []
 let _filter = 'on_sale'
@@ -314,8 +315,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   _token = localStorage.getItem('mowo_token') || ''
   if (!_token) { location.href = 'index.html'; return }
   try {
-    const p = JSON.parse(atob(_token.split('.')[1]))
-    if ((p.role ?? 0) < 2) { alert('权限不足'); location.href = 'index.html'; return }
+    const user = await fetchCurrentUser()
+    if (!user?.staffRole) { alert('权限不足'); location.href = 'index.html'; return }
   } catch { location.href = 'index.html'; return }
   loadWorks()
 })
