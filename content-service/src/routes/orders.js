@@ -1,7 +1,7 @@
 // routes/orders.js — 用户端订单查询、确认收货、取消订单
 // 注册前缀：/api/orders
 
-import { unlockInventory, makeIdempotencyKey } from '../lib/inventory.js'
+import { unlockInventoryInTransaction, makeIdempotencyKey } from '../lib/inventory.js'
 import { FILE_PURPOSE, findOwnedReadyFiles, linkFiles } from '../lib/private-files.js'
 import { summarizeProductionStatus } from '../lib/sales-orders.js'
 
@@ -279,14 +279,10 @@ async function orderRoutes(fastify, opts) {
         await tx.customizeOrder.updateMany({ where: { id: { in: tasks.map(task => task.id) } }, data: { status: 'cancelled' } })
         await tx.salesOrderItem.updateMany({ where: { salesOrderId: id }, data: { status: 'cancelled' } })
         await tx.salesOrder.update({ where: { id }, data: { status: 'cancelled', cancelledAt: new Date() } })
-      })
-      for (const item of salesOrder.items) {
-        try {
-          await unlockInventory(prisma, item.skuId, item.quantity, id, `sales_order_cancel_${id}_${item.id}`)
-        } catch (error) {
-          fastify.log.warn(`取消聚合订单释放库存失败：${error.message}`)
+        for (const item of salesOrder.items) {
+          await unlockInventoryInTransaction(tx, item.skuId, item.quantity, id, `sales_order_cancel_${id}_${item.id}`)
         }
-      }
+      })
       return reply.send({ success: true, data: { status: 'cancelled' } })
     }
 
@@ -303,25 +299,13 @@ async function orderRoutes(fastify, opts) {
       })
     }
 
-    await prisma.customizeOrder.update({
-      where: { id },
-      data: { status: 'cancelled' },
-    })
-
-    // paid 状态已锁定库存，需释放
-    if (order.status === 'paid' && order.skuId) {
-      try {
-        await unlockInventory(
-          prisma,
-          order.skuId,
-          1,
-          order.id,
-          makeIdempotencyKey('cancel_order', order.id)
-        )
-      } catch (e) {
-        fastify.log.warn('取消订单释放库存失败：' + e.message)
+    await prisma.$transaction(async tx => {
+      await tx.customizeOrder.update({ where: { id }, data: { status: 'cancelled' } })
+      // paid 状态已锁定库存，必须与订单状态一起提交。
+      if (order.status === 'paid' && order.skuId) {
+        await unlockInventoryInTransaction(tx, order.skuId, 1, order.id, makeIdempotencyKey('cancel_order', order.id))
       }
-    }
+    })
 
     return reply.send({ success: true, data: { status: 'cancelled' } })
   })

@@ -81,22 +81,28 @@ export async function lockInventory(prisma, skuId, qty, orderId, idempotencyKey)
 // unlockInventory — 取消/退款（未进批次）：locked → available
 // ---------------------------------------------------------------
 export async function unlockInventory(prisma, skuId, qty, orderId, idempotencyKey) {
-  if (await isIdempotentDuplicate(prisma, idempotencyKey)) return { success: true, duplicate: true }
-
   return prisma.$transaction(async (tx) => {
-    await tx.$executeRaw`
-      UPDATE sku_inventory
-      SET reserved_stock = GREATEST(0, reserved_stock - ${qty}),
-          updated_at = NOW()
-      WHERE sku_id = ${skuId}
-    `
-    const inv = await tx.skuInventory.findUnique({ where: { skuId } })
-    await writeLog(tx, {
-      skuId, type: 'released', quantity: qty, orderId,
-      idempotencyKey, beforeQty: calcAvailable(inv) - qty, afterQty: calcAvailable(inv)
-    })
-    return { success: true }
+    return unlockInventoryInTransaction(tx, skuId, qty, orderId, idempotencyKey)
   }, { timeout: 5000 })
+}
+
+// 在已有业务事务中释放预留库存。订单取消必须调用此版本，避免订单已取消但
+// 库存释放失败时留下无法恢复的占用。
+export async function unlockInventoryInTransaction(tx, skuId, qty, orderId, idempotencyKey) {
+  if (await isIdempotentDuplicate(tx, idempotencyKey)) return { success: true, duplicate: true }
+
+  await tx.$executeRaw`
+    UPDATE sku_inventory
+    SET reserved_stock = GREATEST(0, reserved_stock - ${qty}),
+        updated_at = NOW()
+    WHERE sku_id = ${skuId}
+  `
+  const inv = await tx.skuInventory.findUnique({ where: { skuId } })
+  await writeLog(tx, {
+    skuId, type: 'released', quantity: qty, orderId,
+    idempotencyKey, beforeQty: calcAvailable(inv) - qty, afterQty: calcAvailable(inv)
+  })
+  return { success: true }
 }
 
 // ---------------------------------------------------------------

@@ -8,6 +8,7 @@ const apiBase = process.env.TEST_API_BASE || 'http://127.0.0.1:3001'
 const webBase = process.env.TEST_WEB_BASE || 'http://127.0.0.1:5500/mowo/frontend/pages'
 const runId = String(Date.now()).slice(-8)
 let userId
+let outsiderId
 let assetId
 let versionId
 let cartId
@@ -55,6 +56,15 @@ async function cleanup() {
   await prisma.userProfile.deleteMany({ where: { userId } })
   await prisma.creditScore.deleteMany({ where: { userId } })
   await prisma.user.deleteMany({ where: { id: userId } })
+  if (outsiderId) {
+    await prisma.smsCode.deleteMany({ where: { userId: outsiderId } })
+    await prisma.refreshToken.deleteMany({ where: { userId: outsiderId } })
+    await prisma.operationLog.deleteMany({ where: { userId: outsiderId } })
+    await prisma.auditLog.deleteMany({ where: { userId: outsiderId } })
+    await prisma.userProfile.deleteMany({ where: { userId: outsiderId } })
+    await prisma.creditScore.deleteMany({ where: { userId: outsiderId } })
+    await prisma.user.deleteMany({ where: { id: outsiderId } })
+  }
   if (skuId) await prisma.inventoryLog.deleteMany({ where: { skuId } })
   if (skuId) await prisma.skuInventory.deleteMany({ where: { skuId } })
   if (skuId) await prisma.machineModelSku.deleteMany({ where: { id: skuId } })
@@ -105,6 +115,22 @@ try {
   })
   assert(loginResponse.status === 200, '订单测试账号可以登录')
   const token = (await loginResponse.json()).data.accessToken
+  const outsiderPhone = `195${runId}`
+  const outsider = await prisma.user.create({ data: {
+    phone: outsiderPhone,
+    privacyAgreedAt: new Date(), privacyPolicyVersion: 'sales-order-test',
+    profile: { create: { nickname: `sales-order-test-outsider-${runId}` } },
+    creditScore: { create: { score: 100 } }
+  } })
+  outsiderId = outsider.id
+  await prisma.smsCode.create({ data: {
+    userId: outsiderId, phone: outsiderPhone, code: '123456', purpose: 'LOGIN', expiresAt: new Date(Date.now() + 300000)
+  } })
+  const outsiderLogin = await request('/api/v1/auth/sms/verify', null, {
+    method: 'POST', body: JSON.stringify({ phone: outsiderPhone, code: '123456', mode: 'LOGIN' })
+  })
+  assert(outsiderLogin.ok, '第二测试账号可以登录以验证订单所有权')
+  const outsiderToken = (await outsiderLogin.json()).data.accessToken
 
   const asset = await prisma.animationAsset.create({ data: {
     assetNo: `ANM-20990101-${runId.slice(-6)}`,
@@ -258,6 +284,8 @@ try {
   const detailResponse = await request(`/api/orders/${order.id}`, token)
   const detail = (await detailResponse.json()).data
   assert(detail.items.length === 3 && detail.items.flatMap(item => item.productionTasks).length === 4, '订单详情返回完整混合商品和单件任务关系')
+  assert((await request(`/api/orders/${order.id}`, outsiderToken)).status === 404, '其他用户不能读取订单详情')
+  assert((await request(`/api/orders/${order.id}/cancel`, outsiderToken, { method: 'POST' })).status === 404, '其他用户不能取消订单')
 
   const cancellableProduct = await prisma.customProduct.create({ data: {
     userId, animationFrames: JSON.stringify(['private/test/frame.png']),
@@ -281,16 +309,31 @@ try {
   })
   const cancellablePreOrder = (await cancellableCheckout.json()).data
   assert(cancellableCheckout.ok && (await prisma.skuInventory.findUnique({ where: { skuId } })).reservedStock === 6, '新待付款订单继续准确预锁库存')
-  const updateCart = await request(`/api/cart/item/${cancellableItem.id}/update`, token, {
-    method: 'POST', body: JSON.stringify({ quantity: 1 }),
-  })
-  assert(updateCart.ok && (await prisma.preOrder.findUnique({ where: { id: cancellablePreOrder.id } })).status === 'cancelled', '修改购物车时旧待付款订单自动取消')
-  assert((await prisma.skuInventory.findUnique({ where: { skuId } })).reservedStock === 4, '旧待付款订单取消后准确释放已锁库存')
+  const cancellablePay = await request(`/api/payment/mock-pay/${cancellablePreOrder.id}`, token, { method: 'POST' })
+  assert(cancellablePay.ok, '待取消订单可从付款前订单进入正式订单')
+  const cancellableSalesOrder = await prisma.salesOrder.findUnique({ where: { preOrderId: cancellablePreOrder.id } })
+  const cancelResponse = await request(`/api/orders/${cancellableSalesOrder.id}/cancel`, token, { method: 'POST' })
+  assert(cancelResponse.ok, '用户可以取消尚未进入生产的正式订单')
+  assert((await prisma.salesOrder.findUnique({ where: { id: cancellableSalesOrder.id } })).status === 'cancelled', '取消后聚合订单状态已更新')
+  assert((await prisma.skuInventory.findUnique({ where: { skuId } })).reservedStock === 4, '正式订单取消与库存释放在同一事务内完成')
+  assert((await request(`/api/orders/${cancellableSalesOrder.id}/cancel`, token, { method: 'POST' })).status === 400, '重复取消不会重复释放库存')
   await prisma.skuInventory.update({ where: { skuId }, data: { currentStock: 5 } })
-  await prisma.cartItem.update({ where: { id: cancellableItem.id }, data: { quantity: 2 } })
+  const insufficientProduct = await prisma.customProduct.create({ data: {
+    userId, animationFrames: JSON.stringify(['private/test/frame.png']),
+    configJson: JSON.stringify({ modelId, modelName: model.name, frameCount: 1 }),
+    hardwareSkuId: sku.id, frameCount: 1, animationAssetId: assetId,
+    animationVersionId: versionId, status: 'in_cart',
+  } })
+  productIds.push(insufficientProduct.id)
+  const insufficientItem = await prisma.cartItem.create({ data: {
+    cartId, itemType: 'CUSTOM', contentId: insufficientProduct.id,
+    customProductId: insufficientProduct.id, hardwareSkuId: sku.id,
+    hardwareSkuCode: sku.skuCode, snapshotTitle: '库存不足测试',
+    snapshotPrice: '100.00', quantity: 2,
+  } })
   const insufficientCheckout = await request('/api/cart/checkout', token, {
     method: 'POST', body: JSON.stringify({
-      cartItemIds: [cancellableItem.id], receiverName: '订单测试', receiverPhone: phone,
+      cartItemIds: [insufficientItem.id], receiverName: '订单测试', receiverPhone: phone,
       receiverAddress: '测试地址 1 号', receiverCity: '测试市',
       idempotencyKey: `sales-order-insufficient-${runId}`,
     }),
@@ -319,6 +362,22 @@ try {
   assert(await page.locator('.order-item').count() === 3, '订单详情页展示三条订单商品')
   assert(await page.getByText(/已生成 2 个生产任务/).count() === 1, '数量二正确展示为两个生产任务')
   await context.close()
+
+  await prisma.customizeOrder.updateMany({ where: { id: { in: tasks.map(task => task.id) } }, data: { status: 'shipped' } })
+  const confirmReceipt = await request(`/api/orders/${order.id}/confirm-receipt`, token, { method: 'POST' })
+  assert(confirmReceipt.ok, '全部发货的聚合订单可以由本人确认收货')
+  const receivedOrder = await prisma.salesOrder.findUnique({
+    where: { id: order.id }, include: { items: { include: { productionTasks: true } } }
+  })
+  assert(receivedOrder.status === 'received' && receivedOrder.items.flatMap(item => item.productionTasks).every(task => task.status === 'received'), '确认收货会一致更新订单头、商品项和全部生产任务')
+  const aftersaleResponse = await request(`/api/orders/${order.id}/aftersale`, token, {
+    method: 'POST', body: JSON.stringify({ type: 'quality', reason: '自动化状态机验收' })
+  })
+  assert(aftersaleResponse.ok, '已收货的订单可提交质量问题售后')
+  assert((await request(`/api/orders/${order.id}/aftersale`, token)).ok, '用户可读取自己订单的最新售后申请')
+  assert((await request(`/api/orders/${order.id}/aftersale`, token, {
+    method: 'POST', body: JSON.stringify({ type: 'quality', reason: '重复申请' })
+  })).status === 400, '存在待处理售后时不能重复提交申请')
 
   console.log('Sales order structure checks passed')
 } finally {
