@@ -42,6 +42,8 @@
 
 `frontend/js/admin-sidebar.js` 当前菜单分为生产、素材、商品、定制、联名、运营、用户和系统。菜单仅改善可见性，绝不作为鉴权；所有敏感请求仍由服务端权限表决定。
 
+后台页面的运行时配置取证：20 个 `admin-*.html` 中 19 个已引入 `auth.js`、20 个引入 `admin-sidebar.js`，但 20 个均未引入 `runtime-config.js`；`admin-frame-making.html` 还未引入 `auth.js`。`admin-collab.html`、`admin-collab-works.html`、`admin-collab-activities.html`、`admin-inventory.html` 直接解码 JWT 的旧数字角色。B5-E 改造必须按“先在每页最早位置加载 runtime-config，再加载 auth，再让页面读取 `window.MOWO_API_BASE`，最后以 `/api/v1/account/me` 获取当前岗位”的顺序进行；不得把旧 Token payload 当作权限事实源。
+
 | 项目 | 首发决定 | 代码现状 | 后续动作 |
 |---|---|---|---|
 | 创作者认证展示 | 保留在用户设置中，未来可做简易认证。 | `settings.html` 保留；不联动创作者后台。 | 非 B5 阻断。 |
