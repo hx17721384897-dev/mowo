@@ -830,7 +830,7 @@ model CollabWork {
   revenueRate         Float     @default(0) @map("revenue_rate") // 审核时快照
   isOnShelf           Boolean   @default(false) @map("is_on_shelf")
   shelfAt             DateTime? @map("shelf_at")
-  shelfStatus         String    @default("on_sale") @map("shelf_status")
+    shelfStatus         String    @default("on_sale") @map("shelf_status") @db.VarChar(30)
   // on_sale / suspended / pending_delist / off_shelf
   suspendedAt         DateTime? @map("suspended_at")
   suspendedBy         String?   @map("suspended_by")
@@ -1073,10 +1073,10 @@ model InventoryLog {
   skuId      String  @map("sku_id")
   // in / out / reserved / released（旧）
   // wip_frame_start / wip_kit_start / wip_kit_rollback / wip_defect_frame / wip_deduct / manual_adjustment（新）
-  type       String  @db.VarChar(30)
+  type       String  @db.VarChar(20)
   quantity   Int
   orderId    String? @map("order_id")
-  operatorId String? @map("operator_id")
+  operatorId String  @map("operator_id")
   note       String? @db.VarChar(200)
 
   // v2 新增
@@ -1838,7 +1838,7 @@ model CustomProduct {
   frameCount         Int?      @map("frame_count") // 帧数（用于物理校验）
   animationAssetId   String?   @map("animation_asset_id")
   animationVersionId String?   @map("animation_version_id")
-  status             String    @default("draft") // draft|in_cart|ordered|removed
+  status             String    @default("draft") @db.VarChar(30) // draft|in_cart|ordered|removed
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
@@ -2213,8 +2213,8 @@ model PreOrder {
   cartItemIds            String      @map("cart_item_ids") @db.Text // JSON 数组，幂等校验用
   checkoutSnapshot       Json?       @map("checkout_snapshot") // 付款前冻结的整单商品、动画版本、SKU、数量和价格
   checkoutIdempotencyKey String      @unique @map("checkout_idempotency_key")
-  status                 String      @default("pending_payment") // pending_payment|paid|expired|cancelled
-  orderType              String      @default("normal") @map("order_type") // normal|presale
+  status                 String      @default("pending_payment") @db.VarChar(30) // pending_payment|paid|expired|cancelled
+  orderType              String      @default("normal") @map("order_type") @db.VarChar(30) // normal|presale
   discountAdjustment     Decimal?    @map("discount_adjustment") @db.Decimal(10, 2)
   totalAmount            Decimal     @map("total_amount") @db.Decimal(10, 2)
   // 收件信息（结算时填写，字段名与 customize_orders 统一用 receiver*）
