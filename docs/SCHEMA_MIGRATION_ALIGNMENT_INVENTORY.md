@@ -1,11 +1,11 @@
 # Schema 与迁移对齐清单
 
-> 最后复核：2026-09-08
-> 目的：记录当前 `prisma/schema.prisma` 与 51 份可重放历史迁移之间的差异，作为独立的 P0 整改输入。它不授权对 `mowo_db` 直接执行任何迁移。
+> 最后复核：2026-09-09
+> 目的：记录当前 `prisma/schema.prisma` 与可重放迁移之间的差异，作为独立的 P0 整改输入。它不授权对 `mowo_db` 直接执行任何迁移。
 
 ## 1. 已确认的边界
 
-- `mowo_b1_test` 已从零完整重放 51/51 份迁移，`prisma migrate status` 为最新。
+- `mowo_b1_test` 已从零完整重放 59/59 份迁移，`prisma migrate status` 为最新；重放时未启用演示种子。
 - 用 `prisma migrate diff --from-migrations ... --to-schema-datamodel ...` 在隔离 `mowo_b1_shadow` 复核，迁移终态仍未等于当前 Prisma Schema。
 - 差异的主要原因是早期用 `prisma db push` 或手工改库后，没有同步产生正式迁移。
 - 当前结论只适用于新空库的结构分析；`mowo_db` 仍有 37 份未应用迁移，禁止直接执行 `migrate dev`、`migrate deploy` 或自动生成的对齐 SQL。
@@ -22,12 +22,12 @@
 
 | 分组 | Prisma Schema 比迁移终态多出的结构 | 风险与处理建议 | 推荐批次 |
 |---|---|---|---|
-| 账户、会话、隐私 | 枚举 `UserStatus`、`SmsPurpose`、`ActionType`；`users` 的状态、微信标识、删除/隐私字段及手机号/密码可空；`user_profiles` 的通知、隐私可见性、登录失败/锁定与昵称更新时间；表 `sms_codes`、`sms_global_counters`、`action_tokens`、`refresh_tokens`、`token_blacklist`、`audit_logs`、`user_addresses`。 | 已新增 `20260908103000_add_account_security_schema`，覆盖 B1 账户 API 实际依赖的枚举、状态/隐私字段、资料安全字段与短信/会话/审计表；空库 52/52 重放以及注册、账户读取、当前设备退出冒烟均通过。`users.phone` 可空与其他默认值差异仍待业务确认，未为消除 diff 而放宽。 | 批次 2 前置 / P0-A（第一切片完成） |
+| 账户、会话、隐私 | 枚举 `UserStatus`、`SmsPurpose`、`ActionType`；`users` 的状态、微信标识、删除/隐私字段及手机号/密码可空；`user_profiles` 的通知、隐私可见性、登录失败/锁定与昵称更新时间；表 `sms_codes`、`sms_global_counters`、`action_tokens`、`refresh_tokens`、`token_blacklist`、`audit_logs`、`user_addresses`。 | `20260908103000_add_account_security_schema` 覆盖账户 API 的枚举、状态/隐私字段、资料安全字段与短信/会话/审计表；`20260909110000_allow_anonymized_user_phone` 已依据注销服务的正式去标识化规则放宽手机号非空约束。空库 59/59 重放、账户基础冒烟与完整注销专项均通过。其他默认值差异仍需按领域确认。 | 批次 2 前置 / P0-A（账户切片完成） |
 | 交易、订单、售后 | `customize_orders` 的平台、外部订单、锁定、优先级、收货/发货、买家备注、售后计数等字段；`aftersale_requests`、`carts`、`cart_items`；`pre_orders` 的状态/订单类型文本化；`custom_products.status` 文本化。 | 已新增交易工作区迁移与 `20260908130000_add_order_fulfillment_timestamps`，补齐购物车、地址、售后、订单扩展及生产任务的发货/收货时间。空库 54/54 重放、地址 CRUD 通过。订单职责已确认：`SalesOrder` 是总订单、`SalesOrderItem` 是成交快照、`CustomizeOrder` 是单件生产/物流任务；用户状态与内部 `fulfillmentStatus` 分开。`PreOrder`/草稿类型定义仍待状态机规范后收口；真实支付保持关闭。 | 批次 3 / P0-B（第二切片完成） |
 | SKU、库存、外部订单 | `machine_models.model_type`；`machine_model_skus` 的 `sku_code`、类型和授权字段；`sku_inventory` 的完工/WIP/仓库/安全系数；`inventory_logs` 的前后库存、原因、幂等键；表 `inventory_snapshots`、`order_item_bindings`、`channel_quotas`、`platform_sku_mappings`。 | 已新增 `20260908140000_add_sku_inventory_schema`：覆盖当前库存服务、库存快照/渠道配额、SKU 管理和外部订单映射已实际使用的结构。空库 55/55 重放、库存服务事务与幂等日志验证均通过。没有为“看起来正确”而新增未在 Schema 中表达的外键；SKU 编码唯一性、库存日志既有约束/类型及跨表所有权仍待 P0-F 定义。 | 批次 3、6 / P0-C（切片完成） |
 | 帧包与生产辅助 | 表 `frame_pack_works`、`frame_pack_variants`、`frame_pack_logs`、`frame_instances`；生产相关索引/外键命名差异。 | 已新增 `20260908150000_add_frame_pack_schema`，覆盖后台帧包白名单/变体/库存日志和批量导出写入的帧实例。空库 56/56 重放及帧包层级读写通过。`collab_work_id`、`order_id` 按 Schema 仍是软引用，未猜测外键；生产批次、扫码履约的状态/约束仍需逐路由审计。 | 批次 5、6 / P0-D（第一切片完成） |
 | 联名货架与历史创作者数据 | `collab_works` 的下架、修订、提交批次等字段；`creator_notifications`、`content_quotas`。 | 已新增 `20260908160000_add_collab_legacy_schema`，覆盖员工联名后台与账户清理仍读写的货架治理/通知结构，并保留关闭创作者平台的历史配额数据。空库 57/57 重放及联名作品、通知、配额读写通过；自助入口未恢复。`collab_works.order_no` 的可空性与迁移终态冲突留给 P0-F。 | 批次 1、5 / P0-E（切片完成） |
-| 外键、索引与默认值冲突 | Diff 建议删除 `animation_assets.owner_user_id` 外键及 `frame_asset_drafts_owner_user_id_idx`；多个 `updated_at` 默认值不同；`users.phone` 仍存在可空性差异。 | `20260909100000_align_confirmed_schema_constraints` 已按“动画直接提交可无订单号”的既有产品说明放宽 `collab_works.order_no`，并把 SKU/库存、预订单、草稿和货架状态的长度标注收敛到迁移事实。**禁止自动采纳**外键删除、手机号可空、默认值变更或仅命名的索引重命名；它们需先确认所有权、微信登录范围和现有数据回退策略。空库 58/58 重放通过。 | 横切 P0-F（待产品决策项已隔离） |
+| 外键、索引与默认值冲突 | Diff 建议删除 `animation_assets.owner_user_id` 外键及 `frame_asset_drafts_owner_user_id_idx`；多个 `updated_at` 默认值不同。 | `20260909100000_align_confirmed_schema_constraints` 已按“动画直接提交可无订单号”的既有产品说明放宽 `collab_works.order_no`；`20260909110000_allow_anonymized_user_phone` 已按可验证的注销匿名化规则放宽手机号。**仍禁止自动采纳**外键删除、默认值变更或仅命名的索引重命名；它们需先确认所有权和现有数据回退策略。空库 59/59 重放通过。 | 横切 P0-F（剩余待决策项已隔离） |
 
 ## 4. 分域执行顺序
 
