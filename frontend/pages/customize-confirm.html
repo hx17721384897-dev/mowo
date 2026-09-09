@@ -754,7 +754,7 @@ let _reuseAsset         = null;
   if (_reuseAssetId) {
     const token = localStorage.getItem('mowo_token');
     if (!token) {
-      location.href = `auth.html?redirect=${encodeURIComponent(location.pathname + location.search)}`;
+      location.href = `index.html?auth=1&redirect=${encodeURIComponent(location.pathname + location.search)}`;
       return;
     }
     try {

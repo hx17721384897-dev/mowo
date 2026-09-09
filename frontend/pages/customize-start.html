@@ -642,7 +642,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 async function loadReuseAsset(assetId) {
   const token = localStorage.getItem('mowo_token')
   if (!token) {
-    location.href = `auth.html?redirect=${encodeURIComponent(location.pathname + location.search)}`
+    location.href = `index.html?auth=1&redirect=${encodeURIComponent(location.pathname + location.search)}`
     return false
   }
   try {
