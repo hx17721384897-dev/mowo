@@ -9,6 +9,7 @@ const apiBase = process.env.TEST_API_BASE || 'http://127.0.0.1:3001'
 const webBase = process.env.TEST_WEB_BASE || 'http://127.0.0.1:5500/mowo/frontend/pages'
 const runId = String(Date.now()).slice(-7)
 const phone = `198${runId}1`
+const replacementPhone = `199${runId}1`
 let userId = null
 let browser = null
 
@@ -44,6 +45,7 @@ async function cleanup() {
     await prisma.operationLog.deleteMany({ where: { userId } })
     await prisma.auditLog.deleteMany({ where: { userId } })
     await prisma.refreshToken.deleteMany({ where: { userId } })
+    await prisma.actionToken.deleteMany({ where: { userId } })
     await prisma.smsCode.deleteMany({ where: { userId } })
     await prisma.creditScore.deleteMany({ where: { userId } })
     await prisma.userProfile.deleteMany({ where: { userId } })
@@ -93,6 +95,46 @@ try {
     throw new Error('profile fields were not persisted')
   }
   console.log('PASS settings browser saves profile data')
+
+  // Password login is intentionally disabled in the B1 environment. The phone
+  // security row must remain usable because SMS remains the primary login.
+  await page.locator('.sidebar-item[data-section="security"]').click()
+  await page.locator('#section-security.active').waitFor()
+  await page.locator('#phoneSecurityRow').waitFor()
+  if (!await page.locator('#phoneSecurityRow').isVisible()) throw new Error('phone change row is hidden when password login is disabled')
+  if (await page.locator('#passwordSecurityRow').isVisible()) throw new Error('password row is visible while password login is disabled')
+  await prisma.smsCode.create({
+    data: { userId, phone, code: '654321', purpose: 'BIND_PHONE', expiresAt: new Date(Date.now() + 300000) }
+  })
+  await prisma.smsCode.create({
+    data: { userId, phone: replacementPhone, code: '654322', purpose: 'BIND_PHONE', expiresAt: new Date(Date.now() + 300000) }
+  })
+  await page.getByRole('button', { name: '换绑' }).click()
+  await page.locator('#phoneModal.open').waitFor({ timeout: 10000 })
+  await page.locator('#oldOtpInput').fill('654321')
+  await page.getByRole('button', { name: '下一步' }).click()
+  await page.locator('#phoneStep2.active').waitFor({ timeout: 10000 })
+  await page.locator('#newPhoneInput').fill(replacementPhone)
+  await page.locator('#newOtpInput').fill('654322')
+  await page.getByRole('button', { name: '确认换绑' }).click()
+  await page.waitForURL(/index\.html/, { timeout: 10000 })
+  const changedPhoneUser = await prisma.user.findUnique({ where: { id: userId } })
+  if (changedPhoneUser?.phone !== replacementPhone) throw new Error('phone change was not persisted')
+  console.log('PASS settings browser changes the SMS login phone while password login is disabled')
+
+  // Phone change revokes every existing session. Obtain a fresh SMS session
+  // before continuing the independent settings checks below.
+  await prisma.smsCode.create({
+    data: { userId, phone: replacementPhone, code: '123457', purpose: 'LOGIN', expiresAt: new Date(Date.now() + 300000) }
+  })
+  const refreshedLoginResponse = await api('/api/v1/auth/sms/verify', null, {
+    method: 'POST', body: JSON.stringify({ phone: replacementPhone, code: '123457', mode: 'LOGIN' })
+  })
+  const refreshedLogin = await refreshedLoginResponse.json()
+  if (!refreshedLoginResponse.ok || !refreshedLogin.success) throw new Error('phone change re-login failed')
+  await page.addInitScript((token) => localStorage.setItem('mowo_token', token), refreshedLogin.data.accessToken)
+  await page.goto(`${webBase}/settings.html`, { waitUntil: 'networkidle' })
+  await page.locator('#nicknameInput').waitFor({ timeout: 10000 })
 
   await page.locator('.sidebar-item[data-section="notifications"]').click()
   await page.locator('#section-notifications.active').waitFor()
