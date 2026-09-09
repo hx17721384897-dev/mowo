@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<script src="../js/runtime-config.js"></script>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>订单生产 — 哞屋后台</title>
 <style>
@@ -11,7 +12,7 @@
 <div class="overlay" id="reprintOverlay" onclick="if(event.target===this)closeReprint()"><div class="modal"><h2>重印帧素材包</h2><p id="reprintSub"></p><div class="page-options" id="reprintPages"></div><label style="font-size:12px;font-weight:900">返工原因</label><textarea class="reason" id="reprintReason" placeholder="例如：裁切偏移，第 2 页需要重新打印"></textarea><div class="modal-foot"><button class="btn" onclick="closeReprint()">取消</button><button class="btn btn-black" id="reprintSubmit" onclick="submitReprint()">生成新帧包码并下载</button></div></div></div><div class="toast" id="toast"></div>
 <script src="../js/auth.js?v=20260826-formal-orders"></script><script src="../js/admin-sidebar.js?v=20260826-formal-orders"></script>
 <script>
-const API=location.hostname==='127.0.0.1'?'http://127.0.0.1:3001':'http://localhost:3001',token=localStorage.getItem('mowo_token')||'',view=new URLSearchParams(location.search).get('view')||'all'
+const API=window.MOWO_API_BASE||'',token=localStorage.getItem('mowo_token')||'',view=new URLSearchParams(location.search).get('view')||'all'
 const stages={all:{label:'订单总览',status:'',desc:'所有正式订单都以总订单为单位展示；生产状态只能通过对应环节操作推进。'},paid:{label:'已付款',status:'PAID',desc:'用户已经付款，但尚未进入生产批次。请前往生产批次页选择完整总订单。'},pending:{label:'待处理',status:'PENDING_ADDRESS_EXPORT',desc:'已经进入生产批次，等待导出收件地址。导出后进入处理中。'},locked:{label:'处理中',status:'WAITING_TRACKING',desc:'地址已经导出，等待绑定快递面单。绑定后进入待生产。'},processing:{label:'待生产',status:'READY_FOR_PRODUCTION',desc:'面单已经绑定。导出生产资料后，打印线与材料线同时开始，订单进入生产中。'},producing:{label:'生产中',status:'PRODUCING',desc:'查看每件产品的帧包码与生产进度；打印损坏时从这里按页返工。'},ready:{label:'待发货',status:'READY_TO_SHIP',desc:'整单所有产品已经完成配对和装箱，可在扫码生产页确认发货。'},shipped:{label:'已发货',status:'SHIPPED',desc:'已经确认发货的正式订单，只读留档。'}},stageOrder=['all','paid','pending','locked','processing','producing','ready','shipped'],statusLabel={PAID:'已付款',PENDING_ADDRESS_EXPORT:'待处理',WAITING_TRACKING:'处理中',READY_FOR_PRODUCTION:'待生产',PRODUCING:'生产中',READY_TO_SHIP:'待发货',SHIPPED:'已发货'}
 let rows=[],counts={},reprintUnit=null
 function auth(){return {Authorization:`Bearer ${token}`}}function esc(v){const d=document.createElement('div');d.textContent=v??'';return d.innerHTML}function toast(m){const e=document.getElementById('toast');e.textContent=m;e.style.display='block';clearTimeout(e._t);e._t=setTimeout(()=>e.style.display='none',2800)}function time(v){return v?new Date(v).toLocaleString('zh-CN'):'-'}function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(a.href)}

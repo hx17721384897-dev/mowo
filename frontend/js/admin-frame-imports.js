@@ -1,4 +1,4 @@
-const API_BASE = location.hostname === '127.0.0.1' ? 'http://127.0.0.1:3001' : 'http://localhost:3001'
+const API_BASE = window.MOWO_API_BASE || ''
 const token = localStorage.getItem('mowo_token') || ''
 const MAX_GROUPS = 100
 const MAX_FILES = 2000

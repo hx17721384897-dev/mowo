@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<script src="../js/runtime-config.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>用户管理 — 哞屋后台</title>
@@ -250,7 +251,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
 <div class="toast" id="toast"></div>
 
 <script>
-const API = (location.hostname==='127.0.0.1'?'http://127.0.0.1:3001':'http://localhost:3001');
+const API = window.MOWO_API_BASE || '';
 const STAFF_LABEL = { OWNER:'负责人', CUSTOMER_SERVICE:'运营客服', PRODUCTION:'生产人员', COLLAB_OPS:'合作运营' };
 const ACCOUNT_STATUS_LABEL = { ACTIVE:'正常', LIMITED:'受限', SUSPENDED:'停用', PENDING_DELETE:'注销处理中', DELETED:'已注销' };
 const STAFF_CLASS = { OWNER:'role-3', CUSTOMER_SERVICE:'role-2', PRODUCTION:'role-1', COLLAB_OPS:'role-2' };

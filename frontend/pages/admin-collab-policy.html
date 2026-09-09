@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<script src="../js/runtime-config.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>违约政策配置 — 哞屋后台</title>
@@ -228,7 +229,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
 
 <script src="../js/auth.js"></script>
 <script>
-const API = location.hostname === '127.0.0.1' ? 'http://127.0.0.1:3001' : 'http://localhost:3001'
+const API = window.MOWO_API_BASE || ''
 
 let isSuperAdmin = false
 let policy = null

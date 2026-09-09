@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<script src="../js/runtime-config.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>生产批次 - 哞屋后台</title>
@@ -50,7 +51,7 @@
 <div class="toast" id="toast"></div>
 <script src="../js/admin-sidebar.js"></script>
 <script>
-const API = location.hostname === '127.0.0.1' ? 'http://127.0.0.1:3001' : 'http://localhost:3001'
+const API = window.MOWO_API_BASE || ''
 const token = localStorage.getItem('mowo_token') || ''
 let batches = [], candidates = [], candidateMeta = {}, selected = new Set(), activeBatchId = null
 const statusText = {READY:'已创建',IN_PROGRESS:'生产中',COMPLETED:'生产完成',ARCHIVED:'已归档',Open:'旧批次',Locked:'旧批次',Processing:'旧批次'}

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<script src="../js/runtime-config.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>注销任务 - 哞屋后台</title>
@@ -32,7 +33,7 @@
 <div class="toast" id="toast"></div>
 <script src="../js/auth.js"></script><script src="../js/admin-sidebar.js?v=20260813-shell-init"></script>
 <script>
-const API=location.hostname==='127.0.0.1'?'http://127.0.0.1:3001':'http://localhost:3001';
+const API=window.MOWO_API_BASE||'';
 const labels={REQUESTED:'保护期/待执行',PROCESSING:'清理中',FAILED:'自动重试',MANUAL_REVIEW:'待人工关注',PAUSED:'已暂停',BLOCKED:'存在未结事项',CANCELLED:'已撤销',COMPLETED:'已完成'};
 let token='',canManage=false,currentPage=1,pauseTaskId='';
 document.addEventListener('DOMContentLoaded',async()=>{token=localStorage.getItem('mowo_token')||'';if(!token){location.href='index.html';return}const u=await window.fetchCurrentUser?.();if(!u?.staffRole||!['OWNER','CUSTOMER_SERVICE'].includes(u.staffRole)){alert('当前岗位无权查看注销任务');location.href='index.html';return}await loadTasks(1)});

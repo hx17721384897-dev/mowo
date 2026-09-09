@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<script src="../js/runtime-config.js"></script>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>定制处理 — 哞屋后台</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
@@ -25,7 +26,7 @@
 <div class="modal-bg" id="modal" onclick="if(event.target===this)closeDetail()"><section class="modal"><div class="modal-head"><div><div class="label">定制申请</div><h2 class="modal-title" id="modalTitle">—</h2></div><button class="close" onclick="closeDetail()">×</button></div><div class="modal-body" id="modalBody"></div></section></div>
 <script src="../js/auth.js"></script><script src="../js/admin-sidebar.js?v=20260820-customization"></script>
 <script>
-const API=location.hostname==='127.0.0.1'?'http://127.0.0.1:3001':'http://localhost:3001';const LABEL={SUBMITTED:'等待处理',REVIEWING:'正在处理',NEEDS_SUPPLEMENT:'需要补充素材',OPTIONS_READY:'待确认方案',UNAVAILABLE:'暂时无法制作',CONFIRMED:'已确认',CLOSED:'已关闭'};let token='';
+const API=window.MOWO_API_BASE||'';const LABEL={SUBMITTED:'等待处理',REVIEWING:'正在处理',NEEDS_SUPPLEMENT:'需要补充素材',OPTIONS_READY:'待确认方案',UNAVAILABLE:'暂时无法制作',CONFIRMED:'已确认',CLOSED:'已关闭'};let token='';
 function esc(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}function dt(v){return v?new Date(v).toLocaleString('zh-CN',{hour12:false}):'—'}function size(v){if(!v)return'—';return v>1048576?(v/1048576).toFixed(1)+' MB':(v/1024).toFixed(1)+' KB'}
 document.addEventListener('DOMContentLoaded',async()=>{token=localStorage.getItem('mowo_token')||'';if(!token){location.href='index.html';return}const u=await window.fetchCurrentUser?.();if(!['OWNER','CUSTOMER_SERVICE','PRODUCTION'].includes(u?.staffRole)){alert('当前岗位无权查看定制处理');location.href='index.html';return}loadAll()});
 async function loadAll(){await Promise.all([loadStats(),loadList()])}async function loadStats(){try{const r=await fetch(`${API}/api/admin/customization-requests/stats`,{headers:{Authorization:`Bearer ${token}`}}),j=await r.json();if(!j.success)throw new Error(j.message);const s=j.data;document.getElementById('mSubmitted').textContent=s.SUBMITTED||0;document.getElementById('mReviewing').textContent=s.REVIEWING||0;document.getElementById('mAction').textContent=(s.NEEDS_SUPPLEMENT||0)+(s.OPTIONS_READY||0);document.getElementById('mDone').textContent=(s.UNAVAILABLE||0)+(s.CONFIRMED||0)+(s.CLOSED||0)}catch{}}

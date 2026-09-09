@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<script src="../js/runtime-config.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>款式管理 — 哞屋后台</title>
@@ -409,7 +410,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
 </div>
 
 <script>
-const API = (location.hostname==='127.0.0.1'?'http://127.0.0.1:3001':'http://localhost:3001')
+const API = window.MOWO_API_BASE || ''
 const ROLE_LABEL = {0:'用户',1:'生产端',2:'管理员',3:'超级管理员'}
 
 // localStorage key

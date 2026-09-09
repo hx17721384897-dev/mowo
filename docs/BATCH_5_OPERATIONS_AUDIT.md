@@ -24,10 +24,10 @@
 | B5-002 | `COLLAB_OPS` 为便于兼容被映射为数字 role 2，但它不等于客服。 | **P0 回归风险：** 任何缺失全局路径映射而仅依赖 `requireRole(2)` 的新路由，都可能让合作运营访问客服能力。 | 已将此场景加入员工权限回归检查；待完整路由清单审计。 |
 | B5-003 | `admin-contact.js` 的更新/删除/IP 封禁有路由级数字角色校验；全局映射将其归为 CONTACT。 | 现状由全局权限表先拦截，尚未证实越权；负责人专属动作仍应保留明确命名权限而非数字 3。 | 待权限契约改造。 |
 | B5-004 | 合同、结算记录、联名运营页面仍存在，但创作者自助、创作者财务和牛量不属于首发。 | **P0 产品边界风险：** 管理后台数据录入功能不等于可对外运营/结算能力。 | 保留源码、服务端 feature gate 继续关闭财务/牛量/推广；待核对所有入口。 |
-| B5-005 | 多个 `admin-*.html` 仍各自硬编码 `localhost:3001` 或 `127.0.0.1:3001`；`admin-contact.html` 是固定 `/api` 写法。 | **P1 部署准备风险：** 本机可用不代表反向代理、受邀环境或非默认端口可用。 | 记录；统一运行时 API Origin 改造待后台页面按风险分组处理，不在本轮盲量替换。 |
+| B5-005 | 多个 `admin-*.html` 曾各自硬编码 `localhost:3001` 或 `127.0.0.1:3001`。 | **P1 维护风险：** 非默认端口或后续环境会请求错误地址。 | **已修复：** 20 个后台页及帧图共享脚本均使用 `runtime-config.js`；新增静态回归防止复发。 |
 | B5-006 | 员工权限回归脚本会创建用户、岗位、注销任务和审计日志。 | **P0 测试安全风险：** 不应允许写入 `mowo_db`。 | 本轮已加入 `mowo_b1_test` 强制保护；待在一次性 3002 服务上执行。 |
-| B5-007 | `admin-collab.html`、`admin-collab-works.html` 等旧页面仍从 JWT payload 读取数字 `role`，仅用于前端跳转/展示。 | **P1 体验与维护风险：** 岗位改动、Token 刷新或新岗位加入时，前端可能显示错误的“权限不足”；服务端权限仍是最终边界。 | 待 B5-E：统一以 `/api/v1/account/me` 的当前 `staffRole` 作页面预判。 |
-| B5-008 | `admin-sidebar.js` 与多数后台页未使用 `runtime-config.js`，各自推导本机 API 地址。 | **P1 部署准备风险：** 后台的 API Origin 仍不是唯一配置源。 | 待 B5-E：先为后台公共脚本引入运行时配置，再逐页替换；必须配合浏览器回归。 |
+| B5-007 | 4 个旧页面曾从 JWT payload 读取数字 `role`，仅用于前端跳转/展示。 | **P1 体验与维护风险：** 岗位改动或 Token 刷新时可能误判。 | **已修复代码：** 均改读 `/api/v1/account/me` 当前 `staffRole`；浏览器岗位回归待执行。 |
+| B5-008 | 后台页面原先没有统一运行时 API Origin。 | **P1 维护风险：** 页面各自判断部署地址。 | **已修复代码：** 20/20 页面加载运行时配置，20/20 加载认证脚本；`check:admin-runtime-config` 通过。 |
 | B5-009 | `admin.js` 仍保留一大组以旧 `CustomizeOrder`、旧批次和旧扫码模型为中心的 `/api/admin/orders`、`/batches`、`/scan`、`/auth-codes` 路由。 | **P0 架构边界风险：** 它们与 B3 的正式 `SalesOrder`/生产工作流并存，不能被新后台页面或后续功能重新接入。 | 移交 B6：建立消费者清单、封闭旧入口或迁移数据后才能删除。 |
 
 ## 3. 已实施记录（2026-09-09）
@@ -38,12 +38,13 @@
 - 在一次性 `mowo_b1_test` 的本地 3002 服务执行员工权限回归，全部通过；完成后已关闭该服务。已验证：未登录拒绝、客服仅读用户/注销任务、合作运营仅读联名审核队列、生产仅访问库存、联络留言最小权限、负责人日志权限、岗位变更后旧会话失效，以及操作日志正文脱敏。
 - 用户/注销路由首轮确认：`/api/admin/account-deletions` 已区分客服只读与负责人处置，用户岗位变更会撤销目标用户会话。旧 `admin.js` 同时保留历史订单、批次、扫码和验证码路由；这些不是 B5 可直接删除的“冗余页面”，而是 B6 必须按消费者和数据兼容逐项收口的旧生产域。
 - B5-E 首个页面组已收敛：`admin-sidebar.js` 优先读取 `window.MOWO_API_BASE`；`admin-collab.html`、`admin-collab-works.html`、`admin-collab-activities.html` 在最早位置加载 `runtime-config.js`，并使用 `/api/v1/account/me` 的当前 `staffRole` 做前端预判。服务端仍是唯一授权边界。`npm run check:syntax` 已通过；其余后台页待按组浏览器回归后迁移。
+- B5-E 运行时配置代码收口完成：其余 17 个后台页面也在认证与业务脚本之前加载 `runtime-config.js`，所有页面/帧图后台共享脚本均不再硬编码本机 3001；`admin-frame-making.html` 补齐公共认证脚本。库存页不再解码 JWT，而是只允许当前 `OWNER`/`PRODUCTION` 岗位进入。新增 `npm run check:admin-runtime-config`，扫描 20 个后台页的配置、认证、硬编码地址和 JWT 解析残留；检查及完整 `npm run check` 通过。浏览器逐岗位验收仍待 B5-E 后半。
 
 ## 3.1 后台菜单与首发边界
 
 `frontend/js/admin-sidebar.js` 当前菜单分为生产、素材、商品、定制、联名、运营、用户和系统。菜单仅改善可见性，绝不作为鉴权；所有敏感请求仍由服务端权限表决定。
 
-后台页面的运行时配置取证：20 个 `admin-*.html` 中 19 个已引入 `auth.js`、20 个引入 `admin-sidebar.js`，但 20 个均未引入 `runtime-config.js`；`admin-frame-making.html` 还未引入 `auth.js`。`admin-collab.html`、`admin-collab-works.html`、`admin-collab-activities.html`、`admin-inventory.html` 直接解码 JWT 的旧数字角色。B5-E 改造必须按“先在每页最早位置加载 runtime-config，再加载 auth，再让页面读取 `window.MOWO_API_BASE`，最后以 `/api/v1/account/me` 获取当前岗位”的顺序进行；不得把旧 Token payload 当作权限事实源。
+后台页面的运行时配置当前事实：20 个 `admin-*.html` 均在业务脚本前加载 `runtime-config.js` 和 `auth.js`，页面及 `admin-sidebar.js`、帧图制作/导入共享脚本不再硬编码本机 3001；页面岗位预判不再直接解析 JWT。服务端命名权限仍是唯一授权事实源。
 
 | 项目 | 首发决定 | 代码现状 | 后续动作 |
 |---|---|---|---|

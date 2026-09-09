@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<script src="../js/runtime-config.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>帧图资产库 - 哞屋后台</title>
@@ -51,7 +52,7 @@
 <div class="toast" id="toast"></div>
 <script src="../js/admin-sidebar.js"></script>
 <script>
-const API=location.hostname==='127.0.0.1'?'http://127.0.0.1:3001':'http://localhost:3001',token=localStorage.getItem('mowo_token')||''
+const API=window.MOWO_API_BASE||'',token=localStorage.getItem('mowo_token')||''
 const labels={source:{WEB_CUSTOM:'网站定制',OFFLINE_CUSTOM:'线下定制',CREATOR_SUBMISSION:'创作者提供',INTERNAL_CREATED:'内部制作'},usage:{PRIVATE_CUSTOM:'私人定制',COLLAB_SALE:'联名销售',COMPANY_PRODUCT:'公司自营',INTERNAL_TEST:'内部测试',UNDECIDED:'暂未确定'},rights:{USER:'网站用户',OFFLINE_CUSTOMER:'线下客户',CREATOR:'创作者',COMPANY:'哞屋公司',UNCONFIRMED:'暂未确认'},auth:{PRIVATE_ONLY:'仅限私人使用',PENDING:'授权确认中',AUTHORIZED:'已授权'},status:{ACTIVE:'正常',USER_DELETED:'用户已删除',ARCHIVED:'已归档'}}
 const categories=[['all','全部帧图'],['private','私人定制'],['collab','联名作品'],['company','公司自营'],['internal','内部测试'],['incomplete','待整理'],['user_deleted','用户已删除'],['archived','已归档']]
 let currentUser=null,stats={},assets=[],activeId=null,active=null,page=1,category='all',total=0,listView=false,playTimer=null,frameData=[],productionOptions=null
