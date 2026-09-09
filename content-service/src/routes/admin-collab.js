@@ -20,6 +20,7 @@ export default async function adminCollabRoutes(fastify) {
   // token 内的历史岗位，而不是 authenticate 已从数据库确认的当前岗位。
   // 保留局部 preHandler 作为路由自说明，但复用唯一的命名权限校验。
   const requireAdmin = fastify.requirePermission(PERMISSION.COLLAB)
+  const requireCollabAdmin = fastify.requirePermission(PERMISSION.COLLAB_ADMIN)
 
   // ─────────────────────────────────────────────
   // 联名作品审核
@@ -998,20 +999,16 @@ export default async function adminCollabRoutes(fastify) {
    * 读取违约政策配置，无记录时返回默认值
    */
   fastify.get('/admin/collab/policy', { preHandler: requireAdmin }, async (req, reply) => {
-    const row = await prisma.platformConfig.findUnique({ where: { key: POLICY_KEY } })
-    const policy = row ? JSON.parse(row.value) : DEFAULT_POLICY
+    const row = await prisma.platformConfig.findUnique({ where: { configKey: POLICY_KEY } })
+    const policy = row ? JSON.parse(row.configValue) : DEFAULT_POLICY
     return reply.send({ success: true, data: policy })
   })
 
   /**
    * PUT /api/admin/collab/policy
-   * 更新违约政策配置，仅 role=3 可操作
+   * 更新违约政策配置，仅负责人可操作
    */
-  fastify.put('/admin/collab/policy', { preHandler: requireAdmin }, async (req, reply) => {
-    if (req.user.role < 3) {
-      return reply.code(403).send({ success: false, message: '仅超级管理员可修改违约政策' })
-    }
-
+  fastify.put('/admin/collab/policy', { preHandler: requireCollabAdmin }, async (req, reply) => {
     const { suspendMaxDays, warnDay1, warnDay2, timeRates, depositTiers } = req.body
 
     if (!Number.isInteger(suspendMaxDays) || suspendMaxDays < 1) {
@@ -1030,9 +1027,16 @@ export default async function adminCollabRoutes(fastify) {
     const policy = { suspendMaxDays, warnDay1, warnDay2, timeRates, depositTiers }
 
     await prisma.platformConfig.upsert({
-      where:  { key: POLICY_KEY },
-      update: { value: JSON.stringify(policy) },
-      create: { key: POLICY_KEY, value: JSON.stringify(policy) },
+      where:  { configKey: POLICY_KEY },
+      update: { configValue: JSON.stringify(policy), updatedBy: req.user.userId },
+      create: {
+        configKey: POLICY_KEY,
+        configValue: JSON.stringify(policy),
+        valueType: 'json',
+        groupName: 'collab',
+        description: '联名违约政策',
+        updatedBy: req.user.userId
+      },
     })
 
     return reply.send({ success: true, data: policy })

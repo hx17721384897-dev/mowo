@@ -1,7 +1,11 @@
 // src/routes/admin-contact.js
-// 管理员联络留言管理接口（role >= 2）
+// 管理员联络留言管理接口
+
+import { PERMISSION } from '../lib/permissions.js'
 
 export default async function adminContactRoutes(fastify) {
+  const requireContact = fastify.requirePermission(PERMISSION.CONTACT)
+  const requireContactAdmin = fastify.requirePermission(PERMISSION.CONTACT_ADMIN)
 
   // ══════════════════════════════════════════
   // GET /api/admin/contact — 留言列表
@@ -9,7 +13,7 @@ export default async function adminContactRoutes(fastify) {
   // starred=1 只看星标
   // ══════════════════════════════════════════
   fastify.get('/', {
-    preHandler: [fastify.requireRole(2)]
+    preHandler: [requireContact]
   }, async (request, reply) => {
     const { page = 1, limit = 20, type, status, starred, keyword } = request.query
     const skip  = (parseInt(page) - 1) * parseInt(limit)
@@ -71,7 +75,7 @@ export default async function adminContactRoutes(fastify) {
   // GET /api/admin/contact/stats
   // ══════════════════════════════════════════
   fastify.get('/stats', {
-    preHandler: [fastify.requireRole(2)]
+    preHandler: [requireContact]
   }, async (request, reply) => {
     const types    = ['artist', 'channel', 'media', 'join', 'feedback', 'factory']
     const statuses = ['pending', 'processing', 'done', 'spam']
@@ -106,7 +110,7 @@ export default async function adminContactRoutes(fastify) {
   // GET /api/admin/contact/:id — 单条详情
   // ══════════════════════════════════════════
   fastify.get('/:id', {
-    preHandler: [fastify.requireRole(2)]
+    preHandler: [requireContact]
   }, async (request, reply) => {
     const { id } = request.params
     const item = await fastify.prisma.contactSubmission.findUnique({ where: { id } })
@@ -159,7 +163,7 @@ export default async function adminContactRoutes(fastify) {
   // body: { status, note? }
   // ══════════════════════════════════════════
   fastify.put('/:id/status', {
-    preHandler: [fastify.requireRole(2)]
+    preHandler: [requireContact]
   }, async (request, reply) => {
     const { id }           = request.params
     const { status, note } = request.body
@@ -207,7 +211,7 @@ export default async function adminContactRoutes(fastify) {
   // body: { isStarred: true | false }
   // ══════════════════════════════════════════
   fastify.put('/:id/star', {
-    preHandler: [fastify.requireRole(2)]
+    preHandler: [requireContact]
   }, async (request, reply) => {
     const { id }        = request.params
     const { isStarred } = request.body
@@ -234,7 +238,7 @@ export default async function adminContactRoutes(fastify) {
   // PUT /api/admin/contact/:id/note — 更新备注
   // ══════════════════════════════════════════
   fastify.put('/:id/note', {
-    preHandler: [fastify.requireRole(2)]
+    preHandler: [requireContact]
   }, async (request, reply) => {
     const { id }   = request.params
     const { note } = request.body
@@ -254,7 +258,7 @@ export default async function adminContactRoutes(fastify) {
   // DELETE /api/admin/contact/:id（仅超管）
   // ══════════════════════════════════════════
   fastify.delete('/:id', {
-    preHandler: [fastify.requireRole(3)]
+    preHandler: [requireContactAdmin]
   }, async (request, reply) => {
     const { id } = request.params
     const item = await fastify.prisma.contactSubmission.findUnique({ where: { id } })
@@ -282,7 +286,7 @@ export default async function adminContactRoutes(fastify) {
   // POST /api/admin/contact/ban-ip（超管）
   // ══════════════════════════════════════════
   fastify.post('/ban-ip', {
-    preHandler: [fastify.requireRole(3)]
+    preHandler: [requireContactAdmin]
   }, async (request, reply) => {
     const { ip, reason } = request.body
     if (!ip) return reply.code(400).send({ success: false, message: 'IP不能为空' })

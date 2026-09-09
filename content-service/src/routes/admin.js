@@ -656,7 +656,7 @@ export default async function adminRoutes(fastify) {
 
   // GET /api/admin/users — 用户列表
   fastify.get('/users', {
-    preHandler: [fastify.requireRole(2)]
+    preHandler: [fastify.requirePermission(PERMISSION.USERS_READ)]
   }, async (request, reply) => {
     const { page = 1, limit = 20, role, staffRole } = request.query
     const skip  = (parseInt(page) - 1) * parseInt(limit)
@@ -693,7 +693,7 @@ export default async function adminRoutes(fastify) {
 
   // PUT /api/admin/users/:id/role — 修改用户角色（仅SuperAdmin）
   fastify.put('/users/:id/role', {
-    preHandler: [fastify.requireRole(3)]
+    preHandler: [fastify.requirePermission(PERMISSION.STAFF_MANAGE)]
   }, async (request, reply) => {
     const { id }   = request.params
     const { staffRole = null } = request.body || {}
@@ -753,7 +753,7 @@ export default async function adminRoutes(fastify) {
 
   // PUT /api/admin/users/:id/ban — 封禁/解封用户
   fastify.put('/users/:id/ban', {
-    preHandler: [fastify.requireRole(2)]
+    preHandler: [fastify.requirePermission(PERMISSION.USERS_BAN)]
   }, async (request, reply) => {
     const { id }       = request.params
     const { isBanned } = request.body
@@ -800,7 +800,7 @@ export default async function adminRoutes(fastify) {
 
   // GET /api/admin/logs — 审计日志（仅SuperAdmin）
   fastify.get('/logs', {
-    preHandler: [fastify.requireRole(3)]
+    preHandler: [fastify.requirePermission(PERMISSION.SECURITY_LOGS)]
     }, async (request, reply) => {
     const { page = 1, limit = 50, method, outcome } = request.query
     const safePage = Math.max(1, parseInt(page) || 1)

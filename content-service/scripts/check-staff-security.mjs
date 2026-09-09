@@ -140,8 +140,24 @@ try {
   assertStatus('production cannot read collab work queue', (await request('/api/admin/collab/works', production.token)).status, 403)
   assertStatus('collab cannot access contact submissions', (await request('/api/admin/contact', collab.token)).status, 403)
   assertStatus('production cannot access contact submissions', (await request('/api/admin/contact', production.token)).status, 403)
+  assertStatus('support can access contact submissions', (await request('/api/admin/contact?limit=1', support.token)).status, 200)
   assertStatus('support cannot delete contact submissions', (await request('/api/admin/contact/not-a-real-id', support.token, {
     method: 'DELETE'
+  })).status, 403)
+  assertStatus('owner can reach contact deletion handler', (await request('/api/admin/contact/not-a-real-id', owner.token, {
+    method: 'DELETE'
+  })).status, 404)
+  assertStatus('collab can read contracts', (await request('/api/admin/contracts?limit=1', collab.token)).status, 200)
+  assertStatus('support cannot read contracts', (await request('/api/admin/contracts?limit=1', support.token)).status, 403)
+  assertStatus('collab cannot delete contracts', (await request('/api/admin/contracts/not-a-real-id', collab.token, {
+    method: 'DELETE'
+  })).status, 403)
+  assertStatus('owner can reach contract deletion handler', (await request('/api/admin/contracts/not-a-real-id', owner.token, {
+    method: 'DELETE'
+  })).status, 404)
+  assertStatus('collab can read collab policy', (await request('/api/admin/collab/policy', collab.token)).status, 200)
+  assertStatus('collab cannot update collab policy', (await request('/api/admin/collab/policy', collab.token, {
+    method: 'PUT', body: JSON.stringify({})
   })).status, 403)
   assertStatus('support cannot ban staff', (await request(`/api/admin/users/${production.id}/ban`, support.token, {
     method: 'PUT', body: JSON.stringify({ isBanned: true })

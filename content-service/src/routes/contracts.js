@@ -1,5 +1,5 @@
 // src/routes/contracts.js
-// 大IP商务合同管理（仅管理端，role >= 2）
+// 大IP商务合同管理（仅合作运营权限）
 //
 //   GET  /api/admin/contracts              合同列表（分页/状态/类型筛选）
 //   GET  /api/admin/contracts/:id          合同详情
@@ -7,11 +7,14 @@
 //   PUT  /api/admin/contracts/:id          编辑合同
 //   PUT  /api/admin/contracts/:id/status   更新合同状态
 //   POST /api/admin/contracts/:id/settle   录入一条打款记录
-//   DELETE /api/admin/contracts/:id        删除合同（仅 role=3）
+//   DELETE /api/admin/contracts/:id        删除合同（仅负责人）
+
+import { PERMISSION } from '../lib/permissions.js'
 
 export default async function contractsRoutes(fastify) {
 
-  const requireAdmin = fastify.requireRole(2)
+  const requireCollab = fastify.requirePermission(PERMISSION.COLLAB)
+  const requireCollabAdmin = fastify.requirePermission(PERMISSION.COLLAB_ADMIN)
 
   const CONTRACT_TYPE_LABELS = {
     revenue_share:   '纯分红',
@@ -31,7 +34,7 @@ export default async function contractsRoutes(fastify) {
   // 合同列表
   // ─────────────────────────────────────────
   fastify.get('/admin/contracts', {
-    preHandler: requireAdmin,
+    preHandler: requireCollab,
     schema: {
       querystring: {
         type: 'object',
@@ -89,7 +92,7 @@ export default async function contractsRoutes(fastify) {
   // 合同详情
   // ─────────────────────────────────────────
   fastify.get('/admin/contracts/:id', {
-    preHandler: requireAdmin
+    preHandler: requireCollab
   }, async (request, reply) => {
     const { id } = request.params
 
@@ -117,7 +120,7 @@ export default async function contractsRoutes(fastify) {
   // 新建合同
   // ─────────────────────────────────────────
   fastify.post('/admin/contracts', {
-    preHandler: requireAdmin,
+    preHandler: requireCollab,
     schema: {
       body: {
         type: 'object',
@@ -176,7 +179,7 @@ export default async function contractsRoutes(fastify) {
   // 编辑合同基本信息
   // ─────────────────────────────────────────
   fastify.put('/admin/contracts/:id', {
-    preHandler: requireAdmin,
+    preHandler: requireCollab,
     schema: {
       body: {
         type: 'object',
@@ -220,7 +223,7 @@ export default async function contractsRoutes(fastify) {
   // 更新合同状态（生效/到期/终止）
   // ─────────────────────────────────────────
   fastify.put('/admin/contracts/:id/status', {
-    preHandler: requireAdmin,
+    preHandler: requireCollab,
     schema: {
       body: {
         type: 'object',
@@ -258,7 +261,7 @@ export default async function contractsRoutes(fastify) {
   // body: { amount, note, settledAt }
   // ─────────────────────────────────────────
   fastify.post('/admin/contracts/:id/settle', {
-    preHandler: requireAdmin,
+    preHandler: requireCollab,
     schema: {
       body: {
         type: 'object',
@@ -309,7 +312,7 @@ export default async function contractsRoutes(fastify) {
   // 删除合同（仅超管）
   // ─────────────────────────────────────────
   fastify.delete('/admin/contracts/:id', {
-    preHandler: fastify.requireRole(3)
+    preHandler: requireCollabAdmin
   }, async (request, reply) => {
     const { id } = request.params
 

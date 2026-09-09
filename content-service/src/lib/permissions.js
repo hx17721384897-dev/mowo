@@ -8,10 +8,12 @@ export const STAFF_ROLE = Object.freeze({
 export const PERMISSION = Object.freeze({
   ORDER_SUPPORT: 'ORDER_SUPPORT',
   CONTACT: 'CONTACT',
+  CONTACT_ADMIN: 'CONTACT_ADMIN',
   CATALOG: 'CATALOG',
   PRODUCTION: 'PRODUCTION',
   PRODUCTION_CONFIG: 'PRODUCTION_CONFIG',
   COLLAB: 'COLLAB',
+  COLLAB_ADMIN: 'COLLAB_ADMIN',
   USERS_READ: 'USERS_READ',
   USERS_BAN: 'USERS_BAN',
   ACCOUNT_DELETIONS_READ: 'ACCOUNT_DELETIONS_READ',
@@ -68,12 +70,20 @@ export function requiredPermissionForRequest(method, rawUrl) {
   if (/^\/api\/admin\/users\/[^/]+\/role$/.test(path)) return PERMISSION.STAFF_MANAGE
   if (/^\/api\/admin\/users\/[^/]+\/ban$/.test(path)) return PERMISSION.USERS_BAN
   if (path === '/api/admin/users') return PERMISSION.USERS_READ
+  if (path === '/api/admin/contact/ban-ip' || (verb === 'DELETE' && /^\/api\/admin\/contact\/[^/]+$/.test(path))) {
+    return PERMISSION.CONTACT_ADMIN
+  }
   if (path.startsWith('/api/admin/contact')) return PERMISSION.CONTACT
   if (path.startsWith('/api/admin/customization-requests')) return PERMISSION.CUSTOMIZATION_REVIEW
   if (path.startsWith('/api/admin/frame-library')) return PERMISSION.FRAME_LIBRARY
   if (path.startsWith('/api/admin/frame-making')) return PERMISSION.FRAME_MAKING
   if (path.startsWith('/api/admin/frame-imports')) return PERMISSION.FRAME_LIBRARY
   if (path.startsWith('/api/admin/print-production')) return PERMISSION.PRODUCTION_CONFIG
+
+  if (
+    (verb === 'PUT' && path === '/api/admin/collab/policy') ||
+    (verb === 'DELETE' && /^\/api\/admin\/contracts\/[^/]+$/.test(path))
+  ) return PERMISSION.COLLAB_ADMIN
 
   if (
     path.startsWith('/api/admin/collab') ||
