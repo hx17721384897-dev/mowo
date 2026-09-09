@@ -1,5 +1,8 @@
 import { PrismaClient } from '@prisma/client'
+import { requireIsolatedTestDatabase } from './test-db-guard.mjs'
 
+// 该脚本会创建员工、改变岗位、暂停注销任务；只能在隔离测试库运行。
+requireIsolatedTestDatabase()
 const prisma = new PrismaClient()
 const apiBase = process.env.TEST_API_BASE || 'http://127.0.0.1:3001'
 const runId = String(Date.now()).slice(-7)
@@ -132,6 +135,11 @@ try {
     method: 'POST'
   })).status, 200)
   assertStatus('support cannot read security logs', (await request('/api/admin/logs', support.token)).status, 403)
+  assertStatus('collab cannot access contact submissions', (await request('/api/admin/contact', collab.token)).status, 403)
+  assertStatus('production cannot access contact submissions', (await request('/api/admin/contact', production.token)).status, 403)
+  assertStatus('support cannot delete contact submissions', (await request('/api/admin/contact/not-a-real-id', support.token, {
+    method: 'DELETE'
+  })).status, 403)
   assertStatus('support cannot ban staff', (await request(`/api/admin/users/${production.id}/ban`, support.token, {
     method: 'PUT', body: JSON.stringify({ isBanned: true })
   })).status, 403)
