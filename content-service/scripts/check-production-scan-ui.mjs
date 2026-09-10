@@ -54,7 +54,10 @@ try {
   const page = await context.newPage()
   const errors = []
   page.on('pageerror', error => errors.push(error.message))
-  await page.addInitScript(token => localStorage.setItem('mowo_token', token), login.data.accessToken)
+  await page.addInitScript(({ token, apiBase }) => {
+    window.MOWO_RUNTIME_API_BASE = apiBase
+    localStorage.setItem('mowo_token', token)
+  }, { token: login.data.accessToken, apiBase })
 
   const pages = [
     ['production-scan.html?v=20260904-1#overview', '扫码作业总览', 'overview'],

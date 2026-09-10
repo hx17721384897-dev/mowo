@@ -383,9 +383,10 @@ textarea.form-control{height:72px;padding:10px 12px;resize:none;}
 
 <div class="toast-wrap" id="toastWrap"></div>
 
+<script src="../js/runtime-config.js"></script>
 <script src="../js/auth.js"></script>
 <script>
-const API = (location.hostname==='127.0.0.1'?'http://127.0.0.1:3001':'http://localhost:3001')
+const API = window.MOWO_API_BASE || ''
 let token = ''
 let skuList = []
 let currentTab = 'overview'

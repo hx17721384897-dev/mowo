@@ -118,7 +118,10 @@ try {
   let page = await context.newPage()
   const pageErrors = []
   page.on('pageerror', error => pageErrors.push(error.message))
-  await page.addInitScript(value => localStorage.setItem('mowo_token', value), owner.token)
+  await page.addInitScript(({ token, apiBase }) => {
+    window.MOWO_RUNTIME_API_BASE = apiBase
+    localStorage.setItem('mowo_token', token)
+  }, { token: owner.token, apiBase })
   await page.goto(`${webBase}/admin-customization-requests.html`, { waitUntil:'networkidle' })
   const taskRow = page.locator('.row').filter({ hasText:model.name })
   await taskRow.getByRole('button', { name:'开始筛帧' }).waitFor({ timeout:10000 })
@@ -140,7 +143,10 @@ try {
     orderDialogs.push(dialog.message())
     await dialog.dismiss()
   })
-  await page.addInitScript(value => localStorage.setItem('mowo_token', value), customer.token)
+  await page.addInitScript(({ token, apiBase }) => {
+    window.MOWO_RUNTIME_API_BASE = apiBase
+    localStorage.setItem('mowo_token', token)
+  }, { token: customer.token, apiBase })
   await page.goto(`${webBase}/my-customizations.html`, { waitUntil:'networkidle' })
   await page.getByRole('link', { name:'确认筛帧' }).click()
   await page.locator('#stateEditor.active').waitFor({ timeout:10000 })

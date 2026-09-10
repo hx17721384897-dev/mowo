@@ -7,7 +7,7 @@
   const frameDraftId = params.get('frameDraftId')
   if (!adminRequestId && !reviewRequestId && !frameDraftId) return
 
-  const API = location.hostname === '127.0.0.1' ? 'http://127.0.0.1:3001' : 'http://localhost:3001'
+  const API = window.MOWO_API_BASE || ''
   const token = localStorage.getItem('mowo_token') || ''
   let task = null
   let pendingDraft = null

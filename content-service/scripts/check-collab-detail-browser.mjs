@@ -2,6 +2,7 @@ import { chromium } from 'file:///C:/Users/25839/.cache/codex-runtimes/codex-pri
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
+const apiBase = process.env.TEST_API_BASE || 'http://127.0.0.1:3001'
 const webBase = process.env.TEST_WEB_BASE || 'http://127.0.0.1:5500/mowo/frontend'
 const runId = String(Date.now()).slice(-8)
 let browser
@@ -69,6 +70,7 @@ try {
 
   browser = await chromium.launch({ headless: true, executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe' })
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
+  await context.addInitScript(apiBase => { window.MOWO_RUNTIME_API_BASE = apiBase }, apiBase)
   const page = await context.newPage()
   const errors = []
   page.on('pageerror', error => errors.push(error.message))

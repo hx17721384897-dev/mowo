@@ -243,7 +243,10 @@ try {
   browser = await chromium.launch({ headless: true, executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe' })
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
   const page = await context.newPage()
-  await page.addInitScript(value => localStorage.setItem('mowo_token', value), token)
+  await page.addInitScript(({ token, apiBase }) => {
+    window.MOWO_RUNTIME_API_BASE = apiBase
+    localStorage.setItem('mowo_token', token)
+  }, { token, apiBase })
   await page.goto(`${webBase}/admin-production-batches.html?batchId=${encodeURIComponent(reprintBatchId)}`, { waitUntil: 'networkidle' })
   await page.getByText(`${reprintBatchId} / 返工1次`, { exact: true }).waitFor()
   assert((await page.getByText('纸面数字不一致即为旧清单').count()) === 1 && (await page.getByText('返工记录与当前进度', { exact: true }).count()) === 1, '批次页面醒目标出旧清单判断和返工步骤')

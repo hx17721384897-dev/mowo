@@ -1,5 +1,5 @@
 (function(){
-  const API=location.hostname==='127.0.0.1'?'http://127.0.0.1:3001':'http://localhost:3001'
+  const API=window.MOWO_API_BASE||''
   const token=localStorage.getItem('mowo_token')||''
   let buffer='',timer=null,busy=false
   function auth(json=false){return{Authorization:`Bearer ${token}`,...(json?{'Content-Type':'application/json'}:{})}}

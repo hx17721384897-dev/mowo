@@ -134,6 +134,7 @@ try {
 
   browser = await chromium.launch({ headless: true, executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe' })
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
+  await context.addInitScript(apiBase => { window.MOWO_RUNTIME_API_BASE = apiBase }, apiBase)
   const page = await context.newPage()
   const pageErrors = []
   page.on('pageerror', error => pageErrors.push(error.message))

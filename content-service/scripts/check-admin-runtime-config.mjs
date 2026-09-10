@@ -6,6 +6,13 @@ const scriptsDir = new URL('../../frontend/js/', import.meta.url)
 const names = (await fs.readdir(pagesDir)).filter(name => /^admin-.*\.html$/.test(name)).sort()
 const errors = []
 
+for (const name of (await fs.readdir(pagesDir)).filter(name => name.endsWith('.html'))) {
+  const html = await fs.readFile(new URL(name, pagesDir), 'utf8')
+  if (html.includes('../js/auth.js') && !html.includes('../js/runtime-config.js')) {
+    errors.push(`${name}: 加载 auth.js 但缺少 runtime-config.js`)
+  }
+}
+
 for (const name of names) {
   const html = await fs.readFile(new URL(name, pagesDir), 'utf8')
   if (!html.includes('../js/runtime-config.js')) errors.push(`${name}: 缺少 runtime-config.js`)
@@ -17,7 +24,11 @@ for (const name of names) {
   }
 }
 
-for (const name of ['admin-sidebar.js', 'admin-frame-imports.js', 'admin-frame-making.js']) {
+for (const name of [
+  'admin-sidebar.js', 'admin-frame-imports.js', 'admin-frame-making.js',
+  'admin-customization-workbench.js', 'customization-review-editor.js',
+  'private-upload.js', 'production-scan-common.js'
+]) {
   const source = await fs.readFile(new URL(name, scriptsDir), 'utf8')
   if (/https?:\/\/(?:localhost|127\.0\.0\.1):3001/.test(source)) errors.push(`${name}: 仍硬编码本机 API 地址`)
 }

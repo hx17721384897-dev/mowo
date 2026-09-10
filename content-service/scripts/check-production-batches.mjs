@@ -176,7 +176,10 @@ try {
   browser = await chromium.launch({ headless: true, executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe' })
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
   const page = await context.newPage()
-  await page.addInitScript(value => localStorage.setItem('mowo_token', value), token)
+  await page.addInitScript(({ token, apiBase }) => {
+    window.MOWO_RUNTIME_API_BASE = apiBase
+    localStorage.setItem('mowo_token', token)
+  }, { token, apiBase })
   await page.goto(`${webBase}/admin-production-batches.html`, { waitUntil: 'networkidle' })
   const productionItems = page.locator('.nav-group[data-key="production"] > .nav-sub > *')
   assert(await productionItems.first().locator('.nav-sub-parent').getByText('全部订单', { exact: true }).count() === 1, '生产菜单把全部订单放在第一位')

@@ -1,9 +1,7 @@
 // Shared browser helper for registered private-file uploads.
 (function () {
   function apiBase() {
-    return location.hostname === '127.0.0.1'
-      ? 'http://127.0.0.1:3001'
-      : 'http://localhost:3001'
+    return window.MOWO_API_BASE || ''
   }
 
   function extensionFor(mimeType) {

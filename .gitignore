@@ -3,6 +3,8 @@ dist/
 build/
 coverage/
 storage/
+.local-run/
+.local-backups/
 *.log
 .DS_Store
 .vscode/

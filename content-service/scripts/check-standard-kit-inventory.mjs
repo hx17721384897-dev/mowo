@@ -149,7 +149,10 @@ try {
   browser = await chromium.launch({ headless:true, executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe' })
   const context = await browser.newContext({ viewport:{width:1440,height:900} })
   const page = await context.newPage()
-  await page.addInitScript(value => localStorage.setItem('mowo_token', value), token)
+  await page.addInitScript(({ token, apiBase }) => {
+    window.MOWO_RUNTIME_API_BASE = apiBase
+    localStorage.setItem('mowo_token', token)
+  }, { token, apiBase })
   await page.goto(`${webBase}/admin-inventory.html`, { waitUntil:'networkidle' })
   await page.locator('#tabBtnPacked').click()
   await page.getByRole('button', {name:'新增分装小包'}).click()

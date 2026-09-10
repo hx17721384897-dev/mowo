@@ -85,15 +85,14 @@ try {
     assert(await page.locator('a[href="admin-logs.html"]').count() === 0, '客服菜单不显示负责人审计日志')
     await context.close()
   }
-  console.log('CHECK collab read-only page')
   {
     const { context, page } = await openAs(collab, 'admin-collab-policy.html')
     await page.locator('#permBanner .banner-lock').waitFor()
+    await page.locator('a[href="admin-collab-policy.html"]').waitFor()
     assert(await page.locator('a[href="admin-collab-policy.html"]').count() === 1, '合作运营菜单显示只读联名政策')
     assert(await page.locator('#saveBtn').isHidden(), '合作运营不能看到联名政策保存按钮')
     await context.close()
   }
-  console.log('CHECK production page')
   {
     const { context, page } = await openAs(production, 'admin-orders.html')
     await page.locator('#pageTitle').waitFor()
@@ -102,7 +101,6 @@ try {
     assert(await page.locator('a[href="admin-users.html"]').count() === 0, '生产岗位菜单不显示用户管理')
     await context.close()
   }
-  console.log('CHECK owner page')
   {
     const { context, page } = await openAs(owner, 'admin-logs.html')
     await page.waitForFunction(() => {
@@ -113,7 +111,6 @@ try {
     await context.close()
   }
 
-  console.log('CHECK denied page redirects')
   await expectRedirect(support, 'admin-orders.html', '客服直接访问生产订单会返回前台')
   await expectRedirect(production, 'admin-users.html', '生产岗位直接访问用户管理会返回前台')
   await expectRedirect(collab, 'admin-contact.html', '合作运营直接访问联络留言会返回前台')

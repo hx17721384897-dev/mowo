@@ -88,7 +88,10 @@ try {
   const page = await context.newPage()
   const pageErrors = []
   page.on('pageerror', (error) => pageErrors.push(error.message))
-  await page.addInitScript((token) => localStorage.setItem('mowo_token', token), login.data.accessToken)
+  await page.addInitScript(({ token, apiBase }) => {
+    window.MOWO_RUNTIME_API_BASE = apiBase
+    localStorage.setItem('mowo_token', token)
+  }, { token: login.data.accessToken, apiBase })
   await page.goto(`${webBase}/settings.html`, { waitUntil: 'networkidle' })
   await page.locator('#nicknameInput').waitFor({ timeout: 10000 })
 
@@ -152,7 +155,10 @@ try {
   })
   const refreshedLogin = await refreshedLoginResponse.json()
   if (!refreshedLoginResponse.ok || !refreshedLogin.success) throw new Error('phone change re-login failed')
-  await page.addInitScript((token) => localStorage.setItem('mowo_token', token), refreshedLogin.data.accessToken)
+  await page.addInitScript(({ token, apiBase }) => {
+    window.MOWO_RUNTIME_API_BASE = apiBase
+    localStorage.setItem('mowo_token', token)
+  }, { token: refreshedLogin.data.accessToken, apiBase })
   await page.goto(`${webBase}/settings.html`, { waitUntil: 'networkidle' })
   await page.locator('#nicknameInput').waitFor({ timeout: 10000 })
 

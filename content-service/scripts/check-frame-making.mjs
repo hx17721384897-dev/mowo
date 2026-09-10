@@ -190,7 +190,10 @@ try {
   browser = await chromium.launch({ headless: true, executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe' })
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
   const page = await context.newPage()
-  await page.addInitScript(value => localStorage.setItem('mowo_token', value), owner.token)
+  await page.addInitScript(({ token, apiBase }) => {
+    window.MOWO_RUNTIME_API_BASE = apiBase
+    localStorage.setItem('mowo_token', token)
+  }, { token: owner.token, apiBase })
   await page.goto(`${webBase}/admin-frame-making.html`, { waitUntil: 'networkidle' })
   await page.getByRole('heading', { name: '制作草稿' }).waitFor()
   assert(await page.getByText('帧图制作', { exact: true }).count() >= 1, '后台导航和独立制作页面正常显示')

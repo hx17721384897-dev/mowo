@@ -197,7 +197,10 @@ try {
   browser = await chromium.launch({ headless: true, executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe' })
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
   const page = await context.newPage()
-  await page.addInitScript(value => localStorage.setItem('mowo_token', value), token)
+  await page.addInitScript(({ token, apiBase }) => {
+    window.MOWO_RUNTIME_API_BASE = apiBase
+    localStorage.setItem('mowo_token', token)
+  }, { token, apiBase })
   await page.goto(`${webBase}/admin-print-production.html`, { waitUntil: 'networkidle' })
   await page.getByText(group12.name).waitFor()
   assert(await page.locator(`[data-sku-id="${skus[0].id}"] img`).count() === 1, '页面逐个展示 SKU 图片和基础信息')

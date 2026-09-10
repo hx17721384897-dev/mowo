@@ -21,6 +21,10 @@ function assertDemoSeedIsSafe() {
   if (!demoSeedEnabled) {
     throw new Error('Set ALLOW_DEMO_SEED=true before writing demo seed data')
   }
+  const databaseName = new URL(process.env.DATABASE_URL || '').pathname.replace(/^\//, '')
+  if (databaseName !== 'mowo_b1_test') {
+    throw new Error('Demo seed is restricted to the isolated mowo_b1_test database')
+  }
   if (demoPassword.length < 12 || demoPassword === '123456') {
     throw new Error('DEMO_SEED_PASSWORD must contain at least 12 characters and cannot use the old default')
   }
@@ -42,8 +46,8 @@ async function main() {
     {
       phone:         '13800138000',
       password:      demoPassword,
-      nickname:      '超管测试',
-      role:          3,              // SuperAdmin
+      nickname:      '负责人测试',
+      role:          3,              // 旧字段兼容等级；授权以 staffRole 为准
       staffRole:     'OWNER',
       certifyStatus: 2,             // 已认证创作者
       isCreator:     true,
@@ -51,8 +55,8 @@ async function main() {
     {
       phone:         '13800138001',
       password:      demoPassword,
-      nickname:      '管理员测试',
-      role:          2,              // Admin
+      nickname:      '客服测试',
+      role:          2,              // 旧字段兼容等级；授权以 staffRole 为准
       staffRole:     'CUSTOMER_SERVICE',
       certifyStatus: 0,
       isCreator:     false,

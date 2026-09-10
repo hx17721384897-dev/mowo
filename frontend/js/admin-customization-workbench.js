@@ -1,6 +1,6 @@
 (function () {
   'use strict'
-  const apiBase = location.hostname === '127.0.0.1' ? 'http://127.0.0.1:3001' : 'http://localhost:3001'
+  const apiBase = window.MOWO_API_BASE || ''
   let accessToken = localStorage.getItem('mowo_token') || ''
   let currentStaff = null
   const labels = {
