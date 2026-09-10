@@ -5,6 +5,7 @@ coverage/
 storage/
 .local-run/
 .local-backups/
+.codex-tmp/
 *.log
 .DS_Store
 .vscode/
