@@ -1,6 +1,6 @@
 # B5 后台页面与权限矩阵
 
-> 最后核对：2026-09-09。前端菜单/页面仅负责体验，服务端 `requiredPermissionForRequest()` 与路由命名权限才是授权边界。
+> 最后核对：2026-09-10。前端菜单/页面仅负责体验，服务端 `requiredPermissionForRequest()` 与路由命名权限才是授权边界。
 
 | 页面 | 主要端点域 | 命名权限 | 最小岗位/特殊动作 | 当前状态 |
 |---|---|---|---|---|
@@ -13,19 +13,29 @@
 | `admin-collab-policy.html` | `/api/admin/collab/policy` | `COLLAB`、`COLLAB_ADMIN` | 合作运营读；负责人写 | 命名权限已通过；旧字段冲突已修复 |
 | `admin-contract.html` | `/api/admin/contracts` | `COLLAB`、`COLLAB_ADMIN` | 合作运营、负责人；仅负责人删除 | 路由命名权限及隔离回归已通过 |
 | `admin-customization-requests.html` | `/api/admin/customization-requests` | `CUSTOMIZATION_REVIEW` | 客服可看；生产/负责人可编辑 | B2 流程回归已通过 |
-| `admin-frame-library.html` | `/api/admin/frame-library` | `FRAME_LIBRARY` | 合作运营/生产可读；负责人治理；生产可生成文件 | B6 继续副作用回归 |
-| `admin-frame-making.html` | `/api/admin/frame-making` | `FRAME_MAKING` | 生产制作；负责人发布 | B6 继续副作用回归 |
-| `admin-frame-imports.html` | `/api/admin/frame-imports` | `FRAME_LIBRARY` + 负责人校验 | 负责人 | B6 继续导入回归 |
-| `admin-models.html` | `/api/machine-models`、SKU mapping | `CATALOG` | 客服/负责人；写操作按路由控制 | 待浏览器回归 |
+| `admin-frame-library.html` | `/api/admin/frame-library` | `FRAME_LIBRARY` | 合作运营/生产可读；负责人治理；生产可生成文件 | B6 隔离专项通过 |
+| `admin-frame-making.html` | `/api/admin/frame-making` | `FRAME_MAKING` | 生产制作；负责人发布 | B6 隔离专项通过 |
+| `admin-frame-imports.html` | `/api/admin/frame-imports` | `FRAME_LIBRARY` + 负责人校验 | 负责人 | B6 隔离专项通过 |
+| `admin-models.html` | `/api/machine-models`、SKU mapping | `CATALOG` | 客服/负责人；写操作按路由控制 | 页面命名岗位检查与静态回归通过 |
 | `admin-inventory.html` | `/api/inventory`、`/api/materials` | `PRODUCTION` | 生产、负责人 | 当前岗位读取已收口 |
 | `admin-orders.html` | `/api/admin/production-workflow` | `PRODUCTION` | 生产、负责人 | 正式工作流结构检查通过 |
-| `admin-production-batches.html` | `/api/admin/production-batches` | `PRODUCTION` | 生产、负责人 | B6 专项待重跑 |
-| `admin-print-production.html` | `/api/admin/print-production` | `PRODUCTION_CONFIG` | 负责人 | B6 专项待重跑 |
-| `admin-import.html` | `/api/admin/import` | `PRODUCTION` | 生产、负责人 | 旧/新导入消费者待 B6 核对 |
+| `admin-production-batches.html` | `/api/admin/production-batches` | `PRODUCTION` | 生产、负责人 | B6 隔离专项通过 |
+| `admin-print-production.html` | `/api/admin/print-production` | `PRODUCTION_CONFIG` | 负责人 | B6 隔离专项通过 |
+| `admin-import.html` | `/api/admin/import` | `PRODUCTION` | 生产、负责人 | 页面岗位已收口；B6 导入专项通过 |
 
 ## 本轮已完成与仍需完成
 
 - 已将用户、岗位、封禁、日志、联络、合同和联名政策等 B5 核心路由改为命名权限；负责人专属动作使用 `CONTACT_ADMIN`/`COLLAB_ADMIN`。
 - `admin.js` 剩余数字角色主要属于旧订单、生产、导入和售后域，由 B6 在消费者确认后迁移，不在 B5 中机械替换。
-- 逐岗位浏览器验证菜单可见性、页面进入、允许动作和 403 失败提示。
-- 继续补齐不可逆动作的审计字段与消费者记录。
+- 逐岗位浏览器验证已通过：客服、合作运营、生产人员和负责人菜单均按岗位显示；4 条越权页面路径会回到首页，联名政策页对合作运营保持只读。
+- B5 当前消费者与审计结论已记录在 `BATCH_5_OPERATIONS_AUDIT.md`；生产域消费者转入 `BATCH_6_ORDER_PRODUCTION_CONSUMER_MATRIX.md`。
+
+## 消费者与审计结论
+
+| 域 | 消费者事实 | 审计/风险结论 |
+|---|---|---|
+| 用户与岗位 | `admin-users.html` | 封禁、解封、岗位变更和员工处理均有明确命名权限；岗位变更会撤销旧会话。 |
+| 账号注销 | `admin-account-deletions.html` | 客服只读、负责人处置；B2 已覆盖审计和隔离回归。 |
+| 联络留言 | `admin-contact.html` | 客服处理与负责人删除/IP 封禁分权；不可逆动作由 `CONTACT_ADMIN` 限制。 |
+| 联名政策/合同 | 联名后台页面 | 合作运营读取、负责人写入/删除；合同操作仍使用通用操作日志，字段级差异可在未来审计增强批次补齐。 |
+| 帧图、导入和生产 | 对应生产后台页 | 消费者和 9 项隔离生产回归已转入 B6 清单；旧入口不能因源码仍存在而重新接入。 |
