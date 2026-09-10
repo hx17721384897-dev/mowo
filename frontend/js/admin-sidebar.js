@@ -161,6 +161,19 @@
 .sidebar-user-name{font-weight:800;font-size:12px;color:var(--white,#fff);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .sidebar-user-role{font-weight:700;font-size:10px;color:var(--gray3,#787874);}
 .sidebar.collapsed .sidebar-user-info{display:none;}
+@media(max-width:1023px){
+  .sidebar{
+    z-index:200;
+    width:min(var(--sidebar-w,220px),calc(100vw - 48px));
+    height:100vh;
+    height:100dvh;
+    min-height:0;
+  }
+  .sidebar.collapsed{width:min(var(--sidebar-w,220px),calc(100vw - 48px));}
+  .sidebar.collapsed .nav-label,.sidebar.collapsed .nav-group-arrow{opacity:1;}
+  .sidebar.collapsed .sidebar-user-info{display:block;}
+  .sidebar-nav{min-height:0;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}
+}
 `;
 
   function currentFile() {

@@ -6,7 +6,15 @@ $ApiProcess = $null
 $WebProcess = $null
 
 function Test-Listening([int]$Port) {
-  return [bool](Get-NetTCPConnection -State Listen -LocalPort $Port -ErrorAction SilentlyContinue)
+  $client = [System.Net.Sockets.TcpClient]::new()
+  try {
+    $connect = $client.ConnectAsync('127.0.0.1', $Port)
+    return $connect.Wait(500) -and $client.Connected
+  } catch {
+    return $false
+  } finally {
+    $client.Dispose()
+  }
 }
 
 function Wait-Url([string]$Url) {
@@ -70,7 +78,8 @@ try {
     'check:feature-gates',
     'check:staff-security',
     'check:launch-safety',
-    'check:admin-role-browser'
+    'check:admin-role-browser',
+    'check:user-shell-browser'
   )
 
   Stop-Process -Id $ApiProcess.Id -Force

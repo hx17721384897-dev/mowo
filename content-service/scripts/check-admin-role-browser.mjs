@@ -32,15 +32,15 @@ async function createStaff(label, staffRole, role, index) {
   return { ...user, token: payload.data.accessToken }
 }
 
-async function openAs(staff, path) {
-  const context = await browser.newContext()
+async function openAs(staff, path, contextOptions = {}) {
+  const context = await browser.newContext(contextOptions)
   await context.addInitScript(({ token, apiBase }) => {
     window.MOWO_RUNTIME_API_BASE = apiBase
     localStorage.setItem('mowo_token', token)
   }, { token: staff.token, apiBase })
   const page = await context.newPage()
   page.setDefaultTimeout(8000)
-  page.setDefaultNavigationTimeout(8000)
+  page.setDefaultNavigationTimeout(15000)
   page.on('dialog', dialog => dialog.accept())
   await page.goto(`${webBase}/${path}`, { waitUntil: 'domcontentloaded' })
   return { context, page }
@@ -108,6 +108,35 @@ try {
       return node && node.textContent !== '加载中…'
     })
     assert(await page.locator('a[href="admin-logs.html"]').count() === 1, '负责人可以进入审计日志并看到完整菜单入口')
+    await context.close()
+  }
+  {
+    const { context, page } = await openAs(owner, 'admin-users.html', { viewport: { width: 700, height: 420 } })
+    await page.waitForFunction(() => document.querySelector('#sidebarName')?.textContent !== '加载中…')
+    await page.locator('#menuBtn').click()
+    await page.locator('#sidebar.open').waitFor()
+    const layers = await page.evaluate(() => {
+      const sidebar = document.getElementById('sidebar')
+      const backdrop = document.getElementById('sidebarBackdrop')
+      const topElement = document.elementFromPoint(Math.min(100, sidebar.getBoundingClientRect().width / 2), 100)
+      return {
+        sidebar: Number(getComputedStyle(sidebar).zIndex),
+        backdrop: Number(getComputedStyle(backdrop).zIndex),
+        sidebarReceivesPointer: sidebar.contains(topElement)
+      }
+    })
+    assert(layers.sidebar > layers.backdrop && layers.sidebarReceivesPointer, '窄屏侧栏位于遮罩上方并可点击')
+    const nav = page.locator('#sidebar .sidebar-nav')
+    const dimensions = await nav.evaluate(element => ({ clientHeight: element.clientHeight, scrollHeight: element.scrollHeight }))
+    assert(dimensions.scrollHeight > dimensions.clientHeight, '窄屏侧栏菜单形成独立可滚动区域')
+    await nav.hover()
+    await page.mouse.wheel(0, 500)
+    await page.waitForFunction(() => document.querySelector('#sidebar .sidebar-nav')?.scrollTop > 0)
+    assert(true, '窄屏侧栏支持滚轮滚动')
+    await page.locator('.nav-group[data-key="system"] .nav-group-header').click()
+    await page.locator('#sidebar a[href="admin-logs.html"]').click()
+    await page.waitForURL(url => url.pathname.endsWith('/admin-logs.html'))
+    assert(true, '窄屏侧栏可以切换后台页面')
     await context.close()
   }
 

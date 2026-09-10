@@ -15,6 +15,7 @@
     "check:legacy-production-boundary": "node scripts/check-legacy-production-boundary.mjs",
     "check:admin-runtime-config": "node scripts/check-admin-runtime-config.mjs",
     "check:admin-role-browser": "node scripts/check-admin-role-browser.mjs",
+    "check:user-shell-browser": "node scripts/check-user-shell-browser.mjs",
     "test-db:rebuild": "node scripts/test-database.mjs rebuild",
     "test-db:status": "node scripts/test-database.mjs status",
     "check:backup-restore": "node scripts/check-backup-restore.mjs",

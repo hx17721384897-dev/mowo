@@ -26,6 +26,7 @@
   background: var(--nav-bg);
   border-bottom: 1px solid var(--nav-border);
   color: var(--nav-text);
+  font-family: 'Nunito', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }
 
 /* ── 左区：Logo ── */
