@@ -12,6 +12,9 @@ for (const name of names) {
   if (!html.includes('../js/auth.js')) errors.push(`${name}: 缺少 auth.js`)
   if (/https?:\/\/(?:localhost|127\.0\.0\.1):3001/.test(html)) errors.push(`${name}: 仍硬编码本机 API 地址`)
   if (/JSON\.parse\(atob\([^\n]+split\(['"]\.['"]\)/.test(html)) errors.push(`${name}: 仍直接解析 JWT 角色`)
+  if (/(?:user|me|json\.data)\.role\s*[<>]=?/.test(html) || /initPermission\(user\.role\)/.test(html)) {
+    errors.push(`${name}: 仍使用数字角色做页面权限判断`)
+  }
 }
 
 for (const name of ['admin-sidebar.js', 'admin-frame-imports.js', 'admin-frame-making.js']) {

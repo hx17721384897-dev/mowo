@@ -642,12 +642,13 @@ updateClock();setInterval(updateClock,1000)
 async function init(){
   if(!token){location.href='index.html';return}
   try{
-    const me=await api('/auth/me')
-    if(!me.success||me.data.role<2){location.href='index.html';return}
-    const name=me.data.profile?.nickname||me.data.phone||'管理员'
-    const roleMap={0:'普通用户',1:'生产端',2:'管理员',3:'超级管理员'}
+    const me=await api('/v1/account/me')
+    const user=me.data
+    if(!me.success||!['OWNER','CUSTOMER_SERVICE'].includes(user?.staffRole)){location.href='index.html';return}
+    const name=user.profile?.nickname||user.maskedPhone||'员工'
+    const roleMap={OWNER:'负责人',CUSTOMER_SERVICE:'运营客服'}
     document.getElementById('sidebarName').textContent=name
-    document.getElementById('sidebarRole').textContent=roleMap[me.data.role]||'管理员'
+    document.getElementById('sidebarRole').textContent=roleMap[user.staffRole]||'员工'
     document.getElementById('sidebarAvatar').textContent=name.slice(0,1)
   }catch(e){location.href='index.html';return}
   await loadStats();await loadList(1)

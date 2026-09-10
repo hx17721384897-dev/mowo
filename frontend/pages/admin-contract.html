@@ -470,8 +470,10 @@ function openDrawer(){document.getElementById('drawerOverlay').classList.add('sh
 function closeDrawer(){document.getElementById('drawerOverlay').classList.remove('show');document.getElementById('drawer').classList.remove('open');currentContractId=null}
 
 window.addEventListener('DOMContentLoaded',async function(){
-  const userStr=localStorage.getItem('mowo_user')
-  if(userStr){try{const u=JSON.parse(userStr);document.getElementById('sidebarName').textContent=u.nickname||u.phone||'管理员';document.getElementById('sidebarAvatar').textContent=(u.nickname||'管')[0].toUpperCase();const rm={0:'用户',1:'生产端',2:'管理员',3:'超管'};document.getElementById('sidebarRole').textContent=rm[u.role]||'—'}catch(e){}}
+  try{
+    const u=await fetchCurrentUser()
+    if(!['OWNER','COLLAB_OPS'].includes(u?.staffRole)){location.href='index.html';return}
+  }catch(e){location.href='index.html';return}
   loadContracts(1)
 })
 </script>

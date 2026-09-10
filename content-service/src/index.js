@@ -48,6 +48,7 @@ import { startScheduler }     from './lib/scheduler.js'
 import { hasPermission, requiredPermissionForRequest } from './lib/permissions.js'
 import { auditOutcome, serializeSafeAuditBody } from './lib/audit.js'
 import { publicFeatureFlags, requiredFeatureForRequest } from './lib/features.js'
+import { isClosedLegacyProductionEndpoint } from './lib/legacy-production-endpoints.js'
 
 const config = loadConfig()
 const fastify = Fastify({ logger: true, bodyLimit: 10 * 1024 * 1024 })
@@ -126,6 +127,21 @@ async function start() {
           code: 'STAFF_PERMISSION_DENIED'
         })
       }
+    })
+
+    // 已确认无当前页面/脚本消费者的旧生产入口保留源码但停止执行。
+    // 权限校验先运行，因此未登录请求仍返回 401，不暴露内部历史能力。
+    fastify.addHook('preHandler', async (request, reply) => {
+      if (!isClosedLegacyProductionEndpoint(request.method, request.url)) return
+      if (!request.user) {
+        await fastify.authenticate(request, reply)
+        if (reply.sent) return
+      }
+      return reply.code(410).send({
+        success: false,
+        code: 'LEGACY_ENDPOINT_CLOSED',
+        message: '旧生产入口已关闭，请使用正式订单与生产工作流'
+      })
     })
 
     // ── 审计日志 Hook ──

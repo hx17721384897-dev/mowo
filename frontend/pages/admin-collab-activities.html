@@ -324,7 +324,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (!_token) { location.href = 'index.html'; return }
   try {
     const user = await fetchCurrentUser()
-    if (!user?.staffRole) { alert('权限不足'); location.href = 'index.html'; return }
+    if (!['OWNER','COLLAB_OPS'].includes(user?.staffRole)) { alert('权限不足'); location.href = 'index.html'; return }
   } catch { location.href = 'index.html'; return }
 
   await loadActivities()

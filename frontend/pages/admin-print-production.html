@@ -27,7 +27,7 @@ const API=window.MOWO_API_BASE||'',token=localStorage.getItem('mowo_token')||''
 let groups=[],skus=[],editingGroupId=null,ruleGroupId=null,templateGroupId=null,pickedSkuIds=new Set(),dragState=null
 const auth=()=>({Authorization:`Bearer ${token}`});const esc=v=>String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))
 function toast(m){const e=document.getElementById('toast');e.textContent=m;e.style.display='block';setTimeout(()=>e.style.display='none',2500)}
-async function ensureStaff(){try{const u=await fetchCurrentUser();if(!u?.staffRole){location.href='index.html';return false}return true}catch{location.href='auth.html?redirect='+encodeURIComponent(location.pathname);return false}}
+async function ensureStaff(){try{const u=await fetchCurrentUser();if(u?.staffRole!=='OWNER'){location.href='index.html';return false}return true}catch{location.href='auth.html?redirect='+encodeURIComponent(location.pathname);return false}}
 async function api(path,options={}){const r=await fetch(`${API}/api/admin/print-production${path}`,{...options,headers:{...auth(),...(options.body?{'Content-Type':'application/json'}:{}),...(options.headers||{})}});const j=await r.json();if(!j.success)throw new Error(j.message||'操作失败');return j}
 async function loadData(){try{const j=await api('/');groups=j.data.groups||[];skus=j.data.skus||[];render()}catch(e){toast(e.message)}}
 function skuImage(s,cls='sku-img'){return s.previewUrl?`<img class="${cls}" src="${esc(s.previewUrl)}" alt="${esc(s.modelName)}">`:`<div class="${cls} placeholder">无图</div>`}

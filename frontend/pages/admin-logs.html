@@ -201,7 +201,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const user = await window.fetchCurrentUser();
     if (!user || user.staffRole !== 'OWNER') {
       alert('安全记录仅负责人可查看');
-      location.href = 'admin-orders.html';
+      location.href = 'index.html';
       return;
     }
     document.getElementById('sidebarRole').textContent = '负责人';

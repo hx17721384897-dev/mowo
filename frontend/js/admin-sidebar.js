@@ -91,7 +91,7 @@
 
   const STAFF_GROUPS = {
     OWNER: ['production', 'assets', 'customization', 'product', 'collab', 'creator', 'ops', 'users', 'system'],
-    CUSTOMER_SERVICE: ['production', 'customization', 'product', 'ops', 'users'],
+    CUSTOMER_SERVICE: ['customization', 'product', 'ops', 'users'],
     PRODUCTION: ['production', 'assets', 'customization', 'product'],
     COLLAB_OPS: ['assets', 'collab', 'creator']
   };
@@ -99,7 +99,7 @@
   const STAFF_HIDDEN_ITEMS = {
     CUSTOMER_SERVICE: new Set(['admin-import.html', 'admin-inventory.html', 'admin-print-production.html']),
     PRODUCTION: new Set(['admin-models.html', 'admin-print-production.html']),
-    COLLAB_OPS: new Set(['admin-collab-policy.html', 'admin-frame-making.html'])
+    COLLAB_OPS: new Set(['admin-frame-making.html'])
   };
 
   const CSS = `

@@ -577,12 +577,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // 用户信息
   try {
-    const me = JSON.parse(localStorage.getItem('mowo_user') || '{}')
-    if (me.role < 2) { location.href = '../index.html'; return }
-    document.getElementById('sidebarName').textContent = me.phone?.slice(-4) ? `*${me.phone.slice(-4)}` : '管理员'
-    document.getElementById('sidebarAvatar').textContent = me.role >= 3 ? 'S' : 'A'
-    document.getElementById('sidebarRole').textContent = me.role >= 3 ? 'SuperAdmin' : 'Admin'
-  } catch{}
+    const me = await fetchCurrentUser()
+    if (!['OWNER','PRODUCTION'].includes(me?.staffRole)) { location.href = 'index.html'; return }
+  } catch{ location.href = 'index.html'; return }
 
   setInterval(() => {
     document.getElementById('topbarTime').textContent = new Date().toLocaleString('zh-CN', {hour12:false})

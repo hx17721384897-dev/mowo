@@ -253,14 +253,14 @@ document.getElementById('sidebarBackdrop').onclick = () => {
 }
 
 /* ── 权限初始化 ── */
-function initPermission(role) {
-  isSuperAdmin = role >= 3
+function initPermission(staffRole) {
+  isSuperAdmin = staffRole === 'OWNER'
   const banner = document.getElementById('permBanner')
   if (isSuperAdmin) {
     banner.innerHTML = `<div class="banner-warn">⚠️ 政策修改将影响后续所有违约计算，请谨慎操作。历史已发生的违约不受影响。</div>`
     document.getElementById('saveBtn').style.display = 'inline-flex'
   } else {
-    banner.innerHTML = `<div class="banner-lock">🔒 当前账号为普通管理员，只读模式。修改违约政策需超级管理员权限。</div>`
+    banner.innerHTML = `<div class="banner-lock">🔒 当前账号为合作运营，只读模式。修改违约政策需负责人权限。</div>`
   }
 }
 
@@ -441,16 +441,17 @@ async function savePolicy() {
   }
 }
 
-/* ── Auth 回调 ── */
-window.onAuthReady = function(user) {
-  if (!user || user.role < 2) {
+/* ── 页面权限初始化 ── */
+document.addEventListener('DOMContentLoaded', async () => {
+  const user = await fetchCurrentUser()
+  if (!['OWNER', 'COLLAB_OPS'].includes(user?.staffRole)) {
     alert('无权限访问后台')
     location.href = 'index.html'
     return
   }
-  initPermission(user.role)
+  initPermission(user.staffRole)
   loadPolicy()
-}
+}, { once: true })
 </script>
 <script src="../js/admin-sidebar.js?v=20260813-shell-init"></script>
 </body>

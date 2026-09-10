@@ -462,10 +462,10 @@ window.addEventListener('DOMContentLoaded', async () => {
       headers:{Authorization:`Bearer ${_token}`}
     })
     const json = await res.json()
-    if (!json.success || json.data.role < 2) { location.href = 'index.html'; return }
+    if (!json.success || !['OWNER','CUSTOMER_SERVICE'].includes(json.data.staffRole)) { location.href = 'index.html'; return }
     const u = json.data
     document.getElementById('sidebarName').textContent   = u.profile?.nickname || u.maskedPhone || '管理员'
-    document.getElementById('sidebarRole').textContent   = ROLE_LABEL[u.role]
+    document.getElementById('sidebarRole').textContent   = u.staffRole === 'OWNER' ? '负责人' : '运营客服'
     document.getElementById('sidebarAvatar').textContent = (u.profile?.nickname || u.maskedPhone || '管')[0].toUpperCase()
   } catch { location.href = 'index.html'; return }
 

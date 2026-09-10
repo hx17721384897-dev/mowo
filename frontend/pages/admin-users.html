@@ -276,7 +276,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   try {
     const res = await fetch(`${API}/api/v1/account/me`, { headers: { Authorization: `Bearer ${_token}` } });
     const json = await res.json();
-    if (!json.success || !json.data.staffRole) { alert('权限不足'); location.href = 'index.html'; return; }
+    if (!json.success || !['OWNER','CUSTOMER_SERVICE'].includes(json.data.staffRole)) { alert('权限不足'); location.href = 'index.html'; return; }
     _myRole = json.data.role ?? 0;
     _myStaffRole = json.data.staffRole;
     _myUserId = json.data.id;
