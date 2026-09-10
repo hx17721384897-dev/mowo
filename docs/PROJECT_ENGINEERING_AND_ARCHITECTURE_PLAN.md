@@ -1,6 +1,6 @@
 # 项目工程化与架构整理计划
 
-> 版本：v1.2（2026-09-09）
+> 版本：v1.4（2026-09-10，L0 封版）
 >
 > 本计划的当前目标是让哞屋在**本地使用合成测试数据可重复跑通**，并完成架构、权限、数据库、测试、文档和交接基础整理；当前不以邀请真实用户、服务器部署或接入真实线上支付为完成条件。每一批次都必须可独立验证、提交和回退。
 
@@ -102,19 +102,21 @@ Vue 3 + TypeScript 适合逐步承接购物车、结算、订单、定制编辑�
 
 ## 6. 执行架构与审计批次
 
-### 6.1 当前代码版图（批次 0 起点）
+### 6.1 当前代码版图
 
-| 范围 | 当前静态盘点 | 审计提醒 |
-|---|---:|---|
-| Web 顶层 HTML | 58 页 | 页面存在不等于可用，必须核对正式入口、权限、API、链接和移动端行为。 |
-| 后台页面 | 24 页 | 覆盖用户、联名、库存、订单、帧图和生产，属于高复杂度区域。 |
-| 生产页面 | 6 页 | 已有统一生产工作台和旧入口，需核对实际是否已完全收口。 |
-| 创作者页面 | 8 页 | 部分功能可能由功能开关关闭，不能仅凭页面判断已开放。 |
-| 用户交易页面 | 11 页 | 定制、购物车、结算、订单、地址和设置构成 B1 主线。 |
-| 后端路由模块 | 44 个 | 约 477 个端点，按领域逐个建立消费者与权限映射。 |
-| Prisma 数据模型 | 111 个 | 必须同时核对 Schema、迁移、真实数据库与代码消费者。 |
-| Prisma 迁移目录 | 59 个 | 必须验证空库是否可完整重放。 |
-| 小程序 | 14 个注册页 | 作为交易层的独立客户端审计，不当作已可发布产品。 |
+批次 0 的 58 个 Web 页面、44 个路由模块和约 477 个端点是开始整理时的历史快照，不再代表当前仓库。2026-09-10 只读复核得到以下当前基线；后端端点数按源码中的直接 `fastify.get/post/put/patch/delete` 声明统计，不含动态注册或同一路径的运行时变化。
+
+| 范围 | 批次 0 起点 | 2026-09-10 当前复核 | 审计提醒 |
+|---|---:|---:|---|
+| Web 顶层 HTML | 58 页 | 46 页 | 页面减少不能直接解释为冗余已清完，仍需核对链接、权限、API、失败态和移动端行为。 |
+| 后台页面 | 24 页 | 20 页 | 核心岗位入口已纳入 B5；少数异常跳转仍待最终收口。 |
+| `_legacy/` 页面 | 未单列 | 4 页 | 正式入口和主要服务端能力已关闭，但本地静态服务器仍可按完整地址读取页面外壳。 |
+| 顶层创作者命名页面 | 8 页 | 0 页 | 创作者平台页面已经退出当前范围；`settings.html` 的认证展示保留，但不得链接已删除的创作者中心。 |
+| 后端路由模块 | 44 个 | 36 个 | 当前约有 331 个直接路由声明；全项目字段、权限、消费者矩阵尚未逐端点完成。 |
+| 请求/响应 Schema 标记 | 未形成可靠基线 | 请求约 35 处；统一响应 Schema 0 处 | 当前专项回归可保护核心链路，但完整 API 契约工程仍是长期整理项。 |
+| Prisma 数据模型 | 111 个 | 111 个 | 必须同时核对 Schema、迁移、测试库与代码消费者。 |
+| Prisma 迁移目录 | 59 个 | 59 个 | 已在 `mowo_b1_test` 从空库重放 59/59；不能据此直接改造旧 `mowo_db`。 |
+| 小程序 | 14 个注册页 | 14 个注册页 | 已有独立 Git 和类型检查；只有浏览、详情和购物车基础，不是完整交易客户端。 |
 
 三层业务视角适合组织工作，但认证、数据库、文件权限、功能开关、测试和运维是横切能力，必须先于或同步于三层审查。
 
@@ -124,6 +126,92 @@ Vue 3 + TypeScript 适合逐步承接购物车、结算、订单、定制编辑�
 ├─ 用户交易层（Web + 微信小程序）
 └─ 后台运营 / 生产层
 ```
+
+### 6.2 批次进度核对总表
+
+本表是判断“总计划做到哪里”的唯一总览。这里的“完成”只表示达到当前 **L0 本地合成数据自测**范围，不表示可以邀请真实用户、接入真实支付或公开上线。各批次正文保留更详细的实现证据和边界。
+
+| 批次 | 当前状态 | 已完成 | 未完成或仍需收口 | 下一步/完成条件 |
+|---|---|---|---|---|
+| B0 横切基础层 | **L0 完成** | 建立仓库、页面、路由、Schema、迁移、功能开关、新旧冲突和 P0/P1/P2 风险台账；形成模块代码地图，并在 H0 标明历史快照与当前事实的边界。 | 全项目逐端点字段/权限/消费者矩阵只在 B5、B6 等核心域完成。 | 后续按被修改领域补齐端点契约和消费者，不为未修改领域一次性制造低质量矩阵。 |
+| B1 官网展示层 | **L0 核心完成；退役残留转 R1** | 公开 API Origin、作品公开字段、媒体边界、列表/详情失败态、联络契约、公开 CTA 和付款关闭边界已完成首轮收敛。 | `settings.html` 仍链接已删除的创作者页面，并残留收益、牛量与自助联名承诺；第三方字体/CDN 策略未收口。 | R1 删除退役能力时一并移除残留入口和文案；CDN/CSP 留到真实邀请前处理。 |
+| B2 用户账户与私人定制 | **L0 核心完成** | 登录、设备会话、设置、头像、换绑、地址、注销、私有文件、自己筛帧、人工筛帧、确认、版本与复购均有隔离 API/浏览器证据。 | 批次文档个别早期段落仍写“待浏览器验收”；真实用户素材和恶意文件扫描不属于 L0。 | 同步 B2 文档内部旧状态；真实素材只能在未来 B1 达到文件扫描与隐私门槛后验收。 |
+| B3 用户交易层 | **L0 完成** | 混合购物车、冻结快照、幂等建单、库存预锁/释放、跨账号隔离、取消/收货/售后首轮状态机及订单页面回归已完成。 | 真实支付验签、退款、对账和支付供应商未实现；这些不是 L0 遗漏。 | 日常保持 `ONLINE_CHECKOUT_ENABLED=false`；未来进入真实交易阶段时另建支付与退款批次。 |
+| B4 微信小程序 | **工程基线完成；客户端功能部分完成** | 独立 Git、登录/注册契约、公开作品列表/详情、SKU、加购、购物车增删改、刷新失败队列、类型检查和微信构建基线已完成。 | 订单、地址、通知、定制步骤仍为占位；微信身份、会话续期、一次性领取、AppID/合法域名、真机和支付未完成。 | 当前继续明确显示“未开放”，不列为 L0 主客户端；未来确定小程序范围和微信资料后分身份/领取、订单、支付三个阶段实施。 |
+| B5 后台运营层 | **L0 核心完成；兼容层转后续整理** | 20/20 后台页运行时 API Origin、四岗位正反路径、命名权限、员工数据隔离、核心消费者与权限矩阵已完成；H0 复核未再发现此前记录的四个页面失败跳转或样式引用。 | 服务端若干路由仍叠加 `requireRole(1/2)` 数字兼容判断。 | 保持全局命名权限为唯一安全事实源，后续按消费者和专项测试逐域移除数字权限兼容层。 |
+| B6 库存、生产与履约 | **当前 L0 范围完成；有两项产品决定** | 9 项隔离生产专项、SO/PU/PB/FP 正式链、新旧消费者清单、29 个旧代表入口 410 关闭和扫码夹具清理均已完成。 | `production-inventory.html` 仍消费 2 个旧批次只读入口；正式订单可产生售后申请，但没有清晰的最小后台处理页面。 | 由负责人决定旧库存生产页迁入正式批次链还是下线；决定售后补最小后台闭环还是在基础版本关闭。决定前不删除、不误关。 |
+| B7 本地综合验收 | **L0 完成并封版** | 一键启动/状态/停止、59/59 空库迁移、5 个合成账号、32 项综合回归、浏览器自动检查、测试库备份恢复和暂停/回退手册均已完成；负责人于 2026-09-10 确认计划完成。H0 当日再次完整执行 B7，三项修复的自动防回归均通过。 | 没有 L0 阻断；真实资料、真实支付和线上运行能力仍属于未来 B1/C/R1-R3。 | 以 `l0-engineering-baseline-20260910` 为接续基线，后续进入 Vue 计划 H0 之后的 R0/R1。 |
+
+### 6.3 批次与相关文档目录
+
+以后阅读项目时，先看本文和 `PROJECT_INDEX.md`，再按正在修改的批次进入对应事实/验收文档。旧规划文档只用于追溯，不得覆盖当前代码和批次事实。
+
+#### A. 总入口、范围与治理
+
+| 文档 | 用途/当前身份 |
+|---|---|
+| [`PROJECT_ENGINEERING_AND_ARCHITECTURE_PLAN.md`](PROJECT_ENGINEERING_AND_ARCHITECTURE_PLAN.md) | 本文；总目标、完成标准、批次进度和下一步的唯一总入口。 |
+| [`PROJECT_INDEX.md`](PROJECT_INDEX.md) | 新程序员阅读顺序、仓库结构和模块索引。 |
+| [`DOCUMENTATION_STATUS.md`](DOCUMENTATION_STATUS.md) | 每份文档是当前事实、实施记录还是历史规划。 |
+| [`RELEASE_SCOPE.md`](RELEASE_SCOPE.md) | 产品阶段与开放/关闭能力；其中旧“当前目标是邀请测试”描述待同步为 L0。 |
+| [`LAUNCH_READINESS.md`](LAUNCH_READINESS.md) | 从 L0 到真实邀请、交易和公开上线分别需要的工程门槛。 |
+| [`FUTURE_CHANGE_GUARDRAILS.md`](FUTURE_CHANGE_GUARDRAILS.md) | 新功能必须遵守的迁移、权限、测试、文档和 Git 规则。 |
+| [`OPEN_QUESTIONS.md`](OPEN_QUESTIONS.md) | 仍需负责人决定的产品规则，不能由代码擅自决定。 |
+| [`USER_SCENARIOS.md`](USER_SCENARIOS.md) | 用户、员工和生产岗位的历史场景说明；验收时需与当前功能开关和批次事实核对。 |
+| [`REMEDIATION_ROADMAP.md`](REMEDIATION_ROADMAP.md) | 历史整改路线；使用前必须与本文当前进度核对。 |
+
+#### B. B0 横切事实、差异与数据库
+
+| 文档 | 用途/当前身份 |
+|---|---|
+| [`ARCHITECTURE_AUDIT_REGISTER.md`](ARCHITECTURE_AUDIT_REGISTER.md) | 跨项目审计台账、证据和风险；部分历史条目待同步当前状态。 |
+| [`DOC_CODE_DIFFERENCES.md`](DOC_CODE_DIFFERENCES.md) | 文档与代码差异、迁移边界；保留历史，但旧结论需要逐项标记已解决。 |
+| [`SCHEMA_MIGRATION_ALIGNMENT_INVENTORY.md`](SCHEMA_MIGRATION_ALIGNMENT_INVENTORY.md) | 111 个模型、59 份迁移和历史约束的整理依据。 |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | 历史总体架构说明；不是当前完成度的唯一事实源。 |
+| [`DATABASE.md`](DATABASE.md) | 历史数据库设计与模型语义；需结合 Schema、迁移和模块事实阅读。 |
+| [`API.md`](API.md) | API 说明；具体契约以当前路由 Schema、消费者和测试为准。 |
+| [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md) | 本地问题排查。 |
+
+#### C. B1–B4 官网、账户、交易和小程序
+
+| 批次 | 主要文档 | 说明 |
+|---|---|---|
+| B1 官网 | [`COLLAB_STOREFRONT_REMEDIATION_PLAN.md`](COLLAB_STOREFRONT_REMEDIATION_PLAN.md)、[`FRONTEND.md`](FRONTEND.md) | 联名货架整改记录及历史前端说明。 |
+| B2 账户/定制 | [`BATCH_2_ACCOUNT_CUSTOMIZATION_AUDIT.md`](BATCH_2_ACCOUNT_CUSTOMIZATION_AUDIT.md)、[`ACCOUNT_DELETION_POLICY.md`](ACCOUNT_DELETION_POLICY.md)、[`ACCOUNT_FILE_SECURITY_ACCEPTANCE.md`](ACCOUNT_FILE_SECURITY_ACCEPTANCE.md)、[`WEB_CUSTOMIZATION_ACCEPTANCE.md`](WEB_CUSTOMIZATION_ACCEPTANCE.md)、[`ANIMATION_DRAFT_PLAN.md`](ANIMATION_DRAFT_PLAN.md) | 账户、注销、私有文件、定制状态机及验收。 |
+| B3 交易 | [`BATCH_3_TRANSACTION_AUDIT.md`](BATCH_3_TRANSACTION_AUDIT.md)、[`WEB_COMMERCE_END_TO_END.md`](WEB_COMMERCE_END_TO_END.md)、[`SALES_ORDER_ACCEPTANCE.md`](SALES_ORDER_ACCEPTANCE.md)、[`STANDARD_KIT_INVENTORY.md`](STANDARD_KIT_INVENTORY.md) | 购物车、订单、库存、售后边界和验收。 |
+| B4 小程序 | [`BATCH_4_MINIPROGRAM_AUDIT.md`](BATCH_4_MINIPROGRAM_AUDIT.md) | 小程序真实完成度、契约和未来微信前置条件。 |
+| 延期创作者平台 | [`DEFERRED_CREATOR_PLATFORM.md`](DEFERRED_CREATOR_PLATFORM.md) | 记录已移出基础版本的创作者后台、自助联名和未来恢复条件。 |
+
+#### D. B5–B7 后台、生产和本地验收
+
+| 批次 | 主要文档 | 说明 |
+|---|---|---|
+| B5 后台 | [`BATCH_5_OPERATIONS_AUDIT.md`](BATCH_5_OPERATIONS_AUDIT.md)、[`BATCH_5_ADMIN_PERMISSION_MATRIX.md`](BATCH_5_ADMIN_PERMISSION_MATRIX.md) | 后台页面、岗位权限、消费者和失败态证据。 |
+| B6 生产 | [`BATCH_6_PRODUCTION_FULFILLMENT_AUDIT.md`](BATCH_6_PRODUCTION_FULFILLMENT_AUDIT.md)、[`BATCH_6_ORDER_PRODUCTION_CONSUMER_MATRIX.md`](BATCH_6_ORDER_PRODUCTION_CONSUMER_MATRIX.md) | 新旧订单/批次/扫码/生产消费者及关闭边界。 |
+| B6 生产规则/验收 | [`ANIMATION_ORDER_PRODUCTION_FRAMEWORK.md`](ANIMATION_ORDER_PRODUCTION_FRAMEWORK.md)、[`PRODUCTION_BATCH_WORKFLOW.md`](PRODUCTION_BATCH_WORKFLOW.md)、[`PRINT_PRODUCTION_PLANNING.md`](PRINT_PRODUCTION_PLANNING.md)、[`PRODUCTION_WORKFLOW_ACCEPTANCE.md`](PRODUCTION_WORKFLOW_ACCEPTANCE.md)、[`PRODUCTION_MANUAL_TEST_PLAN_STANDARD_6SKU.md`](PRODUCTION_MANUAL_TEST_PLAN_STANDARD_6SKU.md)、[`admin-inventory-plan.md`](admin-inventory-plan.md) | 生产领域设计、人工计划与专项验收；需要以 B6 消费者清单判断哪些是现行规则。 |
+| B7 本地验收 | [`BATCH_7_LOCAL_ACCEPTANCE_AND_RECOVERY.md`](BATCH_7_LOCAL_ACCEPTANCE_AND_RECOVERY.md) | 一键启动、空库、32 项回归、备份恢复、人工验收和未来暂停/回退流程。 |
+
+#### E. 模块级当前事实
+
+`modules/` 用于新程序员按业务域读取当前事实，入口为 [`modules/README.md`](modules/README.md)：
+
+- [`foundation-auth-security.md`](modules/foundation-auth-security.md)：认证、会话、功能开关和安全基础。
+- [`private-file-security.md`](modules/private-file-security.md)：私有文件、用途、所有权和岗位读取。
+- [`web-frontend.md`](modules/web-frontend.md)：Web 页面、公共脚本、正式入口与旧页面。
+- [`web-customization.md`](modules/web-customization.md)：私人定制与人工处理。
+- [`commerce-orders-inventory.md`](modules/commerce-orders-inventory.md)：交易、订单、库存和售后。
+- [`admin-production.md`](modules/admin-production.md)：正式生产链、批次、扫码与发货。
+- [`staff-permissions-audit.md`](modules/staff-permissions-audit.md)：员工岗位与权限事实。
+- [`collab-creator-revenue.md`](modules/collab-creator-revenue.md)：联名、创作者与关闭的线上财务。
+- [`content-users-contact.md`](modules/content-users-contact.md)：内容、用户和联络资料。
+- [`animation-assets.md`](modules/animation-assets.md)、[`frame-asset-library.md`](modules/frame-asset-library.md)：动画资产、帧图与文件关系。
+- [`database-schema.md`](modules/database-schema.md)：Schema 和迁移事实。
+- [`mini-program.md`](modules/mini-program.md)：小程序消费者与占位边界。
+- [`operations-quality.md`](modules/operations-quality.md)：测试、运行、部署、监控和容量边界。
+
+#### F. 前端渐进重构文档
+
+[`VUE_FRONTEND_REFACTOR_PLAN.md`](VUE_FRONTEND_REFACTOR_PLAN.md) 已由负责人确认作为 L0 封版后的接续计划。H0 负责封存本基线；后续严格按 R0/R1/V0 起步，不把计划内容误写成已经实施。
 
 ### 批次 0：横切基础层与全量代码地图
 
@@ -207,7 +295,7 @@ Vue 3 + TypeScript 适合逐步承接购物车、结算、订单、定制编辑�
 
 ### 批次 7：本地综合验收与运行准备
 
-**当前进度（2026-09-10）：** 当前 L0 工程范围已完成，负责人已完成第一轮人工验收，除订单页退出边界、公开导航字体和后台窄屏侧栏外其余项目未发现问题；这 3 项均已修复、加入自动回归并通过，等待负责人定向复验。已建立一键启动/状态/停止入口、严格限定 `mowo_b1_test` 的空库重建与合成种子、32 项综合回归入口，以及测试库 `pg_dump`/删除重建/`pg_restore`/数据指纹对比演练。综合回归覆盖 59/59 迁移、113 个 JavaScript 文件语法、Prisma Schema、账号/文件/定制/交易/后台权限/库存/生产/扫码/联名流程，并验证日常结算和首发关闭功能不会误开。正式域名/反向代理、法律主体/条款、线上备份恢复和真实邀请批准仍属于未来 B1，不因本地通过而完成。详见 `BATCH_7_LOCAL_ACCEPTANCE_AND_RECOVERY.md`。
+**当前进度（2026-09-10）：** 当前 L0 工程范围已完成并封版。负责人完成第一轮人工验收后提出订单页退出边界、公开导航字体和后台窄屏侧栏 3 项反馈；它们均已修复并加入自动回归。负责人同日确认本计划当前阶段完成，H0 随后再次完整执行 `npm run check:b7` 并通过。已建立一键启动/状态/停止入口、严格限定 `mowo_b1_test` 的空库重建与合成种子、32 项综合回归入口，以及测试库 `pg_dump`/删除重建/`pg_restore`/数据指纹对比演练。综合回归覆盖 59/59 迁移、113 个 JavaScript 文件语法、Prisma Schema、账号/文件/定制/交易/后台权限/库存/生产/扫码/联名流程，并验证日常结算和首发关闭功能不会误开。正式域名/反向代理、法律主体/条款、线上备份恢复和真实邀请批准仍属于未来 B1，不因本地通过而完成。详见 `BATCH_7_LOCAL_ACCEPTANCE_AND_RECOVERY.md`。
 
 **范围：** 空库迁移、测试数据隔离、自动检查、浏览器回归、本地运行手册、本地问题记录、服务停止和 Git/测试库回退流程。服务器部署、域名、受邀名单、付费基础设施及线上告警不属于当前批次。
 
@@ -244,6 +332,13 @@ Vue 3 + TypeScript 适合逐步承接购物车、结算、订单、定制编辑�
 | `LAUNCH_READINESS.md` | B0/B1/C/D 的发布门槛与组织责任。 |
 | `FUTURE_CHANGE_GUARDRAILS.md` | 此后新增功能必须遵守的 Schema/迁移、测试隔离、接口、前端、文档和 Git 约束。 |
 
-## 10. 下一步
+## 10. L0 封版结论与接续点
 
-下一步由负责人定向复验订单页退出边界、公开导航字体和后台窄屏侧栏。复验无阻断后，当前 L0 本地整理阶段可以封版；之后再单独决定 `production-inventory.html` 迁入正式生产批次还是未来下线，以及售后申请补最小后台处理页还是在基础版本延期。决定前不删除、不误关。只有负责人决定启动真实邀请时，才进入 B1 的主体/协议、真实附件安全、独立环境、线上备份恢复、监控和责任人准备；本地 B7 通过不能替代这些门槛。
+负责人于 2026-09-10 确认本计划当前阶段完成。H0 随后在当前工作树重新执行 `npm run check:b7`：59/59 迁移、32 个组合检查入口、三项 B7 修复的浏览器防回归以及隔离测试库备份恢复全部通过。此结论只表示 **B0-B7 的 L0 本地合成数据基线完成**，不表示可以邀请真实用户、真实收款或公开上线。
+
+接续基线为 Git tag `l0-engineering-baseline-20260910`。下一阶段以 `VUE_FRONTEND_REFACTOR_PLAN.md` 为执行入口，并保留以下明确边界：
+
+1. `settings.html` 中已删除创作者页面的残留链接，以及收益、牛量、自助联名承诺，进入 R1 已退役能力清理；H0 不通过隐藏按钮假装完成。
+2. `production-inventory.html` 的两个旧只读消费者，以及售后申请是否补最小后台处理闭环，是 V4/V5 前的产品决定；不阻止 R0、R1 和 V0。
+3. 真实附件安全、正式主体/协议、独立环境、监控、线上备份、微信身份与支付继续是未来 B1/C 的门槛，不属于 L0 已完成内容。
+4. 全项目 API 响应契约、数字角色兼容层、CI、Scheduler/Worker 和 CSP/CDN 仍按后续专项治理，不与本次封版混写为完成。

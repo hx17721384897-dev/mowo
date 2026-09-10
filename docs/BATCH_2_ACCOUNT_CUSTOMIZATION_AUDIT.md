@@ -22,7 +22,7 @@
 | `frontend/pages/settings.html` + `frontend/js/settings.js` | 正式保留 | `/api/v1/account/*`、`/api/upload/*`、`/api/addresses/*` | B1 正式账户设置入口；含资料、头像、密码、换绑手机号、通知、隐私、地址、设备退出和注销。认证展示区保留，不联动创作者平台。 |
 | `frontend/js/auth.js` | 正式公共登录入口 | `/api/v1/auth/*`、`/api/v1/account/me` | 使用 `mowo_token` 与 `mowo_user` 本地缓存，并用 HttpOnly Refresh Cookie 刷新。需要逐页核对是否所有页面都复用它。 |
 | `frontend/pages/my-addresses.html` | 正式候选入口 | `/api/addresses/*` | 地址接口已在隔离库完成 CRUD 冒烟；仍需浏览器验收默认地址与错误态。 |
-| `frontend/pages/my-customizations.html` | 正式候选入口 | `/api/customization-requests/mine*` | 已改为统一运行时 API 配置；未登录转至同目录 `index.html?auth=1` 的登录弹窗，登录后回到原路径。待浏览器验收。 |
+| `frontend/pages/my-customizations.html` | 正式候选入口 | `/api/customization-requests/mine*` | 已改为统一运行时 API 配置；未登录转至同目录 `index.html?auth=1` 的登录弹窗，登录后回到原路径。B2/B7 浏览器回归已通过。 |
 | `frontend/pages/my-animations.html` | 正式候选入口 | `/api/animation-assets/*` | 私人动画资产与版本入口；需核对本人隔离、版本追加和软删除。 |
 | `customize-start/editor/confirm.html` | 正式私人定制入口 | 定制申请、私有上传、机型/SKU | 进入批次 B2-D/E 后按“自己筛帧”和“人工筛帧”分开回归。 |
 | `creator-profile.html`、`creator-certify.html` | 当前目录不存在 | 无 | 旧模块文档的“现行页面”记述已过期；本批次不恢复这些页面。 |

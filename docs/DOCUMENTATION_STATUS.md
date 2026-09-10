@@ -1,6 +1,6 @@
 # 项目文档有效性总表
 
-> 最近复核：2026-09-07
+> 最近复核：2026-09-10（H0 接管与 L0 封版）
 >
 > 用途：说明每份项目 Markdown 的身份、可信范围和下一次核对动作。后续开发者或 AI 不应把“历史规划”直接当成当前代码事实。
 
@@ -20,6 +20,8 @@
 | 文件 | 身份 | 当前结论 |
 |---|---|---|
 | `../README.md` | 当前入口 | 本轮已收口为项目简介、启动方式和真实进度，不再维护旧功能长清单 |
+| `PROJECT_ENGINEERING_AND_ARCHITECTURE_PLAN.md` | 已完成计划/当前 L0 基线 | B0-B7 的 L0 范围、证据、未上线边界和封版 tag |
+| `VUE_FRONTEND_REFACTOR_PLAN.md` | 当前执行计划 | L0 之后的 H0/R0/R1/V0-V6；计划项不等于已实现 |
 | `PROJECT_INDEX.md` | 当前总索引 | 本轮更新；负责阅读顺序、代码版图和文档规则 |
 | `RELEASE_SCOPE.md` | 当前产品边界 | 需在后续批次复核“当前发布事实”和上线阻断项 |
 | `REMEDIATION_ROADMAP.md` | 当前整改路线 | Web 核心流程已更新；历史定制段落仍需在本轮分批收口 |
@@ -63,9 +65,9 @@
 | `collab-creator-revenue.md` | 联名货架已上线部分与首发关闭的收益系统 |
 | `content-users-contact.md` | 联络功能与首发关闭的社区、互动和模拟认证代码 |
 | `admin-production.md` | 2026-09-08 已按正式 `SO/PU/PB/FP`、统一扫码工作台、返工和发货代码重写；旧入口单独列为待删除 |
-| `web-frontend.md` | 当前 58 个 HTML 页面、唯一正式入口和待退役页面 |
+| `web-frontend.md` | 前端页面与消费者地图；其中旧页面数量是历史快照，H0 当前扫描为 50 个 HTML 文件 |
 | `mini-program.md` | 骨架与主后端契约断点 |
-| `database-schema.md` | 当前 111 个模型、51 个迁移目录和迁移基线风险 |
+| `database-schema.md` | 当前 111 个模型、4 个枚举；旧 51 迁移是历史快照，H0 当前为 59 份且已完整重放 |
 | `operations-quality.md` | 部署、监控、备份、压测和多实例任务 |
 | `../BATCH_7_LOCAL_ACCEPTANCE_AND_RECOVERY.md` | L0 本地启动、隔离空库、综合回归、测试库恢复、人工验收和未来邀请暂停流程 |
 

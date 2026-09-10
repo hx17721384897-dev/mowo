@@ -1,10 +1,12 @@
 # 项目工程化与架构审计台账
 
-> 当前批次：批次 0——横切基础层与全量代码地图
+> 当前身份：批次 0 的历史审计台账；当前接续事实见本节 H0 注记与 `PROJECT_ENGINEERING_AND_ARCHITECTURE_PLAN.md`
 >
 > 开始日期：2026-09-08
 >
 > 用途：记录直接从当前代码、配置、迁移或可重复检查得到的事实。规划、历史文档和推测不会被写成代码事实。每个后续批次在本台账补充证据、状态和推荐动作。
+
+> H0 注记（2026-09-10）：下文带 2026-09-08 日期的数量、Git 状态和“待验证/阻断”是审计发生时的历史快照，不再代表当前完成度。当前主仓库为 `main`；同级小程序已建立独立 Git；前端当前扫描为 50 个 HTML 文件；Schema 为 111 个 model、4 个 enum；迁移为 59 份。`npm run check:b7` 已在 H0 再次通过 59/59 空库重放、32 个组合入口与备份恢复，L0 以 `l0-engineering-baseline-20260910` 封存。CI、真实环境恢复、监控、真实附件安全和支付仍是未来阶段门槛。
 
 ## 1. 状态标签与记录规则
 
@@ -42,9 +44,9 @@
 | 项目 | 代码事实 | 状态 | 证据 |
 |---|---|---|---|
 | 主仓库 | `C:/Users/25839/Desktop/mowo/mowo` 是唯一 Git 工作树；当前分支为 `main`。 | 可用但有限制 | `git rev-parse --show-toplevel`，2026-09-08。 |
-| 主仓库提交状态 | 当前 `main` 比 `origin/main` 超前 54 个提交；批次开始时只有计划文档改动和两个临时目录未跟踪。 | 可用但有限制 | `git status --short --branch`，2026-09-08。 |
-| 同级小程序 | `C:/Users/25839/Desktop/mowo/xiaochengxu` 存在独立源码，但没有 Git 仓库。 | 安全/上线阻断 | 目录存在、`../xiaochengxu/.git` 不存在，2026-09-08。小程序不能获得与主仓库相同的版本、回退和交接保证。 |
-| 前端目录 | `frontend/` 是静态 HTML/原生 JavaScript/CSS，不存在独立构建 manifest。 | 可用但有限制 | 顶层 HTML 58 页；共享脚本位于 `frontend/js/`，2026-09-08。 |
+| 主仓库提交状态 | H0 已分类并封存当前计划与事实文档；远端同步状态不作为 L0 完成条件。 | 可用但有限制 | `git status --short --branch`，2026-09-10；封版 tag 见 H0 注记。 |
+| 同级小程序 | `C:/Users/25839/Desktop/mowo/xiaochengxu` 是独立源码和独立 Git 工作树。 | 可用但有限制 | B4 工程基线记录，2026-09-10；客户端业务仍部分占位。 |
+| 前端目录 | `frontend/` 是静态 HTML/原生 JavaScript/CSS，不存在独立构建 manifest。 | 可用但有限制 | 当前共 50 个 HTML 文件；共享脚本位于 `frontend/js/`，2026-09-10。 |
 | 后端目录 | `content-service/` 是 Node.js ESM/Fastify/Prisma 服务，拥有自己的 `package.json` 与锁文件。 | 可用 | `content-service/package.json`、`package-lock.json`，2026-09-08。 |
 | CRMEB | `crmeb/` 只作为历史占位目录存在。 | 关闭但保留 | 仓库目录事实；当前业务不应把它当作运行依赖。后续需核对是否只有 `.gitkeep`。 |
 | 临时目录 | `.codex-tmp/` 和 `content-service/.codex-tmp/` 未被 `.gitignore` 忽略，当前显示为未跟踪。 | 可归档候选 | `git status` 与 `.gitignore`，2026-09-08；待确认是否为所有开发工具都应忽略的临时目录。 |
@@ -63,7 +65,7 @@
 | Fastify 端点 | 约 477 个 | 静态按 `.get/.post/.put/.patch/.delete` 调用统计；不是已测试端点数量。 |
 | Prisma 模型 | 111 个 | Schema 当前事实；文件头仍写“共25张表”，该注释已过时。 |
 | 当前数据库基础表 | 112 张 | 只读查询 `information_schema.tables`；需要后续逐表对应 Schema 和 Prisma 元数据表。 |
-| Prisma 迁移目录 | 51 个 | 有 `migration_lock.toml`；其中 1 个目录没有 `migration.sql`；空库重放待验证。 |
+| Prisma 迁移目录 | 59 个 | H0 已在 `mowo_b1_test` 从空库完整重放并通过备份恢复。 |
 | 小程序注册页面 | 14 页 | 用户交易层的独立客户端；当前无独立 Git 工作树。 |
 
 ### 4.1 Web 页面初始分组（未判定可用性）
