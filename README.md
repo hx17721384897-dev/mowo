@@ -47,20 +47,22 @@ mowo/
 
 ---
 
-## 本地启动
+## 本地启动（隔离测试库）
 
-```bash
-# 启动后端
+```powershell
+# 首次准备
 cd content-service
 npm install
-# 首次使用：按 .env.example 创建本机 .env，并填写真实的本地配置
-npm run check
-npm run dev
-# → http://localhost:3001
+npm run test-db:rebuild
+cd ..
 
-# 前端用 VS Code Live Server 打开
-# → http://127.0.0.1:5500
+# 日常启动、查看状态和停止；默认只连接 mowo_b1_test
+pwsh -File scripts/local.ps1 start
+pwsh -File scripts/local.ps1 status
+pwsh -File scripts/local.ps1 stop
 ```
+
+首页为 `http://127.0.0.1:5500/mowo/frontend/pages/index.html`。完整的空库、全量回归、备份恢复和人工验收流程见 [`docs/BATCH_7_LOCAL_ACCEPTANCE_AND_RECOVERY.md`](docs/BATCH_7_LOCAL_ACCEPTANCE_AND_RECOVERY.md)。
 
 ---
 

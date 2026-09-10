@@ -2,9 +2,9 @@
 
 > 目标：让新加入的开发者或 AI 先读少量入口文档，再按业务域深入，不必重新猜测代码结构。
 >
-> 调查基准：2026-08-13，进度更新：2026-09-07。本文档区分“已核对代码事实”“原规划”“待确认”，不把规划自动视为已实现。
+> 调查基准：2026-08-13，进度更新：2026-09-10。本文档区分“已核对代码事实”“原规划”“待确认”，不把规划自动视为已实现。
 
-> 当前进度：账号与文件安全已完成；联名货架、私人定制、动画资产复购/V2、混合购物车、冻结交易快照、聚合订单 `SO` 与单件生产任务 `PU` 已建立。两类商品会共同预留库存，并在模拟付款后进入同一生产系统。后台帧图总库、库存三层结构、打印裁切、生产批次、指定页返工和四岗位扫码已形成可测试闭环。下一条主线是 Web 到微信小程序的一次性安全领取和真实微信支付；正式 OSS、恶意文件扫描、退款售后、备份恢复、监控与压测仍未完成。
+> 当前进度：B0-B7 的 L0 本地整理基线已建立；账号/文件安全、联名货架、私人定制、混合交易、库存、生产、扫码和四岗位后台均有隔离回归。B7 已提供一键本地启动、59/59 空库迁移、合成种子、31 项综合检查和测试库备份恢复演练，等待负责人完成一次人工浏览器验收。真实 OSS 恶意文件扫描、售后后台闭环、服务器备份恢复、监控、CI、真实支付和小程序交易仍未完成，不能据此邀请真实用户。
 
 ## 建议阅读顺序
 
@@ -24,14 +24,15 @@
 13. `docs/WEB_CUSTOMIZATION_ACCEPTANCE.md`：Web 定制首批的人工验收步骤与延后边界。
 14. `docs/WEB_COMMERCE_END_TO_END.md`：从联名/私人定制、混合购物车、小程序交接到付款后生产发货的统一全链路；同时列出当前已完成部分和 P0/P1 断点。
 15. `docs/COLLAB_STOREFRONT_REMEDIATION_PLAN.md`：联名商品瀑布流、唯一详情、后台 SKU 销售配置、公开字段白名单、浏览量热门和登录后继续购买的实施方案。
-16. `docs/TROUBLESHOOTING.md`：本地开发已经发生过的故障、识别方法和修复边界。
-17. 对应业务规划：`PRODUCTION.md`、`REVENUE.md`、`docs/USER_SCENARIOS.md` 等。
-18. `docs/ANIMATION_ORDER_PRODUCTION_FRAMEWORK.md`：动画资产、版本、订单商品、单件生产和材料追踪的已确认目标框架。
-19. `docs/STANDARD_KIT_INVENTORY.md`：三层库存、FIFO批次追溯、SKU材料清单、标准材料包组装、退回隔离检查和补发任务的当前实现。
-20. `docs/PRODUCTION_BATCH_WORKFLOW.md`：材料包款生产批次、帧素材与材料并行作业、阶段边界和验收记录。
-21. `docs/PRINT_PRODUCTION_PLANNING.md`：打印裁切组、Word 模板版本、无损拼接帧、生产文件、订单筛选和批次快照。
-22. `docs/PRODUCTION_WORKFLOW_ACCEPTANCE.md`：当前生产闭环的自动检查、人工验收范围和已知边界。
-23. `docs/PRODUCTION_MANUAL_TEST_PLAN_STANDARD_6SKU.md`：当前标准款六规格的正式端到端测试，使用四个订单覆盖地址、面单、多页打印、领料、配对、齐套装箱和发货。
+16. `docs/BATCH_7_LOCAL_ACCEPTANCE_AND_RECOVERY.md`：当前 L0 的一键启动、空库、综合回归、测试库恢复、人工验收和未来邀请暂停流程。
+17. `docs/TROUBLESHOOTING.md`：本地开发已经发生过的故障、识别方法和修复边界。
+18. 对应业务规划：`PRODUCTION.md`、`REVENUE.md`、`docs/USER_SCENARIOS.md` 等。
+19. `docs/ANIMATION_ORDER_PRODUCTION_FRAMEWORK.md`：动画资产、版本、订单商品、单件生产和材料追踪的已确认目标框架。
+20. `docs/STANDARD_KIT_INVENTORY.md`：三层库存、FIFO批次追溯、SKU材料清单、标准材料包组装、退回隔离检查和补发任务的当前实现。
+21. `docs/PRODUCTION_BATCH_WORKFLOW.md`：材料包款生产批次、帧素材与材料并行作业、阶段边界和验收记录。
+22. `docs/PRINT_PRODUCTION_PLANNING.md`：打印裁切组、Word 模板版本、无损拼接帧、生产文件、订单筛选和批次快照。
+23. `docs/PRODUCTION_WORKFLOW_ACCEPTANCE.md`：当前生产闭环的自动检查、人工验收范围和已知边界。
+24. `docs/PRODUCTION_MANUAL_TEST_PLAN_STANDARD_6SKU.md`：当前标准款六规格的正式端到端测试，使用四个订单覆盖地址、面单、多页打印、领料、配对、齐套装箱和发货。
 
 ## 文档分层
 
@@ -68,7 +69,7 @@
 5. 默认监听 `0.0.0.0:3001`，可由 `HOST`、`PORT` 调整。
 6. 在进程内启动常规定时任务；牛量和创作者财务任务只有对应首发开关启用时才启动。
 
-当前 `package.json` 已有 `dev`、`start`、`npm run check` 以及账号安全、私有文件、注销、定制、订单、库存、生产、帧图总库和帧图制作等专项验收脚本。专项脚本覆盖岗位、文件、注销、功能开关、协议记录、防刷、定制提交和后台动画制作，并在结束后清理测试数据。项目仍没有完整 CI，早期本地库的 Prisma 迁移基线也尚待 R0.2 处理。
+当前 `package.json` 已有 `dev`、`start`、`npm run check` 以及账号安全、私有文件、注销、定制、订单、库存、生产、帧图总库和帧图制作等专项验收脚本。`npm run check:b7` 会严格使用 `mowo_b1_test`，从零迁移并组合 31 项回归和一次测试库恢复演练。项目仍没有完整 CI；`mowo_db` 是历史开发库，不应作为当前迁移或自动测试基线。
 
 ## 技术栈事实（已核对）
 

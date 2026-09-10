@@ -67,6 +67,7 @@
 | `mini-program.md` | 骨架与主后端契约断点 |
 | `database-schema.md` | 当前 111 个模型、51 个迁移目录和迁移基线风险 |
 | `operations-quality.md` | 部署、监控、备份、压测和多实例任务 |
+| `../BATCH_7_LOCAL_ACCEPTANCE_AND_RECOVERY.md` | L0 本地启动、隔离空库、综合回归、测试库恢复、人工验收和未来邀请暂停流程 |
 
 ## D. 未来方案
 

@@ -15,6 +15,8 @@
 4. 所有会写数据的验证只连接命名明确的测试库（当前为 `mowo_b1_test`），绝不连接 `mowo_db`、邀请测试库或未来生产库。
 5. 每次涉及数据结构的改动至少运行：Prisma 校验、空库 `migrate deploy`、`migrate status`；重要领域再运行 Schema diff 和对应业务冒烟。
 6. 删除字段、删表、删外键、改字段类型/非空/默认值前，必须先列出现有数据、消费者、备份和回退方案，并由负责人确认。
+7. 新增会写库的回归必须加入 `npm run check:b7`，或提供同等级的“数据库名严格等于 `mowo_b1_test`”硬闸门；不能只依赖 `.env` 恰好指向测试库。
+8. 新增页面或共享脚本不得写死 API 端口，应通过 `runtime-config.js`/`window.MOWO_API_BASE` 读取运行时地址，并由 `check:admin-runtime-config` 一类静态检查守住。
 
 ## 3. 后端：一项能力只有一个正式事实源
 
