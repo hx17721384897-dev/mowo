@@ -173,12 +173,17 @@ try {
 
   await page.locator('.sidebar-item[data-section="privacy"]').click()
   await page.locator('#section-privacy.active').waitFor()
-  await page.locator('.privacy-option-row[data-value="followers"]').click()
+  if (await page.locator('.privacy-option-row[data-value="followers"]').count()) {
+    throw new Error('retired follower visibility option is still rendered')
+  }
+  await page.locator('.privacy-option-row[data-value="private"]').click()
   await page.locator('#savePrivacyBtn').click()
+  await page.locator('#confirmDialog.open').waitFor()
+  await page.locator('#confirmOk').click()
   await waitForToast(page, '隐私设置已保存')
   const afterPrivacy = await prisma.userProfile.findUnique({ where: { userId } })
-  if (afterPrivacy?.profileVisibility !== 'followers') throw new Error('privacy preference was not persisted')
-  console.log('PASS settings browser saves privacy preferences')
+  if (afterPrivacy?.profileVisibility !== 'private') throw new Error('privacy preference was not persisted')
+  console.log('PASS settings browser removes follower visibility and saves private visibility')
 
   await page.locator('.sidebar-item[data-section="addresses"]').click()
   await page.locator('#section-addresses.active').waitFor()

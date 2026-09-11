@@ -12,6 +12,7 @@
     "check:prisma": "prisma validate",
     "check:staff-security": "node scripts/check-staff-security.mjs",
     "check:feature-gates": "node scripts/check-feature-gates.mjs",
+    "check:retired-endpoints": "node scripts/check-retired-endpoints.mjs",
     "check:legacy-production-boundary": "node scripts/check-legacy-production-boundary.mjs",
     "check:admin-runtime-config": "node scripts/check-admin-runtime-config.mjs",
     "check:admin-role-browser": "node scripts/check-admin-role-browser.mjs",

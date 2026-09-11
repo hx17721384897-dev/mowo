@@ -48,6 +48,7 @@ import { startScheduler }     from './lib/scheduler.js'
 import { hasPermission, requiredPermissionForRequest } from './lib/permissions.js'
 import { auditOutcome, serializeSafeAuditBody } from './lib/audit.js'
 import { publicFeatureFlags, requiredFeatureForRequest } from './lib/features.js'
+import { isRetiredEndpoint } from './lib/retired-endpoints.js'
 import { isClosedLegacyProductionEndpoint } from './lib/legacy-production-endpoints.js'
 
 const config = loadConfig()
@@ -56,6 +57,16 @@ fastify.decorate('config', config)
 
 async function start() {
   try {
+    // 已退役能力不可由环境变量重新开启。请求在认证、CORS 预检和路由处理前统一终止。
+    fastify.addHook('onRequest', async (request, reply) => {
+      if (!isRetiredEndpoint(request.url)) return
+      return reply.code(404).send({
+        success: false,
+        message: '请求的资源不存在',
+        code: 'FEATURE_RETIRED'
+      })
+    })
+
     // CORS：允许凭证（HttpOnly Cookie 需要），开发环境放行本地前端地址
     await fastify.register(cors, {
       origin: (origin, cb) => {
@@ -95,7 +106,7 @@ async function start() {
       return payload
     })
 
-    // 首发未开放能力必须在服务端拒绝；隐藏页面入口只是用户体验，不能代替安全边界。
+    // 暂时关闭但保留的能力仍由服务端开关控制；已退役能力使用更早的永久拒绝边界。
     fastify.addHook('preHandler', async (request, reply) => {
       const feature = requiredFeatureForRequest(request.url)
       if (!feature || config.features[feature]) return

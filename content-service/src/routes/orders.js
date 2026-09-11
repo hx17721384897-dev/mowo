@@ -463,13 +463,6 @@ async function orderRoutes(fastify, opts) {
         await tx.salesOrderItem.updateMany({ where: { salesOrderId: salesOrder.id }, data: { status: 'aftersale' } })
         await tx.salesOrder.update({ where: { id: salesOrder.id }, data: { status: 'aftersale' } })
       }
-      // 联名款：取消冷却期中的分红（还未打款的部分）
-      if (order.sourceType === 'collab') {
-        await tx.collabOrder.updateMany({
-          where: { orderId: { in: relevantTasks.map(task => task.id) }, revenueStatus: { in: ['estimated', 'cooling'] } },
-          data: { revenueStatus: 'cancelled' },
-        })
-      }
     })
 
     return reply.send({ success: true, data: { status: 'aftersale' } })

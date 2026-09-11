@@ -50,7 +50,6 @@ async function loadAllData() {
     currentUser = res.data
     renderProfile(currentUser)
     renderSecurity(currentUser)
-    renderCertify(currentUser)
     renderDeactivateBanner(currentUser)
   } catch (e) {
     showToast('加载失败，请刷新重试', 'error')
@@ -72,7 +71,7 @@ async function loadAllData() {
 
 function handleHashSection() {
   const hash = location.hash.replace('#', '')
-  const valid = ['profile', 'security', 'certify', 'addresses', 'notifications', 'privacy', 'account']
+  const valid = ['profile', 'security', 'addresses', 'notifications', 'privacy', 'account']
   if (valid.includes(hash)) {
     const btn = document.querySelector(`.sidebar-item[data-section="${hash}"]`)
     if (btn) switchSection(hash, btn, true)
@@ -126,23 +125,6 @@ function renderSecurity(user) {
   document.getElementById('securityPhone').textContent = user.maskedPhone || '未绑定'
 }
 
-function renderCertify(user) {
-  const status = user.certifyStatus ?? 0
-  // 只显示对应状态的 block
-  ;[0, 1, 2, 3].forEach(s => {
-    const el = document.getElementById('certifyState' + s)
-    if (el) el.style.display = (s === status) ? 'block' : 'none'
-  })
-  // 侧边栏 certify 项：已认证时加绿点标记
-  const sidebarBtn = document.querySelector('.sidebar-item[data-section="certify"]')
-  if (sidebarBtn) {
-    if (status === 2) {
-      sidebarBtn.querySelector('.sidebar-icon').textContent = '✦'
-      sidebarBtn.style.color = ''
-    }
-  }
-}
-
 function renderPasswordStatus(data) {
   const row = document.getElementById('passwordSecurityRow')
   if (row) row.style.display = data.passwordLoginEnabled ? '' : 'none'
@@ -156,7 +138,6 @@ function renderPasswordStatus(data) {
 }
 
 function renderNotifications(data) {
-  document.getElementById('notifyInteraction').checked = data.notifyInteraction !== false
   document.getElementById('notifyPromo').checked = data.notifyPromo !== false
   // order and system are always on (disabled)
   document.getElementById('notifyOrder').checked = true
@@ -164,7 +145,7 @@ function renderNotifications(data) {
 }
 
 function renderPrivacy(data) {
-  selectedPrivacy = data.profileVisibility || 'public'
+  selectedPrivacy = data.profileVisibility === 'private' ? 'private' : 'public'
   originalPrivacy = selectedPrivacy
   updatePrivacyUI(selectedPrivacy)
 }
@@ -622,13 +603,12 @@ async function submitPassword() {
 // NOTIFICATIONS
 // ─────────────────────────────────────────────────
 async function saveNotifications() {
-  const interaction = document.getElementById('notifyInteraction').checked
   const promo = document.getElementById('notifyPromo').checked
 
   try {
     const res = await apiFetch('/api/v1/account/notifications', {
       method: 'PUT',
-      body: JSON.stringify({ interaction, promo })
+      body: JSON.stringify({ promo })
     })
     if (!res.success) throw new Error(res.message)
     showToast('通知设置已保存', 'success')

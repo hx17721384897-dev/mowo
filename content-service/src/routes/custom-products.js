@@ -4,6 +4,8 @@
 
 import { FILE_PURPOSE, findOwnedReadyFiles, linkFiles } from '../lib/private-files.js'
 
+const DRAFT_LIMIT = 3
+
 export default async function customProductRoutes(fastify) {
   const { prisma } = fastify
 
@@ -40,9 +42,7 @@ export default async function customProductRoutes(fastify) {
       return reply.code(400).send({ success: false, message: error.message })
     }
 
-    // ── 草稿数量上限（普通用户 3 个，认证创作者 10 个）──
-    const certifyStatus = req.user.certifyStatus ?? 0
-    const DRAFT_LIMIT = certifyStatus >= 2 ? 10 : 3
+    // ── 草稿数量上限（当前版本所有用户规则一致）──
     const activeDraftCount = await prisma.customProduct.count({
       where: { userId, status: { in: ['draft', 'in_cart'] } }
     })
@@ -81,14 +81,12 @@ export default async function customProductRoutes(fastify) {
     preHandler: [fastify.authenticate]
   }, async (req, reply) => {
     const userId = req.user.userId
-    const certifyStatus = req.user.certifyStatus ?? 0
-    const limit = certifyStatus >= 2 ? 10 : 3
     const count = await prisma.customProduct.count({
       where: { userId, status: { in: ['draft', 'in_cart'] } }
     })
     return reply.send({
       success: true,
-      data: { count, limit, canCreate: count < limit }
+      data: { count, limit: DRAFT_LIMIT, canCreate: count < DRAFT_LIMIT }
     })
   })
 

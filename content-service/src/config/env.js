@@ -119,10 +119,6 @@ export function loadConfig(env = process.env) {
   const corsOrigins = parseCorsOrigins(env.CORS_ORIGIN, isProduction, errors)
   const privacyVersion = env.CURRENT_PRIVACY_VERSION?.trim() || (isProduction ? '' : 'dev-2026-08')
   const userAgreementVersion = env.CURRENT_USER_AGREEMENT_VERSION?.trim() || (isProduction ? '' : 'test-2026-08')
-  const communityEnabled = parseBoolean(env.COMMUNITY_ENABLED, false, 'COMMUNITY_ENABLED', errors)
-  const creatorFinanceEnabled = parseBoolean(env.CREATOR_FINANCE_ENABLED, false, 'CREATOR_FINANCE_ENABLED', errors)
-  const bullSystemEnabled = parseBoolean(env.BULL_SYSTEM_ENABLED, false, 'BULL_SYSTEM_ENABLED', errors)
-  const mockCertificationEnabled = parseBoolean(env.MOCK_CERTIFICATION_ENABLED, false, 'MOCK_CERTIFICATION_ENABLED', errors)
   const onlineCheckoutEnabled = parseBoolean(
     env.ONLINE_CHECKOUT_ENABLED,
     false,
@@ -243,10 +239,6 @@ export function loadConfig(env = process.env) {
     userAgreementVersion,
     passwordLoginEnabled,
     features: Object.freeze({
-      community: communityEnabled,
-      creatorFinance: creatorFinanceEnabled,
-      bullSystem: bullSystemEnabled,
-      mockCertification: mockCertificationEnabled,
       onlineCheckout: onlineCheckoutEnabled,
       passwordLogin: passwordLoginEnabled
     }),

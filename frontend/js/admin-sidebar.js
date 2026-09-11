@@ -63,7 +63,6 @@
       items: [
         { href: 'admin-collab-works.html',      icon: '🎨', label: '联名作品' },
         { href: 'admin-collab.html',            icon: '✅', label: '联名审核' },
-        { href: 'admin-collab-activities.html', icon: '🎪', label: '活动管理' },
         { href: 'admin-contract.html',          icon: '📑', label: '商务合同' },
         { href: 'admin-collab-policy.html',     icon: '📜', label: '违约政策' }
       ]

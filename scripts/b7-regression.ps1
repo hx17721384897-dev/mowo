@@ -76,6 +76,7 @@ try {
     'check:admin-runtime-config',
     'check:legacy-production-boundary',
     'check:feature-gates',
+    'check:retired-endpoints',
     'check:staff-security',
     'check:launch-safety',
     'check:admin-role-browser',

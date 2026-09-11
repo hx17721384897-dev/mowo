@@ -1,62 +1,72 @@
 import { requiredFeatureForRequest } from '../src/lib/features.js'
+import { isRetiredEndpoint } from '../src/lib/retired-endpoints.js'
 
-const registeredClosedEndpoints = [
-  ['POST', '/api/articles'],
-  ['GET', '/api/articles'],
-  ['GET', '/api/articles/article-id'],
-  ['PUT', '/api/articles/article-id'],
-  ['DELETE', '/api/articles/article-id'],
-  ['POST', '/api/articles/article-id/like'],
-  ['POST', '/api/articles/article-id/collect'],
-  ['POST', '/api/articles/article-id/comments'],
-  ['GET', '/api/articles/article-id/comments'],
-  ['GET', '/api/feed'],
-  ['GET', '/api/users/user-id/articles'],
-  ['POST', '/api/users/user-id/follow'],
-  ['GET', '/api/users/user-id/follow-status'],
-  ['POST', '/api/cart/checkout'],
-  ['POST', '/api/payment/callback'],
-  ['GET', '/api/payment/status/preorder-id'],
-  ['POST', '/api/payment/mock-pay/preorder-id']
+const retiredPaths = [
+  '/api/articles',
+  '/api/articles/article-id/comments',
+  '/api/feed',
+  '/api/users/user-id/articles',
+  '/api/users/user-id/follow',
+  '/api/users/user-id/follow-status',
+  '/api/collab/works/work-id/like',
+  '/api/products',
+  '/api/products/product-id',
+  '/api/animations',
+  '/api/animations/animation-id',
+  '/api/collab/apply',
+  '/api/collab/my-works',
+  '/api/earnings',
+  '/api/creator/settlement',
+  '/api/admin/settlement',
+  '/api/admin/revenue',
+  '/api/creator/bull',
+  '/api/admin/bull',
+  '/api/creator/links',
+  '/api/admin/links',
+  '/api/admin/collab/activities',
+  '/api/certify/status'
 ]
 
-const reservedClosedPrefixes = [
-  ['community', '/api/collab/works/work-id/like'],
-  ['creatorFinance', '/api/earnings'],
-  ['creatorFinance', '/api/creator/settlement'],
-  ['creatorFinance', '/api/admin/settlement'],
-  ['creatorFinance', '/api/admin/revenue'],
-  ['bullSystem', '/api/creator/bull'],
-  ['bullSystem', '/api/admin/bull'],
-  ['bullSystem', '/api/creator/links'],
-  ['bullSystem', '/api/admin/links'],
-  ['mockCertification', '/api/certify/status']
+for (const path of retiredPaths) {
+  if (!isRetiredEndpoint(path)) throw new Error(`${path}: missing permanent retirement boundary`)
+  if (requiredFeatureForRequest(path) !== null) throw new Error(`${path}: retired endpoint must not retain a feature flag`)
+  console.log(`PASS retired ${path}`)
+}
+
+const retirementNearMisses = [
+  '/api/articleship',
+  '/api/feed-back',
+  '/api/products-v2',
+  '/api/animations-preview',
+  '/api/collab/application',
+  '/api/creator/settlements',
+  '/api/admin/revenues',
+  '/api/certify-provider'
 ]
 
-const expectedFeature = path => {
-  if (path.startsWith('/api/articles') || path.startsWith('/api/feed') || /\/api\/users\/[^/]+\/(articles|follow|follow-status)/.test(path)) return 'community'
-  if (path.startsWith('/api/cart/checkout') || path.startsWith('/api/payment/')) return 'onlineCheckout'
-  return null
+for (const path of retirementNearMisses) {
+  if (isRetiredEndpoint(path)) throw new Error(`${path}: retirement prefix is too broad`)
 }
 
-for (const [method, path] of registeredClosedEndpoints) {
-  const expected = expectedFeature(path)
-  const actual = requiredFeatureForRequest(path)
-  if (actual !== expected) throw new Error(`${method} ${path}: expected ${expected}, received ${actual}`)
-  console.log(`PASS ${method} ${path} -> ${actual}`)
-}
+const activeGates = [
+  ['/api/cart/checkout', 'onlineCheckout'],
+  ['/api/payment/callback', 'onlineCheckout'],
+  ['/api/payment/status/preorder-id', 'onlineCheckout'],
+  ['/api/payment/mock-pay/preorder-id', 'onlineCheckout']
+]
 
-for (const [expected, path] of reservedClosedPrefixes) {
+for (const [path, expected] of activeGates) {
   const actual = requiredFeatureForRequest(path)
   if (actual !== expected) throw new Error(`${path}: expected ${expected}, received ${actual}`)
-  console.log(`PASS reserved ${path} -> ${actual}`)
+  if (isRetiredEndpoint(path)) throw new Error(`${path}: active feature was marked retired`)
+  console.log(`PASS gated ${path} -> ${actual}`)
 }
 
 const openPaths = ['/api/users/user-id', '/api/collab/works', '/api/cart', '/api/admin/contracts']
 for (const path of openPaths) {
-  const actual = requiredFeatureForRequest(path)
-  if (actual !== null) throw new Error(`${path}: unexpectedly gated by ${actual}`)
-  console.log(`PASS open boundary ${path}`)
+  if (requiredFeatureForRequest(path) !== null) throw new Error(`${path}: unexpectedly feature-gated`)
+  if (isRetiredEndpoint(path)) throw new Error(`${path}: unexpectedly retired`)
+  console.log(`PASS open ${path}`)
 }
 
-console.log(`Feature gate mapping check passed for ${registeredClosedEndpoints.length} registered endpoints and ${reservedClosedPrefixes.length} reserved prefixes`)
+console.log(`Retirement and active feature mapping passed for ${retiredPaths.length} retired paths and ${retirementNearMisses.length} near-miss paths`)

@@ -16,7 +16,6 @@
           return window.mowoFeatures;
         })
         .catch(() => ({
-          community: false,
           onlineCheckout: false,
           passwordLogin: false
         }));
@@ -24,26 +23,9 @@
     return promise;
   }
 
-  function hideLinks(part) {
-    document.querySelectorAll(`a[href*="${part}"]`).forEach(link => link.remove());
-  }
-
   async function apply() {
     const flags = await load();
     window.mowoFeatures = flags;
-
-    if (!flags.community) {
-      document.querySelectorAll('[data-feature-community]').forEach(element => element.remove());
-    }
-
-    const page = location.pathname.split('/').pop().toLowerCase();
-    const disabledPages = {
-    };
-    if (!disabledPages[page]) return flags;
-
-    const isAdmin = page.startsWith('admin-');
-    const target = isAdmin ? 'admin-orders.html' : 'my-animations.html';
-    location.replace(`${target}?notice=feature-not-available`);
     return flags;
   }
 

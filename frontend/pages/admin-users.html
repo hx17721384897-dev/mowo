@@ -78,8 +78,8 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
 
 /* 用户表格 */
 .table-wrap{background:var(--white);border-radius:16px;border:1.5px solid var(--gray1);overflow:hidden;}
-.table-header{display:grid;grid-template-columns:48px 1fr 100px 100px 80px 140px;padding:12px 16px;background:var(--cream);border-bottom:1.5px solid var(--gray1);font-weight:800;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gray3);}
-.user-row{display:grid;grid-template-columns:48px 1fr 100px 100px 80px 140px;padding:14px 16px;border-bottom:1px solid var(--gray1);align-items:center;transition:background .15s;}
+.table-header{display:grid;grid-template-columns:48px 1fr 100px 80px 140px;padding:12px 16px;background:var(--cream);border-bottom:1.5px solid var(--gray1);font-weight:800;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gray3);}
+.user-row{display:grid;grid-template-columns:48px 1fr 100px 80px 140px;padding:14px 16px;border-bottom:1px solid var(--gray1);align-items:center;transition:background .15s;}
 .user-row:last-child{border-bottom:none;}
 .user-row:hover{background:var(--cream);}
 
@@ -97,13 +97,6 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
 .role-1{background:#E3F2FD;color:#1565C0;}
 .role-2{background:#FFF8E1;color:#B8860B;}
 .role-3{background:#FCE4EC;color:#C62828;}
-
-/* 认证状态 */
-.certify-badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:6px;font-weight:700;font-size:11px;}
-.certify-0{background:var(--gray1);color:var(--gray3);}
-.certify-1{background:#FFF8E1;color:#B8860B;}
-.certify-2{background:#E8F5E9;color:#2E7D32;}
-.certify-3{background:#FFE8E3;color:#C0320A;}
 
 /* 封禁标记 */
 .banned-tag{background:#FFE8E3;color:#C0320A;font-weight:800;font-size:10px;padding:2px 6px;border-radius:4px;margin-left:6px;}
@@ -149,7 +142,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
   .topbar{padding:0 16px;}
   .table-header{display:none;}
   .user-row{grid-template-columns:48px 1fr auto;gap:8px;}
-  .col-role,.col-certify,.col-time{display:none;}
+  .col-role,.col-time{display:none;}
 }
 
 /* ── 移动端侧边栏开关 ── */
@@ -203,7 +196,6 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
         <div></div>
         <div>用户信息</div>
         <div class="col-role">角色</div>
-        <div class="col-certify">认证状态</div>
         <div class="col-time">注册时间</div>
         <div>操作</div>
       </div>
@@ -255,8 +247,6 @@ const API = window.MOWO_API_BASE || '';
 const STAFF_LABEL = { OWNER:'负责人', CUSTOMER_SERVICE:'运营客服', PRODUCTION:'生产人员', COLLAB_OPS:'合作运营' };
 const ACCOUNT_STATUS_LABEL = { ACTIVE:'正常', LIMITED:'受限', SUSPENDED:'停用', PENDING_DELETE:'注销处理中', DELETED:'已注销' };
 const STAFF_CLASS = { OWNER:'role-3', CUSTOMER_SERVICE:'role-2', PRODUCTION:'role-1', COLLAB_OPS:'role-2' };
-const CERTIFY_LABEL = { 0:'未认证', 1:'审核中', 2:'已认证', 3:'已拒绝' };
-const CERTIFY_CLASS = { 0:'certify-0', 1:'certify-1', 2:'certify-2', 3:'certify-3' };
 
 let _token      = '';
 window.addEventListener('mowoTokenRefreshed', () => { _token = localStorage.getItem('mowo_token') || ''; });
@@ -363,9 +353,6 @@ function renderTable(users) {
         </div>
         <div class="col-role">
           <span class="role-badge ${STAFF_CLASS[staffRole] || 'role-0'}">${staffLabel}</span>
-        </div>
-        <div class="col-certify">
-          <span class="certify-badge ${CERTIFY_CLASS[u.certifyStatus]}">${CERTIFY_LABEL[u.certifyStatus]}</span>
         </div>
         <div class="col-time" style="font-size:11px;font-weight:700;color:var(--gray3);">${regDate}</div>
         <div style="display:flex;gap:6px;align-items:center;">

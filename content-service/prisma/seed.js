@@ -2,10 +2,8 @@
 // 数据库种子文件 — 每次迁移后运行 `npx prisma db seed` 恢复测试数据
 //
 // 包含：
-//   1. 测试账号（超管 / 管理员 / 创作者 / 普通用户）
+//   1. 测试账号（负责人 / 客服 / 普通用户 / 生产岗位）
 //   2. 机型款式 + SKU（带库存）
-//   3. 联名活动示例
-//   4. 平台规则参数
 
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
@@ -49,8 +47,7 @@ async function main() {
       nickname:      '负责人测试',
       role:          3,              // 旧字段兼容等级；授权以 staffRole 为准
       staffRole:     'OWNER',
-      certifyStatus: 2,             // 已认证创作者
-      isCreator:     true,
+      certifyStatus: 0,
     },
     {
       phone:         '13800138001',
@@ -59,16 +56,14 @@ async function main() {
       role:          2,              // 旧字段兼容等级；授权以 staffRole 为准
       staffRole:     'CUSTOMER_SERVICE',
       certifyStatus: 0,
-      isCreator:     false,
     },
     {
       phone:         '13800138002',
       password:      demoPassword,
-      nickname:      '创作者小明',
+      nickname:      '普通用户小明',
       role:          0,
       staffRole:     null,
-      certifyStatus: 2,             // 已认证创作者
-      isCreator:     true,
+      certifyStatus: 0,
     },
     {
       phone:         '13800138003',
@@ -77,7 +72,6 @@ async function main() {
       role:          0,
       staffRole:     null,
       certifyStatus: 0,
-      isCreator:     false,
     },
     {
       phone:         '13800138004',
@@ -86,18 +80,14 @@ async function main() {
       role:          2,              // 后台兼容等级，具体权限由岗位决定
       staffRole:     'PRODUCTION',
       certifyStatus: 0,
-      isCreator:     false,
     },
   ]
-
-  const userIds = {}
 
   for (const acc of accounts) {
     // upsert：已存在就跳过，不存在就创建
     const existing = await prisma.user.findUnique({ where: { phone: acc.phone } })
     if (existing) {
       console.log(`  ⏭  账号已存在，跳过：${acc.phone}（${acc.nickname}）`)
-      userIds[acc.phone] = existing.id
       continue
     }
 
@@ -122,42 +112,9 @@ async function main() {
         data: { userId: u.id, score: 100 }
       })
 
-      await tx.balance.create({
-        data: {
-          creatorId:       u.id,
-          pendingAmount:   0,
-          availableAmount: 0,
-          withdrawnAmount: 0,
-        }
-      })
-
-      // 认证创作者额外创建 creator_profile 和 creator_reserve
-      if (acc.isCreator) {
-        await tx.creatorProfile.create({
-          data: {
-            userId:          u.id,
-            bullLevel:       1,
-            bullScore:       0,
-            bullCoefficient: 1.0,
-            isExclusive:     false,
-          }
-        })
-
-        await tx.creatorReserve.create({
-          data: {
-            creatorId:        u.id,
-            totalReserved:    0,
-            frozenAmount:     0,
-            releasableAmount: 0,
-            releasedAmount:   0,
-          }
-        })
-      }
-
       return u
     })
 
-    userIds[acc.phone] = user.id
     console.log(`  ✅ 创建账号：${acc.phone}（${acc.nickname}）role=${acc.role}`)
   }
 
@@ -268,59 +225,6 @@ async function main() {
 
     console.log('  ✅ 创建机型：标准款（6 个 SKU）+ 迷你款（2 个 SKU）')
   }
-
-  // ══════════════════════════════════════════
-  // 3. 联名活动示例
-  // ══════════════════════════════════════════
-  const existingActivity = await prisma.collabActivity.findFirst({
-    where: { name: '春季新品联名活动' }
-  })
-
-  if (existingActivity) {
-    console.log('  ⏭  联名活动已存在，跳过')
-  } else {
-    const adminId = userIds['13800138000']
-    await prisma.collabActivity.create({
-      data: {
-        name:        '春季新品联名活动',
-        description: '春季限定活动，参与创作者享受更高分红比例',
-        revenueRate: 0.20,
-        startAt:     new Date('2026-04-01'),
-        endAt:       new Date('2026-06-30'),
-        isActive:    true,
-        createdBy:   adminId,
-      }
-    })
-    console.log('  ✅ 创建联名活动：春季新品联名活动（分红率 20%）')
-  }
-
-  // ══════════════════════════════════════════
-  // 4. 平台规则参数
-  // ══════════════════════════════════════════
-  const rules = [
-    // 分红基础
-    { key: 'revenue_base_rate',      value: 0.05,  desc: '基础分红率（5%）' },
-    { key: 'revenue_exclusive_bonus',value: 0.08,  desc: '独家协议加成（8%）' },
-    { key: 'revenue_max_rate',       value: 0.25,  desc: '分红率上限（25%）' },
-    { key: 'revenue_newbie_rate',    value: 0.20,  desc: '新手期分红率（20%）' },
-    { key: 'revenue_newbie_days',    value: 30,    desc: '新手期天数（30天或100单）' },
-    { key: 'revenue_newbie_orders',  value: 100,   desc: '新手期订单数上限' },
-    { key: 'revenue_newbie_works',   value: 3,     desc: '新手期适用作品数（前3款）' },
-    // 储备金
-    { key: 'reserve_rate',           value: 0.15,  desc: '储备金扣除比例（15%）' },
-    { key: 'reserve_release_days',   value: 90,    desc: '储备金释放天数（90天）' },
-    // 结算
-    { key: 'settlement_cooling_days',value: 15,    desc: '收货后结算冷却天数（15天）' },
-  ]
-
-  for (const rule of rules) {
-    await prisma.platformRule.upsert({
-      where:  { ruleKey: rule.key },
-      create: { ruleKey: rule.key, ruleValue: rule.value, description: rule.desc },
-      update: { description: rule.desc },  // 已存在时只更新描述，不覆盖运营手动调整过的值
-    })
-  }
-  console.log(`  ✅ 写入平台规则参数：${rules.length} 条`)
 
   // ══════════════════════════════════════════
   // 完成

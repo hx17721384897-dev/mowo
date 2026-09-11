@@ -177,7 +177,6 @@ function injectCSS() {
 .dd-av img{width:100%;height:100%;object-fit:cover;}
 .dd-name{font-weight:900;font-size:13px;color:#111110;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px;}
 .dd-badge{display:inline-block;padding:1px 7px;border-radius:999px;font-size:10px;font-weight:900;}
-.dd-badge.creator{background:#EDFBEE;color:#287030;}
 .dd-badge.user{background:#EBEBEA;color:#787874;}
 
 .dd-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;font-weight:800;font-size:13px;color:#111110;width:100%;text-align:left;background:none;border:none;font-family:inherit;cursor:pointer;transition:background .15s;text-decoration:none;box-sizing:border-box;}
@@ -186,8 +185,6 @@ function injectCSS() {
 .dd-item.danger{color:#E03030;}
 .dd-item.danger:hover{background:#FFF5F5;}
 .dd-divider{height:1px;background:#EBEBEA;margin:4px 0;}
-.dd-item.creator-only{display:none;}
-.nav-user.is-creator .dd-item.creator-only{display:flex;}
 .dd-item.admin-only{display:none;}
 .nav-user.is-admin .dd-item.admin-only{display:flex;}
 .dd-item.admin-only .dd-item-icon{background:#FFF9C4;}
@@ -408,9 +405,6 @@ function injectNavUser() {
       <button class="dd-item" onclick="navGoTo('myAnimations')">
         <div class="dd-item-icon" style="background:#F0F4FF;">🎬</div>我的动画
       </button>
-      <button class="dd-item creator-only" onclick="navGoTo('myAnimations')">
-        <div class="dd-item-icon" style="background:#FFF3FB;">✦</div>我的创作
-      </button>
       <a class="dd-item admin-only" href="admin-orders.html">
         <div class="dd-item-icon" style="background:#FFF9C4;">🛠</div>进入后台
       </a>
@@ -443,8 +437,6 @@ function updateNavState(user) {
   if (user) {
     if (loginBtn) loginBtn.style.display = 'none';
     navUser.classList.add('show');
-    if (user.certifyStatus === 2) navUser.classList.add('is-creator');
-    else navUser.classList.remove('is-creator');
 
     // 固定员工岗位显示「进入后台」入口，具体页面仍由服务端权限控制。
     if (user.staffRole) navUser.classList.add('is-admin');
@@ -477,12 +469,11 @@ function updateNavState(user) {
       const role = user.role ?? 0;
       if (role >= 3)              { badge.textContent='⭐ 超级管理员'; badge.className='dd-badge'; badge.style.cssText='background:#FCE4EC;color:#C62828;'; }
       else if (role === 2)        { badge.textContent='🛡 管理员';    badge.className='dd-badge'; badge.style.cssText='background:#FFF8E1;color:#B8860B;'; }
-      else if (user.certifyStatus === 2) { badge.textContent='✦ 创作者'; badge.className='dd-badge creator'; badge.style.cssText=''; }
       else                        { badge.textContent='普通用户';    badge.className='dd-badge user';    badge.style.cssText=''; }
     }
   } else {
     if (loginBtn) loginBtn.style.display = '';
-    navUser.classList.remove('show','is-creator','is-admin');
+    navUser.classList.remove('show','is-admin');
   }
 }
 

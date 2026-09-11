@@ -64,13 +64,17 @@ try {
   const signedFileProbe = await request('/api/storage/local')
   assert(signedFileProbe.headers.get('cross-origin-resource-policy') === 'cross-origin', 'signed local file responses can render from the static frontend origin')
   const flags = (await flagsResponse.json()).data
-  for (const feature of ['community', 'creatorFinance', 'bullSystem', 'mockCertification', 'onlineCheckout']) {
+  for (const feature of ['onlineCheckout']) {
     assert(flags[feature] === false, `${feature} is disabled for local baseline testing`)
+  }
+  for (const retiredFeature of ['community', 'creatorFinance', 'bullSystem', 'mockCertification']) {
+    assert(!(retiredFeature in flags), `${retiredFeature} cannot be re-enabled through public configuration`)
   }
 
   const closedPaths = [
     '/api/articles',
     '/api/feed',
+    '/api/products',
     '/api/earnings',
     '/api/admin/bull/configs',
     '/api/certify/status'
@@ -78,13 +82,13 @@ try {
   for (const path of closedPaths) {
     const response = await request(path)
     const body = await response.json()
-    assert(response.status === 404 && body.code === 'FEATURE_NOT_AVAILABLE', `${path} is denied by the server gate`)
+    assert(response.status === 404 && body.code === 'FEATURE_RETIRED', `${path} is denied by the retirement boundary`)
   }
   const removedSelfService = await request('/api/collab/my-works')
   const removedSelfServiceBody = await removedSelfService.json()
   assert(
-    removedSelfService.status === 404 && removedSelfServiceBody.statusCode === 404,
-    'removed creator collaboration self-service route is not registered'
+    removedSelfService.status === 404 && removedSelfServiceBody.code === 'FEATURE_RETIRED',
+    'creator collaboration self-service is permanently retired'
   )
   assert((await request('/api/collab/works?limit=1')).status === 200, 'approved collaboration showcase remains available')
 

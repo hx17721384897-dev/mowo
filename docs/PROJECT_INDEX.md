@@ -2,9 +2,9 @@
 
 > 目标：让新加入的开发者或 AI 先读少量入口文档，再按业务域深入，不必重新猜测代码结构。
 >
-> 调查基准：2026-08-13，进度更新：2026-09-10。本文档区分“已核对代码事实”“原规划”“待确认”，不把规划自动视为已实现。
+> 调查基准：2026-08-13，进度更新：2026-09-11。本文档区分“已核对代码事实”“原规划”“待确认”，不把规划自动视为已实现。
 
-> 当前进度：B0-B7 的 L0 本地整理基线已完成并以 `l0-engineering-baseline-20260910` 封存；账号/文件安全、联名货架、私人定制、混合交易、库存、生产、扫码和四岗位后台均有隔离回归。2026-09-10 的 H0 复查再次通过 59/59 空库迁移、32 项综合检查、三项 B7 修复的浏览器防回归和测试库备份恢复。真实 OSS 恶意文件扫描、售后后台闭环、服务器备份恢复、监控、CI、真实支付和小程序交易仍未完成，不能据此邀请真实用户。后续执行入口为 `VUE_FRONTEND_REFACTOR_PLAN.md`。
+> 当前进度：B0-B7 的 L0 本地整理基线已完成并以 `l0-engineering-baseline-20260910` 封存；R0 后端/数据库证据已固化，R1-A 已把社区、线上财务、牛量/推广、模拟认证和创作者自助旧接口永久隔离。当前 B7 包含 59/59 空库迁移、33 项综合检查、退役接口 504 种负向调用和测试库备份恢复。R1-B 物理删除、真实 OSS 恶意文件扫描、售后后台闭环、服务器备份恢复、监控、CI、真实支付和小程序交易仍未完成，不能据此邀请真实用户。后续执行入口为 `VUE_FRONTEND_REFACTOR_PLAN.md`。
 
 ## 建议阅读顺序
 
@@ -12,29 +12,31 @@
 2. `docs/PROJECT_ENGINEERING_AND_ARCHITECTURE_PLAN.md`：已封版 L0 的证据、边界和历史批次。
 3. `docs/VUE_FRONTEND_REFACTOR_PLAN.md`：当前接续计划、H0/R0/R1/V0-V6 顺序和验收门槛。
 4. `docs/PROJECT_INDEX.md`：项目地图、文档分层和调查进度。
-5. `docs/RELEASE_SCOPE.md`：当前发布阶段、首发开放/关闭能力和延后讨论边界。
-6. `docs/REMEDIATION_ROADMAP.md`：按功能区划分的实际代码整改顺序、边界和验收标准。
-7. `CLAUDE.md`：开发约束、合规边界、角色规则和协作规范；其中历史进度或旧架构描述不覆盖 `RELEASE_SCOPE.md`。
-8. `docs/LAUNCH_READINESS.md`：B/C/D 阶段门槛、R0-R4 工程就绪等级、复杂度和责任域。
-9. `docs/modules/README.md`：按代码模块进入详细说明。
+5. `docs/R0_BACKEND_DATABASE_BASELINE.md`：Vue 可消费的后端/数据库证据、隔离边界和失败处置。
+6. `docs/R1_RETIREMENT_AUDIT.md`：退役接口硬隔离、负向矩阵、保留责任和 R1-B 删除清单。
+7. `docs/RELEASE_SCOPE.md`：当前发布阶段、首发开放/关闭能力和延后讨论边界。
+8. `docs/REMEDIATION_ROADMAP.md`：按功能区划分的实际代码整改顺序、边界和验收标准。
+9. `CLAUDE.md`：开发约束、合规边界、角色规则和协作规范；其中历史进度或旧架构描述不覆盖 `RELEASE_SCOPE.md`。
+10. `docs/LAUNCH_READINESS.md`：B/C/D 阶段门槛、R0-R4 工程就绪等级、复杂度和责任域。
+11. `docs/modules/README.md`：按代码模块进入详细说明。
    员工岗位与安全记录见 `docs/modules/staff-permissions-audit.md`；本地/OSS私有上传与文件权限见 `docs/modules/private-file-security.md`；Web 定制首批事实见 `docs/modules/web-customization.md`；后台统一帧图资料见 `docs/modules/frame-asset-library.md`。
-10. `docs/DOC_CODE_DIFFERENCES.md`：文档与代码不一致、风险和过渡状态。
-11. `docs/DOCUMENTATION_STATUS.md`：每份 Markdown 的当前身份、可信范围、候选删除项和复核进度。
-12. `docs/OPEN_QUESTIONS.md`：待确认问题，以及已从问题台账收敛出的阶段性产品决策。
-13. `docs/ACCOUNT_DELETION_POLICY.md`：账号注销的法规参考、建议规则和数据处理边界。
-14. `docs/ACCOUNT_FILE_SECURITY_ACCEPTANCE.md`：账号、权限、文件、注销与首发安全的人工验收步骤。
-15. `docs/WEB_CUSTOMIZATION_ACCEPTANCE.md`：Web 定制首批的人工验收步骤与延后边界。
-16. `docs/WEB_COMMERCE_END_TO_END.md`：从联名/私人定制、混合购物车、小程序交接到付款后生产发货的统一全链路；同时列出当前已完成部分和 P0/P1 断点。
-17. `docs/COLLAB_STOREFRONT_REMEDIATION_PLAN.md`：联名商品瀑布流、唯一详情、后台 SKU 销售配置、公开字段白名单、浏览量热门和登录后继续购买的实施方案。
-18. `docs/BATCH_7_LOCAL_ACCEPTANCE_AND_RECOVERY.md`：当前 L0 的一键启动、空库、综合回归、测试库恢复、人工验收和未来邀请暂停流程。
-19. `docs/TROUBLESHOOTING.md`：本地开发已经发生过的故障、识别方法和修复边界。
-20. 对应业务规划：`PRODUCTION.md`、`REVENUE.md`、`docs/USER_SCENARIOS.md` 等。
-21. `docs/ANIMATION_ORDER_PRODUCTION_FRAMEWORK.md`：动画资产、版本、订单商品、单件生产和材料追踪的已确认目标框架。
-22. `docs/STANDARD_KIT_INVENTORY.md`：三层库存、FIFO批次追溯、SKU材料清单、标准材料包组装、退回隔离检查和补发任务的当前实现。
-23. `docs/PRODUCTION_BATCH_WORKFLOW.md`：材料包款生产批次、帧素材与材料并行作业、阶段边界和验收记录。
-24. `docs/PRINT_PRODUCTION_PLANNING.md`：打印裁切组、Word 模板版本、无损拼接帧、生产文件、订单筛选和批次快照。
-25. `docs/PRODUCTION_WORKFLOW_ACCEPTANCE.md`：当前生产闭环的自动检查、人工验收范围和已知边界。
-26. `docs/PRODUCTION_MANUAL_TEST_PLAN_STANDARD_6SKU.md`：当前标准款六规格的正式端到端测试，使用四个订单覆盖地址、面单、多页打印、领料、配对、齐套装箱和发货。
+12. `docs/DOC_CODE_DIFFERENCES.md`：文档与代码不一致、风险和过渡状态。
+13. `docs/DOCUMENTATION_STATUS.md`：每份 Markdown 的当前身份、可信范围、候选删除项和复核进度。
+14. `docs/OPEN_QUESTIONS.md`：待确认问题，以及已从问题台账收敛出的阶段性产品决策。
+15. `docs/ACCOUNT_DELETION_POLICY.md`：账号注销的法规参考、建议规则和数据处理边界。
+16. `docs/ACCOUNT_FILE_SECURITY_ACCEPTANCE.md`：账号、权限、文件、注销与首发安全的人工验收步骤。
+17. `docs/WEB_CUSTOMIZATION_ACCEPTANCE.md`：Web 定制首批的人工验收步骤与延后边界。
+18. `docs/WEB_COMMERCE_END_TO_END.md`：从联名/私人定制、混合购物车、小程序交接到付款后生产发货的统一全链路；同时列出当前已完成部分和 P0/P1 断点。
+19. `docs/COLLAB_STOREFRONT_REMEDIATION_PLAN.md`：联名商品瀑布流、唯一详情、后台 SKU 销售配置、公开字段白名单、浏览量热门和登录后继续购买的实施方案。
+20. `docs/BATCH_7_LOCAL_ACCEPTANCE_AND_RECOVERY.md`：当前 L0 的一键启动、空库、综合回归、测试库恢复、人工验收和未来邀请暂停流程。
+21. `docs/TROUBLESHOOTING.md`：本地开发已经发生过的故障、识别方法和修复边界。
+22. 对应业务规划：`PRODUCTION.md`、`REVENUE.md`、`docs/USER_SCENARIOS.md` 等。
+23. `docs/ANIMATION_ORDER_PRODUCTION_FRAMEWORK.md`：动画资产、版本、订单商品、单件生产和材料追踪的已确认目标框架。
+24. `docs/STANDARD_KIT_INVENTORY.md`：三层库存、FIFO批次追溯、SKU材料清单、标准材料包组装、退回隔离检查和补发任务的当前实现。
+25. `docs/PRODUCTION_BATCH_WORKFLOW.md`：材料包款生产批次、帧素材与材料并行作业、阶段边界和验收记录。
+26. `docs/PRINT_PRODUCTION_PLANNING.md`：打印裁切组、Word 模板版本、无损拼接帧、生产文件、订单筛选和批次快照。
+27. `docs/PRODUCTION_WORKFLOW_ACCEPTANCE.md`：当前生产闭环的自动检查、人工验收范围和已知边界。
+28. `docs/PRODUCTION_MANUAL_TEST_PLAN_STANDARD_6SKU.md`：当前标准款六规格的正式端到端测试，使用四个订单覆盖地址、面单、多页打印、领料、配对、齐套装箱和发货。
 
 ## 文档分层
 
@@ -69,9 +71,9 @@
 3. 添加后台岗位权限 Hook 和脱敏安全记录 Hook。
 4. 注册旧版认证、新版认证以及各业务路由。
 5. 默认监听 `0.0.0.0:3001`，可由 `HOST`、`PORT` 调整。
-6. 在进程内启动常规定时任务；牛量和创作者财务任务只有对应首发开关启用时才启动。
+6. 在进程内启动当前保留的常规定时任务；旧牛量和创作者财务配置入口已经移除，相关残留任务代码由 R1-B 物理删除。
 
-当前 `package.json` 已有 `dev`、`start`、`npm run check` 以及账号安全、私有文件、注销、定制、订单、库存、生产、帧图总库和帧图制作等专项验收脚本。`npm run check:b7` 会严格使用 `mowo_b1_test`，从零迁移并组合 32 项回归和一次测试库恢复演练。项目仍没有完整 CI；`mowo_db` 是历史开发库，不应作为当前迁移或自动测试基线。
+当前 `package.json` 已有 `dev`、`start`、`npm run check` 以及账号安全、私有文件、注销、定制、订单、库存、生产、帧图总库、帧图制作和退役接口负向矩阵等专项验收脚本。`npm run check:b7` 会严格使用 `mowo_b1_test`，从零迁移并组合 33 项回归和一次测试库恢复演练。项目仍没有完整 CI；`mowo_db` 是历史开发库，不应作为当前迁移或自动测试基线。
 
 ## 技术栈事实（已核对）
 

@@ -312,30 +312,6 @@ input,textarea,select{font-family:var(--font);}
 .skel-line{height:14px;border-radius:7px;margin-bottom:10px;}
 .skel-avatar{width:80px;height:80px;border-radius:50%;}
 
-/* ── CERTIFY SECTION ── */
-.certify-hero{display:flex;flex-direction:column;align-items:center;text-align:center;padding:12px 0 24px;}
-.certify-hero-icon{font-size:52px;margin-bottom:16px;line-height:1;}
-.certify-hero-title{font-weight:900;font-size:20px;margin-bottom:8px;}
-.certify-hero-desc{font-size:13px;font-weight:700;color:var(--gray3);line-height:1.7;max-width:380px;}
-.certify-benefits{display:flex;flex-direction:column;gap:10px;margin:20px 0 24px;}
-.certify-benefit-row{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--cream);border-radius:14px;}
-.certify-benefit-icon{font-size:20px;width:32px;text-align:center;flex-shrink:0;}
-.certify-benefit-text{flex:1;}
-.certify-benefit-title{font-weight:900;font-size:13px;}
-.certify-benefit-desc{font-size:12px;font-weight:700;color:var(--gray3);margin-top:2px;}
-.certify-status-card{border-radius:16px;padding:20px;margin-bottom:20px;display:flex;align-items:flex-start;gap:16px;}
-.certify-status-card.pending{background:#FFFBEB;border:1.5px solid #FDE68A;}
-.certify-status-card.certified{background:#F0FDF4;border:1.5px solid #86EFAC;}
-.certify-status-card.rejected{background:#FFF5F5;border:1.5px solid #FEB2B2;}
-.certify-status-icon{font-size:28px;flex-shrink:0;line-height:1;margin-top:2px;}
-.certify-status-info{}
-.certify-status-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;font-weight:900;font-size:12px;margin-bottom:6px;}
-.certify-status-badge.pending{background:#FEF3C7;color:#92400E;}
-.certify-status-badge.certified{background:#DCFCE7;color:#166534;}
-.certify-status-badge.rejected{background:#FEE2E2;color:#991B1B;}
-.certify-status-title{font-weight:900;font-size:15px;margin-bottom:4px;}
-.certify-status-desc{font-size:13px;font-weight:700;color:var(--gray3);line-height:1.6;}
-
 /* ── ADDRESS SECTION ── */
 .address-list{display:flex;flex-direction:column;gap:12px;}
 .address-card{background:var(--white);border:1.5px solid var(--gray1);border-radius:16px;padding:18px 20px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
@@ -524,9 +500,6 @@ input,textarea,select{font-family:var(--font);}
       <button class="sidebar-item" data-section="security" onclick="switchSection('security', this)">
         <span class="sidebar-icon">🔒</span>账号安全
       </button>
-      <button class="sidebar-item" data-section="certify" onclick="switchSection('certify', this)">
-        <span class="sidebar-icon">✦</span>哞屋认证
-      </button>
       <button class="sidebar-item" data-section="addresses" onclick="switchSection('addresses', this)">
         <span class="sidebar-icon">📍</span>收货地址
       </button>
@@ -638,18 +611,6 @@ input,textarea,select{font-family:var(--font);}
 
           <div class="toggle-row">
             <div class="toggle-info">
-              <div class="toggle-label">互动通知</div>
-              <div class="toggle-desc">有人点赞、评论、关注时推送</div>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" id="notifyInteraction" onchange="saveNotifications()">
-              <div class="toggle-track"></div>
-              <div class="toggle-thumb"></div>
-            </label>
-          </div>
-
-          <div class="toggle-row">
-            <div class="toggle-info">
               <div class="toggle-label">订单通知</div>
               <div class="toggle-desc">订单状态变更（支付成功、发货、退款等）</div>
               <div class="toggle-locked-note">⚠️ 该类通知关系您的订单权益，无法关闭</div>
@@ -702,13 +663,6 @@ input,textarea,select{font-family:var(--font);}
                 <div class="privacy-option-desc">所有人可访问您的主页和作品</div>
               </div>
             </div>
-            <div class="privacy-option-row" data-value="followers" onclick="selectPrivacy('followers')">
-              <div class="privacy-radio-dot"></div>
-              <div>
-                <div class="privacy-option-title">👥 仅关注我的人</div>
-                <div class="privacy-option-desc">仅粉丝可见，搜索结果中不展示您的主页</div>
-              </div>
-            </div>
             <div class="privacy-option-row" data-value="private" onclick="selectPrivacy('private')">
               <div class="privacy-radio-dot"></div>
               <div>
@@ -722,93 +676,6 @@ input,textarea,select{font-family:var(--font);}
             <button class="btn-primary" onclick="savePrivacy()" id="savePrivacyBtn" disabled>保存设置</button>
           </div>
         </div>
-      </div>
-
-      <!-- ── 哞屋认证 ── -->
-      <div class="settings-section" id="section-certify">
-
-        <!-- 未申请 (certifyStatus === 0) -->
-        <div id="certifyState0" style="display:none;">
-          <div class="s-card">
-            <div class="certify-hero">
-              <div class="certify-hero-icon">✦</div>
-              <div class="certify-hero-title">成为哞屋认证创作者</div>
-              <div class="certify-hero-desc">通过哞屋创作者认证，解锁联名合作权限，让您的作品真正被触摸到。</div>
-            </div>
-            <div class="certify-benefits">
-              <div class="certify-benefit-row">
-                <div class="certify-benefit-icon">🎨</div>
-                <div class="certify-benefit-text">
-                  <div class="certify-benefit-title">申请联名合作</div>
-                  <div class="certify-benefit-desc">提交您的动画作品，审核通过后上架联名动画机</div>
-                </div>
-              </div>
-              <div class="certify-benefit-row">
-                <div class="certify-benefit-icon">💰</div>
-                <div class="certify-benefit-text">
-                  <div class="certify-benefit-title">获得销售分红</div>
-                  <div class="certify-benefit-desc">每售出一台，按分红规则获得专属收益</div>
-                </div>
-              </div>
-              <div class="certify-benefit-row">
-                <div class="certify-benefit-icon">📊</div>
-                <div class="certify-benefit-text">
-                  <div class="certify-benefit-title">创作者数据中心</div>
-                  <div class="certify-benefit-desc">查看销量、收益、牛量等完整创作者数据</div>
-                </div>
-              </div>
-            </div>
-            <a href="creator-certify.html" class="btn-primary" style="display:inline-block;text-decoration:none;">申请哞屋认证 →</a>
-          </div>
-        </div>
-
-        <!-- 审核中 (certifyStatus === 1) -->
-        <div id="certifyState1" style="display:none;">
-          <div class="s-card">
-            <div class="certify-status-card pending">
-              <div class="certify-status-icon">⏳</div>
-              <div class="certify-status-info">
-                <div class="certify-status-badge pending">审核中</div>
-                <div class="certify-status-title">认证申请已提交</div>
-                <div class="certify-status-desc">我们正在审核您的创作者资质，预计 3～5 个工作日完成。审核结果将通过站内信通知您，请耐心等待。</div>
-              </div>
-            </div>
-            <p style="font-size:13px;font-weight:700;color:var(--gray3);">如有疑问请通过「联络我们」页面联系官方客服。</p>
-          </div>
-        </div>
-
-        <!-- 认证通过 (certifyStatus === 2) -->
-        <div id="certifyState2" style="display:none;">
-          <div class="s-card">
-            <div class="certify-status-card certified">
-              <div class="certify-status-icon">🌟</div>
-              <div class="certify-status-info">
-                <div class="certify-status-badge certified">✦ 认证创作者</div>
-                <div class="certify-status-title">哞屋认证已通过</div>
-                <div class="certify-status-desc">您已是哞屋认证创作者，可以申请联名合作、查看收益数据、参与创作者活动。</div>
-              </div>
-            </div>
-            <div class="btn-row">
-              <a href="creator-dashboard.html" class="btn-primary" style="display:inline-block;text-decoration:none;">进入创作者中心 →</a>
-            </div>
-          </div>
-        </div>
-
-        <!-- 审核拒绝 (certifyStatus === 3) -->
-        <div id="certifyState3" style="display:none;">
-          <div class="s-card">
-            <div class="certify-status-card rejected">
-              <div class="certify-status-icon">❌</div>
-              <div class="certify-status-info">
-                <div class="certify-status-badge rejected">未通过</div>
-                <div class="certify-status-title">认证申请未通过</div>
-                <div class="certify-status-desc">很遗憾，您的认证申请未通过审核。您可以完善资料后重新提交申请。如有疑问请联系客服。</div>
-              </div>
-            </div>
-            <a href="creator-certify.html" class="btn-primary" style="display:inline-block;text-decoration:none;">重新申请认证 →</a>
-          </div>
-        </div>
-
       </div>
 
       <!-- ── 收货地址 ── -->

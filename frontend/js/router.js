@@ -37,14 +37,6 @@ const Router = {
     this.go('/pages/products.html')
   },
 
-  toCommunity(tag = null) {
-    // tag 有值时跳转到对应标签的筛选结果
-    const url = tag
-      ? `/pages/community.html?tag=${encodeURIComponent(tag)}`
-      : '/pages/community.html'
-    this.go(url)
-  },
-
   toContact() {
     this.go('/pages/contact.html')
   },
@@ -95,10 +87,6 @@ const Router = {
 
   toCart() {
     this.go('/pages/cart.html')
-  },
-
-  toFavorites() {
-    this.go('/pages/favorites.html')
   },
 
   toOrders() {
