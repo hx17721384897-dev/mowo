@@ -1,0 +1,24 @@
+:root {
+  --mowo-color-ink: #111110;
+  --mowo-color-paper: #fffdf6;
+  --mowo-color-surface: #ffffff;
+  --mowo-color-muted: #787874;
+  --mowo-color-line: #e7e5df;
+  --mowo-color-accent: #f5e642;
+  --mowo-color-danger: #c0320a;
+  --mowo-color-success: #287030;
+  --mowo-space-1: 0.25rem;
+  --mowo-space-2: 0.5rem;
+  --mowo-space-3: 0.75rem;
+  --mowo-space-4: 1rem;
+  --mowo-space-6: 1.5rem;
+  --mowo-space-8: 2rem;
+  --mowo-radius-sm: 0.5rem;
+  --mowo-radius-md: 1rem;
+  --mowo-radius-lg: 1.5rem;
+  --mowo-shadow-card: 0 1rem 3rem rgb(17 17 16 / 8%);
+  --mowo-font-sans: Inter, 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  --mowo-layer-header: 100;
+  --mowo-layer-dialog: 1000;
+  --mowo-breakpoint-mobile: 48rem;
+}
