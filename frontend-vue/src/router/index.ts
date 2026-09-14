@@ -4,9 +4,13 @@ import AdminLayout from '@/layouts/AdminLayout.vue'
 import ProductionLayout from '@/layouts/ProductionLayout.vue'
 import PublicLayout from '@/layouts/PublicLayout.vue'
 import AreaPlaceholderView from '@/views/AreaPlaceholderView.vue'
+import AboutView from '@/views/AboutView.vue'
+import FaqView from '@/views/FaqView.vue'
 import ForbiddenView from '@/views/ForbiddenView.vue'
-import FoundationView from '@/views/FoundationView.vue'
+import HomeView from '@/views/HomeView.vue'
+import LegalView from '@/views/LegalView.vue'
 import NotFoundView from '@/views/NotFoundView.vue'
+import ProductIntroView from '@/views/ProductIntroView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -14,7 +18,36 @@ const router = createRouter({
     {
       path: '/',
       component: PublicLayout,
-      children: [{ path: '', name: 'foundation', component: FoundationView }]
+      children: [
+        { path: '', name: 'home', component: HomeView, meta: { title: '哞屋造物 MOWO' } },
+        {
+          path: 'about',
+          name: 'about',
+          component: AboutView,
+          meta: { title: '关于我们 · 哞屋 MOWO' }
+        },
+        {
+          path: 'products',
+          name: 'products',
+          component: ProductIntroView,
+          meta: { title: '产品介绍 · 哞屋 MOWO' }
+        },
+        { path: 'faq', name: 'faq', component: FaqView, meta: { title: '常见问题 · 哞屋 MOWO' } },
+        {
+          path: 'legal/terms',
+          name: 'terms',
+          component: LegalView,
+          props: { document: 'terms' },
+          meta: { title: '用户协议（测试草案）· 哞屋 MOWO' }
+        },
+        {
+          path: 'legal/privacy',
+          name: 'privacy',
+          component: LegalView,
+          props: { document: 'privacy' },
+          meta: { title: '隐私政策（测试草案）· 哞屋 MOWO' }
+        }
+      ]
     },
     {
       path: '/account',
@@ -53,9 +86,24 @@ const router = createRouter({
       ]
     },
     { path: '/forbidden', name: 'forbidden', component: ForbiddenView },
-    { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFoundView }
+    {
+      path: '/:pathMatch(.*)*',
+      component: PublicLayout,
+      children: [
+        {
+          path: '',
+          name: 'not-found',
+          component: NotFoundView,
+          meta: { title: '页面不存在 · 哞屋 MOWO' }
+        }
+      ]
+    }
   ],
   scrollBehavior: () => ({ top: 0 })
+})
+
+router.afterEach((to) => {
+  document.title = typeof to.meta.title === 'string' ? to.meta.title : '哞屋 MOWO'
 })
 
 export default router

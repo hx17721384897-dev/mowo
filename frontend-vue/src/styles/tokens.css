@@ -1,10 +1,13 @@
 :root {
-  --mowo-color-ink: #111110;
-  --mowo-color-paper: #fffdf6;
+  --mowo-color-ink: #261c14;
+  --mowo-color-paper: #faf6ef;
   --mowo-color-surface: #ffffff;
-  --mowo-color-muted: #787874;
-  --mowo-color-line: #e7e5df;
-  --mowo-color-accent: #f5e642;
+  --mowo-color-muted: #765f4d;
+  --mowo-color-line: #e4d8c8;
+  --mowo-color-accent: #f1c84b;
+  --mowo-color-accent-soft: #fbe8ae;
+  --mowo-color-warm: #c96f3b;
+  --mowo-color-dark: #1d1510;
   --mowo-color-danger: #c0320a;
   --mowo-color-success: #287030;
   --mowo-space-1: 0.25rem;

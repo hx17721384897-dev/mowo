@@ -2,6 +2,7 @@
 
 interface MowoRuntimeConfig {
   apiBase: string
+  legacyWebBase: string
   environment: 'development' | 'test' | 'staging' | 'production'
 }
 

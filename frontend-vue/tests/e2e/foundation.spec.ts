@@ -1,21 +1,66 @@
 import { expect, test } from '@playwright/test'
 
-test('four application areas and status components render', async ({ page }) => {
+test('public V1a pages have one working navigation shell', async ({ page }) => {
   await page.goto('/app/')
-  await expect(page.getByRole('heading', { name: '公开应用壳' })).toBeVisible()
-  await expect(page.getByRole('status')).toHaveCount(3)
+  await expect(page.getByRole('heading', { name: /转动手柄/ })).toBeVisible()
+  await expect(page.getByRole('link', { name: '开始私人定制' }).first()).toHaveAttribute(
+    'href',
+    '/mowo/frontend/pages/customize-start.html'
+  )
 
-  await page.goto('/app/account')
-  await expect(page.getByText('账户区域占位')).toBeVisible()
+  await page.locator('.site-footer').getByRole('link', { name: '产品介绍' }).click()
+  await expect(page).toHaveURL(/\/app\/products$/)
+  await expect(page.getByRole('heading', { name: /一台让逐帧画面/ })).toBeVisible()
 
-  await page.goto('/app/admin')
-  await expect(page.getByText('管理区域占位')).toBeVisible()
+  await page.locator('.site-footer').getByRole('link', { name: '品牌故事' }).click()
+  await expect(page.getByRole('heading', { name: /让每一帧热爱/ })).toBeVisible()
 
-  await page.goto('/app/production')
-  await expect(page.getByText('生产区域占位')).toBeVisible()
+  await page.locator('.site-footer').getByRole('link', { name: '常见问题' }).click()
+  await expect(page.getByRole('heading', { name: '常见问题' })).toBeVisible()
 })
 
-test('unknown Vue path shows the controlled 404 page', async ({ page }) => {
+test('FAQ search reports current product boundaries', async ({ page }) => {
+  await page.goto('/app/faq')
+  await page.getByRole('searchbox', { name: '搜索问题' }).fill('社区')
+  await expect(page.getByText('找到 1 个问题')).toBeVisible()
+  await page.getByText('现在有社区、关注或收藏功能吗？').click()
+  await expect(page.getByText(/旧实现已经退役/)).toBeVisible()
+  await expect(page.getByText(/7 天无理由/)).toHaveCount(0)
+})
+
+test('legal drafts remain visibly non-production', async ({ page }) => {
+  await page.goto('/app/legal/privacy')
+  await expect(page.getByRole('heading', { name: '哞屋隐私政策' })).toBeVisible()
+  await expect(page.getByText('测试草案，不是正式上线法律文本')).toBeVisible()
+
+  await page.goto('/app/legal/terms')
+  await expect(page.getByRole('heading', { name: '哞屋用户协议' })).toBeVisible()
+  await expect(page.getByText(/当前网页不提供真实在线付款/)).toBeVisible()
+})
+
+test('mobile public navigation is usable without horizontal overflow', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/app/')
+  await page.getByRole('button', { name: '打开或关闭导航' }).click()
+  await expect(page.getByRole('navigation', { name: '主导航' })).toBeVisible()
+  await page.getByRole('link', { name: '产品介绍' }).first().click()
+  await expect(page).toHaveURL(/\/app\/products$/)
+  const overflows = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1
+  )
+  expect(overflows).toBe(false)
+})
+
+test('four application areas and controlled 404 still render', async ({ page }) => {
+  await page.goto('/app/account')
+  await expect(page.getByText('账户区域占位')).toBeVisible()
+  await page.goto('/app/admin')
+  await expect(page.getByText('管理区域占位')).toBeVisible()
+  await page.goto('/app/production')
+  await expect(page.getByText('生产区域占位')).toBeVisible()
   await page.goto('/app/does-not-exist')
   await expect(page.getByRole('heading', { name: '页面不存在' })).toBeVisible()
+  const menuButton = page.getByRole('button', { name: '打开或关闭导航' })
+  if (await menuButton.isVisible()) await menuButton.click()
+  await expect(page.getByRole('navigation', { name: '主导航' })).toBeVisible()
 })

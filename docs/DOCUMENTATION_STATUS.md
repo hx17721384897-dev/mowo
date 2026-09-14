@@ -24,6 +24,7 @@
 | `VUE_FRONTEND_REFACTOR_PLAN.md` | 当前执行计划 | L0 之后的 H0/R0/R1/V0-V6；计划项不等于已实现 |
 | `R0_BACKEND_DATABASE_BASELINE.md` | 当前接续基线 | R0 复核结果、隔离命令、正式 API 边界和失败处置 |
 | `R1_RETIREMENT_AUDIT.md` | 当前退役台账 | R1-A/R1-B 完成记录、物理删除范围、保留边界和回归证据 |
+| `V1A_PUBLIC_SITE_MIGRATION.md` | 当前迁移记录 | V1a 公共页面、旧 URL 302、交接边界、自动验收与人工复验范围 |
 | `PROJECT_INDEX.md` | 当前总索引 | 本轮更新；负责阅读顺序、代码版图和文档规则 |
 | `RELEASE_SCOPE.md` | 当前产品边界 | 需在后续批次复核“当前发布事实”和上线阻断项 |
 | `REMEDIATION_ROADMAP.md` | 当前整改路线 | Web 核心流程已更新；历史定制段落仍需在本轮分批收口 |

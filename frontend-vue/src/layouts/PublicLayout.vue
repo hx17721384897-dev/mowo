@@ -1,11 +1,13 @@
-<template>
-  <BaseLayout
-    area="公开区域"
-    title="公开应用壳"
-    description="官网与公开商品页面将在后续批次逐页迁移。"
-  />
-</template>
-
 <script setup lang="ts">
-import BaseLayout from './BaseLayout.vue'
+import PublicFooter from '@/components/PublicFooter.vue'
+import PublicHeader from '@/components/PublicHeader.vue'
 </script>
+
+<template>
+  <div class="public-shell">
+    <a class="skip-link" href="#main-content">跳到主要内容</a>
+    <PublicHeader />
+    <div id="main-content"><RouterView /></div>
+    <PublicFooter />
+  </div>
+</template>
