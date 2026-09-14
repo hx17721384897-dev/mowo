@@ -36,7 +36,6 @@ async function cleanup() {
     await prisma.operationLog.deleteMany({ where: { userId } })
     await prisma.refreshToken.deleteMany({ where: { userId } })
     await prisma.smsCode.deleteMany({ where: { OR: [{ userId }, { phone }] } })
-    await prisma.creditScore.deleteMany({ where: { userId } })
     await prisma.userProfile.deleteMany({ where: { userId } })
     await prisma.user.deleteMany({ where: { id: userId } })
   }
@@ -46,7 +45,7 @@ async function cleanup() {
 try {
   const user = await prisma.user.create({ data: {
     phone, role: 3, staffRole: 'OWNER', privacyAgreedAt: new Date(), privacyPolicyVersion: 'scan-safety-test',
-    profile: { create: { nickname: `scan-safety-${runId}` } }, creditScore: { create: { score: 100 } }
+    profile: { create: { nickname: `scan-safety-${runId}` } }
   } })
   userId = user.id
 

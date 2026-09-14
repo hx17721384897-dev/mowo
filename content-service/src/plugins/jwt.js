@@ -43,7 +43,6 @@ async function jwtPlugin(fastify) {
             select: {
               role: true,
               staffRole: true,
-              certifyStatus: true,
               isBanned: true,
               status: true
             }
@@ -73,7 +72,6 @@ async function jwtPlugin(fastify) {
       // 后台权限以数据库当前值为准，角色调整后立即生效。
       request.user.role = user.role
       request.user.staffRole = effectiveStaffRole(user)
-      request.user.certifyStatus = user.certifyStatus
       request.user.accountStatus = user.status
       if (user.status === 'PENDING_DELETE' && !pendingDeletionActionAllowed(request)) {
         reply.code(403).send({

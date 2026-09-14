@@ -58,7 +58,6 @@ async function cleanup() {
     await prisma.operationLog.deleteMany({ where: { userId } })
     await prisma.auditLog.deleteMany({ where: { userId } })
     await prisma.userProfile.deleteMany({ where: { userId } })
-    await prisma.creditScore.deleteMany({ where: { userId } })
     await prisma.user.deleteMany({ where: { id: userId } })
   }
 }
@@ -76,7 +75,6 @@ try {
     phone, role: 3, staffRole: 'OWNER',
     privacyAgreedAt: new Date(), privacyPolicyVersion: 'kit-inventory-test',
     profile: { create: { nickname: `kit-inventory-test-${runId}` } },
-    creditScore: { create: { score: 100 } }
   } })
   userId = user.id
   await prisma.smsCode.create({ data: { userId, phone, code: '123456', purpose: 'LOGIN', expiresAt: new Date(Date.now() + 300000) } })

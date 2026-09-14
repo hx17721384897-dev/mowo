@@ -1,7 +1,6 @@
-// src/routes/admin-collab.js — 管理员联名审核 + 活动管理
+// src/routes/admin-collab.js — 管理员联名审核与商品管理
 // 全部需要 role >= 2
 
-import { calcRevenueRate, buildRevenueConfig } from '../lib/revenue.js'
 import { generateAndUploadHoverGif } from '../lib/gif-generator.js'
 import { updateCollabAssetStatus } from '../lib/collab-animation-asset.js'
 import {
@@ -62,22 +61,7 @@ export default async function adminCollabRoutes(fastify) {
     })
     const profileMap = Object.fromEntries(profiles.map(p => [p.userId, p]))
 
-    // 附创作者等级信息（用于审核时参考分红率）
-    const creatorProfiles = await prisma.creatorProfile.findMany({
-      where: { userId: { in: creatorIds } },
-      select: { userId: true, bullLevel: true, isExclusive: true },
-    })
-    const creatorMap = Object.fromEntries(creatorProfiles.map(c => [c.userId, c]))
-
     const result = works.map(w => {
-      const cp = creatorMap[w.creatorId] ?? {}
-      const preview = calcRevenueRate({
-        bullEnergy: cp.bullLevel ?? 1,
-        isExclusive: cp.isExclusive ?? false,
-        isNewbieWork: w.isNewbieWork,
-        newbieExpiredAt: w.newbieExpiredAt,
-        activityRate: null,
-      })
       // 预签名封面图（list 不含完整 animationFrames，避免大量 base64 数据）
       const coverUrl = presignAdminKey(w.coverUrl, fastify, 3600)
       return {
@@ -86,8 +70,6 @@ export default async function adminCollabRoutes(fastify) {
         coverUrl,                      // 已预签名，前端直接用
         supportedSkus: safeJson(w.supportedSkus),
         creator: profileMap[w.creatorId] ?? null,
-        creatorLevel: { bullEnergy: cp.bullLevel ?? 1, isExclusive: cp.isExclusive ?? false },
-        revenueRatePreview: preview.rate,
         saleConfigCount: w.saleSkus.length,
       }
     })
@@ -170,57 +152,11 @@ export default async function adminCollabRoutes(fastify) {
         return rejected
       })
 
-      const notifType = work.isRevision ? 'revision_rejected' : 'rejected'
-      const notifMsg  = work.isRevision
-        ? `你对《${work.title}》的修改申请未通过，原因：${rejectReason}`
-        : `你的作品《${work.title}》审核未通过，原因：${rejectReason}`
-      await prisma.creatorNotification.create({
-        data: { userId: work.creatorId, type: notifType, workId: work.id, workTitle: work.title, message: notifMsg }
-      }).catch(() => {})
-
       return reply.send({ success: true, data: updated })
     }
 
     // action === 'approve'
-    // 首发可审核和展示联名作品，但关闭时不承诺或自动计算线上分红。
-    const creatorFinanceEnabled = fastify.config.features.creatorFinance
-    // 读取分红参数配置
-    const revenueConfigRows = creatorFinanceEnabled
-      ? await prisma.platformConfig.findMany({ where: { groupName: 'revenue' } })
-      : []
-    const revenueConfig = buildRevenueConfig(revenueConfigRows)
-    const newbieDays = Number(revenueConfig.revenue_newbie_days ?? 14)
-
-    // 获取创作者等级信息（计算分红率快照）
-    const creatorProfile = creatorFinanceEnabled
-      ? await prisma.creatorProfile.findUnique({ where: { userId: work.creatorId } })
-      : null
-
-    // 查询活动分红率
-    let activityRate = null
-    if (creatorFinanceEnabled && work.activityId) {
-      const activity = await prisma.collabActivity.findUnique({ where: { id: work.activityId } })
-      if (activity && activity.isActive && new Date() <= activity.endAt) {
-        activityRate = activity.revenueRate
-      }
-    }
-
-    // 计算分红率快照
     const now = new Date()
-    const newbieExpiredAt = work.isNewbieWork
-      ? new Date(now.getTime() + newbieDays * 24 * 60 * 60 * 1000)
-      : null
-
-    const { rate, breakdown } = creatorFinanceEnabled
-      ? calcRevenueRate({
-          bullEnergy: creatorProfile?.bullLevel ?? 1,
-          isExclusive: creatorProfile?.isExclusive ?? false,
-          isNewbieWork: work.isNewbieWork,
-          newbieExpiredAt,
-          activityRate,
-          config: revenueConfig,
-        })
-      : { rate: 0, breakdown: [] }
 
     const updated = await prisma.$transaction(async tx => {
       const approved = await tx.collabWork.update({
@@ -230,9 +166,6 @@ export default async function adminCollabRoutes(fastify) {
         approvedAt: now,
         approvedBy: adminId,
         rejectReason: null,
-        isExclusiveWork: creatorFinanceEnabled ? (creatorProfile?.isExclusive ?? false) : false,
-        newbieExpiredAt: creatorFinanceEnabled ? newbieExpiredAt : null,
-        revenueRate: rate,
         isOnShelf: false,
         shelfAt: null,
         shelfStatus: 'off_shelf',
@@ -241,29 +174,6 @@ export default async function adminCollabRoutes(fastify) {
       await updateCollabAssetStatus(tx, approved, 'approved')
       return approved
     })
-
-    // 修改版通过时：将变更字段覆写回原作品
-    if (work.isRevision && work.originalWorkId) {
-      const cl = safeJson(work.changeLog)
-      const patch = {}
-      if (cl.title)                      patch.title        = cl.title.new
-      if (cl.description !== undefined)  patch.description  = cl.description?.new ?? null
-      if (cl.supportedSkus)              patch.supportedSkus = JSON.stringify(cl.supportedSkus.new)
-      if (Object.keys(patch).length) {
-        await prisma.collabWork.update({ where: { id: work.originalWorkId }, data: patch })
-      }
-    }
-
-    // 写通知
-    const notifType = work.isRevision ? 'revision_approved' : 'approved'
-    const notifMsg  = work.isRevision
-      ? `你对《${work.title}》的修改版已审核通过，修改内容已同步至展示库`
-      : creatorFinanceEnabled
-        ? `你的作品《${work.title}》已审核通过，分红率 ${(rate * 100).toFixed(1)}%`
-        : `你的作品《${work.title}》已审核通过，合作与结算方式请以线下确认记录为准`
-    await prisma.creatorNotification.create({
-      data: { userId: work.creatorId, type: notifType, workId: work.id, workTitle: work.title, message: notifMsg }
-    }).catch(() => {})
 
     // 异步生成 hover GIF（不阻塞审核响应）
     const frameKeys = safeJson(work.animationFrames)
@@ -291,7 +201,7 @@ export default async function adminCollabRoutes(fastify) {
 
     return reply.send({
       success: true,
-      data: { ...updated, revenueRateBreakdown: breakdown },
+      data: updated,
     })
   })
 
@@ -427,24 +337,12 @@ export default async function adminCollabRoutes(fastify) {
         offShelfType:   'platform_force',
         offShelfReason: reason.trim(),
         offShelfNotice: notice.trim(),
-        canResubmit:    true,
         suspendedAt:    null,
         suspendedBy:    null,
       },
     })
 
-    // 通知创作者
-    await prisma.creatorNotification.create({
-      data: {
-        userId:    work.creatorId,
-        type:      'offshelf',
-        workId:    work.id,
-        workTitle: work.title,
-        message:   notice.trim(),
-      },
-    }).catch(() => {})
-
-    return reply.send({ success: true, message: '已强制下架并通知创作者', data: updated })
+    return reply.send({ success: true, message: '已强制下架并记录告知内容', data: updated })
   })
 
   /**
@@ -468,58 +366,9 @@ export default async function adminCollabRoutes(fastify) {
         offShelfType:   null,
         offShelfReason: null,
         offShelfNotice: null,
-        canResubmit:    false,
       },
     })
     return reply.send({ success: true, message: '已重新上架', data: updated })
-  })
-
-  /**
-   * PUT /api/admin/collab/:id/approve-delist
-   * 管理员审批创作者的下架申请
-   * Body: { approve: true/false, adminNote? }
-   */
-  fastify.put('/admin/collab/:id/approve-delist', { preHandler: requireAdmin }, async (req, reply) => {
-    const { approve, adminNote } = req.body
-    const work = await prisma.collabWork.findUnique({ where: { id: req.params.id } })
-    if (!work) return reply.code(404).send({ success: false, message: '作品不存在' })
-    if (work.shelfStatus !== 'pending_delist')
-      return reply.code(400).send({ success: false, message: '作品不在申请处理中状态' })
-
-    if (approve === false && !(await requireSaleReady(req.params.id, reply))) return
-
-    const now = new Date()
-    const data = approve
-      ? {
-          shelfStatus:  'off_shelf',
-          isOnShelf:    false,
-          offShelfAt:   now,
-          offShelfType: 'creator_request',
-          offShelfReason: adminNote?.trim() || '创作者申请下架，管理员同意',
-          canResubmit:  false,
-        }
-      : {
-          shelfStatus: 'on_sale',
-          isOnShelf:   true,
-          delistRequestedAt: null,
-          delistReason: null,
-        }
-
-    const updated = await prisma.collabWork.update({ where: { id: req.params.id }, data })
-
-    await prisma.creatorNotification.create({
-      data: {
-        userId:    work.creatorId,
-        type:      'delist_decision',
-        workId:    work.id,
-        workTitle: work.title,
-        message:   approve
-          ? `你的《${work.title}》下架申请已通过`
-          : `你的《${work.title}》下架申请未通过${adminNote ? '：' + adminNote : '，作品维持上架'}`,
-      },
-    }).catch(() => {})
-
-    return reply.send({ success: true, message: approve ? '已同意下架' : '已拒绝申请，作品恢复上架', data: updated })
   })
 
   // ─────────────────────────────────────────────
@@ -632,7 +481,6 @@ export default async function adminCollabRoutes(fastify) {
         productNo: true,
         title: true,
         status: true,
-        isRevision: true,
         storefrontSummary: true,
         storefrontTitle: true,
         storefrontDescription: true,
@@ -649,7 +497,7 @@ export default async function adminCollabRoutes(fastify) {
       },
     })
     if (!work) return reply.code(404).send({ success: false, message: '作品不存在' })
-    if (work.status !== 'approved' || work.isRevision) {
+    if (work.status !== 'approved') {
       return reply.code(409).send({ success: false, message: '只有审核通过的正式作品可以配置销售规格' })
     }
 
@@ -761,11 +609,6 @@ export default async function adminCollabRoutes(fastify) {
       })),
     }
     const operatorId = req.user.userId
-    const legacyMarkups = Object.fromEntries(config.skus.map(row => [
-      row.skuId,
-      Number((row.finalPrice - Number(skuMap.get(row.skuId).price)).toFixed(2)),
-    ]))
-
     const productNo = work.productNo || makeProductNo(work.id)
     const previousCover = work.storefrontCoverUrl || work.coverUrl
     const nextStorefrontCover = coverKey || (isLegacyInlineCollabCover(previousCover) ? null : previousCover)
@@ -785,7 +628,6 @@ export default async function adminCollabRoutes(fastify) {
           storefrontUpdatedBy: operatorId,
           storefrontCoverUrl: nextStorefrontCover,
           supportedSkus: JSON.stringify(config.skus.map(row => row.skuId)),
-          creatorMarkups: JSON.stringify(legacyMarkups),
         },
       })
       await tx.collabSaleSku.deleteMany({
@@ -901,74 +743,6 @@ export default async function adminCollabRoutes(fastify) {
     })
 
     return reply.send({ success: true, message: `库存已调整 ${quantity > 0 ? '+' : ''}${quantity}`, data: updated })
-  })
-
-  // ─────────────────────────────────────────────
-  // 活动管理
-  // ─────────────────────────────────────────────
-
-  /**
-   * GET /api/admin/collab/activities
-   * 活动列表
-   */
-  fastify.get('/admin/collab/activities', { preHandler: requireAdmin }, async (req, reply) => {
-    const activities = await prisma.collabActivity.findMany({
-      orderBy: { createdAt: 'desc' },
-    })
-    return reply.send({ success: true, data: activities })
-  })
-
-  /**
-   * POST /api/admin/collab/activities
-   * 创建活动
-   *
-   * Body: { name, description?, revenueRate, startAt, endAt }
-   */
-  fastify.post('/admin/collab/activities', { preHandler: requireAdmin }, async (req, reply) => {
-    const { name, description, revenueRate, startAt, endAt } = req.body
-
-    if (!name || revenueRate === undefined || !startAt || !endAt) {
-      return reply.code(400).send({ success: false, message: '缺少必填字段' })
-    }
-    if (revenueRate <= 0 || revenueRate > 0.25) {
-      return reply.code(400).send({ success: false, message: '活动分红率须在 0~25% 之间' })
-    }
-    if (new Date(endAt) <= new Date(startAt)) {
-      return reply.code(400).send({ success: false, message: '结束时间必须晚于开始时间' })
-    }
-
-    const activity = await prisma.collabActivity.create({
-      data: {
-        name,
-        description: description ?? null,
-        revenueRate,
-        startAt: new Date(startAt),
-        endAt: new Date(endAt),
-        isActive: true,
-        createdBy: req.user.userId,
-      },
-    })
-
-    return reply.code(201).send({ success: true, data: activity })
-  })
-
-  /**
-   * PUT /api/admin/collab/activities/:id
-   * 修改活动（只能改 isActive / endAt / description）
-   */
-  fastify.put('/admin/collab/activities/:id', { preHandler: requireAdmin }, async (req, reply) => {
-    const { isActive, endAt, description } = req.body
-    const activity = await prisma.collabActivity.findUnique({ where: { id: req.params.id } })
-    if (!activity) return reply.code(404).send({ success: false, message: '活动不存在' })
-
-    const data = {}
-    if (isActive !== undefined) data.isActive = isActive
-    if (endAt) data.endAt = new Date(endAt)
-    if (description !== undefined) data.description = description
-
-    const updated = await prisma.collabActivity.update({ where: { id: req.params.id }, data })
-
-    return reply.send({ success: true, data: updated })
   })
 
   // ─────────────────────────────────────────────

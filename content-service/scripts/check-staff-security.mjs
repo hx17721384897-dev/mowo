@@ -42,7 +42,6 @@ async function createAndLogin(label, staffRole, role, index) {
       phone, role, staffRole,
       privacyAgreedAt: new Date(), privacyPolicyVersion: 'security-test',
       profile: { create: { nickname: `security-test-${label}` } },
-      creditScore: { create: { score: 100 } }
     }
   })
   users.set(label, { ...user, phone })
@@ -68,7 +67,6 @@ async function cleanup() {
   await prisma.accountDeletionRequest.deleteMany({ where: { userId: { in: ids } } })
   await prisma.refreshToken.deleteMany({ where: { userId: { in: ids } } })
   await prisma.smsCode.deleteMany({ where: { phone: { in: [...phones, testPhone(9)] } } })
-  await prisma.creditScore.deleteMany({ where: { userId: { in: ids } } })
   await prisma.userProfile.deleteMany({ where: { userId: { in: ids } } })
   await prisma.user.deleteMany({ where: { id: { in: ids } } })
 }
@@ -164,7 +162,8 @@ try {
   })).status, 403)
   assertStatus('production can read inventory', (await request('/api/inventory?limit=1', production.token)).status, 200)
   assertStatus('production cannot read users', (await request('/api/admin/users', production.token)).status, 403)
-  assertStatus('disabled revenue config is unavailable', (await request('/api/admin/revenue/configs', collab.token)).status, 404)
+  assertStatus('collab role cannot probe retired revenue paths', (await request('/api/admin/revenue/configs', collab.token)).status, 403)
+  assertStatus('retired revenue config has no route for owner', (await request('/api/admin/revenue/configs', owner.token)).status, 404)
   assertStatus('collab cannot read users', (await request('/api/admin/users', collab.token)).status, 403)
   assertStatus('owner can read security logs', (await request('/api/admin/logs', owner.token)).status, 200)
   const closedLegacyOrders = await request('/api/admin/orders', owner.token)

@@ -1,58 +1,56 @@
 # R1 已退役能力隔离与删除台账
 
-> 当前状态：R1-A 完成；V0 已确认外部订单导入保留，R1-B 可按已确认边界执行（最终复核：2026-09-14）
+> 当前状态：R1-A 与 R1-B 均已完成（最终复核：2026-09-14）。
 >
-> 产品原则：当前版本不需要的能力不隐藏、不保留可重新开启的实现。R1-A 只是在物理删除前立即封死运行路径；R1-B 必须删除源码、静态文件、任务、配置和无保留责任的数据结构，不能把 R1-A 当作最终状态。
+> 产品原则：当前版本不需要的社区、线上财务、牛量/推广、模拟认证和创作者自助能力不隐藏、不保留可重新开启的实现；未来如有需求，必须按新业务规则重新立项开发。
 
-## 1. R1-A 已实施隔离
+## 1. 完成结果
 
-所有退役 URL 在最早的 `onRequest` 阶段统一返回 HTTP 404 和 `FEATURE_RETIRED`，早于认证、CORS 预检和业务路由。环境变量与公开功能配置已移除 `community`、`creatorFinance`、`bullSystem` 和 `mockCertification`，旧能力不能通过修改 `.env` 重新开启。
+R1-A 曾在物理删除前以临时服务端拒绝规则封死旧路径。R1-B 已删除该临时规则及旧路由注册、专用服务、定时任务、页面、导航、配置、种子和无保留责任的数据结构。旧 URL 现在因为没有业务路由而自然返回 404，不存在 `FEATURE_RETIRED` 或可重新开启旧能力的 Feature Flag。
 
-| 退役域 | 当前拦截路径族 |
+后台路径仍先经过全局后台认证与岗位授权，因此未登录调用旧后台 URL 返回 401、无权限普通用户返回 403、获授权员工到达路由层后返回自然 404。这是统一安全边界的预期顺序，不表示旧业务仍存在。
+
+| 退役域 | 已删除的运行能力 |
 |---|---|
-| 社区 | `/api/articles*`、`/api/feed*`、`/api/users/:id/articles|follow|follow-status*`、`/api/collab/works/:id/like*` |
-| 历史创作者商品 | `/api/products*`、`/api/animations*` |
-| 创作者自助联名 | `/api/collab/apply*`、`/api/collab/my-works*` |
-| 线上财务 | `/api/earnings*`、`/api/creator/settlement*`、`/api/admin/settlement*`、`/api/admin/revenue*`、`/api/admin/collab/activities*` |
-| 牛量/推广 | `/api/creator/bull*`、`/api/admin/bull*`、`/api/creator/links*`、`/api/admin/links*` |
-| 模拟认证 | `/api/certify*` |
+| 社区 | 文章、Feed、评论、点赞、收藏、关注路由与旧静态页面 |
+| 历史创作者商品 | `/api/products*`、`/api/animations*` 旧路由与消费者 |
+| 创作者自助 | 模拟认证、自助联名申请、我的作品、修改批次和自主下架请求 |
+| 线上财务 | 收益、余额、提现、自动结算、储备金、分红活动/计算及定时任务 |
+| 牛量/推广 | 积分、等级、推广链接、点击归因、外链声量及相关任务 |
 
-运行时负向测试对未登录、普通用户和负责人三类调用者，逐一执行 GET、POST、PUT、PATCH、DELETE、OPTIONS。当前共验证 504 个“调用者 × 方法 × 路径”组合均返回统一 404，并比较 `Article`、`Product`、`CollabOrder`、`Balance`、`WithdrawalRequest` 计数，确认无业务副作用。
-
-设置页已删除认证导航、认证状态、收益/牛量承诺、互动通知和“仅关注者可见”；公共导航和用户后台不再展示旧认证身份，FAQ 与产品页不再承诺社区、收藏、会员积分或“创作者变现”。私人定制草稿统一为当前用户规则，不再读取旧认证状态决定配额。合成种子也不再创建认证创作者、余额、储备金、牛量、分红活动或分红规则；售后申请不再改写旧分红状态。
-
-## 2. 明确保留且不得误删
+## 2. 明确保留且已回归
 
 - 正式联名货架、商品/SKU 配置、作品权利人和授权关系。
-- 人工合作合同、线下约定和必要付款凭证；它们不是线上余额/提现系统。
-- 已成交订单的金额快照、售后、注销阻断和审计所需历史责任。
+- 人工合作合同、线下约定和必要付款凭证；它们不是线上余额或提现系统。
+- 已成交订单金额快照、售后、注销阻断和审计所需责任记录。
 - 私人定制的 `/api/custom-products` 草稿、`/api/customization-requests` 申请和 `/api/animation-assets` 可复购资产。
-- 当前订单、库存、生产、扫码和文件权限链。
-- 外部平台订单导入、SKU 映射、异常补全、渠道配额和订单来源审计；仅作为内部岗位能力保留，并在 V4 迁移。
+- 当前订单、库存、生产、扫码和私有文件权限链。
+- 外部平台订单导入、SKU 映射、异常补全、渠道配额和订单来源审计；该能力按负责人决定作为内部岗位能力保留，后续在 V4 迁移。
 
-## 3. R1-B 精确删除清单
+## 3. 物理删除记录
 
-| 层 | 待删除/改造 | 删除前必须拆出的保留依赖 |
-|---|---|---|
-| 路由 | `articles.js`、`feed.js`、`products.js`、`animations.js` 及 `index.js` 注册；`users.js` 的文章/关注端点；`collab.js` 的点赞、自助申请和我的作品端点；`admin-collab.js` 的活动路由 | 联名货架继续使用 `collab.js` 的公开作品接口和工作人员商品工作区 |
-| 财务运行代码 | `revenue.js`；`scheduler.js` 的冷却、储备金与取消任务；`admin.js`、`orders.js`、`payment.js`、`admin-collab.js` 中的旧分红读取、计算与写入；`permissions.js` 的专用映射 | 订单成交金额、合同条款、线下付款追溯；`account-deletion.js` 在旧表删除前继续阻止带责任数据的账号注销 |
-| 前端 | `_legacy/community.html`、`_legacy/favorites.html`、`_legacy/work-detail.html`、`admin-collab-activities.html`；`admin-collab.html` 和 `admin-collab-works.html` 中的自动分红/牛量展示与编辑 | 联名审核、上架、SKU、人工合同和违约政策的有效部分 |
-| 配置/种子/测试 | 退役 Feature Flag、退役演示数据、旧正向测试与文案 | 保留负向 404 测试，直到源码和部署产物均确认无入口 |
-| Schema/迁移 | Article/互动、余额、提现、结算、储备金、牛量/推广、模拟认证申请等无消费者结构 | 先核对注销清理、合同、订单快照、联名权利人、历史迁移外键；用新迁移删除，不改写历史 SQL |
-| 文档 | 把仍写“关闭但保留/未来开开关”的当前文档改为“已退役” | 历史记录可保留，但必须明确不是当前实现或恢复方案 |
+已删除独立实现包括：
 
-## 4. R1-B 已知阻断与顺序
+- `content-service/src/routes/articles.js`、`feed.js`、`products.js`、`animations.js`、`users.js`。
+- `content-service/src/lib/revenue.js` 与 R1-A 临时拦截器 `retired-endpoints.js`。
+- `frontend/pages/_legacy/community.html`、`favorites.html`、`work-detail.html`。
+- `frontend/pages/admin-collab-activities.html`。
 
-1. 外部平台订单导入已确认保留；R1-B 不得删除其页面、路由、映射、渠道配额或订单来源字段。
-2. 建立 Prisma 模型、路由、注销、合同、订单与测试的依赖图。
-3. 删除运行入口、专用服务和静态文件，再用新迁移清理无消费者表/字段。
-4. 重放空库并运行账户、定制、联名、交易、合同、注销、库存和生产回归。
-5. 扫描源码与构建产物，确保没有旧 URL、页面、Feature Flag、Scheduler 或可调用路径。
+混合文件中的旧财务副作用、Scheduler、权限映射、认证字段、社区/财务设置、后台活动与创作者自助处理分支也已拆除。`frontend/pages/products.html` 仍是正式产品介绍页，`my-animations.html` 仍是私人定制资产入口；二者与已删除的历史接口无关。
 
-R1-B 完成后删除临时的 `retired-endpoints.js` 拦截规则；旧 URL 应因源码和注册不存在而自然返回统一 404，仓库中不能永久留下“死开关”。
+数据库通过新增迁移 `20260914113000_retire_legacy_community_creator_finance` 删除无消费者的社区、认证、旧商品、线上财务、牛量和推广表/字段，并先清理已废弃枚举值与平台配置。历史迁移未改写。`CreatorContract`、订单金额与履约责任记录、联名作品和 `PlatformConfig` 中仍被违约政策使用的系统配置得到保留。
 
-## 5. 2026-09-11 文件级复核
+## 4. 验收证据
 
-当前仍存在且明确属于 R1-B 的独立文件为 `content-service/src/routes/articles.js`、`feed.js`、`products.js`、`animations.js`、`content-service/src/lib/revenue.js`、`frontend/pages/_legacy/community.html`、`favorites.html`、`work-detail.html` 和 `frontend/pages/admin-collab-activities.html`。此外还有上表列出的混合文件残留，不能只删除独立文件后宣告完成。
+- 独立空测试库从零完整重放 60/60 份迁移并完成合成种子。
+- 退役矩阵覆盖 330 个“调用者 × 方法 × 路径”组合；公开旧路径自然 404，后台旧路径遵循 401/403/404 安全顺序，均不产生业务副作用。
+- 外部订单导入不是只做静态保留：测试验证匿名及普通用户不能访问，并由获授权岗位实际执行小红书手工导入，生成 `pending_info` 订单。
+- 账户注销、私有文件、定制双路线、混合购物车与订单、库存、生产、扫码、联名货架、合同和备份恢复均通过 `npm run check:b7`。
+- 顾客自行筛帧在浏览器存储接近满载时仍可进入款式选择；提交时会忽略陈旧的人工筛帧状态并进入确认/结算流程。
 
-`frontend/pages/products.html` 是当前产品介绍页，不等同于历史 `/api/products` 创作者商品接口；`frontend/pages/my-animations.html` 是私人定制资产入口，不等同于历史 `/api/animations`。`admin-contract.html` 与 `contracts.js` 的分成/买断条款属于人工合作合同记录，必须保留并在 R1-B 中与线上余额、提现和自动结算彻底拆开。
+## 5. 后续约束
+
+1. 不得恢复上述旧路由、旧表或临时 Feature Flag。
+2. 未来社区、创作者认证、线上财务或牛量需求必须重新建立产品规则、权限、数据模型、安全审计和验收测试。
+3. 外部订单导入只能维持内部岗位权限，不得暴露为公共前端能力。
+4. 新迁移只向前演进，不修改已经执行过的历史迁移 SQL。

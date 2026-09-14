@@ -32,7 +32,7 @@ async function createStaff(label, staffRole, role, index) {
   const phone = `197${runId}${index}`
   const user = await prisma.user.create({ data: {
     phone, role, staffRole, privacyAgreedAt: new Date(), privacyPolicyVersion: 'frame-library-test',
-    profile: { create: { nickname: `frame-${label}-${runId}` } }, creditScore: { create: { score: 100 } }
+    profile: { create: { nickname: `frame-${label}-${runId}` } }
   } })
   users.push(user)
   await prisma.smsCode.create({ data: { phone, code: '123456', purpose: 'LOGIN', expiresAt: new Date(Date.now() + 300000) } })
@@ -80,7 +80,6 @@ async function cleanup() {
     await prisma.auditLog.deleteMany({ where: { userId: { in: ids } } })
     await prisma.refreshToken.deleteMany({ where: { userId: { in: ids } } })
     await prisma.smsCode.deleteMany({ where: { phone: { in: phones } } })
-    await prisma.creditScore.deleteMany({ where: { userId: { in: ids } } })
     await prisma.userProfile.deleteMany({ where: { userId: { in: ids } } })
     await prisma.user.deleteMany({ where: { id: { in: ids } } })
   }

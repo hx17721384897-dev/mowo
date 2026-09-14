@@ -35,8 +35,7 @@ async function createUser(label, index, staffRole = null, role = 0) {
     data: {
       phone, role, staffRole,
       privacyAgreedAt: new Date(), privacyPolicyVersion: 'deletion-test',
-      profile: { create: { nickname: `delete-${label}`, bio: 'private bio', email: `${label}@example.test` } },
-      creditScore: { create: { score: 100 } }
+      profile: { create: { nickname: `delete-${label}`, bio: 'private bio', email: `${label}@example.test` } }
     }
   })
   users.push(user.id)
@@ -138,29 +137,18 @@ async function cleanup() {
   await prisma.preOrder.deleteMany({ where: { userId: whereUser } })
   await prisma.aftersaleRequest.deleteMany({ where: { userId: whereUser } })
   await prisma.customizeOrder.deleteMany({ where: { id: { in: orderIds } } })
-  await prisma.report.deleteMany({ where: { OR: [{ reporterId: whereUser }, { targetType: 'user', targetId: whereUser }] } })
   await prisma.creatorContract.deleteMany({ where: { OR: [{ creatorId: whereUser }, { createdBy: whereUser }] } })
-  await prisma.settlementRecord.deleteMany({ where: { OR: [{ creatorId: whereUser }, { settledBy: whereUser }] } })
-  await prisma.reserveLog.deleteMany({ where: { creatorId: whereUser } })
-  await prisma.creatorReserve.deleteMany({ where: { creatorId: whereUser } })
-  await prisma.withdrawalRequest.deleteMany({ where: { creatorId: whereUser } })
-  await prisma.balance.deleteMany({ where: { creatorId: whereUser } })
-  await prisma.earning.deleteMany({ where: { creatorId: whereUser } })
-  await prisma.collabOrder.deleteMany({ where: { creatorId: whereUser } })
   const collabWorks = await prisma.collabWork.findMany({ where: { creatorId: whereUser }, select: { id: true } })
   if (collabWorks.length) await prisma.collabFramePack.deleteMany({ where: { collabWorkId: { in: collabWorks.map(item => item.id) } } })
   await prisma.collabWork.deleteMany({ where: { creatorId: whereUser } })
   await prisma.contactSubmission.deleteMany({ where: { submitterUserId: whereUser } })
-  await prisma.certifyApplication.deleteMany({ where: { userId: whereUser } })
+  await prisma.customizationRequest.deleteMany({ where: { userId: whereUser } })
   const carts = await prisma.cart.findMany({ where: { userId: whereUser }, select: { id: true } })
   if (carts.length) await prisma.cartItem.deleteMany({ where: { cartId: { in: carts.map(item => item.id) } } })
   await prisma.cart.deleteMany({ where: { userId: whereUser } })
   await prisma.customProduct.deleteMany({ where: { userId: whereUser } })
   await prisma.userAddress.deleteMany({ where: { userId: whereUser } })
   await prisma.privateFile.deleteMany({ where: { OR: [{ ownerUserId: whereUser }, { objectKey: { in: objectKeys } }] } })
-  await prisma.creditLog.deleteMany({ where: { userId: whereUser } })
-  await prisma.creditScore.deleteMany({ where: { userId: whereUser } })
-  await prisma.creatorNotification.deleteMany({ where: { userId: whereUser } })
   await prisma.userProfile.deleteMany({ where: { userId: whereUser } })
   await prisma.user.deleteMany({ where: { id: whereUser } })
 }
@@ -216,15 +204,6 @@ try {
   await assertDeletionBlocker(blockerMatrix, 'OPEN_AFTERSALES', 'open aftersale request blocks deletion')
   await prisma.aftersaleRequest.update({ where: { id: aftersale.id }, data: { status: 'completed' } })
 
-  const certification = await prisma.certifyApplication.create({
-    data: {
-      userId: blockerMatrix.id, creatorName: 'blocker creator', creatorType: 'individual',
-      realName: 'Test User', idNumberLast4: '0000'
-    }
-  })
-  await assertDeletionBlocker(blockerMatrix, 'PENDING_CERTIFICATION', 'pending creator certification blocks deletion')
-  await prisma.certifyApplication.update({ where: { id: certification.id }, data: { status: 'rejected' } })
-
   const contact = await prisma.contactSubmission.create({
     data: {
       type: 'feedback', name: 'blocker contact', contact: blockerMatrix.phone,
@@ -233,6 +212,12 @@ try {
   })
   await assertDeletionBlocker(blockerMatrix, 'OPEN_CONTACTS', 'open contact submission blocks deletion')
   await prisma.contactSubmission.update({ where: { id: contact.id }, data: { status: 'done' } })
+
+  const customization = await prisma.customizationRequest.create({
+    data: { userId: blockerMatrix.id, mode: 'HUMAN', status: 'SUBMITTED', sourceKeys: [] }
+  })
+  await assertDeletionBlocker(blockerMatrix, 'ACTIVE_CUSTOMIZATION_REQUESTS', 'active customization request blocks deletion')
+  await prisma.customizationRequest.update({ where: { id: customization.id }, data: { status: 'CANCELLED' } })
 
   const collabWork = await prisma.collabWork.create({
     data: {
@@ -246,47 +231,6 @@ try {
     data: { status: 'rejected', isOnShelf: false, shelfStatus: 'off_shelf' }
   })
 
-  const collabOrder = await prisma.collabOrder.create({
-    data: {
-      orderId: activeOrder.id, collabWorkId: collabWork.id, creatorId: blockerMatrix.id,
-      salePrice: 100, revenueRate: 0.2, revenueAmount: 20
-    }
-  })
-  await assertDeletionBlocker(blockerMatrix, 'UNSETTLED_REVENUE', 'unsettled collaboration revenue blocks deletion')
-  await prisma.collabOrder.update({
-    where: { id: collabOrder.id }, data: { revenueStatus: 'withdrawn', settlementStatus: 'settled' }
-  })
-
-  const balance = await prisma.balance.create({
-    data: { creatorId: blockerMatrix.id, pendingAmount: 1 }
-  })
-  await assertDeletionBlocker(blockerMatrix, 'ACCOUNT_BALANCE', 'non-zero creator balance blocks deletion')
-  await prisma.balance.update({ where: { id: balance.id }, data: { pendingAmount: 0, availableAmount: 0 } })
-
-  const withdrawal = await prisma.withdrawalRequest.create({
-    data: {
-      creatorId: blockerMatrix.id, amount: 1, method: 'bankcard',
-      accountName: 'Test User', accountNumber: 'test-account'
-    }
-  })
-  await assertDeletionBlocker(blockerMatrix, 'OPEN_WITHDRAWALS', 'open withdrawal blocks deletion')
-  await prisma.withdrawalRequest.update({ where: { id: withdrawal.id }, data: { status: 'paid' } })
-
-  const reserve = await prisma.creatorReserve.create({
-    data: { creatorId: blockerMatrix.id, frozenAmount: 1 }
-  })
-  await assertDeletionBlocker(blockerMatrix, 'CREATOR_RESERVE', 'frozen creator reserve blocks deletion')
-  await prisma.creatorReserve.update({ where: { id: reserve.id }, data: { frozenAmount: 0, releasableAmount: 0 } })
-
-  const settlement = await prisma.settlementRecord.create({
-    data: {
-      settlementWeek: `T-${runId}`, creatorId: blockerMatrix.id, orderCount: 1,
-      totalRevenue: 20, reserveDeducted: 3, payoutAmount: 17
-    }
-  })
-  await assertDeletionBlocker(blockerMatrix, 'OPEN_SETTLEMENTS', 'open settlement record blocks deletion')
-  await prisma.settlementRecord.update({ where: { id: settlement.id }, data: { status: 'paid' } })
-
   const contract = await prisma.creatorContract.create({
     data: {
       creatorId: blockerMatrix.id, creatorName: 'blocker creator', contractType: 'revenue_share',
@@ -296,15 +240,7 @@ try {
   await assertDeletionBlocker(blockerMatrix, 'ACTIVE_CONTRACTS', 'active creator contract blocks deletion')
   await prisma.creatorContract.update({ where: { id: contract.id }, data: { status: 'terminated' } })
 
-  const report = await prisma.report.create({
-    data: {
-      reporterId: blockerMatrix.id, targetType: 'user', targetId: blockerMatrix.id,
-      reason: 'automated test', description: 'deletion blocker matrix'
-    }
-  })
-  await assertDeletionBlocker(blockerMatrix, 'OPEN_DISPUTES', 'open report or dispute blocks deletion')
-  await prisma.report.update({ where: { id: report.id }, data: { status: 'resolved' } })
-  assert((await getAccountDeletionBlockers(prisma, blockerMatrix.id)).length === 0, 'resolved business records no longer block deletion')
+  assert((await getAccountDeletionBlockers(prisma, blockerMatrix.id)).length === 0, 'completed retained business records no longer block deletion')
 
   const oldEndpoint = await request('/api/v1/user/account/deactivate', cancellableToken, {
     method: 'POST', body: JSON.stringify({ password: 'anything' })

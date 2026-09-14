@@ -31,7 +31,6 @@ async function cleanup() {
     await prisma.auditLog.deleteMany({ where: { userId } })
     await prisma.operationLog.deleteMany({ where: { userId } })
     await prisma.refreshToken.deleteMany({ where: { userId } })
-    await prisma.creditScore.deleteMany({ where: { userId } })
     await prisma.userProfile.deleteMany({ where: { userId } })
     await prisma.user.deleteMany({ where: { id: userId } })
   }
@@ -81,15 +80,11 @@ try {
   ]
   for (const path of closedPaths) {
     const response = await request(path)
-    const body = await response.json()
-    assert(response.status === 404 && body.code === 'FEATURE_RETIRED', `${path} is denied by the retirement boundary`)
+    const expected = path.startsWith('/api/admin/') ? 401 : 404
+    assert(response.status === expected, `${path} has no callable runtime route`)
   }
   const removedSelfService = await request('/api/collab/my-works')
-  const removedSelfServiceBody = await removedSelfService.json()
-  assert(
-    removedSelfService.status === 404 && removedSelfServiceBody.code === 'FEATURE_RETIRED',
-    'creator collaboration self-service is permanently retired'
-  )
+  assert(removedSelfService.status === 404, 'creator collaboration self-service has no runtime route')
   assert((await request('/api/collab/works?limit=1')).status === 200, 'approved collaboration showcase remains available')
 
   for (let index = 0; index < smsTestPhones.length; index += 1) {

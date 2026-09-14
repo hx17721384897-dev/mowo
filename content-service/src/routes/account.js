@@ -56,7 +56,6 @@ export default async function accountRoutes(fastify) {
       select: {
         id: true,
         phone: true,
-        certifyStatus: true,
         role: true,
         staffRole: true,
         status: true,
@@ -70,11 +69,8 @@ export default async function accountRoutes(fastify) {
             gender: true,
             birthday: true,
             nicknameUpdatedAt: true,
-            notifyInteraction: true,
             notifyOrder: true,
             notifySystem: true,
-            notifyPromo: true,
-            profileVisibility: true,
           }
         }
       }
@@ -109,7 +105,6 @@ export default async function accountRoutes(fastify) {
       data: {
         id: user.id,
         maskedPhone,
-        certifyStatus: user.certifyStatus,
         role: user.role,
         staffRole: user.staffRole,
         status: user.status,
@@ -542,109 +537,6 @@ export default async function accountRoutes(fastify) {
       const [status, message] = codeMap[err.code] || [500, '短信发送失败，请稍后重试']
       return reply.code(status).send({ success: false, message, code: err.code })
     }
-  })
-
-  // ─────────────────────────────────────────────────────────
-  // GET /api/v1/account/notifications — 获取通知设置
-  // ─────────────────────────────────────────────────────────
-  fastify.get('/notifications', { preHandler: fastify.authenticate }, async (req, reply) => {
-    const userId = req.user.userId
-    const profile = await fastify.prisma.userProfile.findUnique({
-      where: { userId },
-      select: {
-        notifyInteraction: true,
-        notifyOrder:       true,
-        notifySystem:      true,
-        notifyPromo:       true
-      }
-    })
-    if (!profile) return reply.code(404).send({ success: false, message: '用户信息不存在' })
-    return reply.send({ success: true, data: profile })
-  })
-
-  // ─────────────────────────────────────────────────────────
-  // PUT /api/v1/account/notifications — 更新通知设置
-  // ─────────────────────────────────────────────────────────
-  fastify.put('/notifications', {
-    preHandler: fastify.authenticate,
-    schema: {
-      body: {
-        type: 'object',
-        properties: {
-          interaction: { type: 'boolean' },
-          order:       { type: 'boolean' },
-          system:      { type: 'boolean' },
-          promo:       { type: 'boolean' }
-        }
-      }
-    }
-  }, async (req, reply) => {
-    const userId = req.user.userId
-    const { interaction, order, system, promo } = req.body
-
-    const updateData = {}
-    if (interaction !== undefined) updateData.notifyInteraction = interaction
-    if (promo !== undefined)       updateData.notifyPromo = promo
-    // order 和 system 不可关闭（设计书要求）
-    if (order !== undefined && order === false) {
-      return reply.code(400).send({
-        success: false,
-        message: '该类通知关系您的账号安全与订单权益，无法关闭',
-        code: 'NOTIFY_REQUIRED'
-      })
-    }
-    if (system !== undefined && system === false) {
-      return reply.code(400).send({
-        success: false,
-        message: '该类通知关系您的账号安全与订单权益，无法关闭',
-        code: 'NOTIFY_REQUIRED'
-      })
-    }
-
-    if (Object.keys(updateData).length === 0) {
-      return reply.send({ success: true, message: '没有需要更新的内容' })
-    }
-
-    await fastify.prisma.userProfile.update({ where: { userId }, data: updateData })
-    return reply.send({ success: true, message: '通知设置已保存' })
-  })
-
-  // ─────────────────────────────────────────────────────────
-  // GET /api/v1/account/privacy — 获取隐私设置
-  // ─────────────────────────────────────────────────────────
-  fastify.get('/privacy', { preHandler: fastify.authenticate }, async (req, reply) => {
-    const userId = req.user.userId
-    const profile = await fastify.prisma.userProfile.findUnique({
-      where: { userId },
-      select: { profileVisibility: true }
-    })
-    if (!profile) return reply.code(404).send({ success: false, message: '用户信息不存在' })
-    return reply.send({ success: true, data: profile })
-  })
-
-  // ─────────────────────────────────────────────────────────
-  // PUT /api/v1/account/privacy — 更新隐私设置
-  // ─────────────────────────────────────────────────────────
-  fastify.put('/privacy', {
-    preHandler: fastify.authenticate,
-    schema: {
-      body: {
-        type: 'object',
-        required: ['profileVisibility'],
-        properties: {
-          profileVisibility: { type: 'string', enum: ['public', 'followers', 'private'] }
-        }
-      }
-    }
-  }, async (req, reply) => {
-    const userId = req.user.userId
-    const { profileVisibility } = req.body
-
-    await fastify.prisma.userProfile.update({
-      where: { userId },
-      data: { profileVisibility }
-    })
-    return reply.send({ success: true, message: '隐私设置已保存' })
   })
 
   // ─────────────────────────────────────────────────────────

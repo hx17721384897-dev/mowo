@@ -9,11 +9,6 @@ import jwtPlugin from './plugins/jwt.js'
 import ossPlugin from './plugins/oss.js'
 import authRoutes from './routes/auth.js'
 import { authV1Routes, userV1Routes } from './routes/auth-v1.js'
-import articleRoutes from './routes/articles.js'
-import userRoutes from './routes/users.js'
-import animationRoutes from './routes/animations.js'
-import productRoutes from './routes/products.js'
-import feedRoutes from './routes/feed.js'
 import machineModelRoutes from './routes/machine-models.js'
 import uploadRoutes from './routes/upload.js'
 import customizeOrderRoutes from './routes/customize-orders.js'
@@ -48,7 +43,6 @@ import { startScheduler }     from './lib/scheduler.js'
 import { hasPermission, requiredPermissionForRequest } from './lib/permissions.js'
 import { auditOutcome, serializeSafeAuditBody } from './lib/audit.js'
 import { publicFeatureFlags, requiredFeatureForRequest } from './lib/features.js'
-import { isRetiredEndpoint } from './lib/retired-endpoints.js'
 import { isClosedLegacyProductionEndpoint } from './lib/legacy-production-endpoints.js'
 
 const config = loadConfig()
@@ -57,16 +51,6 @@ fastify.decorate('config', config)
 
 async function start() {
   try {
-    // 已退役能力不可由环境变量重新开启。请求在认证、CORS 预检和路由处理前统一终止。
-    fastify.addHook('onRequest', async (request, reply) => {
-      if (!isRetiredEndpoint(request.url)) return
-      return reply.code(404).send({
-        success: false,
-        message: '请求的资源不存在',
-        code: 'FEATURE_RETIRED'
-      })
-    })
-
     // CORS：允许凭证（HttpOnly Cookie 需要），开发环境放行本地前端地址
     await fastify.register(cors, {
       origin: (origin, cb) => {
@@ -106,7 +90,7 @@ async function start() {
       return payload
     })
 
-    // 暂时关闭但保留的能力仍由服务端开关控制；已退役能力使用更早的永久拒绝边界。
+    // 暂时关闭但保留的能力由服务端开关控制；已物理退役能力不再注册路由。
     fastify.addHook('preHandler', async (request, reply) => {
       const feature = requiredFeatureForRequest(request.url)
       if (!feature || config.features[feature]) return
@@ -195,11 +179,6 @@ async function start() {
 
     // ── 用户接口（旧版，保留向后兼容）──
     await fastify.register(authRoutes,           { prefix: '/api/auth' })
-    await fastify.register(articleRoutes,        { prefix: '/api/articles' })
-    await fastify.register(userRoutes,           { prefix: '/api/users' })
-    await fastify.register(animationRoutes,      { prefix: '/api/animations' })
-    await fastify.register(productRoutes,        { prefix: '/api/products' })
-    await fastify.register(feedRoutes,           { prefix: '/api/feed' })
     await fastify.register(machineModelRoutes,   { prefix: '/api/machine-models' })
     await fastify.register(uploadRoutes,         { prefix: '/api/upload' })
     await fastify.register(customizeOrderRoutes, { prefix: '/api/customize-orders' })

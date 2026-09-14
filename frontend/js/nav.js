@@ -45,7 +45,7 @@
     '<div class="mowo-nav-mid">' +
       '<a href="about.html"' + act(['about']) + '>关于我们</a>' +
       '<a href="products.html"' + act(['products']) + '>动盒系列</a>' +
-      '<a href="showcase.html"' + act(['showcase', 'community']) + '>联名作品</a>' +
+      '<a href="showcase.html"' + act(['showcase']) + '>联名作品</a>' +
       '<a href="customize-start.html"' + act(['customize', 'creator']) + '>创作中心</a>' +
       '<a href="contact.html"' + act(['contact']) + '>联络我们</a>' +
     '</div>' +
@@ -78,7 +78,7 @@
       '<div class="mowo-mobile-body">' +
         '<a href="about.html"' + act(['about']) + '>关于我们</a>' +
         '<a href="products.html"' + act(['products']) + '>动盒系列</a>' +
-        '<a href="showcase.html"' + act(['showcase', 'community']) + '>联名作品</a>' +
+        '<a href="showcase.html"' + act(['showcase']) + '>联名作品</a>' +
         '<a href="customize-start.html"' + act(['customize', 'creator']) + '>创作中心</a>' +
         '<a href="contact.html"' + act(['contact']) + '>联络我们</a>' +
         '<a href="cart.html">购物车</a>' +

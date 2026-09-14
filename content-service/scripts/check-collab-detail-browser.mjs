@@ -21,7 +21,6 @@ async function cleanup() {
   if (skuId) await prisma.machineModelSku.deleteMany({ where: { id: skuId } })
   if (modelId) await prisma.machineModel.deleteMany({ where: { id: modelId } })
   if (userId) {
-    await prisma.creditScore.deleteMany({ where: { userId } })
     await prisma.userProfile.deleteMany({ where: { userId } })
     await prisma.user.deleteMany({ where: { id: userId } })
   }
@@ -31,7 +30,7 @@ async function cleanup() {
 try {
   const user = await prisma.user.create({ data: {
     phone: `194${runId}`, privacyAgreedAt: new Date(), privacyPolicyVersion: 'detail-ui',
-    profile: { create: { nickname: '联名详情测试创作者' } }, creditScore: { create: { score: 100 } },
+    profile: { create: { nickname: '联名详情测试创作者' } },
   } })
   userId = user.id
   const model = await prisma.machineModel.create({ data: { name: '标准款', ratios: '["1:1"]', frameOptions: '[12]', sizes: '["5x5cm"]' } })

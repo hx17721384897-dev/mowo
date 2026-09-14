@@ -58,7 +58,6 @@ async function cleanup() {
     await prisma.auditLog.deleteMany({ where: { userId } }).catch(() => {})
     await prisma.refreshToken.deleteMany({ where: { userId } }).catch(() => {})
     await prisma.smsCode.deleteMany({ where: { OR: [{ userId }, { phone }] } }).catch(() => {})
-    await prisma.creditScore.deleteMany({ where: { userId } }).catch(() => {})
     await prisma.userProfile.deleteMany({ where: { userId } }).catch(() => {})
     await prisma.user.deleteMany({ where: { id: userId } }).catch(() => {})
   }
@@ -68,7 +67,7 @@ async function cleanup() {
 try {
   const user = await prisma.user.create({ data: {
     phone, role: 3, staffRole: 'OWNER', privacyAgreedAt: new Date(), privacyPolicyVersion: 'frame-import-test',
-    profile: { create: { nickname: `frame-import-${runId}` } }, creditScore: { create: { score: 100 } }
+    profile: { create: { nickname: `frame-import-${runId}` } }
   } })
   userId = user.id
   await prisma.smsCode.create({ data: { userId, phone, code: '123456', purpose: 'LOGIN', expiresAt: new Date(Date.now() + 300000) } })

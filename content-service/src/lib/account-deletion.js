@@ -2,9 +2,6 @@ import { Prisma } from '@prisma/client'
 
 const ACTIVE_ORDER_STATUSES = ['pending', 'paid', 'locked', 'processing', 'producing', 'shipped', 'aftersale']
 const OPEN_AFTERSALE_STATUSES = ['pending', 'approved']
-const OPEN_WITHDRAWAL_STATUSES = ['pending', 'processing', 'failed']
-const OPEN_SETTLEMENT_STATUSES = ['pending', 'failed']
-const OPEN_REVENUE_STATUSES = ['estimated', 'cooling', 'available']
 const ACTIVE_CUSTOMIZATION_STATUSES = ['SUBMITTED', 'REVIEWING', 'NEEDS_SUPPLEMENT', 'OPTIONS_READY', 'FRAME_ACCEPTED', 'STYLE_SELECTED', 'CONFIRMED']
 const PROTECTED_FILE_LINKS = new Set(['AFTERSALE_REQUEST', 'CUSTOMIZE_ORDER', 'CONTRACT', 'FRAME_PACK'])
 
@@ -23,72 +20,36 @@ export async function getAccountDeletionBlockers(prisma, userId) {
     activeOrders,
     openAftersales,
     pendingPreOrders,
-    pendingCertification,
     openContacts,
     activeCollabWorks,
-    unsettledCollabOrders,
-    unsettledEarnings,
-    balance,
-    openWithdrawals,
-    reserve,
-    openSettlements,
     activeContracts,
-    openReports,
     activeCustomizationRequests
   ] = await Promise.all([
     prisma.customizeOrder.count({ where: { userId, status: { in: ACTIVE_ORDER_STATUSES } } }),
     prisma.aftersaleRequest.count({ where: { userId, status: { in: OPEN_AFTERSALE_STATUSES } } }),
     prisma.preOrder.count({ where: { userId, status: 'pending_payment' } }),
-    prisma.certifyApplication.count({ where: { userId, status: 'pending' } }),
     prisma.contactSubmission.count({ where: { submitterUserId: userId, status: { in: ['pending', 'processing'] } } }),
     prisma.collabWork.count({ where: {
       creatorId: userId,
       OR: [
         { status: 'pending' },
-        { isOnShelf: true },
-        { shelfStatus: 'pending_delist' }
+        { isOnShelf: true }
       ]
     } }),
-    prisma.collabOrder.count({ where: {
-      creatorId: userId,
-      OR: [
-        { revenueStatus: { in: OPEN_REVENUE_STATUSES } },
-        { settlementStatus: { in: OPEN_SETTLEMENT_STATUSES } }
-      ]
-    } }),
-    prisma.earning.count({ where: { creatorId: userId, status: { in: ['pending', 'available'] } } }),
-    prisma.balance.findUnique({ where: { creatorId: userId } }),
-    prisma.withdrawalRequest.count({ where: { creatorId: userId, status: { in: OPEN_WITHDRAWAL_STATUSES } } }),
-    prisma.creatorReserve.findUnique({ where: { creatorId: userId } }),
-    prisma.settlementRecord.count({ where: { creatorId: userId, status: { in: OPEN_SETTLEMENT_STATUSES } } }),
     prisma.creatorContract.count({ where: { creatorId: userId, status: 'active' } }),
-    prisma.report.count({ where: {
-      status: 'pending',
-      OR: [
-        { reporterId: userId },
-        { targetType: 'user', targetId: userId }
-      ]
-    } }),
     prisma.customizationRequest.count({ where: { userId, status: { in: ACTIVE_CUSTOMIZATION_STATUSES } } })
   ])
 
   const blockers = []
-  // 创作者身份由 certifyStatus 表示；role>0 是旧后台权限等级，也必须先完成工作交接。
+  // 工作人员账号必须先完成岗位与责任移交。
   if (user.staffRole || user.role > 0) blockers.push(blocker('STAFF_ACCOUNT', '工作人员账号不能自助注销，请先由负责人完成权限和职责移交'))
   if (!['ACTIVE', 'PENDING_DELETE'].includes(user.status)) blockers.push(blocker('ACCOUNT_STATUS', '当前账号状态不允许申请注销'))
   if (activeOrders) blockers.push(blocker('ACTIVE_ORDERS', `有 ${activeOrders} 个未完结订单，请完成收货、取消或售后处理后再申请`, activeOrders))
   if (openAftersales) blockers.push(blocker('OPEN_AFTERSALES', `有 ${openAftersales} 个售后仍在处理中`, openAftersales))
   if (pendingPreOrders) blockers.push(blocker('PENDING_PREORDERS', `有 ${pendingPreOrders} 个待付款订单，请先取消或等待失效`, pendingPreOrders))
-  if (pendingCertification) blockers.push(blocker('PENDING_CERTIFICATION', '创作者认证正在审核，请先联系工作人员结束申请'))
   if (openContacts) blockers.push(blocker('OPEN_CONTACTS', `有 ${openContacts} 条联络或合作申请仍在处理中`, openContacts))
   if (activeCollabWorks) blockers.push(blocker('ACTIVE_COLLAB_WORKS', `有 ${activeCollabWorks} 个联名作品仍在审核、销售或下架处理中`, activeCollabWorks))
-  if (unsettledCollabOrders || unsettledEarnings) blockers.push(blocker('UNSETTLED_REVENUE', '仍有联名订单收益尚未结清'))
-  if (balance && [balance.pendingAmount, balance.availableAmount].some(value => Number(value) !== 0)) blockers.push(blocker('ACCOUNT_BALANCE', '创作者账户仍有待结算或可提现余额'))
-  if (openWithdrawals) blockers.push(blocker('OPEN_WITHDRAWALS', `有 ${openWithdrawals} 笔提现尚未完成`, openWithdrawals))
-  if (reserve && [reserve.frozenAmount, reserve.releasableAmount].some(value => Number(value) !== 0)) blockers.push(blocker('CREATOR_RESERVE', '仍有冻结或待释放的创作者储备金'))
-  if (openSettlements) blockers.push(blocker('OPEN_SETTLEMENTS', `有 ${openSettlements} 笔结算尚未完成`, openSettlements))
   if (activeContracts) blockers.push(blocker('ACTIVE_CONTRACTS', `有 ${activeContracts} 份生效中的合作合同`, activeContracts))
-  if (openReports) blockers.push(blocker('OPEN_DISPUTES', `有 ${openReports} 个投诉或举报尚未处理`, openReports))
   if (activeCustomizationRequests) blockers.push(blocker(
     'ACTIVE_CUSTOMIZATION_REQUESTS',
     `有 ${activeCustomizationRequests} 个定制申请仍在处理中，请先结束申请再注销`,
@@ -144,14 +105,12 @@ async function deleteAccountFiles(fastify, userId, now) {
 }
 
 async function anonymizeAccountData(prisma, userId, requestId, now) {
-  const [user, cart, disposableProducts, ownArticles] = await Promise.all([
+  const [user, cart, disposableProducts] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId }, select: { phone: true } }),
     prisma.cart.findUnique({ where: { userId }, select: { id: true } }),
-    prisma.customProduct.findMany({ where: { userId, status: { not: 'ordered' } }, select: { id: true } }),
-    prisma.article.findMany({ where: { userId }, select: { id: true } })
+    prisma.customProduct.findMany({ where: { userId, status: { not: 'ordered' } }, select: { id: true } })
   ])
   const disposableProductIds = disposableProducts.map(item => item.id)
-  const articleIds = ownArticles.map(item => item.id)
 
   await prisma.$transaction(async tx => {
     if (cart) await tx.cartItem.deleteMany({ where: { cartId: cart.id } })
@@ -161,21 +120,6 @@ async function anonymizeAccountData(prisma, userId, requestId, now) {
     if (disposableProductIds.length) await tx.customProduct.deleteMany({ where: { id: { in: disposableProductIds } } })
     await tx.userAddress.deleteMany({ where: { userId } })
 
-    if (articleIds.length) {
-      await tx.like.deleteMany({ where: { targetType: 'article', targetId: { in: articleIds } } })
-      await tx.comment.deleteMany({ where: { articleId: { in: articleIds } } })
-      await tx.collect.deleteMany({ where: { articleId: { in: articleIds } } })
-      await tx.articleProduct.deleteMany({ where: { articleId: { in: articleIds } } })
-      await tx.article.deleteMany({ where: { id: { in: articleIds } } })
-    }
-    await tx.comment.updateMany({ where: { userId }, data: { content: '[已删除]', status: 'deleted', replyToUserId: null } })
-    await tx.like.deleteMany({ where: { userId } })
-    await tx.collect.deleteMany({ where: { userId } })
-    await tx.follow.deleteMany({ where: { OR: [{ followerId: userId }, { followingId: userId }] } })
-
-    await tx.product.updateMany({ where: { userId, status: { in: ['draft', 'pending', 'rejected'] } }, data: { status: 'removed' } })
-    await tx.animation.updateMany({ where: { userId, status: { in: ['draft', 'pending', 'rejected'] } }, data: { status: 'removed' } })
-
     await tx.contactSubmission.updateMany({
       where: { submitterUserId: userId },
       data: {
@@ -183,14 +127,6 @@ async function anonymizeAccountData(prisma, userId, requestId, now) {
         attachments: null, submitterUserId: null, ip: null, userAgent: null
       }
     })
-    await tx.certifyApplication.updateMany({
-      where: { userId },
-      data: { creatorName: '已注销创作者', realName: '已删除', idNumberLast4: '****', portfolioUrls: null, rejectReason: null }
-    })
-    await tx.creatorSocialLink.deleteMany({ where: { creatorId: userId } })
-    await tx.creatorReferralLink.updateMany({ where: { creatorId: userId }, data: { isActive: false } })
-    await tx.referralClick.updateMany({ where: { creatorId: userId }, data: { ip: null, userAgent: null, referrer: null } })
-    await tx.creatorNotification.deleteMany({ where: { userId } })
     await tx.customizationRequestEvent.updateMany({
       where: { request: { userId } },
       data: { internalNote: null, detail: Prisma.JsonNull }
@@ -206,18 +142,12 @@ async function anonymizeAccountData(prisma, userId, requestId, now) {
     await tx.actionToken.deleteMany({ where: { userId } })
     await tx.refreshToken.deleteMany({ where: { userId } })
     await tx.smsCode.deleteMany({ where: { OR: [{ userId }, ...(user?.phone ? [{ phone: user.phone }] : [])] } })
-    await tx.creditLog.deleteMany({ where: { userId } })
-    await tx.creditScore.deleteMany({ where: { userId } })
-    await tx.creatorProfile.updateMany({
-      where: { userId },
-      data: { styleTags: null, weiboUrl: null, xiaohongshuUrl: null, bilibiliUrl: null, isExclusive: false, exclusiveSignedAt: null, exclusiveExpiredAt: null }
-    })
     await tx.userProfile.updateMany({
       where: { userId },
       data: {
         nickname: '已注销用户', avatarUrl: null, bio: null, gender: 0, birthday: null,
-        city: null, mbti: null, email: null, notifyInteraction: false, notifyOrder: false,
-        notifySystem: false, notifyPromo: false, profileVisibility: 'private', loginFailCount: 0,
+        city: null, mbti: null, email: null, notifyOrder: false,
+        notifySystem: false, loginFailCount: 0,
         loginLockedUntil: null, lastLoginIp: null, lastLoginAt: null, nicknameUpdatedAt: null
       }
     })
@@ -229,7 +159,7 @@ async function anonymizeAccountData(prisma, userId, requestId, now) {
       where: { id: userId },
       data: {
         status: 'DELETED', phone: null, passwordHash: null, wechatOpenid: null, wechatUnionid: null,
-        certifyStatus: 0, isBanned: false, role: 0, staffRole: null, lastLoginAt: null,
+        isBanned: false, role: 0, staffRole: null, lastLoginAt: null,
         deletedAt: now, deleteReason: null
       }
     })

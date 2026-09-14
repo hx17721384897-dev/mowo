@@ -54,7 +54,6 @@ async function cleanup() {
   await prisma.operationLog.deleteMany({ where: { userId } })
   await prisma.auditLog.deleteMany({ where: { userId } })
   await prisma.userProfile.deleteMany({ where: { userId } })
-  await prisma.creditScore.deleteMany({ where: { userId } })
   await prisma.user.deleteMany({ where: { id: userId } })
   if (outsiderId) {
     await prisma.smsCode.deleteMany({ where: { userId: outsiderId } })
@@ -62,7 +61,6 @@ async function cleanup() {
     await prisma.operationLog.deleteMany({ where: { userId: outsiderId } })
     await prisma.auditLog.deleteMany({ where: { userId: outsiderId } })
     await prisma.userProfile.deleteMany({ where: { userId: outsiderId } })
-    await prisma.creditScore.deleteMany({ where: { userId: outsiderId } })
     await prisma.user.deleteMany({ where: { id: outsiderId } })
   }
   if (skuId) await prisma.inventoryLog.deleteMany({ where: { skuId } })
@@ -104,7 +102,6 @@ try {
     phone,
     privacyAgreedAt: new Date(), privacyPolicyVersion: 'sales-order-test',
     profile: { create: { nickname: `sales-order-test-${runId}` } },
-    creditScore: { create: { score: 100 } }
   } })
   userId = user.id
   await prisma.smsCode.create({ data: {
@@ -120,7 +117,6 @@ try {
     phone: outsiderPhone,
     privacyAgreedAt: new Date(), privacyPolicyVersion: 'sales-order-test',
     profile: { create: { nickname: `sales-order-test-outsider-${runId}` } },
-    creditScore: { create: { score: 100 } }
   } })
   outsiderId = outsider.id
   await prisma.smsCode.create({ data: {

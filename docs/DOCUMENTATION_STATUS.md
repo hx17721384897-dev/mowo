@@ -1,6 +1,6 @@
 # 项目文档有效性总表
 
-> 最近复核：2026-09-11（R0 证据确认与 R1-A 退役隔离）
+> 最近复核：2026-09-14（V0 与 R1-B 物理退役完成）
 >
 > 用途：说明每份项目 Markdown 的身份、可信范围和下一次核对动作。后续开发者或 AI 不应把“历史规划”直接当成当前代码事实。
 
@@ -23,7 +23,7 @@
 | `PROJECT_ENGINEERING_AND_ARCHITECTURE_PLAN.md` | 已完成计划/当前 L0 基线 | B0-B7 的 L0 范围、证据、未上线边界和封版 tag |
 | `VUE_FRONTEND_REFACTOR_PLAN.md` | 当前执行计划 | L0 之后的 H0/R0/R1/V0-V6；计划项不等于已实现 |
 | `R0_BACKEND_DATABASE_BASELINE.md` | 当前接续基线 | R0 复核结果、隔离命令、正式 API 边界和失败处置 |
-| `R1_RETIREMENT_AUDIT.md` | 当前退役台账 | R1-A 运行隔离证据与 R1-B 精确删除/保留边界 |
+| `R1_RETIREMENT_AUDIT.md` | 当前退役台账 | R1-A/R1-B 完成记录、物理删除范围、保留边界和回归证据 |
 | `PROJECT_INDEX.md` | 当前总索引 | 本轮更新；负责阅读顺序、代码版图和文档规则 |
 | `RELEASE_SCOPE.md` | 当前产品边界 | 需在后续批次复核“当前发布事实”和上线阻断项 |
 | `REMEDIATION_ROADMAP.md` | 当前整改路线 | Web 核心流程已更新；历史定制段落仍需在本轮分批收口 |
@@ -64,12 +64,12 @@
 | `animation-assets.md` | `ANM/Vn`、复购、软删除和订单版本快照 |
 | `frame-asset-library.md` | 总库、批量导入、生产文件和删除/归档边界 |
 | `commerce-orders-inventory.md` | 2026-09-08 已删除已修复旧风险，校正混合购物车、冻结快照、库存预留、`SO/PU` 和支付边界 |
-| `collab-creator-revenue.md` | 联名货架已上线部分与首发关闭的收益系统 |
-| `content-users-contact.md` | 联络功能与首发关闭的社区、互动和模拟认证代码 |
+| `collab-creator-revenue.md` | 2026-08 历史调查；顶部 R1-B 注记优先，当前只保留联名货架、人工合同和线下台账 |
+| `content-users-contact.md` | 2026-08 历史调查；顶部 R1-B 注记优先，当前只保留用户基础能力与联络模块 |
 | `admin-production.md` | 2026-09-08 已按正式 `SO/PU/PB/FP`、统一扫码工作台、返工和发货代码重写；旧入口单独列为待删除 |
-| `web-frontend.md` | 前端页面与消费者地图；其中旧页面数量是历史快照，H0 当前扫描为 50 个 HTML 文件 |
+| `web-frontend.md` | 历史前端消费者地图；R1-B 后当前扫描为 46 个 HTML 文件，Vue 正式迁移以 V0 矩阵为准 |
 | `mini-program.md` | 骨架与主后端契约断点 |
-| `database-schema.md` | 当前 111 个模型、4 个枚举；旧 51 迁移是历史快照，H0 当前为 59 份且已完整重放 |
+| `database-schema.md` | 历史数据库调查；R1-B 后当前为 81 个模型、4 个枚举和 60 份迁移，已完整重放 |
 | `operations-quality.md` | 部署、监控、备份、压测和多实例任务 |
 | `../BATCH_7_LOCAL_ACCEPTANCE_AND_RECOVERY.md` | L0 本地启动、隔离空库、综合回归、测试库恢复、人工验收和未来邀请暂停流程 |
 
@@ -81,7 +81,7 @@
 |---|---|
 | `LAUNCH_READINESS.md` | 保留为上线门槛，逐项更新完成证据 |
 | `ANIMATION_DRAFT_PLAN.md` | 保留尚未实现的工程文件长期存储方案，并标注与当前 `ANM` 的边界 |
-| `REVENUE.md` | 历史产品构想；当前线上分红/牛量已决定退役，只能用于 R1-B 追溯删除范围，不得作为恢复旧实现的方案 |
+| `REVENUE.md` | 历史产品构想；旧线上分红/牛量已物理退役，不得作为恢复旧实现的方案 |
 | `USER_SCENARIOS.md` | 逐个场景对照当前首发范围，删除已经废弃的承诺 |
 
 ## E. 历史或候选删除文档
@@ -104,8 +104,8 @@
 
 1. `showcase-confirm.html` 和 `showcase-confirm-v2.html` 已从正式代码删除，但多个旧文档仍有引用。
 2. CRMEB 首发方案已经废弃，`crmeb/` 只有占位文件；旧文档仍写成待配置商城。
-3. 当前 Schema 是 111 个模型、4 个枚举；旧文档仍出现 36、37、43、44、75、98 等历史数字。
-4. 当前 `frontend/pages/` 有 58 个 HTML 页面；模块索引已校正，详细逐页清单仍待前端专项重建。
+3. R1-B 后当前 Schema 是 81 个模型、4 个枚举；其他数字均为对应日期的历史快照。
+4. 当前 `frontend/pages/` 递归扫描有 46 个 HTML 页面；旧清单与数量是历史快照，正式迁移以 V0 功能矩阵为准。
 5. Web 混合结算、冻结快照、两类商品共同预留库存和付款后生产资料已经完成；旧模块索引仍写成待整改。
 6. 材料包款生产状态、批次、打印、四岗位扫码、返工和发货已经形成首轮闭环；旧模块索引仍写成待设计。
 7. 私人定制自行筛帧首版不经过工作人员内容审核；旧路线图仍保留“全部定制先审核”的历史表述。

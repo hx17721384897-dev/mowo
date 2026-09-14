@@ -23,7 +23,6 @@ async function cleanup() {
     await prisma.operationLog.deleteMany({ where: { userId: { in: userIds } } })
     await prisma.refreshToken.deleteMany({ where: { userId: { in: userIds } } })
     await prisma.smsCode.deleteMany({ where: { OR: [{ userId: { in: userIds } }, { phone: { in: phones } }] } })
-    await prisma.creditScore.deleteMany({ where: { userId: { in: userIds } } })
     await prisma.userProfile.deleteMany({ where: { userId: { in: userIds } } })
     await prisma.user.deleteMany({ where: { id: { in: userIds } } })
   }
@@ -34,7 +33,7 @@ try {
   const user = await prisma.user.create({ data: {
     phone, role: 1, staffRole: 'PRODUCTION', privacyAgreedAt: new Date(),
     privacyPolicyVersion: 'scan-ui-test',
-    profile: { create: { nickname: `scan-ui-${runId}` } }, creditScore: { create: { score: 100 } }
+    profile: { create: { nickname: `scan-ui-${runId}` } }
   } })
   userId = user.id
   await prisma.smsCode.create({ data: {

@@ -6,9 +6,6 @@
 let currentUser = null
 let currentSection = 'profile'
 let profileDirty = false
-let privacyDirty = false
-let selectedPrivacy = 'public'
-let originalPrivacy = 'public'
 let phoneActionToken = null
 let nicknameCheckTimer = null
 let nicknameAvailable = true
@@ -56,13 +53,9 @@ async function loadAllData() {
   }
 
   try {
-    const [notifRes, privRes, pwRes] = await Promise.all([
-      apiFetch('/api/v1/account/notifications'),
-      apiFetch('/api/v1/account/privacy'),
+    const [pwRes] = await Promise.all([
       apiFetch('/api/v1/account/password-status')
     ])
-    if (notifRes.success) renderNotifications(notifRes.data)
-    if (privRes.success) renderPrivacy(privRes.data)
     if (pwRes.success)   renderPasswordStatus(pwRes.data)
   } catch (e) {
     // non-critical
@@ -71,7 +64,7 @@ async function loadAllData() {
 
 function handleHashSection() {
   const hash = location.hash.replace('#', '')
-  const valid = ['profile', 'security', 'addresses', 'notifications', 'privacy', 'account']
+  const valid = ['profile', 'security', 'addresses', 'account']
   if (valid.includes(hash)) {
     const btn = document.querySelector(`.sidebar-item[data-section="${hash}"]`)
     if (btn) switchSection(hash, btn, true)
@@ -137,19 +130,6 @@ function renderPasswordStatus(data) {
   document.getElementById('currentPasswordGroup').style.display = hasPassword ? 'block' : 'none'
 }
 
-function renderNotifications(data) {
-  document.getElementById('notifyPromo').checked = data.notifyPromo !== false
-  // order and system are always on (disabled)
-  document.getElementById('notifyOrder').checked = true
-  document.getElementById('notifySystem').checked = true
-}
-
-function renderPrivacy(data) {
-  selectedPrivacy = data.profileVisibility === 'private' ? 'private' : 'public'
-  originalPrivacy = selectedPrivacy
-  updatePrivacyUI(selectedPrivacy)
-}
-
 function renderDeactivateBanner(user) {
   if (user.staffRole || Number(user.role) > 0) {
     document.getElementById('deactivateNormal').style.display = 'none'
@@ -187,10 +167,9 @@ function renderDeactivateBanner(user) {
 // SECTION NAVIGATION
 // ─────────────────────────────────────────────────
 function switchSection(sectionId, btnEl, skipDirtyCheck = false) {
-  if (!skipDirtyCheck && (profileDirty || privacyDirty)) {
+  if (!skipDirtyCheck && profileDirty) {
     showDirtyDialog(() => {
       profileDirty = false
-      privacyDirty = false
       doSwitchSection(sectionId, btnEl)
     })
     return
@@ -217,10 +196,9 @@ function doSwitchSection(sectionId, btnEl) {
 }
 
 function goBackMobile() {
-  if (profileDirty || privacyDirty) {
+  if (profileDirty) {
     showDirtyDialog(() => {
       profileDirty = false
-      privacyDirty = false
       _doGoBack()
     })
     return
@@ -596,64 +574,6 @@ async function submitPassword() {
     } else {
       showToast(e.message || '操作失败', 'error')
     }
-  }
-}
-
-// ─────────────────────────────────────────────────
-// NOTIFICATIONS
-// ─────────────────────────────────────────────────
-async function saveNotifications() {
-  const promo = document.getElementById('notifyPromo').checked
-
-  try {
-    const res = await apiFetch('/api/v1/account/notifications', {
-      method: 'PUT',
-      body: JSON.stringify({ promo })
-    })
-    if (!res.success) throw new Error(res.message)
-    showToast('通知设置已保存', 'success')
-  } catch (e) {
-    showToast(e.message || '保存失败', 'error')
-  }
-}
-
-// ─────────────────────────────────────────────────
-// PRIVACY
-// ─────────────────────────────────────────────────
-function selectPrivacy(value) {
-  selectedPrivacy = value
-  updatePrivacyUI(value)
-  privacyDirty = (value !== originalPrivacy)
-  document.getElementById('savePrivacyBtn').disabled = !privacyDirty
-}
-
-function updatePrivacyUI(value) {
-  document.querySelectorAll('.privacy-option-row').forEach(row => {
-    row.classList.toggle('selected', row.dataset.value === value)
-  })
-}
-
-async function savePrivacy() {
-  if (selectedPrivacy === 'private') {
-    const confirmed = await showConfirmDialog(
-      '设为私密主页',
-      '将主页设为私密后，您的作品将无法被其他用户发现，是否继续？'
-    )
-    if (!confirmed) return
-  }
-
-  try {
-    const res = await apiFetch('/api/v1/account/privacy', {
-      method: 'PUT',
-      body: JSON.stringify({ profileVisibility: selectedPrivacy })
-    })
-    if (!res.success) throw new Error(res.message)
-    originalPrivacy = selectedPrivacy
-    privacyDirty = false
-    document.getElementById('savePrivacyBtn').disabled = true
-    showToast('隐私设置已保存', 'success')
-  } catch (e) {
-    showToast(e.message || '保存失败', 'error')
   }
 }
 

@@ -157,48 +157,6 @@ input,textarea,select{font-family:var(--font);}
 }
 .gender-option:checked + .gender-label{background:var(--black);color:var(--white);border-color:var(--black);}
 
-/* ── TOGGLE SWITCH ── */
-.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--gray1);}
-.toggle-row:last-child{border-bottom:none;padding-bottom:0;}
-.toggle-row:first-child{padding-top:0;}
-.toggle-info{flex:1;}
-.toggle-label{font-weight:800;font-size:14px;}
-.toggle-desc{font-size:12px;font-weight:700;color:var(--gray3);margin-top:3px;}
-.toggle-switch{position:relative;width:44px;height:24px;flex-shrink:0;margin-left:16px;}
-.toggle-switch input{opacity:0;width:0;height:0;position:absolute;}
-.toggle-track{
-  position:absolute;inset:0;border-radius:999px;
-  background:var(--gray1);cursor:pointer;transition:background .2s;
-}
-.toggle-switch input:checked ~ .toggle-track{background:var(--black);}
-.toggle-thumb{
-  position:absolute;top:3px;left:3px;
-  width:18px;height:18px;border-radius:50%;
-  background:var(--white);transition:transform .2s;
-  pointer-events:none;
-}
-.toggle-switch input:checked ~ .toggle-track ~ .toggle-thumb,
-.toggle-switch input:checked + .toggle-track + .toggle-thumb{transform:translateX(20px);}
-.toggle-switch input:disabled ~ .toggle-track{opacity:.5;cursor:not-allowed;}
-.toggle-locked-note{font-size:11px;color:var(--gray3);font-weight:700;margin-top:4px;}
-
-/* ── PRIVACY RADIO ── */
-.privacy-options{display:flex;flex-direction:column;gap:10px;}
-.privacy-option-row{
-  display:flex;align-items:center;gap:14px;padding:14px 16px;
-  border-radius:14px;border:1.5px solid var(--gray1);cursor:pointer;transition:border-color .2s;
-}
-.privacy-option-row:hover{border-color:var(--gray2);}
-.privacy-option-row.selected{border-color:var(--black);background:rgba(17,17,16,.03);}
-.privacy-radio-dot{
-  width:18px;height:18px;border-radius:50%;border:2px solid var(--gray1);
-  flex-shrink:0;transition:all .2s;display:flex;align-items:center;justify-content:center;
-}
-.privacy-option-row.selected .privacy-radio-dot{border-color:var(--black);background:var(--black);}
-.privacy-radio-dot::after{content:'';width:7px;height:7px;border-radius:50%;background:var(--white);display:block;}
-.privacy-option-title{font-weight:800;font-size:14px;}
-.privacy-option-desc{font-size:12px;font-weight:700;color:var(--gray3);margin-top:2px;}
-
 /* ── SECURITY ROWS ── */
 .security-row{display:flex;align-items:center;justify-content:space-between;padding:18px 0;border-bottom:1px solid var(--gray1);}
 .security-row:last-child{border-bottom:none;padding-bottom:0;}
@@ -503,12 +461,6 @@ input,textarea,select{font-family:var(--font);}
       <button class="sidebar-item" data-section="addresses" onclick="switchSection('addresses', this)">
         <span class="sidebar-icon">📍</span>收货地址
       </button>
-      <button class="sidebar-item" data-section="notifications" onclick="switchSection('notifications', this)">
-        <span class="sidebar-icon">🔔</span>通知设置
-      </button>
-      <button class="sidebar-item" data-section="privacy" onclick="switchSection('privacy', this)">
-        <span class="sidebar-icon">🛡️</span>隐私设置
-      </button>
       <button class="sidebar-item sidebar-danger" data-section="account" onclick="switchSection('account', this)">
         <span class="sidebar-icon">⚠️</span>账号注销
       </button>
@@ -600,80 +552,6 @@ input,textarea,select{font-family:var(--font);}
               <div class="security-row-value" id="passwordStatus">加载中...</div>
             </div>
             <button class="btn-action" id="passwordBtn" onclick="openPasswordModal()">设置</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── 通知设置 ── -->
-      <div class="settings-section" id="section-notifications">
-        <div class="s-card">
-          <div class="s-card-title">站内信通知</div>
-
-          <div class="toggle-row">
-            <div class="toggle-info">
-              <div class="toggle-label">订单通知</div>
-              <div class="toggle-desc">订单状态变更（支付成功、发货、退款等）</div>
-              <div class="toggle-locked-note">⚠️ 该类通知关系您的订单权益，无法关闭</div>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" id="notifyOrder" disabled checked>
-              <div class="toggle-track"></div>
-              <div class="toggle-thumb"></div>
-            </label>
-          </div>
-
-          <div class="toggle-row">
-            <div class="toggle-info">
-              <div class="toggle-label">系统通知</div>
-              <div class="toggle-desc">平台公告、账号异常提醒</div>
-              <div class="toggle-locked-note">⚠️ 该类通知关系您的账号安全，无法关闭</div>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" id="notifySystem" disabled checked>
-              <div class="toggle-track"></div>
-              <div class="toggle-thumb"></div>
-            </label>
-          </div>
-
-          <div class="toggle-row">
-            <div class="toggle-info">
-              <div class="toggle-label">推广活动</div>
-              <div class="toggle-desc">促销、活动信息</div>
-            </div>
-            <label class="toggle-switch">
-              <input type="checkbox" id="notifyPromo" onchange="saveNotifications()">
-              <div class="toggle-track"></div>
-              <div class="toggle-thumb"></div>
-            </label>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── 隐私设置 ── -->
-      <div class="settings-section" id="section-privacy">
-        <div class="s-card">
-          <div class="s-card-title">个人主页可见性</div>
-          <p style="font-size:13px;font-weight:700;color:var(--gray3);margin-bottom:20px;">控制谁可以查看您的个人主页和作品</p>
-
-          <div class="privacy-options" id="privacyOptions">
-            <div class="privacy-option-row selected" data-value="public" onclick="selectPrivacy('public')">
-              <div class="privacy-radio-dot"></div>
-              <div>
-                <div class="privacy-option-title">🌍 公开</div>
-                <div class="privacy-option-desc">所有人可访问您的主页和作品</div>
-              </div>
-            </div>
-            <div class="privacy-option-row" data-value="private" onclick="selectPrivacy('private')">
-              <div class="privacy-radio-dot"></div>
-              <div>
-                <div class="privacy-option-title">🔒 仅自己可见</div>
-                <div class="privacy-option-desc">主页完全私密，他人访问显示「该用户已设为私密」</div>
-              </div>
-            </div>
-          </div>
-
-          <div style="margin-top:20px;">
-            <button class="btn-primary" onclick="savePrivacy()" id="savePrivacyBtn" disabled>保存设置</button>
           </div>
         </div>
       </div>

@@ -44,7 +44,6 @@ export function signToken(fastify, user) {
     {
       userId:        user.id,
       phone:         user.phone,
-      certifyStatus: user.certifyStatus,
       role:          user.role ?? 0
     },
     { expiresIn: '7d' }

@@ -55,7 +55,6 @@ async function cleanup() {
     await prisma.refreshToken.deleteMany({ where: { userId } })
     await prisma.actionToken.deleteMany({ where: { userId } })
     await prisma.smsCode.deleteMany({ where: { userId } })
-    await prisma.creditScore.deleteMany({ where: { userId } })
     await prisma.userProfile.deleteMany({ where: { userId } })
     await prisma.user.deleteMany({ where: { id: userId } })
     await Promise.all(privateFiles.map((file) => fs.rm(new URL(`../storage/private/${file.objectKey}`, import.meta.url), { force: true }).catch(() => {})))
@@ -69,8 +68,7 @@ try {
       phone,
       privacyAgreedAt: new Date(),
       privacyPolicyVersion: 'settings-ui-test',
-      profile: { create: { nickname: `settings-${runId}` } },
-      creditScore: { create: { score: 100 } }
+      profile: { create: { nickname: `settings-${runId}` } }
     }
   })
   userId = user.id
@@ -161,29 +159,6 @@ try {
   }, { token: refreshedLogin.data.accessToken, apiBase })
   await page.goto(`${webBase}/settings.html`, { waitUntil: 'networkidle' })
   await page.locator('#nicknameInput').waitFor({ timeout: 10000 })
-
-  await page.locator('.sidebar-item[data-section="notifications"]').click()
-  await page.locator('#section-notifications.active').waitFor()
-  // The styled toggle intentionally hides its native checkbox.
-  await page.locator('#notifyPromo').evaluate((element) => element.click())
-  await waitForToast(page, '通知设置已保存')
-  const afterNotifications = await prisma.userProfile.findUnique({ where: { userId } })
-  if (afterNotifications?.notifyPromo !== false) throw new Error('notification preference was not persisted')
-  console.log('PASS settings browser saves notification preferences')
-
-  await page.locator('.sidebar-item[data-section="privacy"]').click()
-  await page.locator('#section-privacy.active').waitFor()
-  if (await page.locator('.privacy-option-row[data-value="followers"]').count()) {
-    throw new Error('retired follower visibility option is still rendered')
-  }
-  await page.locator('.privacy-option-row[data-value="private"]').click()
-  await page.locator('#savePrivacyBtn').click()
-  await page.locator('#confirmDialog.open').waitFor()
-  await page.locator('#confirmOk').click()
-  await waitForToast(page, '隐私设置已保存')
-  const afterPrivacy = await prisma.userProfile.findUnique({ where: { userId } })
-  if (afterPrivacy?.profileVisibility !== 'private') throw new Error('privacy preference was not persisted')
-  console.log('PASS settings browser removes follower visibility and saves private visibility')
 
   await page.locator('.sidebar-item[data-section="addresses"]').click()
   await page.locator('#section-addresses.active').waitFor()

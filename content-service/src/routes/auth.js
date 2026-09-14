@@ -61,7 +61,7 @@ export default async function authRoutes(fastify) {
   // GET /api/auth/me 获取当前登录用户信息
   // ─────────────────────────────────────────
   // 需要登录才能访问（preHandler: fastify.authenticate）
-  // 返回用户完整的主页信息，包括信用分
+  // 返回当前账户的兼容基础信息。
   fastify.get('/me', {
     preHandler: fastify.authenticate
   }, async (request, reply) => {
@@ -69,11 +69,7 @@ export default async function authRoutes(fastify) {
 
     const user = await fastify.prisma.user.findUnique({
       where: { id: userId },
-      include: {
-        profile: true,
-        creatorProfile: true,
-        creditScore: true
-      }
+      include: { profile: true }
     })
 
     if (!user) {
@@ -86,11 +82,8 @@ export default async function authRoutes(fastify) {
         id: user.id,
         phone: user.phone,
         role: user.role,
-        certifyStatus: user.certifyStatus,
         isBanned: user.isBanned,
-        profile: user.profile,
-        creatorProfile: user.creatorProfile,
-        creditScore: user.creditScore?.score || 100
+        profile: user.profile
       }
     })
   })

@@ -7,7 +7,7 @@ let skipped = 0
 
 try {
   const works = await prisma.collabWork.findMany({
-    where: { animationAssetId: null, isRevision: false }, orderBy: { createdAt: 'asc' }
+    where: { animationAssetId: null }, orderBy: { createdAt: 'asc' }
   })
   for (const work of works) {
     const product = await prisma.customProduct.findFirst({
@@ -18,19 +18,6 @@ try {
       const current = await tx.collabWork.findUnique({ where: { id: work.id } })
       if (!current || current.animationAssetId) return current
       return linkCollabWorkToAnimation(tx, current, product || {})
-    })
-    if (result?.animationAssetId) linked += 1
-    else skipped += 1
-  }
-
-  const revisions = await prisma.collabWork.findMany({
-    where: { animationAssetId: null, isRevision: true }, orderBy: { createdAt: 'asc' }
-  })
-  for (const revision of revisions) {
-    const result = await prisma.$transaction(async tx => {
-      const current = await tx.collabWork.findUnique({ where: { id: revision.id } })
-      if (!current || current.animationAssetId) return current
-      return linkCollabWorkToAnimation(tx, current)
     })
     if (result?.animationAssetId) linked += 1
     else skipped += 1

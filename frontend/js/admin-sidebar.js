@@ -89,10 +89,10 @@
   ];
 
   const STAFF_GROUPS = {
-    OWNER: ['production', 'assets', 'customization', 'product', 'collab', 'creator', 'ops', 'users', 'system'],
+    OWNER: ['production', 'assets', 'customization', 'product', 'collab', 'ops', 'users', 'system'],
     CUSTOMER_SERVICE: ['customization', 'product', 'ops', 'users'],
     PRODUCTION: ['production', 'assets', 'customization', 'product'],
-    COLLAB_OPS: ['assets', 'collab', 'creator']
+    COLLAB_OPS: ['assets', 'collab']
   };
 
   const STAFF_HIDDEN_ITEMS = {

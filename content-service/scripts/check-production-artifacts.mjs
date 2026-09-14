@@ -94,7 +94,7 @@ try {
   const phone = `194${runId.slice(-8)}`
   const user = await prisma.user.create({ data: {
     phone, role: 3, staffRole: 'OWNER', privacyAgreedAt: new Date(), privacyPolicyVersion: 'print-artifact-test',
-    profile: { create: { nickname: `artifact-owner-${runId}` } }, creditScore: { create: { score: 100 } }
+    profile: { create: { nickname: `artifact-owner-${runId}` } }
   } })
   userId = user.id
   await prisma.smsCode.create({ data: { userId, phone, code: '123456', purpose: 'LOGIN', expiresAt: new Date(Date.now() + 300000) } })
@@ -302,7 +302,6 @@ try {
     await prisma.operationLog.deleteMany({ where: { userId } }).catch(() => {})
     await prisma.auditLog.deleteMany({ where: { userId } }).catch(() => {})
     await prisma.userProfile.deleteMany({ where: { userId } }).catch(() => {})
-    await prisma.creditScore.deleteMany({ where: { userId } }).catch(() => {})
     await prisma.user.deleteMany({ where: { id: userId } }).catch(() => {})
   }
   for (const key of [...new Set(physicalKeys)]) {

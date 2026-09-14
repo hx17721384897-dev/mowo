@@ -150,10 +150,6 @@ export default async function paymentRoutes(fastify) {
             }
           })
 
-          // 分红系统首发关闭；未来启用时必须按每件生产任务建立成交快照。
-          if (fastify.config.features.creatorFinance && item.itemType === 'MARKET' && newOrder) {
-            fastify.log.warn('creatorFinance 已开启，但新订单结构的联名分红快照尚未启用')
-          }
         }
 
         // CUSTOM 品状态 → ordered

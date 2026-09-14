@@ -44,7 +44,6 @@ async function createLogin(label, index, staffRole = null, role = 0) {
     phone, role, staffRole,
     privacyAgreedAt: new Date(), privacyPolicyVersion: 'custom-flow-test',
     profile: { create: { nickname: `customization-test-${label}` } },
-    creditScore: { create: { score: 100 } }
   } })
   users.push({ id: user.id, phone })
   await prisma.smsCode.create({ data: {
@@ -126,7 +125,6 @@ async function cleanup() {
     await prisma.privateFile.deleteMany({ where: { OR: [{ ownerUserId: { in: ids } }, { objectKey: { in: keys } }] } })
     await prisma.refreshToken.deleteMany({ where: { userId: { in: ids } } })
     await prisma.smsCode.deleteMany({ where: { phone: { in: phones } } })
-    await prisma.creditScore.deleteMany({ where: { userId: { in: ids } } })
     await prisma.userProfile.deleteMany({ where: { userId: { in: ids } } })
     await prisma.user.deleteMany({ where: { id: { in: ids } } })
   }

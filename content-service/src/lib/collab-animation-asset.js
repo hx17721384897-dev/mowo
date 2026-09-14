@@ -17,15 +17,6 @@ function statusFields(status) {
 }
 
 export async function linkCollabWorkToAnimation(tx, work, options = {}) {
-  if (work.isRevision && work.originalWorkId) {
-    const original = await tx.collabWork.findUnique({ where: { id: work.originalWorkId }, select: { animationAssetId: true, animationVersionId: true } })
-    if (original?.animationAssetId && original.animationVersionId) {
-      return tx.collabWork.update({ where: { id: work.id }, data: {
-        animationAssetId: original.animationAssetId, animationVersionId: original.animationVersionId
-      } })
-    }
-  }
-
   if (options.animationAssetId && options.animationVersionId) {
     const version = await tx.animationAssetVersion.findFirst({ where: {
       id: options.animationVersionId, assetId: options.animationAssetId,

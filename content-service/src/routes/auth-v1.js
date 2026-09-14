@@ -38,7 +38,7 @@ export async function authV1Routes(fastify) {
     }
 
     const validPurposes = ['LOGIN', 'REGISTER', 'RESET_PASSWORD', 'BIND_PHONE', 'DEACTIVATE',
-      'STEP_UP_WITHDRAW', 'STEP_UP_CHANGE_PAYOUT', 'STEP_UP_CHANGE_PASSWORD']
+      'STEP_UP_CHANGE_PASSWORD']
     if (!validPurposes.includes(purpose)) {
       return reply.code(400).send({ success: false, message: '无效的短信用途' })
     }
@@ -167,13 +167,11 @@ export async function authV1Routes(fastify) {
         const newUser = await tx.user.create({
           data: {
             phone,
-            certifyStatus:       0,
             privacyAgreedAt:     new Date(),
             privacyPolicyVersion: fastify.config.privacyVersion
           }
         })
         await tx.userProfile.create({ data: { userId: newUser.id, nickname } })
-        await tx.creditScore.create({ data: { userId: newUser.id, score: 100 } })
         await tx.consentRecord.createMany({
           data: [
             {

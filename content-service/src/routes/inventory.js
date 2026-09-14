@@ -684,7 +684,7 @@ export default async function inventoryRoutes(fastify) {
       const token = req.headers.authorization?.replace('Bearer ', '') || ''
       fastify.jwt.verify(token)
       const user = fastify.jwt.decode(token)
-      if (!user || (user.role ?? user.certifyStatus) < 2 && !user.role)
+      if (!user || !user.role)
         return reply.code(403).send({ success: false, message: '权限不足' })
       req.user = user
       done()

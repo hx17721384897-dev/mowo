@@ -87,8 +87,8 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
 
 /* 联名作品表格 */
 .table-wrap{background:var(--white);border-radius:16px;border:1.5px solid var(--gray1);overflow:hidden;}
-.table-header{display:grid;grid-template-columns:200px 1fr 120px 90px 110px 140px;padding:12px 16px;background:var(--cream);border-bottom:1.5px solid var(--gray1);font-weight:800;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gray3);}
-.work-row{display:grid;grid-template-columns:200px 1fr 120px 90px 110px 140px;padding:14px 16px;border-bottom:1px solid var(--gray1);align-items:center;transition:background .15s;cursor:pointer;}
+.table-header{display:grid;grid-template-columns:200px 1fr 90px 110px 140px;padding:12px 16px;background:var(--cream);border-bottom:1.5px solid var(--gray1);font-weight:800;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gray3);}
+.work-row{display:grid;grid-template-columns:200px 1fr 90px 110px 140px;padding:14px 16px;border-bottom:1px solid var(--gray1);align-items:center;transition:background .15s;cursor:pointer;}
 .work-row:last-child{border-bottom:none;}
 .work-row:hover{background:var(--cream);}
 
@@ -110,12 +110,6 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
 .status-approved{background:#E8F5E9;color:#2E7D32;}
 .status-rejected{background:#FFE8E3;color:#C0320A;}
 
-/* 分红率标签 */
-.rate-badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:6px;font-weight:900;font-size:12px;background:#FDF9C6;color:#7A7000;}
-
-/* 新手/独家/批次徽章 */
-.badge-newbie{background:#E3F2FD;color:#1565C0;font-weight:800;font-size:10px;padding:2px 6px;border-radius:4px;margin-left:4px;}
-.badge-exclusive{background:#FCE4EC;color:#C62828;font-weight:800;font-size:10px;padding:2px 6px;border-radius:4px;margin-left:4px;}
 /* 批次分组行 */
 .batch-header{display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--cream);border:1px solid var(--gray1);border-radius:10px;margin-bottom:4px;margin-top:12px;}
 .batch-header:first-child{margin-top:0;}
@@ -159,12 +153,6 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
 .frame-thumb img{width:100%;height:100%;object-fit:cover;}
 .frame-thumb-num{position:absolute;bottom:3px;right:3px;background:rgba(0,0,0,.6);color:#fff;font-weight:800;font-size:9px;padding:1px 4px;border-radius:3px;}
 
-/* 分红率明细 */
-.rate-breakdown{background:var(--cream);border-radius:12px;padding:14px 16px;}
-.rate-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--gray1);font-weight:700;font-size:13px;}
-.rate-row:last-child{border-bottom:none;font-weight:900;color:var(--black);}
-.rate-row-label{color:var(--gray3);}
-
 /* 审核操作区 */
 .review-actions{display:flex;gap:10px;}
 .review-actions .btn{flex:1;height:46px;}
@@ -172,16 +160,6 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
 .reject-reason-wrap.show{display:block;}
 .reject-textarea{width:100%;min-height:80px;border:1.5px solid var(--gray1);border-radius:10px;padding:12px 14px;font-family:var(--font);font-weight:700;font-size:13px;color:var(--black);outline:none;resize:vertical;transition:border-color .2s;margin-top:10px;}
 .reject-textarea:focus{border-color:var(--black);}
-
-/* 修改版 diff */
-.diff-block{background:#FFFDE7;border:1px solid #FFE082;border-radius:14px;padding:14px 16px;margin-bottom:16px;}
-.diff-block-title{font-weight:900;font-size:12px;color:#7a5a00;margin-bottom:10px;letter-spacing:.04em;}
-.diff-row{display:flex;align-items:baseline;gap:8px;padding:5px 0;border-bottom:1px solid rgba(245,230,66,.3);font-size:12px;font-weight:700;flex-wrap:wrap;}
-.diff-row:last-child{border-bottom:none;}
-.diff-label{width:70px;font-size:11px;font-weight:800;color:#9a7a00;flex-shrink:0;}
-.diff-old{color:#C0320A;text-decoration:line-through;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.diff-arrow{color:var(--gray3);}
-.diff-new{color:#2E7D32;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
 /* 空状态 */
 .empty-state{padding:60px 20px;text-align:center;}
@@ -209,7 +187,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
   .topbar{padding:0 16px;}
   .table-header{display:none;}
   .work-row{grid-template-columns:1fr auto;gap:8px;}
-  .col-creator,.col-rate,.col-date{display:none;}
+  .col-creator,.col-date{display:none;}
   .stats-grid{grid-template-columns:repeat(3,1fr);}
 }
 
@@ -280,7 +258,6 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
       <div class="table-header">
         <div>作品</div>
         <div class="col-creator">创作者</div>
-        <div class="col-rate">预估分红率</div>
         <div>状态</div>
         <div class="col-date">申请时间</div>
         <div>操作</div>
@@ -309,7 +286,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
 <div class="modal-overlay" id="approveModal">
   <div class="modal">
     <p class="modal-title">确认审核通过</p>
-    <p class="modal-sub" id="approveModalSub">系统将自动计算分红率并快照，通过后创作者可在联名库中展示。</p>
+    <p class="modal-sub" id="approveModalSub">通过后作品可进入联名商品配置流程，合作条款以内部合同记录为准。</p>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeApproveModal()">取消</button>
       <button class="btn btn-green" onclick="submitApprove()">确认通过</button>
@@ -392,10 +369,7 @@ async function loadWorks(page = 1) {
 // ══ 渲染单行 ══
 function renderWorkRow(w, inBatch = false) {
   const createdAt  = new Date(w.createdAt).toLocaleDateString('zh-CN', { month:'2-digit', day:'2-digit', year:'2-digit' })
-  const rateText   = w.revenueRatePreview != null ? `${(w.revenueRatePreview * 100).toFixed(1)}%` : '—'
   const statusHtml = statusBadge(w.status)
-  const newbieHtml = w.isNewbieWork ? '<span class="badge-newbie">新手</span>' : ''
-  const exclHtml   = w.creatorLevel?.isExclusive ? '<span class="badge-exclusive">独家</span>' : ''
   const creatorName = w.creator?.nickname || '创作者'
   const creatorInit = creatorName[0].toUpperCase()
   return `
@@ -403,7 +377,7 @@ function renderWorkRow(w, inBatch = false) {
     <div class="work-cover-wrap">
       <div class="work-cover" id="cover-${w.id}">📦</div>
       <div>
-        <div class="work-title">${esc(w.title)}${newbieHtml}${exclHtml}${w.isRevision ? '<span style="background:#FFF8E1;color:#B8860B;font-weight:900;font-size:10px;padding:2px 7px;border-radius:4px;margin-left:6px;">修改版</span>' : ''}</div>
+        <div class="work-title">${esc(w.title)}</div>
         <div class="work-order">${esc(w.orderNo || '')}</div>
       </div>
     </div>
@@ -413,7 +387,6 @@ function renderWorkRow(w, inBatch = false) {
         <div class="creator-name">${esc(creatorName)}</div>
       </div>
     </div>
-    <div class="col-rate"><span class="rate-badge">${rateText}</span></div>
     <div>${statusHtml}</div>
     <div class="col-date" style="font-weight:700;font-size:11px;color:var(--gray3);">${createdAt}</div>
     <div style="display:flex;gap:6px;">
@@ -427,7 +400,7 @@ function renderWorkRow(w, inBatch = false) {
   </div>`
 }
 
-// ══ 渲染表格（支持批次分组）══
+// ══ 渲染表格 ══
 function renderTable(works) {
   if (!works.length) {
     document.getElementById('tableBody').innerHTML =
@@ -435,38 +408,7 @@ function renderTable(works) {
     return
   }
 
-  // 按 submissionBatchId 分组（null 各自独立）
-  const groups = []
-  const batchMap = {}
-  works.forEach(w => {
-    const bid = w.submissionBatchId
-    if (!bid) {
-      groups.push({ batchId: null, works: [w] })
-    } else {
-      if (!batchMap[bid]) { batchMap[bid] = { batchId: bid, works: [] }; groups.push(batchMap[bid]) }
-      batchMap[bid].works.push(w)
-    }
-  })
-
-  let html = ''
-  for (const g of groups) {
-    if (g.batchId && g.works.length > 1) {
-      // 批次标题行
-      const pendingInBatch = g.works.filter(w => w.status === 'pending')
-      const batchIds = g.works.map(w => `'${w.id}'`).join(',')
-      const creatorName = g.works[0]?.creator?.nickname || '创作者'
-      html += `<div class="batch-header">
-        <span class="batch-tag">批次提交</span>
-        <span class="batch-info">${esc(creatorName)} · 共 ${g.works.length} 款</span>
-        ${pendingInBatch.length > 0 ? `<button class="batch-approve-all" onclick="batchApproveAll([${batchIds}])">全部通过（${pendingInBatch.length}款）</button>` : ''}
-      </div>`
-      g.works.forEach(w => { html += renderWorkRow(w, true) })
-    } else {
-      html += renderWorkRow(g.works[0], false)
-    }
-  }
-
-  document.getElementById('tableBody').innerHTML = html
+  document.getElementById('tableBody').innerHTML = works.map(w => renderWorkRow(w)).join('')
   loadCovers(works)
 }
 
@@ -536,10 +478,6 @@ function renderDrawer(w) {
 
   const createdAt    = new Date(w.createdAt).toLocaleString('zh-CN')
   const approvedAt   = w.approvedAt ? new Date(w.approvedAt).toLocaleString('zh-CN') : '—'
-  const newbieExpire = w.newbieExpiredAt ? new Date(w.newbieExpiredAt).toLocaleDateString('zh-CN') : '—'
-  const rateText     = w.revenueRatePreview != null
-    ? `${(w.revenueRatePreview * 100).toFixed(1)}%`
-    : (w.revenueRate ? `${(w.revenueRate * 100).toFixed(1)}%` : '—')
 
   // 帧图预览
   const frameArr  = Array.isArray(w.animationFrames) ? w.animationFrames : []
@@ -553,52 +491,7 @@ function renderDrawer(w) {
       </div>`
     : '<div style="color:var(--gray3);font-size:13px;font-weight:700;">暂无帧图预览</div>'
 
-  // 分红率说明
-  const cl       = w.creatorLevel || {}
-  const bullMap  = { 1:'1牛能', 2:'2牛能', 3:'3牛能', 4:'4牛能', 5:'5牛能' }
-  const rateBreakdownHtml = `
-    <div class="rate-breakdown">
-      <div class="rate-row">
-        <span class="rate-row-label">牛能等级</span>
-        <span>${bullMap[cl.bullEnergy] || '1牛能'}</span>
-      </div>
-      <div class="rate-row">
-        <span class="rate-row-label">独家协议</span>
-        <span>${cl.isExclusive ? '✅ 已签（+8%）' : '未签'}</span>
-      </div>
-      <div class="rate-row">
-        <span class="rate-row-label">新手作品</span>
-        <span>${w.isNewbieWork ? `✅ 是（新手期至 ${newbieExpire}）` : '否'}</span>
-      </div>
-      <div class="rate-row">
-        <span class="rate-row-label">参与活动</span>
-        <span>${w.activityId ? '✅ 是' : '未参与'}</span>
-      </div>
-      <div class="rate-row">
-        <span class="rate-row-label">预估分红率</span>
-        <span style="color:var(--accent-o);font-size:16px;">${rateText}</span>
-      </div>
-    </div>`
-
-  // 修改版 diff 区块
-  let diffHtml = ''
-  if (w.isRevision && w.changeLog) {
-    let cl = {}
-    try { cl = JSON.parse(w.changeLog) } catch(e) {}
-    const rows = []
-    if (cl.title)        rows.push(`<div class="diff-row"><span class="diff-label">标题</span><span class="diff-old">${esc(cl.title.old)}</span><span class="diff-arrow">→</span><span class="diff-new">${esc(cl.title.new)}</span></div>`)
-    if (cl.description !== undefined) rows.push(`<div class="diff-row"><span class="diff-label">描述</span><span class="diff-old">${esc(cl.description?.old||'（无）')}</span><span class="diff-arrow">→</span><span class="diff-new">${esc(cl.description?.new||'（无）')}</span></div>`)
-    if (cl.supportedSkus) rows.push(`<div class="diff-row"><span class="diff-label">规格数</span><span class="diff-old">${cl.supportedSkus.old?.length||0} 个</span><span class="diff-arrow">→</span><span class="diff-new">${cl.supportedSkus.new?.length||0} 个</span></div>`)
-    if (rows.length) {
-      diffHtml = `<div class="diff-block">
-        <div class="diff-block-title">📝 修改版 — 变更内容对比</div>
-        ${rows.join('')}
-      </div>`
-    }
-  }
-
   document.getElementById('drawerBody').innerHTML = `
-    ${diffHtml}
     <div class="detail-section">
       <div class="detail-section-title">作品信息</div>
       <div class="detail-grid">
@@ -639,16 +532,7 @@ function renderDrawer(w) {
           <div class="detail-item-label">创作者</div>
           <div class="detail-item-val">${esc(w.creator?.nickname || '—')}</div>
         </div>
-        <div>
-          <div class="detail-item-label">独家协议</div>
-          <div class="detail-item-val">${cl.isExclusive ? '✅ 已签' : '未签'}</div>
-        </div>
       </div>
-    </div>
-
-    <div class="detail-section">
-      <div class="detail-section-title">分红率计算</div>
-      ${rateBreakdownHtml}
     </div>
 
     <div class="detail-section">
@@ -787,7 +671,7 @@ async function submitApprove() {
     })
     const json = await res.json()
     if (json.success) {
-      showToast(`✓ 已通过，分红率 ${(json.data.revenueRate * 100).toFixed(1)}%`)
+      showToast('✓ 已通过')
       closeApproveModal()
       closeDrawer()
       await Promise.all([loadStats(), loadWorks(_curPage)])

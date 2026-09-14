@@ -41,7 +41,6 @@ export async function getCollabSaleReadiness(prisma, workId) {
     select: {
       id: true,
       status: true,
-      isRevision: true,
       coverUrl: true,
       storefrontTitle: true,
       description: true,
@@ -67,7 +66,6 @@ export async function getCollabSaleReadiness(prisma, workId) {
   const baseFrameCount = work.animationVersion?.baseFrameCount || fallbackFrameCount
   const blockers = []
   if (work.status !== 'approved') blockers.push('作品尚未审核通过')
-  if (work.isRevision) blockers.push('修改中的影子版本不能上架')
   if (!work.animationAssetId || !work.animationVersionId) blockers.push('尚未关联正式动画资产与版本')
   if (!baseFrameCount) blockers.push('没有可用的核心帧')
   const effectiveCover = work.storefrontCoverUrl || work.coverUrl

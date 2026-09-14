@@ -42,95 +42,6 @@ export default async function adminRoutes(fastify) {
     }
   }
 
-  // ── 辅助函数：订单确认收货时处理联名分红 ──
-  // 在 adminRoutes 函数内部定义，供状态更新接口调用
-  async function handleReceivedOrder(tx, order) {
-    if (!fastify.config.features.creatorFinance) return
-    // 只处理联名订单
-    if (order.sourceType !== 'collab' || !order.collabWorkId) return
-
-    // 查联名作品信息（获取分红率）
-    const collabWork = await tx.collabWork.findUnique({
-      where: { id: order.collabWorkId },
-      select: { id: true, creatorId: true, revenueRate: true, status: true }
-    })
-    if (!collabWork || collabWork.status !== 'approved') return
-
-    // 防重复：检查该订单是否已有 collab_order 记录
-    const existing = await tx.collabOrder.findFirst({
-      where: { orderId: order.id }
-    })
-    if (existing) return
-
-    // 计算分红金额
-    // salePrice 用 SKU 价格，如果取不到就用0（后续完善）
-    const sku = order.skuId ? await tx.machineModelSku.findUnique({
-      where: { id: order.skuId },
-      select: { price: true }
-    }) : null
-    const salePrice     = sku ? Number(sku.price) : 0
-    const revenueRate   = collabWork.revenueRate || 0
-    const revenueAmount = +(salePrice * revenueRate).toFixed(4)
-    const reserveRate   = 0.15
-    const reserveAmount = +(revenueAmount * reserveRate).toFixed(4)
-    const payoutAmount  = +(revenueAmount - reserveAmount).toFixed(4)
-    const coolingEndAt  = new Date(Date.now() + 15 * 24 * 3600 * 1000) // 15天后
-    const now           = new Date()
-
-    // 1. 创建 collab_order 记录，状态为冷却中
-    const collabOrder = await tx.collabOrder.create({
-      data: {
-        orderId:         order.id,
-        collabWorkId:    order.collabWorkId,
-        creatorId:       collabWork.creatorId,
-        salePrice,
-        revenueRate,
-        revenueAmount,
-        reserveRate,
-        reserveAmount,
-        payoutAmount,
-        revenueStatus:   'cooling',   // 确认收货 → 冷却中
-        coolingEndAt,
-        settlementStatus: 'pending'
-      }
-    })
-
-    // 2. 写储备金扣入记录
-    // upsert creator_reserve（如果没有则自动创建）
-    const reserve = await tx.creatorReserve.upsert({
-      where:  { creatorId: collabWork.creatorId },
-      create: {
-        creatorId:        collabWork.creatorId,
-        totalReserved:    reserveAmount,
-        frozenAmount:     0,
-        releasableAmount: reserveAmount,
-        releasedAmount:   0,
-        nextReleaseAt:    new Date(coolingEndAt.getTime() + 75 * 24 * 3600 * 1000), // 冷却15天+储备金90天
-        nextReleaseAmount: reserveAmount
-      },
-      update: {
-        totalReserved:    { increment: reserveAmount },
-        releasableAmount: { increment: reserveAmount }
-      }
-    })
-
-    // 写储备金流水
-    if (reserveAmount > 0) {
-      await tx.reserveLog.create({
-        data: {
-          creatorId:     collabWork.creatorId,
-          reserveId:     reserve.id,
-          collabOrderId: collabOrder.id,
-          actionType:    'deduct',
-          amount:        reserveAmount,
-          balanceAfter:  reserve.releasableAmount,
-          releaseAt:     new Date(coolingEndAt.getTime() + 75 * 24 * 3600 * 1000), // 收货+90天解冻
-          note:          `订单 ${order.orderNo} 联名分红储备金`
-        }
-      })
-    }
-  }
-
   // GET /api/admin/stats — 订单统计
   fastify.get('/stats', {
     preHandler: [fastify.requireRole(2)]
@@ -388,12 +299,7 @@ export default async function adminRoutes(fastify) {
           : { status }
       })
 
-      // 2. 订单变为「已收货」时，触发联名分红逻辑
-      if (status === 'received' && oldStatus !== 'received') {
-        await handleReceivedOrder(tx, order)
-      }
-
-      // 3. 写审计日志
+      // 2. 写审计日志
       try {
         await tx.operationLog.create({
           data: {
@@ -411,9 +317,7 @@ export default async function adminRoutes(fastify) {
 
     return reply.send({
       success: true,
-      message: status === 'received' && order.sourceType === 'collab'
-        ? '状态已更新，联名分红已进入15天冷却期'
-        : '状态已更新',
+      message: '状态已更新',
       data: { orderNo, status }
     })
   })
@@ -671,7 +575,7 @@ export default async function adminRoutes(fastify) {
         where, orderBy: { createdAt: 'desc' }, skip, take: parseInt(limit),
         select: {
           id: true, phone: true, role: true, staffRole: true,
-          certifyStatus: true, isBanned: true, status: true,
+          isBanned: true, status: true,
           createdAt: true, lastLoginAt: true,
           profile: { select: { nickname: true, avatarUrl: true } }
         }
@@ -2286,7 +2190,6 @@ export default async function adminRoutes(fastify) {
           where: { id: request.orderId },
           data:  { status: prevStatus },
         })
-        // 注意：联名分红已被申请时取消，拒绝后不自动恢复（需管理员人工在结算系统处理）
       }
       // approved / completed：订单保持 aftersale 状态，退款等操作线下处理
     })

@@ -32,7 +32,7 @@ async function createUser(label, index, staffRole = null, role = 0) {
   const phone = `196${runId}${index}`
   const user = await prisma.user.create({ data: {
     phone, role, staffRole, privacyAgreedAt:new Date(), privacyPolicyVersion:'custom-ui-test',
-    profile:{ create:{ nickname:`ui-${label}-${runId}` } }, creditScore:{ create:{ score:100 } }
+    profile:{ create:{ nickname:`ui-${label}-${runId}` } }
   } })
   userIds.push(user.id)
   phones.push(phone)
@@ -80,7 +80,6 @@ async function cleanup() {
     await prisma.privateFile.deleteMany({ where:{ OR:[{ ownerUserId:{ in:cleanupUserIds } }, { objectKey:{ in:cleanupObjectKeys } }] } })
     await prisma.refreshToken.deleteMany({ where:{ userId:{ in:cleanupUserIds } } })
     await prisma.smsCode.deleteMany({ where:{ OR:[{ userId:{ in:cleanupUserIds } }, { phone:{ in:phones } }] } })
-    await prisma.creditScore.deleteMany({ where:{ userId:{ in:cleanupUserIds } } })
     await prisma.userProfile.deleteMany({ where:{ userId:{ in:cleanupUserIds } } })
     await prisma.user.deleteMany({ where:{ id:{ in:cleanupUserIds } } })
   }

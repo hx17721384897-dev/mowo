@@ -33,7 +33,6 @@ async function deleteUser(userId) {
   await prisma.operationLog.deleteMany({ where: { userId } })
   await prisma.auditLog.deleteMany({ where: { userId } })
   await prisma.userProfile.deleteMany({ where: { userId } })
-  await prisma.creditScore.deleteMany({ where: { userId } })
   await prisma.user.deleteMany({ where: { id: userId } })
 }
 
@@ -86,7 +85,7 @@ try {
   const adminPhone = `197${runId.slice(-8)}`
   const admin = await prisma.user.create({ data: {
     phone: adminPhone, role: 3, staffRole: 'OWNER', privacyAgreedAt: new Date(), privacyPolicyVersion: 'pb-test',
-    profile: { create: { nickname: `production-batch-admin-${runId}` } }, creditScore: { create: { score: 100 } }
+    profile: { create: { nickname: `production-batch-admin-${runId}` } }
   } })
   adminId = admin.id
   await prisma.smsCode.create({ data: { userId: adminId, phone: adminPhone, code: '123456', purpose: 'LOGIN', expiresAt: new Date(Date.now() + 300000) } })
@@ -112,7 +111,7 @@ try {
   const customerPhone = `198${runId.slice(-8)}`
   const customer = await prisma.user.create({ data: {
     phone: customerPhone, privacyAgreedAt: new Date(), privacyPolicyVersion: 'pb-test',
-    profile: { create: { nickname: `production-batch-test-${runId}` } }, creditScore: { create: { score: 100 } }
+    profile: { create: { nickname: `production-batch-test-${runId}` } }
   } })
   customerId = customer.id
   const preOrder = await prisma.preOrder.create({ data: {

@@ -1,9 +1,6 @@
 // src/lib/scheduler.js
 // 定时任务管理器
 // 在 index.js 启动后调用 startScheduler(fastify) 即可
-//
-// 任务一（每小时）：冷却期到期 → collab_orders.revenueStatus: cooling → available
-// 任务二（每天凌晨2点）：储备金90天到期 → 释放回创作者余额
 
 import {
   cleanupAbandonedAvatars,
@@ -15,198 +12,7 @@ import { closePreOrderAndRelease } from './checkout-snapshot.js'
 
 export function startScheduler(fastify) {
   const log = fastify.log
-
-  // ─────────────────────────────────────────
-  // 任务一：冷却期到期处理
-  // 每小时运行一次，将 coolingEndAt < now 的订单转为 available
-  //
-  // 同时：
-  //   - 将 payoutAmount 记入 balance.pendingAmount（供前端展示"待确认"）
-  //   - 注意：真正的 availableAmount 在管理员 /settle 时才写入
-  // ─────────────────────────────────────────
-  async function processCoolingExpired() {
-    const now = new Date()
-    try {
-      // 找出所有冷却期已过的订单
-      const expired = await fastify.prisma.collabOrder.findMany({
-        where: {
-          revenueStatus: 'cooling',
-          coolingEndAt: { lte: now }
-        },
-        select: { id: true, creatorId: true, payoutAmount: true }
-      })
-
-      if (expired.length === 0) return
-
-      // 按 creatorId 分组，准备批量更新 balance
-      const grouped = {}
-      for (const o of expired) {
-        grouped[o.creatorId] = (grouped[o.creatorId] || 0) + o.payoutAmount
-      }
-
-      await fastify.prisma.$transaction(async (tx) => {
-        // 1. 批量将订单状态改为 available
-        await tx.collabOrder.updateMany({
-          where: { id: { in: expired.map(o => o.id) } },
-          data:  { revenueStatus: 'available' }
-        })
-
-        // 2. 更新每个创作者的 balance.pendingAmount（展示用，不是真实可提现）
-        //    这里 pendingAmount 代表"等待管理员结算打款"的金额
-        for (const [creatorId, amount] of Object.entries(grouped)) {
-          await tx.balance.upsert({
-            where:  { creatorId },
-            create: {
-              creatorId,
-              pendingAmount:   +amount.toFixed(4),
-              availableAmount: 0,
-              withdrawnAmount: 0
-            },
-            update: {
-              pendingAmount: { increment: +amount.toFixed(4) }
-            }
-          })
-        }
-      })
-
-      log.info(`[scheduler] 冷却期到期处理完成：${expired.length} 笔订单转为 available`)
-    } catch (err) {
-      log.error('[scheduler] 冷却期处理失败：' + err.message)
-    }
-  }
-
-  // ─────────────────────────────────────────
-  // 任务二：储备金90天解冻
-  // 每天凌晨2点运行，将 releaseAt <= now 的 reserve_logs 对应金额
-  // 释放回创作者 balance.availableAmount
-  // ─────────────────────────────────────────
-  async function processReserveRelease() {
-    const now = new Date()
-    try {
-      // 找出所有到期的储备金流水（只处理 deduct 类型且未被释放的）
-      const dueLogs = await fastify.prisma.reserveLog.findMany({
-        where: {
-          actionType: 'deduct',
-          releaseAt:  { lte: now },
-          // 通过检查是否存在对应的 release 记录来判断是否已处理
-          // 用 collabOrderId 做关联标识
-        },
-        select: {
-          id:           true,
-          creatorId:    true,
-          reserveId:    true,
-          amount:       true,
-          collabOrderId: true
-        }
-      })
-
-      if (dueLogs.length === 0) return
-
-      // 过滤掉已经有 release 记录的（防重复释放）
-      const alreadyReleased = await fastify.prisma.reserveLog.findMany({
-        where: {
-          actionType:    'release',
-          collabOrderId: { in: dueLogs.map(l => l.collabOrderId).filter(Boolean) }
-        },
-        select: { collabOrderId: true }
-      })
-      const releasedOrderIds = new Set(alreadyReleased.map(l => l.collabOrderId))
-      const toRelease = dueLogs.filter(l => !releasedOrderIds.has(l.collabOrderId))
-
-      if (toRelease.length === 0) return
-
-      // 按 creatorId 分组
-      const grouped = {}
-      for (const l of toRelease) {
-        if (!grouped[l.creatorId]) grouped[l.creatorId] = { amount: 0, reserveId: l.reserveId, logs: [] }
-        grouped[l.creatorId].amount += l.amount
-        grouped[l.creatorId].logs.push(l)
-      }
-
-      await fastify.prisma.$transaction(async (tx) => {
-        for (const [creatorId, data] of Object.entries(grouped)) {
-          const releaseAmount = +data.amount.toFixed(4)
-
-          // 查当前储备金余额
-          const reserve = await tx.creatorReserve.findUnique({
-            where: { creatorId }
-          })
-          if (!reserve) continue
-
-          const newReleasable = Math.max(0, reserve.releasableAmount - releaseAmount)
-          const newReleased   = reserve.releasedAmount + releaseAmount
-
-          // 1. 更新储备金账户
-          await tx.creatorReserve.update({
-            where: { creatorId },
-            data: {
-              releasableAmount: +newReleasable.toFixed(4),
-              releasedAmount:   +newReleased.toFixed(4)
-            }
-          })
-
-          // 2. 写 release 流水记录
-          for (const l of data.logs) {
-            await tx.reserveLog.create({
-              data: {
-                creatorId,
-                reserveId:     data.reserveId,
-                collabOrderId: l.collabOrderId,
-                actionType:    'release',
-                amount:        +l.amount.toFixed(4),
-                balanceAfter:  +newReleasable.toFixed(4),
-                note:          '90天安全期满自动释放'
-              }
-            })
-          }
-
-          // 3. 释放金额打回 balance.availableAmount
-          await tx.balance.upsert({
-            where:  { creatorId },
-            create: {
-              creatorId,
-              pendingAmount:   0,
-              availableAmount: releaseAmount,
-              withdrawnAmount: 0
-            },
-            update: {
-              availableAmount: { increment: releaseAmount }
-            }
-          })
-        }
-      })
-
-      log.info(`[scheduler] 储备金解冻完成：${toRelease.length} 笔流水，涉及 ${Object.keys(grouped).length} 位创作者`)
-    } catch (err) {
-      log.error('[scheduler] 储备金解冻失败：' + err.message)
-    }
-  }
-
-  // ─────────────────────────────────────────
-  // 注册定时器
-  // ─────────────────────────────────────────
-
-  // 任务一：每小时整点运行
   const HOUR_MS = 60 * 60 * 1000
-  if (fastify.config.features.creatorFinance) {
-    setInterval(processCoolingExpired, HOUR_MS)
-    // 启动时立即跑一次，处理服务重启期间积压的
-    processCoolingExpired()
-  }
-
-  // 任务二：每天凌晨2点运行
-  function scheduleReserveRelease() {
-    const now   = new Date()
-    const next  = new Date()
-    next.setHours(2, 0, 0, 0)
-    if (next <= now) next.setDate(next.getDate() + 1)
-    const delay = next - now
-    setTimeout(() => {
-      processReserveRelease()
-      setInterval(processReserveRelease, 24 * HOUR_MS)
-    }, delay)
-  }
-  if (fastify.config.features.creatorFinance) scheduleReserveRelease()
 
   // ─────────────────────────────────────────
   // 任务三：每日00:00 — 库存全量快照
@@ -404,7 +210,6 @@ export function startScheduler(fastify) {
   // ─────────────────────────────────────────
   // 任务七：14天自动确认收货
   // 每小时运行，shipped 且 shippedAt 超过14天 → 自动转 received
-  // 同时触发联名作品冷却期（与手动确认收货逻辑一致）
   // ─────────────────────────────────────────
   async function autoConfirmReceipt() {
     const threshold = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
@@ -420,17 +225,6 @@ export function startScheduler(fastify) {
             where: { id: order.id },
             data:  { status: 'received' }
           })
-
-          if (fastify.config.features.creatorFinance && order.sourceType === 'collab') {
-            const coolingEndAt = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
-            await tx.collabOrder.updateMany({
-              where: {
-                orderId:       order.id,
-                revenueStatus: { in: ['estimated', 'cooling'] }
-              },
-              data: { revenueStatus: 'cooling', coolingEndAt }
-            })
-          }
         }).catch(err => {
           log.warn(`[scheduler] 自动确认收货单条失败 ${order.id}：${err.message}`)
         })
@@ -516,5 +310,5 @@ export function startScheduler(fastify) {
   setInterval(cleanupExpiredRateLimits, 24 * HOUR_MS)
   cleanupExpiredRateLimits()
 
-  log.info(`[scheduler] 定时任务已启动：库存、授权、订单、文件清理、账号注销${fastify.config.features.creatorFinance ? '、创作者财务' : ''}`)
+  log.info('[scheduler] 定时任务已启动：库存、授权、订单、文件清理、账号注销')
 }

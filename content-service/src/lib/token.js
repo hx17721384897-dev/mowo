@@ -12,7 +12,7 @@ const REFRESH_TOKEN_EXPIRE_DAYS = 30
  * 生成双Token并设置Cookie，返回响应
  * @param {import('fastify').FastifyInstance} fastify
  * @param {import('@prisma/client').PrismaClient} prisma
- * @param {object} user - 含 id, phone, certifyStatus, role, profile
+ * @param {object} user - 含 id, phone, role, staffRole, profile
  * @param {import('fastify').FastifyRequest} req
  * @param {import('fastify').FastifyReply} reply
  */
@@ -23,7 +23,6 @@ export async function generateTokenResponse(fastify, prisma, user, req, reply, o
     {
       userId:        user.id,
       phone:         user.phone,
-      certifyStatus: user.certifyStatus ?? 0,
       role:          user.role ?? 0,
       staffRole:     effectiveStaffRole(user),
       sid:           sessionId,
@@ -76,7 +75,6 @@ export async function generateTokenResponse(fastify, prisma, user, req, reply, o
       user: {
         id:           user.id,
         phone:        user.phone,
-        certifyStatus: user.certifyStatus ?? 0,
         role:         user.role ?? 0,
         staffRole:    effectiveStaffRole(user),
         nickname:     user.profile?.nickname || null,

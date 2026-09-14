@@ -189,7 +189,7 @@ async function orderRoutes(fastify, opts) {
 
   // ──────────────────────────────────────────────
   // POST /api/orders/:id/confirm-receipt
-  // 确认收货：status shipped → received，触发联名分红冷却期
+  // 确认收货：status shipped → received
   // ──────────────────────────────────────────────
   fastify.post('/:id/confirm-receipt', async (req, reply) => {
     const userId = req.user.userId
@@ -211,12 +211,6 @@ async function orderRoutes(fastify, opts) {
         })
         await tx.salesOrderItem.updateMany({ where: { salesOrderId: id }, data: { status: 'received' } })
         await tx.salesOrder.update({ where: { id }, data: { status: 'received', receivedAt: now } })
-        if (fastify.config.features.creatorFinance) {
-          await tx.collabOrder.updateMany({
-            where: { orderId: { in: tasks.map(task => task.id) }, revenueStatus: { in: ['estimated', 'cooling'] } },
-            data: { revenueStatus: 'cooling', coolingEndAt: new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000) }
-          })
-        }
       })
       return reply.send({ success: true, data: { status: 'received' } })
     }
@@ -232,27 +226,12 @@ async function orderRoutes(fastify, opts) {
       })
     }
 
-    // 事务：更新订单状态 + 启动联名分红冷却期
+    // 事务：更新订单状态。
     await prisma.$transaction(async tx => {
       await tx.customizeOrder.update({
         where: { id },
         data: { status: 'received', receivedAt: new Date() },
       })
-
-      // 若为联名款，将 collabOrder 从 estimated/cooling → cooling（写入冷却期结束时间）
-      if (fastify.config.features.creatorFinance && order.sourceType === 'collab') {
-        const coolingEndAt = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
-        await tx.collabOrder.updateMany({
-          where: {
-            orderId:       id,
-            revenueStatus: { in: ['estimated', 'cooling'] },
-          },
-          data: {
-            revenueStatus: 'cooling',
-            coolingEndAt,
-          },
-        })
-      }
     })
 
     return reply.send({ success: true, data: { status: 'received' } })
@@ -441,7 +420,7 @@ async function orderRoutes(fastify, opts) {
       return reply.code(400).send({ success: false, message: error.message })
     }
 
-    // 事务：创建申请 + 订单变为 aftersale + 次数+1 + 联名分红取消
+    // 事务：创建申请 + 订单变为 aftersale + 次数+1
     await prisma.$transaction(async tx => {
       const aftersale = await tx.aftersaleRequest.create({
         data: {

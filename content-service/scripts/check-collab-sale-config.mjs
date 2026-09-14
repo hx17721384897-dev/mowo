@@ -42,7 +42,6 @@ async function cleanup() {
     await prisma.operationLog.deleteMany({ where: { userId } })
     await prisma.refreshToken.deleteMany({ where: { userId } })
     await prisma.smsCode.deleteMany({ where: { OR: [{ userId }, { phone }] } })
-    await prisma.creditScore.deleteMany({ where: { userId } })
     await prisma.userProfile.deleteMany({ where: { userId } })
     await prisma.user.deleteMany({ where: { id: userId } })
   }
@@ -58,7 +57,6 @@ try {
       privacyAgreedAt: new Date(),
       privacyPolicyVersion: 'sale-config-test',
       profile: { create: { nickname: `销售配置验收-${runId}` } },
-      creditScore: { create: { score: 100 } },
     },
   })
   userId = user.id

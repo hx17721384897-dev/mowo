@@ -193,11 +193,6 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
         <div class="stat-num" id="cnt-suspended">—</div>
         <div class="stat-sub">管理员暂停</div>
       </div>
-      <div class="stat-card" id="tab-pending_delist" onclick="setFilter('pending_delist')">
-        <div class="stat-label">申请处理中</div>
-        <div class="stat-num" id="cnt-pending_delist">—</div>
-        <div class="stat-sub">创作者申请下架</div>
-      </div>
       <div class="stat-card" id="tab-off_shelf" onclick="setFilter('off_shelf')">
         <div class="stat-label">已下架</div>
         <div class="stat-num" id="cnt-off_shelf">—</div>
@@ -261,23 +256,6 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
   </div>
 </div>
 
-<!-- 审批下架申请 Modal -->
-<div class="modal-overlay" id="delistApproveModal">
-  <div class="modal">
-    <p class="modal-title">处理下架申请</p>
-    <p class="modal-sub" id="delistApproveModalSub">—</p>
-    <div class="form-field">
-      <label class="form-label">备注（可选，将通知创作者）</label>
-      <input class="form-input" id="delistApproveNote" placeholder="如：同意，库存将由平台处理">
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal('delistApproveModal')">取消</button>
-      <button class="btn btn-ghost" onclick="submitDelistDecision(false)">拒绝申请（恢复上架）</button>
-      <button class="btn btn-black" onclick="submitDelistDecision(true)">同意下架</button>
-    </div>
-  </div>
-</div>
-
 <!-- 库存调整 Modal -->
 <div class="modal-overlay" id="stockModal">
   <div class="modal">
@@ -336,7 +314,7 @@ async function loadWorks() {
 }
 
 function updateStats() {
-  ;['on_sale','suspended','pending_delist','off_shelf'].forEach(s => {
+  ;['on_sale','suspended','off_shelf'].forEach(s => {
     document.getElementById(`cnt-${s}`).textContent = _works.filter(w => w.shelfStatus === s).length
   })
 }
@@ -370,7 +348,6 @@ function shelfBadgeHtml(w) {
   const map = {
     on_sale:       '<span class="shelf-badge badge-on-sale">在售</span>',
     suspended:     `<span class="shelf-badge badge-suspended">暂停中</span>`,
-    pending_delist:'<span class="shelf-badge badge-pending">申请处理中 🔒</span>',
     off_shelf:     w.offShelfType === 'platform_force'
                     ? '<span class="shelf-badge badge-off-platform">平台下架</span>'
                     : '<span class="shelf-badge badge-off-shelf">已下架</span>',
@@ -389,15 +366,11 @@ function workCard(w) {
   const cover = w.coverUrl
     ? `<img src="${w.coverUrl}" alt="封面" onerror="this.style.display='none'">`
     : `<div class="work-cover-empty">🎨</div>`
-  const revision = w.isRevision ? '<span class="revision-badge">修改版</span>' : ''
   const sizes = safeJson(w.sizes)
 
   let noticeHtml = ''
   if (w.shelfStatus === 'off_shelf' && w.offShelfNotice) {
     noticeHtml = `<div class="work-notice">📢 通知创作者：${w.offShelfNotice}</div>`
-  }
-  if (w.shelfStatus === 'pending_delist' && w.delistReason) {
-    noticeHtml = `<div class="work-notice">📋 申请原因：${w.delistReason}</div>`
   }
 
   const actions = buildActions(w)
@@ -406,7 +379,6 @@ function workCard(w) {
     <div class="work-cover">
       ${cover}
       ${shelfBadgeHtml(w)}
-      ${revision}
     </div>
     <div class="work-body">
       <div class="work-header">
@@ -420,8 +392,6 @@ function workCard(w) {
         ${suspendDaysHtml(w)}
         ${sizes.map(s => `<span class="work-tag">${s}</span>`).join('')}
         <span class="work-tag">${w.saleConfigCount || 0} 个可售 SKU</span>
-        <span class="work-tag">分红 ${Math.round((w.revenueRate || 0) * 100)}%</span>
-        ${w.isExclusiveWork ? '<span class="work-tag">独家</span>' : ''}
       </div>
       ${noticeHtml}
       <div class="work-actions">
@@ -442,8 +412,6 @@ function buildActions(w) {
     case 'suspended':
       return `<button class="btn btn-green btn-sm" onclick="doResume('${id}')">恢复上架</button>
               <button class="btn btn-red btn-sm" onclick="openDelistModal('${id}')">强制下架</button>`
-    case 'pending_delist':
-      return `<button class="btn btn-black btn-sm" onclick="openDelistApproveModal('${id}')">处理申请</button>`
     case 'off_shelf':
       return `<button class="btn btn-green btn-sm" onclick="openRelistModal('${id}')">重新上架</button>`
     default:
@@ -454,7 +422,7 @@ function buildActions(w) {
 // ── 操作：暂停 / 恢复 ──
 async function doSuspend(id) {
   const w = _works.find(x => x.id === id)
-  if (!confirm(`确认暂停《${w?.title}》的销售？\n暂停后不接受新订单，创作者可申请恢复。`)) return
+  if (!confirm(`确认暂停《${w?.title}》的销售？\n暂停后不接受新订单。`)) return
   await callApi('PUT', `/api/admin/collab/${id}/suspend`, {}, '已暂停销售')
 }
 
@@ -480,7 +448,7 @@ async function submitForceDelist() {
   if (!reason) { showToast('请填写内部备注'); return }
   if (!notice) { showToast('请填写给创作者的通知'); return }
   closeModal('delistModal')
-  await callApi('PUT', `/api/admin/collab/${_activeWorkId}/force-delist`, { reason, notice }, '已强制下架并通知创作者')
+  await callApi('PUT', `/api/admin/collab/${_activeWorkId}/force-delist`, { reason, notice }, '已强制下架并记录告知内容')
 }
 
 // ── 重新上架 Modal ──
@@ -494,25 +462,6 @@ function openRelistModal(id) {
 async function submitRelist() {
   closeModal('relistModal')
   await callApi('PUT', `/api/admin/collab/${_activeWorkId}/relist`, {}, '已重新上架')
-}
-
-// ── 审批申请 Modal ──
-function openDelistApproveModal(id) {
-  _activeWorkId = id
-  const w = _works.find(x => x.id === id)
-  document.getElementById('delistApproveModalSub').textContent =
-    `《${w?.title}》 · ${w?.creator?.nickname || ''}` +
-    (w?.delistReason ? `\n申请原因：${w.delistReason}` : '')
-  document.getElementById('delistApproveNote').value = ''
-  document.getElementById('delistApproveModal').classList.add('show')
-}
-
-async function submitDelistDecision(approve) {
-  const adminNote = document.getElementById('delistApproveNote').value.trim()
-  closeModal('delistApproveModal')
-  await callApi('PUT', `/api/admin/collab/${_activeWorkId}/approve-delist`,
-    { approve, adminNote },
-    approve ? '已同意下架' : '已拒绝申请，作品恢复上架')
 }
 
 // ── 通用 API 调用 ──
@@ -561,13 +510,11 @@ function renderDrawer(w, packs) {
   const statusLabel = {
     on_sale:       '✅ 在售',
     suspended:     '⏸ 暂停中',
-    pending_delist:'🔒 申请处理中',
     off_shelf:     '📦 已下架',
   }[w.shelfStatus] || '—'
 
   const offShelfTypeLabel = {
     platform_force:   '平台强制下架',
-    creator_request:  '创作者申请',
   }[w.offShelfType] || ''
 
   document.getElementById('drawerBody').innerHTML = `
@@ -576,13 +523,11 @@ function renderDrawer(w, packs) {
       <div class="detail-grid">
         <div><div class="detail-item-label">创作者</div><div class="detail-item-val">${w.creator?.nickname || '—'}</div></div>
         <div><div class="detail-item-label">货架状态</div><div class="detail-item-val">${statusLabel}</div></div>
-        <div><div class="detail-item-label">分红率</div><div class="detail-item-val">${Math.round((w.revenueRate || 0) * 100)}%</div></div>
         <div><div class="detail-item-label">审核时间</div><div class="detail-item-val" style="font-size:11px;">${w.approvedAt ? new Date(w.approvedAt).toLocaleDateString('zh-CN') : '—'}</div></div>
         ${w.shelfStatus === 'suspended' ? `<div><div class="detail-item-label">暂停时间</div><div class="detail-item-val" style="font-size:11px;">${w.suspendedAt ? new Date(w.suspendedAt).toLocaleDateString('zh-CN') : '—'}</div></div>` : ''}
         ${w.shelfStatus === 'off_shelf' ? `<div><div class="detail-item-label">下架方式</div><div class="detail-item-val">${offShelfTypeLabel}</div></div>` : ''}
         ${w.offShelfReason ? `<div style="grid-column:1/-1;"><div class="detail-item-label">内部备注</div><div class="detail-item-val" style="font-size:12px;">${w.offShelfReason}</div></div>` : ''}
         ${w.offShelfNotice ? `<div style="grid-column:1/-1;"><div class="detail-item-label">创作者通知</div><div class="detail-item-val" style="font-size:12px;color:#7A5F00;">${w.offShelfNotice}</div></div>` : ''}
-        ${w.delistReason   ? `<div style="grid-column:1/-1;"><div class="detail-item-label">创作者申请原因</div><div class="detail-item-val" style="font-size:12px;">${w.delistReason}</div></div>` : ''}
       </div>
     </div>
     <div class="detail-section">

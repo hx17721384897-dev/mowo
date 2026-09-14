@@ -28,11 +28,9 @@ if (!/^1[3-9]\d{9}$/.test(phone)) {
           phone,
           status: 'ACTIVE',
           role: 0,
-          certifyStatus: 0,
           privacyAgreedAt: new Date(),
           privacyPolicyVersion: process.env.PRIVACY_POLICY_VERSION || 'test-account',
           profile: { create: { nickname } },
-          creditScore: { create: { score: 100 } }
         },
         include: { profile: true }
       })

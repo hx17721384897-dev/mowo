@@ -51,7 +51,6 @@ async function cleanup() {
     await prisma.operationLog.deleteMany({ where: { userId } })
     await prisma.auditLog.deleteMany({ where: { userId } })
     await prisma.userProfile.deleteMany({ where: { userId } })
-    await prisma.creditScore.deleteMany({ where: { userId } })
     await prisma.user.deleteMany({ where: { id: userId } })
   }
 }
@@ -62,7 +61,7 @@ try {
   const adminPhone = `195${runId}`
   const admin = await prisma.user.create({ data: {
     phone: adminPhone, role: 3, staffRole: 'OWNER', privacyAgreedAt: new Date(), privacyPolicyVersion: 'print-test',
-    profile: { create: { nickname: `print-admin-${runId}` } }, creditScore: { create: { score: 100 } }
+    profile: { create: { nickname: `print-admin-${runId}` } }
   } })
   adminId = admin.id
   await prisma.smsCode.create({ data: { userId: adminId, phone: adminPhone, code: '123456', purpose: 'LOGIN', expiresAt: new Date(Date.now() + 300000) } })
@@ -139,7 +138,7 @@ try {
   const customerPhone = `196${runId}`
   const customer = await prisma.user.create({ data: {
     phone: customerPhone, privacyAgreedAt: new Date(), privacyPolicyVersion: 'print-test',
-    profile: { create: { nickname: `print-customer-${runId}` } }, creditScore: { create: { score: 100 } }
+    profile: { create: { nickname: `print-customer-${runId}` } }
   } })
   customerId = customer.id
   const preOrder = await prisma.preOrder.create({ data: {

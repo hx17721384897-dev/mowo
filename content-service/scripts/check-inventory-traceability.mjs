@@ -53,7 +53,6 @@ async function cleanup() {
     await prisma.smsCode.deleteMany({where:{userId}})
     await prisma.refreshToken.deleteMany({where:{userId}})
     await prisma.userProfile.deleteMany({where:{userId}})
-    await prisma.creditScore.deleteMany({where:{userId}})
     await prisma.user.deleteMany({where:{id:userId}})
   }
 }
@@ -72,7 +71,7 @@ try {
   assert(!html.includes('id="matModalCode"') && html.includes('id="matNameSelect"') && html.includes('id="matUnitSelect"'), '编码自动生成，名称和单位使用可管理的下拉列表')
 
   const phone = `194${runId}`
-  const user = await prisma.user.create({data:{phone,role:3,staffRole:'OWNER',privacyAgreedAt:new Date(),privacyPolicyVersion:'inventory-trace-test',profile:{create:{nickname:`trace-${runId}`}},creditScore:{create:{score:100}}}})
+  const user = await prisma.user.create({data:{phone,role:3,staffRole:'OWNER',privacyAgreedAt:new Date(),privacyPolicyVersion:'inventory-trace-test',profile:{create:{nickname:`trace-${runId}`}}}})
   userId = user.id
   await prisma.smsCode.create({data:{userId,phone,code:'123456',purpose:'LOGIN',expiresAt:new Date(Date.now()+300000)}})
   const login = await api('/api/v1/auth/sms/verify',null,{method:'POST',body:JSON.stringify({phone,code:'123456',mode:'LOGIN'})})

@@ -33,7 +33,6 @@ async function cleanup() {
   if (skuId) await prisma.machineModelSku.deleteMany({ where: { id: skuId } })
   if (modelId) await prisma.machineModel.deleteMany({ where: { id: modelId } })
   for (const userId of [creatorId, secondCreatorId].filter(Boolean)) {
-    await prisma.creditScore.deleteMany({ where: { userId } })
     await prisma.userProfile.deleteMany({ where: { userId } })
     await prisma.user.deleteMany({ where: { id: userId } })
   }
@@ -46,7 +45,7 @@ try {
     creators.push(await prisma.user.create({ data: {
       phone: `${index ? '193' : '192'}${runId}`,
       privacyAgreedAt: new Date(), privacyPolicyVersion: 'listing-test',
-      profile: { create: { nickname } }, creditScore: { create: { score: 100 } },
+      profile: { create: { nickname } },
     } }))
   }
   creatorId = creators[0].id

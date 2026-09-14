@@ -54,18 +54,6 @@ const Router = {
   },
 
   // ─────────────────────────────────────────
-  // 内容详情页
-  // ─────────────────────────────────────────
-
-  toArticleDetail(id) {
-    this.go(`/pages/article-detail.html?id=${id}`)
-  },
-
-  toProductDetail(id) {
-    this.go(`/pages/product-detail.html?id=${id}`)
-  },
-
-  // ─────────────────────────────────────────
   // 定制流程
   // ─────────────────────────────────────────
 
@@ -99,10 +87,6 @@ const Router = {
 
   toCheckout() {
     this.go('/pages/checkout.html')
-  },
-
-  toAccount() {
-    this.go('/pages/account.html')
   },
 
   // ─────────────────────────────────────────

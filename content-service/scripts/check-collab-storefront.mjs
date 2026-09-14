@@ -44,17 +44,14 @@ async function createWork(creatorId, suffix, overrides = {}) {
       storefrontTags: JSON.stringify(['自动验收', '联名商品']),
       animationFrames: '[]',
       supportedSkus: JSON.stringify([skuId]),
-      creatorMarkups: JSON.stringify({ [skuId]: 17.25 }),
       animationAssetId,
       animationVersionId,
       status: 'approved',
       agreementSignedAt: new Date(),
       approvedAt: new Date(),
       approvedBy: 'internal-reviewer-should-not-be-public',
-      revenueRate: 0.37,
       isOnShelf: true,
       shelfStatus: 'on_sale',
-      isRevision: false,
       offShelfReason: 'internal-note-should-not-be-public',
       ...overrides,
     },
@@ -87,7 +84,6 @@ async function cleanup() {
   if (userId) {
     await prisma.refreshToken.deleteMany({ where: { userId } })
     await prisma.smsCode.deleteMany({ where: { OR: [{ userId }, { phone }] } })
-    await prisma.creditScore.deleteMany({ where: { userId } })
     await prisma.userProfile.deleteMany({ where: { userId } })
     await prisma.user.deleteMany({ where: { id: userId } })
   }
@@ -104,7 +100,6 @@ try {
       privacyAgreedAt: new Date(),
       privacyPolicyVersion: 'collab-test',
       profile: { create: { nickname: `联名商城验收-${runId}` } },
-      creditScore: { create: { score: 100 } },
     },
   })
   userId = user.id
@@ -192,7 +187,6 @@ try {
   mediaFileId = mediaFile.id
   const hidden = await createWork(user.id, 'hidden', { isOnShelf: false })
   const suspended = await createWork(user.id, 'suspended', { shelfStatus: 'suspended' })
-  const revision = await createWork(user.id, 'revision', { isRevision: true })
 
   const listResponse = await request(`/api/collab/works?creatorId=${encodeURIComponent(user.id)}&limit=50`)
   const listBody = await listResponse.json()
@@ -211,9 +205,9 @@ try {
   }
   assert(!('price' in detail.supportedSkus[0]) && !('markup' in detail.supportedSkus[0]), '公开规格不拆出内部基础价和加价')
 
-  for (const inaccessible of [hidden, suspended, revision]) {
+  for (const inaccessible of [hidden, suspended]) {
     const response = await request(`/api/collab/works/${inaccessible.id}`)
-    assert(response.status === 404, '未上架、暂停或修订版本不可通过详情地址绕过访问')
+    assert(response.status === 404, '未上架或暂停版本不可通过详情地址绕过访问')
   }
 
   await prisma.smsCode.create({

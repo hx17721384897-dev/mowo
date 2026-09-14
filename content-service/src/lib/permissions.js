@@ -87,12 +87,7 @@ export function requiredPermissionForRequest(method, rawUrl) {
 
   if (
     path.startsWith('/api/admin/collab') ||
-    path.startsWith('/api/admin/contracts') ||
-    path.startsWith('/api/admin/revenue') ||
-    path.startsWith('/api/admin/settlement') ||
-    path.startsWith('/api/admin/bull') ||
-    path.startsWith('/api/admin/links') ||
-    path.startsWith('/api/certify/review')
+    path.startsWith('/api/admin/contracts')
   ) return PERMISSION.COLLAB
 
   if (

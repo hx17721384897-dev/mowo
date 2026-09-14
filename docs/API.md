@@ -27,7 +27,7 @@
 > 本地地址：`http://localhost:3001`
 > 生产地址：`https://api.mowo.com`（待部署）
 
-> **阅读提示（2026-08-13）：本文不是从当前路由自动生成的完整契约。** 路径、请求字段、权限和状态仍可能遗漏或漂移；社区、线上收益/牛量/提现、模拟认证和创作者自助联名已由服务端开关默认关闭。支付仍只有未验签的 Mock/回调骨架。实现或调用前先对照 `modules/*`、`DOC_CODE_DIFFERENCES.md` 和 `RELEASE_SCOPE.md`。
+> **阅读提示（2026-09-14）：本文不是从当前路由自动生成的完整契约。** 路径、请求字段、权限和状态仍可能遗漏或漂移；社区、线上收益/牛量/提现、模拟认证和创作者自助联名旧实现已在 R1-B 物理退役，不存在可恢复开关。支付仍只有未验签的 Mock/回调骨架并由服务端关闭。实现或调用前先对照 `modules/*`、`DOC_CODE_DIFFERENCES.md` 和 `RELEASE_SCOPE.md`。
 
 ---
 
@@ -50,11 +50,13 @@ Authorization: Bearer <accessToken>   // 需要登录的接口必须携带
 { "success": false, "message": "错误描述" }
 ```
 
-关闭功能统一返回 HTTP 404：
+仍保留但暂时关闭的真实在线支付能力统一返回 HTTP 404：
 
 ```json
 { "success": false, "message": "该功能在当前测试阶段暂未开放", "code": "FEATURE_NOT_AVAILABLE" }
 ```
+
+已退役能力没有路由，公开旧 URL 自然返回 404；后台旧 URL 仍先经过统一认证和岗位授权，因此可能先返回 401 或 403。
 
 基础响应包含 `X-Content-Type-Options: nosniff`、`X-Frame-Options: DENY`、Referrer/Permissions Policy 和缓存控制；生产环境额外发送 HSTS。静态页面的 CSP 和响应头仍由正式 Web 服务器负责。
 
@@ -89,7 +91,7 @@ Authorization: Bearer <accessToken>   // 需要登录的接口必须携带
 ### JWT Payload
 
 ```json
-{ "userId": "uuid", "phone": "138****", "certifyStatus": 2, "role": 2, "staffRole": "CUSTOMER_SERVICE", "sid": "uuid" }
+{ "userId": "uuid", "phone": "138****", "role": 2, "staffRole": "CUSTOMER_SERVICE", "sid": "uuid" }
 ```
 
 ---
@@ -103,7 +105,6 @@ Authorization: Bearer <accessToken>   // 需要登录的接口必须携带
 | `/api/users` | 用户信息/关注 | `routes/users.js` |
 | `/api/certify` | 创作者认证 | `routes/certify.js` |
 | `/api/animations` | 动画上传管理 | `routes/animations.js` |
-| `/api/products` | 商品 | `routes/products.js` |
 | `/api/machine-models` | 机型款式与SKU | `routes/machine-models.js` |
 | `/api/customize-orders` | 定制订单 | `routes/customize-orders.js` |
 | `/api/upload` | 私有文件登记、上传确认与短期读取 | `routes/upload.js` |
@@ -113,11 +114,10 @@ Authorization: Bearer <accessToken>   // 需要登录的接口必须携带
 | `/api/orders` | 用户订单查询与确认收货 | `routes/orders.js` |
 | `/api/payment` | 支付回调与状态 | `routes/payment.js` |
 | `/api/inventory` | 库存管理 | `routes/inventory.js` |
-| `/api/collab` | 联名系统（公开+创作者） | `routes/collab.js` |
+| `/api/collab` | 公开联名货架 | `routes/collab.js` |
 | `/api/admin` | 管理员后台 | `routes/admin.js` |
 | `/api/admin/import` | 多平台订单导入 | `routes/import.js` |
 | `/api/admin/sku-mapping` | 平台SKU映射管理 | `routes/platform-sku.js` |
-| `/api/creator` | 创作者端 | `routes/creator.js` |
 | `/api/config/features` | 公开读取当前发布功能开关 | `index.js` + `lib/features.js` |
 | `/api/contact` | 六类联络提交 | `routes/contact.js` |
 
@@ -132,7 +132,7 @@ Authorization: Bearer <accessToken>   // 需要登录的接口必须携带
 ```json
 { "phone": "13800138000", "purpose": "LOGIN" }
 ```
-purpose 枚举：`LOGIN / REGISTER / RESET_PASSWORD / BIND_PHONE / DEACTIVATE / STEP_UP_WITHDRAW / STEP_UP_CHANGE_PAYOUT / STEP_UP_CHANGE_PASSWORD`
+purpose 枚举：`LOGIN / REGISTER / RESET_PASSWORD / BIND_PHONE / DEACTIVATE / STEP_UP_CHANGE_PASSWORD`
 
 `LOGIN` 只向已有账号发送验证码；手机号不存在时返回 `ACCOUNT_NOT_FOUND`，提示前往注册。`REGISTER` 只向未注册手机号发送；已有账号返回 `ACCOUNT_ALREADY_EXISTS`，提示直接登录。登录入口不会自动创建账号。
 
@@ -160,7 +160,7 @@ purpose 枚举：`LOGIN / REGISTER / RESET_PASSWORD / BIND_PHONE / DEACTIVATE / 
   "success": true,
   "data": {
     "accessToken": "eyJ...",
-    "user": { "id": "...", "phone": "...", "role": 0, "certifyStatus": 0 }
+    "user": { "id": "...", "phone": "...", "role": 0 }
   }
 }
 ```
@@ -832,19 +832,6 @@ type 可选：`pending_info` / `pending_sku` / 不传=全部异常
 
 ### GET `/api/admin/collab/:id/product-history`
 读取该联名商品最近的工作区修改记录，包括操作人、结果和时间。需负责人或合作运营权限。
-
----
-
-## 创作者端
-
-### GET `/api/creator/dashboard`
-创作者数据总览（牛量/收益/订单数）。需登录（认证创作者）。
-
-### GET `/api/creator/earnings`
-收益明细（分页）。需登录。
-
-### GET `/api/creator/bull-score`
-牛量积分详情（三维度分 + 等级 + 历史趋势）。需登录。
 
 ---
 

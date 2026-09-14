@@ -1,7 +1,6 @@
 // src/routes/collab.js — 联名公开货架接口
 
 import crypto from 'crypto'
-import { calcRevenueRate } from '../lib/revenue.js'
 import { isCollabSkuFrameCompatible } from '../lib/collab-sale-config.js'
 import {
   collabFinalPrice,
@@ -70,8 +69,6 @@ export default async function collabRoutes(fastify) {
           coverUrl: true,
           storefrontCoverUrl: true,
           hoverGifUrl: true,
-          isNewbieWork: true,
-          isExclusiveWork: true,
           approvedAt: true,
           createdAt: true,
           animationVersion: { select: { baseFrameCount: true, frameKeys: true } },
@@ -114,8 +111,6 @@ export default async function collabRoutes(fastify) {
         description: work.storefrontSummary || work.storefrontDescription || work.description,
         coverUrl: presignOrPassthrough(work.storefrontCoverUrl || work.coverUrl, fastify, 3600),
         hoverGifUrl: presignOrNull(work.hoverGifUrl, fastify, 3600),
-        isNewbieWork: work.isNewbieWork,
-        isExclusiveWork: work.isExclusiveWork,
         approvedAt: work.approvedAt,
         creator: profileMap[work.creatorId] ?? { userId: work.creatorId, nickname: '创作者', avatarUrl: null },
         minPrice: prices.length ? Math.min(...prices) : null,
@@ -215,8 +210,6 @@ export default async function collabRoutes(fastify) {
         storefrontCoverUrl: true,
         hoverGifUrl: true,
         animationFrames: true,
-        isNewbieWork: true,
-        isExclusiveWork: true,
         approvedAt: true,
         animationVersion: { select: { baseFrameCount: true } },
         saleSkus: {
@@ -307,8 +300,6 @@ export default async function collabRoutes(fastify) {
         hoverGifUrl,
         coverUrl,
         supportedSkus: skus,
-        isNewbieWork: work.isNewbieWork,
-        isExclusiveWork: work.isExclusiveWork,
         approvedAt: work.approvedAt,
         creator: profile ?? { userId: work.creatorId, nickname: '创作者', avatarUrl: null },
       },

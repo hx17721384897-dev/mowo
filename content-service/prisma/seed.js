@@ -47,7 +47,6 @@ async function main() {
       nickname:      '负责人测试',
       role:          3,              // 旧字段兼容等级；授权以 staffRole 为准
       staffRole:     'OWNER',
-      certifyStatus: 0,
     },
     {
       phone:         '13800138001',
@@ -55,7 +54,6 @@ async function main() {
       nickname:      '客服测试',
       role:          2,              // 旧字段兼容等级；授权以 staffRole 为准
       staffRole:     'CUSTOMER_SERVICE',
-      certifyStatus: 0,
     },
     {
       phone:         '13800138002',
@@ -63,7 +61,6 @@ async function main() {
       nickname:      '普通用户小明',
       role:          0,
       staffRole:     null,
-      certifyStatus: 0,
     },
     {
       phone:         '13800138003',
@@ -71,7 +68,6 @@ async function main() {
       nickname:      '普通用户小红',
       role:          0,
       staffRole:     null,
-      certifyStatus: 0,
     },
     {
       phone:         '13800138004',
@@ -79,7 +75,6 @@ async function main() {
       nickname:      '生产端账号',
       role:          2,              // 后台兼容等级，具体权限由岗位决定
       staffRole:     'PRODUCTION',
-      certifyStatus: 0,
     },
   ]
 
@@ -98,7 +93,6 @@ async function main() {
         data: {
           phone:         acc.phone,
           passwordHash,
-          certifyStatus: acc.certifyStatus,
           role:          acc.role,
           staffRole:     acc.staffRole,
         }
@@ -106,10 +100,6 @@ async function main() {
 
       await tx.userProfile.create({
         data: { userId: u.id, nickname: acc.nickname }
-      })
-
-      await tx.creditScore.create({
-        data: { userId: u.id, score: 100 }
       })
 
       return u

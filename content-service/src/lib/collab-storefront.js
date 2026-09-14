@@ -20,7 +20,6 @@ export function publicCollabWorkWhere(extra = {}) {
     status: 'approved',
     isOnShelf: true,
     shelfStatus: 'on_sale',
-    isRevision: false,
     animationAssetId: { not: null },
     animationVersionId: { not: null },
     storefrontCoverUrl: { not: null },
@@ -39,8 +38,7 @@ export function isPubliclySaleableCollabWork(work) {
     work &&
     work.status === 'approved' &&
     work.isOnShelf === true &&
-    work.shelfStatus === 'on_sale' &&
-    work.isRevision !== true
+    work.shelfStatus === 'on_sale'
   )
 }
 
@@ -77,7 +75,6 @@ export async function resolveCollabOffer(prisma, workId, skuId) {
       status: true,
       isOnShelf: true,
       shelfStatus: true,
-      isRevision: true,
       animationAssetId: true,
       animationVersionId: true,
       animationVersion: { select: { baseFrameCount: true, frameKeys: true } },
