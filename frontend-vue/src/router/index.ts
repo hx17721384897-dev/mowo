@@ -54,7 +54,7 @@ const router = createRouter({
           path: 'showcase/:workId',
           name: 'collab-detail',
           component: CollabDetailView,
-          meta: { title: '联名商品详情 · 哞屋 MOWO' }
+          meta: { title: '联名商品详情 - 哞屋 MOWO', pageOwnFooter: true }
         },
         {
           path: 'legal/terms',

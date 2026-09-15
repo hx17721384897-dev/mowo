@@ -77,6 +77,58 @@ const listData = {
   }))
 }
 
+const detailData = {
+  id: 'work-1',
+  creatorId: 'creator-1',
+  title: '十二格春日',
+  description: '一朵花从种子慢慢开放。\n每一格都保留手绘纸张的细微质感。',
+  storefrontSummary: '把一整个春天，轻轻转到眼前。',
+  storefrontMedia: [{ url: svgData('DETAIL', '#b9dbcb', '#f5dfa2'), kind: 'image' }],
+  storefrontTags: ['手绘', '春日', '逐帧动画'],
+  storefrontSeries: '春日系列',
+  animationFrames: [
+    svgData('FRAME 1', '#f7df88', '#efaa86'),
+    svgData('FRAME 2', '#b6dac8', '#f0d88b'),
+    svgData('FRAME 3', '#adc9ea', '#dfb8df')
+  ],
+  hoverGifUrl: null,
+  coverUrl: works[0]!.coverUrl,
+  approvedAt: '2026-09-01T00:00:00.000Z',
+  creator: { userId: 'creator-1', nickname: '小满', avatarUrl: null },
+  supportedSkus: [
+    {
+      id: 'sku-1',
+      modelId: 'model-1',
+      modelName: '手摇动画机',
+      size: '小号',
+      material: '纸艺',
+      frameCount: 12,
+      colorName: '原木',
+      colorHex: '#d7b98e',
+      previewImage: works[1]!.coverUrl,
+      finalPrice: 129,
+      fulfillmentMode: 'STOCK_FIRST',
+      leadTimeDays: 5,
+      exampleMedia: []
+    },
+    {
+      id: 'sku-2',
+      modelId: 'model-1',
+      modelName: '手摇动画机',
+      size: '大号',
+      material: '纸艺',
+      frameCount: 12,
+      colorName: '深木',
+      colorHex: '#5d4634',
+      previewImage: works[2]!.coverUrl,
+      finalPrice: 169,
+      fulfillmentMode: 'STOCK_ONLY',
+      leadTimeDays: 2,
+      exampleMedia: []
+    }
+  ]
+}
+
 async function mockList(page: Page): Promise<void> {
   await page.route('**/api/collab/works?**', (route) =>
     route.fulfill({ json: { success: true, data: listData } })
@@ -85,15 +137,35 @@ async function mockList(page: Page): Promise<void> {
   await page.route('https://fonts.gstatic.com/**', (route) => route.abort())
 }
 
+async function mockDetail(page: Page): Promise<void> {
+  await mockList(page)
+  await page.route('**/api/config/features', (route) =>
+    route.fulfill({ json: { success: true, data: { onlineCheckout: false } } })
+  )
+  await page.route('**/api/collab/works/work-1', (route) =>
+    route.fulfill({ json: { success: true, data: detailData } })
+  )
+  await page.route('**/api/collab/works/work-1/view', (route) =>
+    route.fulfill({ json: { success: true, data: { counted: true } } })
+  )
+}
+
 function startLegacyServer(): Promise<{ server: Server; origin: string }> {
   const pageHtml = legacyFile('frontend/pages/showcase.html')
+  const detailHtml = legacyFile('frontend/pages/showcase-detail.html')
   const navCss = legacyFile('frontend/css/nav.css')
   const navJs = legacyFile('frontend/js/nav.js')
+  const detailJs = legacyFile('frontend/js/showcase-detail.js')
   const server = createServer((request, response) => {
     const path = new URL(request.url ?? '/', 'http://127.0.0.1').pathname
     if (path === '/pages/showcase.html') {
       response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
       response.end(pageHtml)
+      return
+    }
+    if (path === '/pages/showcase-detail.html') {
+      response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
+      response.end(detailHtml)
       return
     }
     if (path === '/css/nav.css') {
@@ -104,6 +176,16 @@ function startLegacyServer(): Promise<{ server: Server; origin: string }> {
     if (path === '/js/nav.js') {
       response.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8' })
       response.end(navJs)
+      return
+    }
+    if (path === '/js/showcase-detail.js') {
+      response.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8' })
+      response.end(detailJs)
+      return
+    }
+    if (path === '/js/feature-flags.js') {
+      response.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8' })
+      response.end('window.getMowoFeatureFlags = async () => ({ onlineCheckout: false })')
       return
     }
     if (path === '/js/runtime-config.js') {
@@ -152,6 +234,42 @@ test('联名列表旧版与 Vue 版视觉验收截图', async ({ page }, testInf
       fullPage: true
     })
     if (suffix === 'chromium') expect(vueScreenshot.equals(oldScreenshot)).toBe(true)
+  } finally {
+    server.closeAllConnections()
+    await new Promise<void>((resolve, reject) =>
+      server.close((error) => (error ? reject(error) : resolve()))
+    )
+  }
+})
+
+test('联名详情旧版与 Vue 版视觉验收截图', async ({ page }, testInfo) => {
+  const { server, origin } = await startLegacyServer()
+  const suffix = testInfo.project.name
+  try {
+    await page.setViewportSize(
+      suffix === 'mobile-chromium' ? { width: 390, height: 844 } : { width: 1440, height: 900 }
+    )
+    await mockDetail(page)
+    await page.goto(`${origin}/pages/showcase-detail.html?workId=work-1`)
+    await expect(page.locator('.sku-card')).toHaveCount(2)
+    await expect(page.locator('.more-card')).toHaveCount(4)
+    await page.waitForTimeout(700)
+    const oldHeight = await page.evaluate(() => document.documentElement.scrollHeight)
+    await page.screenshot({
+      path: `test-results/visual-fidelity/old-detail-${suffix}.png`,
+      fullPage: true
+    })
+
+    await page.goto('/app/showcase/work-1')
+    await expect(page.locator('.sku-card')).toHaveCount(2)
+    await expect(page.locator('.more-card')).toHaveCount(4)
+    await page.waitForTimeout(700)
+    const vueHeight = await page.evaluate(() => document.documentElement.scrollHeight)
+    expect(vueHeight).toBe(oldHeight)
+    await page.screenshot({
+      path: `test-results/visual-fidelity/vue-detail-${suffix}.png`,
+      fullPage: true
+    })
   } finally {
     server.closeAllConnections()
     await new Promise<void>((resolve, reject) =>

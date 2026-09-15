@@ -36,7 +36,10 @@ const detailData = {
   storefrontMedia: [{ url: '/broken-media.jpg', kind: 'image' }],
   storefrontTags: ['手绘'],
   storefrontSeries: '春日系列',
-  animationFrames: [],
+  animationFrames: [
+    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="40" height="40"%3E%3Crect width="40" height="40" fill="%23f5e642"/%3E%3C/svg%3E',
+    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="40" height="40"%3E%3Crect width="40" height="40" fill="%23ff6b35"/%3E%3C/svg%3E'
+  ],
   hoverGifUrl: null,
   coverUrl: null,
   approvedAt: '2026-09-01T00:00:00.000Z',
@@ -104,11 +107,21 @@ test('collab list, detail deep link and broken media degrade safely', async ({
   }
   await page.locator('.work-card').click()
   await expect(page).toHaveURL(/\/app\/showcase\/work-1\?sku=sku-1$/)
-  await expect(page.getByText('媒体暂时无法显示')).toBeVisible()
+  await expect(page.getByText('该素材暂时不可用')).toBeVisible()
+  await page.getByRole('button', { name: '动画预览' }).click()
+  if (testInfo.project.name === 'mobile-chromium') {
+    await expect(page.getByText('2 个核心帧 · 10 fps')).toBeHidden()
+  } else {
+    await expect(page.getByText('2 个核心帧 · 10 fps')).toBeVisible()
+  }
+  await page.getByRole('button', { name: '播放动画' }).click()
+  await expect(page.getByRole('button', { name: '播放动画' })).toHaveText('暂停')
+  await page.getByRole('button', { name: '加快播放' }).click()
+  await expect(page.getByText('2 个核心帧 · 12 fps')).toHaveCount(1)
   await page.getByRole('button', { name: /大号/ }).click()
   await expect(page).toHaveURL(/sku=sku-2/)
   await page.reload()
-  await expect(page.getByRole('button', { name: /大号/ })).toHaveClass(/active/)
+  await expect(page.getByRole('button', { name: /大号/ })).toHaveClass(/selected/)
   if (process.env.MOWO_CAPTURE_V1B === '1') {
     await page.screenshot({
       path: `test-results/manual-v1b-${testInfo.project.name}-detail.png`,
@@ -121,37 +134,27 @@ test('legacy detail URL preserves work and sku', async ({ page }) => {
   await mockCollab(page)
   await page.goto('/app/showcase-detail?workId=work-1&sku=sku-2')
   await expect(page).toHaveURL(/\/app\/showcase\/work-1\?sku=sku-2$/)
-  await expect(page.getByRole('button', { name: /大号/ })).toHaveClass(/active/)
+  await expect(page.getByRole('button', { name: /大号/ })).toHaveClass(/selected/)
 })
 
-test('login restores the selected sku without opening transaction APIs', async ({ page }) => {
+test('closed checkout keeps the original contact path without transaction calls', async ({
+  page
+}, testInfo) => {
   await mockCollab(page)
   let cartCalls = 0
   await page.route('**/api/cart/**', (route) => {
     cartCalls += 1
     return route.abort()
   })
-  await page.route('**/api/v1/auth/sms/send', (route) =>
-    route.fulfill({ json: { success: true, data: {} } })
-  )
-  await page.route('**/api/v1/auth/sms/verify', (route) =>
-    route.fulfill({
-      json: {
-        success: true,
-        data: { accessToken: 'token', user: { id: 'user-1', nickname: '测试用户' } }
-      }
-    })
-  )
-
   await page.goto('/app/showcase/work-1?sku=sku-2')
-  await page.getByLabel('数量').fill('3')
-  await page.getByRole('button', { name: '登录并保留选择' }).click()
-  await page.getByLabel('手机号').fill('13800138000')
-  await page.getByLabel('短信验证码').fill('123456')
-  await page.getByRole('button', { name: '登录并返回商品' }).click()
-  await expect(page.getByText(/已恢复原规格/)).toBeVisible()
-  await expect(page.getByRole('button', { name: /大号/ })).toHaveClass(/active/)
-  await expect(page.getByLabel('数量')).toHaveValue('3')
+  await page.getByRole('button', { name: '增加数量' }).click()
+  await expect(page.getByRole('button', { name: /大号/ })).toHaveClass(/selected/)
+  await expect(page.getByLabel('购买数量')).toHaveValue('2')
+  const contactAction = page.locator('.actions .cta')
+  if (testInfo.project.name === 'mobile-chromium') await expect(contactAction).toBeHidden()
+  else await expect(contactAction).toBeVisible()
+  await expect(page.getByRole('button', { name: '立即购买' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '加入购物车' })).toHaveCount(0)
   expect(cartCalls).toBe(0)
 })
 

@@ -1,30 +1,24 @@
 <script setup lang="ts">
+/* eslint-disable vue/html-closing-bracket-newline, vue/multiline-html-element-content-newline, vue/html-indent */
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import AppState from '@/components/AppState.vue'
-import AuthDialog from '@/features/auth/AuthDialog.vue'
-import { getCollabWork, recordCollabView } from '@/features/collab/api'
+import { legacyPublicUrl } from '@/config/public-links'
+import { getCollabWork, getCollabWorks, recordCollabView } from '@/features/collab/api'
 import CollabMediaGallery from '@/features/collab/CollabMediaGallery.vue'
-import {
-  clearCollabIntent,
-  readCollabIntent,
-  saveCollabIntent
-} from '@/features/collab/purchase-intent'
-import type { CollabMedia, CollabWorkDetail } from '@/features/collab/types'
-import { useSessionStore } from '@/stores/session'
+import type { CollabMedia, CollabWorkDetail, CollabWorkSummary } from '@/features/collab/types'
 
 const route = useRoute()
 const router = useRouter()
-const session = useSessionStore()
 const work = ref<CollabWorkDetail | null>(null)
+const related = ref<CollabWorkSummary[]>([])
 const selectedSkuId = ref('')
 const quantity = ref(1)
 const loading = ref(true)
 const error = ref('')
-const notice = ref('')
-const authOpen = ref(false)
+const failedSkuImages = ref(new Set<string>())
+const failedRelatedImages = ref(new Set<string>())
 let viewTimer = 0
-let noticeTimer = 0
+let requestSequence = 0
 
 const workId = computed(() => String(route.params.workId ?? ''))
 const selectedSku = computed(
@@ -32,20 +26,23 @@ const selectedSku = computed(
 )
 const media = computed<CollabMedia[]>(() => {
   if (!work.value) return []
-  const result = [...work.value.storefrontMedia]
-  if (work.value.coverUrl && !result.some((item) => item.url === work.value?.coverUrl)) {
-    result.unshift({ url: work.value.coverUrl, kind: 'image' })
+  const result: CollabMedia[] = []
+  const seen = new Set<string>()
+  const add = (item: CollabMedia): void => {
+    if (!item.url || seen.has(item.url)) return
+    seen.add(item.url)
+    result.push(item)
   }
+  if (work.value.coverUrl) add({ url: work.value.coverUrl, kind: 'image' })
+  work.value.storefrontMedia.forEach(add)
   return result
 })
-
-function showNotice(message: string): void {
-  notice.value = message
-  window.clearTimeout(noticeTimer)
-  noticeTimer = window.setTimeout(() => {
-    notice.value = ''
-  }, 4500)
-}
+const creatorName = computed(() => work.value?.creator.nickname || '创作者')
+const selectionText = computed(() => {
+  const sku = selectedSku.value
+  if (!sku) return '请选择规格'
+  return `${sku.modelName} · ${sku.size} · ${sku.frameCount}帧 · ${sku.material} · ${sku.colorName || '默认颜色'} · ${quantity.value} 件`
+})
 
 function visitorId(): string {
   const key = 'mowo_storefront_visitor'
@@ -56,7 +53,6 @@ function visitorId(): string {
   }
   return value
 }
-
 function scheduleView(): void {
   window.clearTimeout(viewTimer)
   viewTimer = window.setTimeout(() => {
@@ -64,157 +60,246 @@ function scheduleView(): void {
       void recordCollabView(workId.value, visitorId()).catch(() => undefined)
   }, 3000)
 }
-
+async function loadRelated(sequence: number): Promise<void> {
+  try {
+    const result = await getCollabWorks({ page: 1, limit: 8, sort: 'recommended' })
+    if (sequence === requestSequence)
+      related.value = result.works.filter((item) => item.id !== workId.value).slice(0, 4)
+  } catch {
+    if (sequence === requestSequence) related.value = []
+  }
+}
 async function load(): Promise<void> {
+  const sequence = ++requestSequence
   loading.value = true
   error.value = ''
   work.value = null
+  related.value = []
+  failedSkuImages.value = new Set()
+  failedRelatedImages.value = new Set()
   try {
+    if (!workId.value) throw new Error('缺少商品编号，请返回联名作品列表重新选择')
     const result = await getCollabWork(workId.value)
+    if (sequence !== requestSequence) return
     work.value = result
     const requestedSku = typeof route.query.sku === 'string' ? route.query.sku : ''
     selectedSkuId.value = result.supportedSkus.some((sku) => sku.id === requestedSku)
       ? requestedSku
       : (result.supportedSkus[0]?.id ?? '')
-    if (!requestedSku && selectedSkuId.value) {
+    if (!requestedSku && selectedSkuId.value)
       await router.replace({ query: { ...route.query, sku: selectedSkuId.value } })
-    }
+    document.title = `${result.title} - 哞屋 MOWO`
     scheduleView()
-    restorePendingAction(false)
+    void loadRelated(sequence)
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : '联名商品详情暂时无法加载'
+    if (sequence !== requestSequence) return
+    error.value = cause instanceof Error ? cause.message : '商品详情暂时无法加载，请稍后重试'
   } finally {
-    loading.value = false
+    if (sequence === requestSequence) loading.value = false
   }
 }
-
 async function selectSku(id: string): Promise<void> {
   selectedSkuId.value = id
   await router.replace({ query: { ...route.query, sku: id } })
 }
-
-function requestPurchasePreparation(): void {
-  if (!selectedSku.value) return showNotice('请先选择一个规格')
-  quantity.value = Math.max(1, Math.min(10, Number.isInteger(quantity.value) ? quantity.value : 1))
-  const intent = {
-    workId: workId.value,
-    skuId: selectedSku.value.id,
-    quantity: quantity.value,
-    action: 'prepare-purchase' as const,
-    createdAt: Date.now()
-  }
-  saveCollabIntent(intent)
-  if (!session.isAuthenticated) {
-    showNotice('登录后会恢复当前规格与操作')
-    authOpen.value = true
-    return
-  }
-  restorePendingAction(true)
+function changeQuantity(delta: number): void {
+  setQuantity(quantity.value + delta)
 }
-
-function restorePendingAction(announce: boolean): void {
-  const intent = readCollabIntent()
-  if (!intent || intent.workId !== workId.value || !work.value) return
-  if (!work.value.supportedSkus.some((sku) => sku.id === intent.skuId)) {
-    clearCollabIntent()
-    showNotice('原规格已不可用，请重新选择')
-    return
-  }
-  selectedSkuId.value = intent.skuId
-  quantity.value = intent.quantity
-  void router.replace({ query: { ...route.query, sku: intent.skuId } })
-  clearCollabIntent()
-  if (announce) showNotice('已恢复原规格。购物车与在线交易将在 V3 验收后开放。')
+function setQuantity(value: number | string): void {
+  quantity.value = Math.max(1, Math.min(10, Number.parseInt(String(value), 10) || 1))
 }
-
-function authenticated(): void {
-  restorePendingAction(true)
+function safeColor(value: string | null): string {
+  return /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(value ?? '')
+    ? value!
+    : '#eee'
+}
+function formatPrice(value: number | null | undefined): string {
+  return Number.isFinite(Number(value)) ? `¥${Number(value).toFixed(2)}` : '暂不可售'
+}
+function fulfillment(short = false): string {
+  if (!selectedSku.value) return ''
+  if (short) return selectedSku.value.fulfillmentMode === 'STOCK_ONLY' ? '库存款' : '可安排制作'
+  return selectedSku.value.fulfillmentMode === 'STOCK_ONLY'
+    ? '仅限现货'
+    : '库存优先，无库存时安排制作'
+}
+function markSkuImageFailed(id: string): void {
+  failedSkuImages.value = new Set(failedSkuImages.value).add(id)
+}
+function markRelatedImageFailed(id: string): void {
+  failedRelatedImages.value = new Set(failedRelatedImages.value).add(id)
 }
 
 watch(workId, load)
 onMounted(load)
 onBeforeUnmount(() => {
+  requestSequence += 1
   window.clearTimeout(viewTimer)
-  window.clearTimeout(noticeTimer)
 })
 </script>
 
 <template>
-  <main class="collab-detail-page page-width">
-    <RouterLink class="collab-back" :to="{ name: 'collab-list' }">← 返回联名货架</RouterLink>
-    <AppState v-if="loading" kind="loading" title="正在加载商品详情" />
-    <AppState v-else-if="error || !work" kind="error" title="商品详情暂时无法显示" :detail="error">
-      <RouterLink class="state-action" :to="{ name: 'collab-list' }">返回联名货架</RouterLink>
-    </AppState>
-    <template v-else>
-      <div class="collab-detail-grid">
-        <CollabMediaGallery :media="media" :title="work.title" />
-        <section class="collab-product" aria-labelledby="product-title">
-          <p class="section-kicker">{{ work.storefrontSeries || 'MOWO COLLAB' }}</p>
-          <h1 id="product-title">{{ work.title }}</h1>
-          <p class="collab-product__creator">与 {{ work.creator.nickname }} 联名</p>
-          <p class="collab-product__summary">{{ work.storefrontSummary || work.description }}</p>
-          <div v-if="work.storefrontTags.length" class="collab-tags">
-            <span v-for="tag in work.storefrontTags" :key="tag">{{ tag }}</span>
-          </div>
-
-          <fieldset class="sku-picker">
-            <legend>选择规格</legend>
-            <button
-              v-for="sku in work.supportedSkus"
-              :key="sku.id"
-              type="button"
-              :class="{ active: selectedSkuId === sku.id }"
-              @click="selectSku(sku.id)"
-            >
-              <strong>{{ sku.modelName }} · {{ sku.size }}</strong>
-              <span>{{ sku.material }} · {{ sku.frameCount }} 帧</span>
-              <b>¥{{ sku.finalPrice.toFixed(2) }}</b>
-            </button>
-          </fieldset>
-
-          <dl v-if="selectedSku" class="sku-facts">
-            <div>
-              <dt>颜色</dt>
-              <dd>{{ selectedSku.colorName || '默认颜色' }}</dd>
-            </div>
-            <div>
-              <dt>供货方式</dt>
-              <dd>
-                {{
-                  selectedSku.fulfillmentMode === 'STOCK_ONLY'
-                    ? '仅限现货'
-                    : '库存优先，无库存时安排制作'
-                }}
-              </dd>
-            </div>
-            <div>
-              <dt>预计发出</dt>
-              <dd>{{ selectedSku.leadTimeDays }} 天内</dd>
-            </div>
-          </dl>
-
-          <div class="purchase-preparation">
-            <label>
-              <span>数量</span>
-              <input v-model.number="quantity" type="number" min="1" max="10" />
-            </label>
-            <button class="primary-action" type="button" @click="requestPurchasePreparation">
-              {{ session.isAuthenticated ? '保留选择，等待交易开放' : '登录并保留选择' }}
-            </button>
-          </div>
-          <p class="transaction-boundary">
-            当前未开放网页购物车与真实支付。本页不会创建订单、锁定库存或发起付款。
-          </p>
-        </section>
+  <div class="collab-detail-fidelity">
+    <div class="shell">
+      <div class="crumb">
+        <RouterLink :to="{ name: 'collab-list' }">联名作品</RouterLink><span>/</span
+        ><span>{{ work?.title || '商品详情' }}</span>
       </div>
-      <section class="collab-description">
-        <p class="section-kicker">ABOUT THE WORK</p>
-        <h2>作品说明</h2>
-        <p>{{ work.description || '创作者暂未填写更多作品说明。' }}</p>
+      <main>
+        <div v-if="loading" class="loading">正在读取商品信息...</div>
+        <div v-else-if="error || !work" class="error-state">
+          <strong>{{ error || '商品不存在或已经下架' }}</strong
+          ><RouterLink :to="{ name: 'collab-list' }">返回联名作品</RouterLink>
+        </div>
+        <div v-else class="product">
+          <CollabMediaGallery
+            :media="media"
+            :animation-frames="work.animationFrames"
+            :title="work.title"
+          />
+          <section class="info">
+            <div class="series">{{ work.storefrontSeries || '哞屋联名作品' }}</div>
+            <h1 class="title">{{ work.title }}</h1>
+            <p class="summary">{{ work.storefrontSummary || '' }}</p>
+            <div v-if="work.storefrontTags.length" class="tags">
+              <span v-for="tag in work.storefrontTags" :key="tag" class="tag">{{ tag }}</span>
+            </div>
+            <RouterLink
+              class="creator"
+              :to="{ name: 'collab-list', query: { creatorId: work.creatorId } }"
+              ><span class="creator-avatar"
+                ><img
+                  v-if="work.creator.avatarUrl"
+                  :src="work.creator.avatarUrl"
+                  :alt="creatorName"
+                />{{ work.creator.avatarUrl ? '' : creatorName.charAt(0) }}</span
+              ><span
+                ><span class="creator-label">联名创作者</span
+                ><span class="creator-name">{{ creatorName }}</span></span
+              ></RouterLink
+            >
+            <div class="price-line">
+              <span class="price">{{ formatPrice(selectedSku?.finalPrice) }}</span
+              ><span class="price-note">按所选款式计价</span>
+            </div>
+            <div class="section-label">选择完整款式</div>
+            <div class="sku-list">
+              <button
+                v-for="sku in work.supportedSkus"
+                :key="sku.id"
+                class="sku-card"
+                :class="{ selected: selectedSkuId === sku.id }"
+                type="button"
+                @click="selectSku(sku.id)"
+              >
+                <span class="sku-image"
+                  ><img
+                    v-if="sku.previewImage && !failedSkuImages.has(sku.id)"
+                    :src="sku.previewImage"
+                    alt=""
+                    @error="markSkuImageFailed(sku.id)"
+                  /><template v-else>暂无图</template></span
+                >
+                <span
+                  ><span class="sku-name"
+                    >{{ sku.modelName }} · {{ sku.size }} · {{ sku.frameCount }}帧</span
+                  ><span class="sku-meta"
+                    >{{ sku.material }} ·
+                    <span class="swatch" :style="{ background: safeColor(sku.colorHex) }" />{{
+                      sku.colorName || '默认颜色'
+                    }}</span
+                  ><span class="sku-delivery"
+                    >{{ sku.fulfillmentMode === 'STOCK_ONLY' ? '库存款' : '可安排制作' }} · 预计
+                    {{ sku.leadTimeDays }} 天内发出</span
+                  ></span
+                >
+                <span class="sku-price">{{ formatPrice(sku.finalPrice) }}</span>
+              </button>
+            </div>
+            <div class="quantity">
+              <b>数量</b>
+              <div class="stepper">
+                <button type="button" aria-label="减少数量" @click="changeQuantity(-1)">-</button
+                ><input
+                  :value="quantity"
+                  inputmode="numeric"
+                  aria-label="购买数量"
+                  @change="setQuantity(($event.target as HTMLInputElement).value)"
+                /><button type="button" aria-label="增加数量" @click="changeQuantity(1)">+</button>
+              </div>
+            </div>
+            <div class="actions single-action">
+              <a class="action buy cta" :href="legacyPublicUrl('contact')"
+                >联系工作人员了解邀请测试订购安排</a
+              >
+            </div>
+            <div class="selection-hint" />
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <template v-if="work && !loading">
+      <section class="detail-band">
+        <div class="detail-inner">
+          <h2 class="detail-title">商品详情</h2>
+          <div class="detail-copy">{{ work.description || '' }}</div>
+          <div v-if="selectedSku" class="spec-table">
+            <div
+              v-for="row in [
+                ['款式', selectedSku.modelName],
+                ['尺寸', selectedSku.size],
+                ['产品帧数', `${selectedSku.frameCount} 帧`],
+                ['材质', selectedSku.material],
+                ['颜色', selectedSku.colorName || '默认颜色'],
+                ['供货方式', fulfillment()],
+                ['预计发出', `${selectedSku.leadTimeDays} 天内`]
+              ]"
+              :key="row[0]"
+              class="spec-row"
+            >
+              <span class="spec-key">{{ row[0] }}</span
+              ><span class="spec-value">{{ row[1] }}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section v-if="related.length" class="more">
+        <div class="more-head">
+          <h2>更多联名作品</h2>
+          <RouterLink :to="{ name: 'collab-list' }">查看全部</RouterLink>
+        </div>
+        <div class="more-grid">
+          <RouterLink
+            v-for="item in related"
+            :key="item.id"
+            class="more-card"
+            :to="{ name: 'collab-detail', params: { workId: item.id } }"
+            ><div class="more-image">
+              <img
+                v-if="item.coverUrl && !failedRelatedImages.has(item.id)"
+                :src="item.coverUrl"
+                alt=""
+                @error="markRelatedImageFailed(item.id)"
+              />
+            </div>
+            <div class="more-body">
+              <div class="more-title">{{ item.title }}</div>
+              <div class="more-price">{{ formatPrice(item.minPrice) }} 起</div>
+            </div></RouterLink
+          >
+        </div>
       </section>
     </template>
-    <p v-if="notice" class="collab-toast" role="status">{{ notice }}</p>
-    <AuthDialog :open="authOpen" @close="authOpen = false" @authenticated="authenticated" />
-  </main>
+
+    <div class="purchase-bar" hidden>
+      <div class="purchase-inner">
+        <div class="bar-summary">
+          <div class="bar-title">{{ work?.title }}</div>
+          <div class="bar-choice">{{ selectionText }}</div>
+        </div>
+        <div class="bar-price">{{ formatPrice(selectedSku?.finalPrice) }}</div>
+      </div>
+    </div>
+  </div>
 </template>
