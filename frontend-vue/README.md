@@ -7,14 +7,14 @@
 先在项目根目录启动 API 与旧页面服务：
 
 ```powershell
-pwsh -File scripts/local.ps1 start
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\local.ps1 start
 ```
 
 再打开一个终端启动 Vue：
 
 ```powershell
 cd frontend-vue
-npm run dev
+npm.cmd run dev
 ```
 
 访问 `http://127.0.0.1:5173/app/`。Vite 只在开发环境将 `/api/*` 代理到本地 3001 API，并将 `/mowo/frontend/*` 代理到旧页面服务；生产地址必须由部署环境注入 `public/runtime-config.js`，不能把密钥写入前端。
@@ -22,7 +22,7 @@ npm run dev
 停止时在 Vue 终端按 `Ctrl+C`，再在项目根目录执行：
 
 ```powershell
-pwsh -File scripts/local.ps1 stop
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\local.ps1 stop
 ```
 
 ## 验证

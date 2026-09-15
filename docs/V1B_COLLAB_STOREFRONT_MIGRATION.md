@@ -40,6 +40,8 @@ V1b 不提前实现 V3 的购物车、立即购买、订单或结算。当前 `o
 
 第一次后端专项执行时，测试脚本默认连接开发库而临时 API 连接 `mowo_b1_test`，因数据源不一致产生假失败；随后显式校验并绑定 `mowo_b1_test` 重跑。另发现 `check:collab-storefront` 固定期待结算返回 400，与关闭支付时统一返回 404 的安全门不一致，已改为依据公开功能开关断言。旧详情浏览器脚本要求关闭支付时仍显示购买按钮，因此被判定为已迁移旧实现并删除，而不是放宽功能开关。
 
+负责人首次按 Windows PowerShell 5.1 执行 `local.ps1` 时，无 BOM UTF-8 中文输出被系统 ANSI 编码误读并破坏脚本引号。启动脚本已改为纯 ASCII 运行文本，并修复 PowerShell 5 在 `Start-Process` 后可能暂时返回空 `Process.Path` 的兼容问题；使用同一 `powershell.exe` 命令完成 `status → start → stop → status` 实测，进程身份仍由 PID、启动时间和规范化可执行路径共同校验。
+
 ## 5. 后续阶段交接
 
 - V1c：迁移联络类型、匿名附件会话、表单与错误反馈。
@@ -48,11 +50,11 @@ V1b 不提前实现 V3 的购物车、立即购买、订单或结算。当前 `o
 
 ## 6. 负责人手工复验
 
-1. 确认当前没有占用 3001、5500、5173：`pwsh -File scripts/local.ps1 status`。若显示由该脚本启动，可先执行 `pwsh -File scripts/local.ps1 stop`。
-2. 根目录执行 `pwsh -File scripts/local.ps1 start`，它只连接隔离库 `mowo_b1_test`；另开终端进入 `frontend-vue` 执行 `npm run dev`。
+1. 确认当前没有占用 3001、5500、5173：`powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\local.ps1 status`。若显示由该脚本启动，可先把末尾的 `status` 改为 `stop`。
+2. 根目录执行 `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\local.ps1 start`，它只连接隔离库 `mowo_b1_test`；另开终端进入 `frontend-vue` 执行 `npm.cmd run dev`。
 3. 打开 `http://127.0.0.1:5173/app/showcase`，检查桌面和手机宽度下的标题、筛选、空状态或真实上架商品。测试库无上架商品时出现空状态是正常结果。
 4. 若有上架商品，进入详情，切换 SKU 后刷新和后退；SKU 应保留在 URL。可临时让一张媒体地址失效，确认只出现占位而不白屏。
 5. 未登录点击“登录并保留选择”，验证弹窗、错误验证码提示及登录后 SKU/数量恢复。不要期待进入购物车；V1b 明确不会调用 `/api/cart/*`。
-6. 测试结束，在 Vue 终端按 `Ctrl+C`，根目录执行 `pwsh -File scripts/local.ps1 stop`。
+6. 测试结束，在 Vue 终端按 `Ctrl+C`，根目录执行 `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\local.ps1 stop`。
 
 反馈时请提供：访问 URL、复现步骤、预期与实际、完整页面截图；若是请求错误，再提供浏览器 Network 中的请求路径、HTTP 状态、响应 `code/message` 和 `X-Request-Id`。不要发送 Access Token、Refresh Cookie、短信验证码、手机号或私有媒体签名 URL。

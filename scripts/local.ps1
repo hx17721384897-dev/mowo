@@ -30,14 +30,14 @@ function Wait-Url([string]$Url) {
     } catch {}
     Start-Sleep -Milliseconds 250
   }
-  throw "服务未能就绪：$Url"
+  throw "Service did not become ready: $Url"
 }
 
-function Save-OwnedProcess([System.Diagnostics.Process]$Process, [string]$PidFile, [string]$ExpectedScript) {
+function Save-OwnedProcess([System.Diagnostics.Process]$Process, [string]$PidFile, [string]$ExpectedScript, [string]$ExecutablePath) {
   $record = [ordered]@{
     pid = $Process.Id
     startTimeUtcTicks = $Process.StartTime.ToUniversalTime().Ticks
-    executablePath = $Process.Path
+    executablePath = [System.IO.Path]::GetFullPath($ExecutablePath)
     expectedScript = $ExpectedScript
   }
   $record | ConvertTo-Json | Set-Content -LiteralPath $PidFile
@@ -49,11 +49,21 @@ function Get-OwnedProcess([string]$PidFile) {
     $record = Get-Content -LiteralPath $PidFile -Raw | ConvertFrom-Json
     $process = Get-Process -Id ([int]$record.pid) -ErrorAction SilentlyContinue
   } catch {
-    throw "进程记录损坏，请人工核对后删除：$PidFile"
+    throw "Process record is invalid; inspect it before removing: $PidFile"
   }
   if (-not $process) { return }
-  if ($process.StartTime.ToUniversalTime().Ticks -ne [long]$record.startTimeUtcTicks -or $process.Path -ne $record.executablePath) {
-    throw "拒绝操作 PID $($record.pid)：进程身份与本脚本记录不匹配"
+  # Windows PowerShell 5 can return a null Process.Path immediately after
+  # Start-Process. Older pid records therefore fall back to the current Node
+  # executable, while start time still protects against PID reuse.
+  $expectedExecutablePath = if ($record.executablePath) {
+    [System.IO.Path]::GetFullPath([string]$record.executablePath)
+  } else {
+    [System.IO.Path]::GetFullPath((Get-Command node).Source)
+  }
+  $actualExecutablePath = [System.IO.Path]::GetFullPath($process.Path)
+  $sameExecutable = [string]::Equals($actualExecutablePath, $expectedExecutablePath, [System.StringComparison]::OrdinalIgnoreCase)
+  if ($process.StartTime.ToUniversalTime().Ticks -ne [long]$record.startTimeUtcTicks -or -not $sameExecutable) {
+    throw "Refusing to operate on PID $($record.pid): process identity does not match the saved record"
   }
   return $process
 }
@@ -65,34 +75,34 @@ function Stop-OwnedProcess([string]$PidFile) {
 }
 
 if ($Action -eq 'status') {
-  Write-Host "API 3001: $(if (Test-Listening 3001) { '运行中' } else { '未运行' })"
-  Write-Host "Web 5500: $(if (Test-Listening 5500) { '运行中' } else { '未运行' })"
+  Write-Host "API 3001: $(if (Test-Listening 3001) { 'running' } else { 'stopped' })"
+  Write-Host "Web 5500: $(if (Test-Listening 5500) { 'running' } else { 'stopped' })"
   exit 0
 }
 
 if ($Action -eq 'stop') {
   Stop-OwnedProcess $WebPidFile
   Stop-OwnedProcess $ApiPidFile
-  Write-Host '已停止由 scripts/local.ps1 启动的本地服务。'
+  Write-Host 'Stopped local services owned by scripts/local.ps1.'
   exit 0
 }
 
 New-Item -ItemType Directory -Force -Path $RunDir | Out-Null
-if (Test-Listening 3001) { throw '端口 3001 已被占用；请先确认现有 API，不要重复启动。' }
-if (Test-Listening 5500) { throw '端口 5500 已被占用；请先确认现有前端服务，不要重复启动。' }
+if (Test-Listening 3001) { throw 'Port 3001 is already in use; inspect the existing API before starting another one.' }
+if (Test-Listening 5500) { throw 'Port 5500 is already in use; inspect the existing web service before starting another one.' }
 
 $dbLine = Get-Content (Join-Path $RepoRoot 'content-service/.env') | Where-Object { $_ -match '^DATABASE_URL=' } | Select-Object -First 1
-if (-not $dbLine) { throw 'content-service/.env 缺少 DATABASE_URL。' }
+if (-not $dbLine) { throw 'content-service/.env is missing DATABASE_URL.' }
 $env:DATABASE_URL = (($dbLine -replace '^DATABASE_URL=', '').Trim('"')) -replace '/mowo_db([?\"]|$)', '/mowo_b1_test$1'
-if ($env:DATABASE_URL -notmatch '/mowo_b1_test(?:\?|$)') { throw '无法安全生成 mowo_b1_test 连接地址。' }
+if ($env:DATABASE_URL -notmatch '/mowo_b1_test(?:\?|$)') { throw 'Could not safely derive the mowo_b1_test database URL.' }
 
 $node = (Get-Command node).Source
 $api = Start-Process -FilePath $node -ArgumentList 'src/index.js' -WorkingDirectory (Join-Path $RepoRoot 'content-service') -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $RunDir 'api.out.log') -RedirectStandardError (Join-Path $RunDir 'api.err.log')
-Save-OwnedProcess $api $ApiPidFile 'src/index.js'
+Save-OwnedProcess $api $ApiPidFile 'src/index.js' $node
 
 $webArgs = @((Join-Path $RepoRoot 'scripts/static-server.mjs'), '--root=frontend', '--mount=mowo/frontend', '--port=5500')
 $web = Start-Process -FilePath $node -ArgumentList $webArgs -WorkingDirectory $RepoRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $RunDir 'web.out.log') -RedirectStandardError (Join-Path $RunDir 'web.err.log')
-Save-OwnedProcess $web $WebPidFile 'static-server.mjs'
+Save-OwnedProcess $web $WebPidFile 'static-server.mjs' $node
 
 try {
   Wait-Url 'http://127.0.0.1:3001/'
@@ -102,7 +112,7 @@ try {
   throw
 }
 
-Write-Host '本地服务已启动（数据库：mowo_b1_test）：'
-Write-Host '  首页：http://127.0.0.1:5500/mowo/frontend/pages/index.html'
-Write-Host '  API：http://127.0.0.1:3001/'
-Write-Host '停止命令：pwsh -File scripts/local.ps1 stop'
+Write-Host 'Local services started (database: mowo_b1_test):'
+Write-Host '  Legacy web: http://127.0.0.1:5500/mowo/frontend/pages/index.html'
+Write-Host '  API: http://127.0.0.1:3001/'
+Write-Host 'Stop command: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/local.ps1 stop'
