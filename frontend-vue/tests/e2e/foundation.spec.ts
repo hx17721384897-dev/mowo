@@ -14,9 +14,9 @@ test('public V1a pages have one working navigation shell', async ({ page }) => {
 
   await page.getByRole('link', { name: '产品介绍' }).last().click()
   await expect(page).toHaveURL(/\/app\/products$/)
-  await expect(page.getByRole('heading', { name: /一台让逐帧画面/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /哞屋.*动画机/ })).toBeVisible()
 
-  await page.locator('.site-footer').getByRole('link', { name: '品牌故事' }).click()
+  await page.goto('/app/about')
   await expect(page.getByRole('heading', { name: /让每一帧热爱/ })).toBeVisible()
 
   await page.goto('/app/faq')
