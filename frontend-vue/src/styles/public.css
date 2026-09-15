@@ -649,49 +649,6 @@
   color: var(--mowo-color-muted);
 }
 
-.legal-page {
-  padding-block: clamp(3rem, 7vw, 6rem);
-}
-.draft-notice {
-  padding: 1.25rem 1.5rem;
-  border-left: 0.35rem solid var(--mowo-color-danger);
-  background: #fff0ed;
-}
-.draft-notice p {
-  margin: 0.5rem 0 0;
-  line-height: 1.7;
-}
-.legal-document {
-  max-width: 54rem;
-  margin: 3rem auto 0;
-  padding: clamp(1.5rem, 5vw, 4rem);
-  border: 1px solid var(--mowo-color-line);
-  background: white;
-}
-.legal-document header {
-  padding-bottom: 2rem;
-  border-bottom: 1px solid var(--mowo-color-line);
-}
-.legal-document h1 {
-  margin: 0.5rem 0;
-  font-size: clamp(2.2rem, 5vw, 4rem);
-}
-.legal-document header > p:last-child {
-  color: var(--mowo-color-muted);
-  font-size: 0.85rem;
-}
-.legal-document section {
-  margin-top: 2.5rem;
-}
-.legal-document h2 {
-  font-size: 1.2rem;
-}
-.legal-document p,
-.legal-document li {
-  color: #514337;
-  line-height: 1.9;
-}
-
 .site-footer {
   padding: 4rem max(1.5rem, calc((100vw - 74rem) / 2)) 1.5rem;
   background: var(--mowo-color-dark);

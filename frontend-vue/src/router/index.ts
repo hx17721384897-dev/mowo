@@ -71,14 +71,22 @@ const router = createRouter({
           name: 'terms',
           component: LegalView,
           props: { document: 'terms' },
-          meta: { title: '用户协议（测试草案）· 哞屋 MOWO' }
+          meta: {
+            title: '用户协议（测试草案）· 哞屋 MOWO',
+            pageOwnHeader: true,
+            pageOwnFooter: true
+          }
         },
         {
           path: 'legal/privacy',
           name: 'privacy',
           component: LegalView,
           props: { document: 'privacy' },
-          meta: { title: '隐私政策（测试草案）· 哞屋 MOWO' }
+          meta: {
+            title: '隐私政策（测试草案）· 哞屋 MOWO',
+            pageOwnHeader: true,
+            pageOwnFooter: true
+          }
         }
       ]
     },

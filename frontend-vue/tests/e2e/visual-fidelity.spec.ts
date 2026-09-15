@@ -162,6 +162,8 @@ function startLegacyServer(): Promise<{ server: Server; origin: string }> {
   const aboutHtml = legacyFile('frontend/pages/about.html')
   const productsHtml = legacyFile('frontend/pages/products.html')
   const faqHtml = legacyFile('frontend/pages/faq.html')
+  const termsHtml = legacyFile('frontend/pages/user-agreement.html')
+  const privacyHtml = legacyFile('frontend/pages/privacy-policy.html')
   const pageHtml = legacyFile('frontend/pages/showcase.html')
   const detailHtml = legacyFile('frontend/pages/showcase-detail.html')
   const navCss = legacyFile('frontend/css/nav.css')
@@ -190,6 +192,16 @@ function startLegacyServer(): Promise<{ server: Server; origin: string }> {
     if (path === '/pages/faq.html') {
       response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
       response.end(faqHtml)
+      return
+    }
+    if (path === '/pages/user-agreement.html') {
+      response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
+      response.end(termsHtml)
+      return
+    }
+    if (path === '/pages/privacy-policy.html') {
+      response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
+      response.end(privacyHtml)
       return
     }
     if (path === '/pages/showcase.html') {
@@ -251,6 +263,46 @@ function startLegacyServer(): Promise<{ server: Server; origin: string }> {
       if (!address || typeof address === 'string') throw new Error('无法启动旧版视觉基线服务')
       resolve({ server, origin: `http://127.0.0.1:${address.port}` })
     })
+  })
+}
+
+for (const legalPage of [
+  { name: '用户协议', legacy: 'user-agreement.html', vue: 'terms' },
+  { name: '隐私政策', legacy: 'privacy-policy.html', vue: 'privacy' }
+]) {
+  test(`${legalPage.name}旧版与 Vue 版视觉验收截图`, async ({ page }, testInfo) => {
+    const { server, origin } = await startLegacyServer()
+    const suffix = testInfo.project.name
+    try {
+      await page.setViewportSize(
+        suffix === 'mobile-chromium' ? { width: 390, height: 844 } : { width: 1440, height: 900 }
+      )
+      await page.goto(`${origin}/pages/${legalPage.legacy}`)
+      const oldHeader = await page.locator('header').boundingBox()
+      const oldArticle = await page.locator('article').boundingBox()
+      await page.screenshot({
+        path: `test-results/visual-fidelity/old-legal-${legalPage.vue}-${suffix}.png`,
+        fullPage: true
+      })
+
+      await page.goto(`/app/legal/${legalPage.vue}`)
+      const vueHeader = await page.locator('.legal-header').boundingBox()
+      const vueArticle = await page.locator('article').boundingBox()
+      expect(vueHeader).toEqual(oldHeader)
+      expect(vueArticle?.x).toBe(oldArticle?.x)
+      expect(vueArticle?.width).toBe(oldArticle?.width)
+      await expect(page.getByText('测试草案，不是正式上线法律文本。')).toBeVisible()
+      await expect(page.getByRole('navigation', { name: '主导航' })).toHaveCount(0)
+      await page.screenshot({
+        path: `test-results/visual-fidelity/vue-legal-${legalPage.vue}-${suffix}.png`,
+        fullPage: true
+      })
+    } finally {
+      server.closeAllConnections()
+      await new Promise<void>((resolve, reject) =>
+        server.close((error) => (error ? reject(error) : resolve()))
+      )
+    }
   })
 }
 
