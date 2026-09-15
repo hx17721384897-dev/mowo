@@ -69,7 +69,7 @@ Vue 重构只替换技术架构，不自行重新设计产品。迁移后的页�
 
 ## 8. 进度记录
 
-视觉事实源固定为 Git 提交 `a007340^`。视觉专项从该提交直接读取旧 HTML/CSS/JS，在固定 DTO 下以 1440×900 和 390×844 对照；运行前必须先执行 `npm run build`，随后在 PowerShell 执行 `$env:MOWO_CAPTURE_FIDELITY='1'; npx playwright test tests/e2e/visual-fidelity.spec.ts`。截图位于被 Git 忽略的 `frontend-vue/test-results/visual-fidelity/`。
+视觉事实源固定为 Git 提交 `a007340^`。视觉专项从该提交直接读取旧 HTML/CSS/JS，在固定 DTO 下以 1440×900 和 390×844 对照；运行前必须先执行 `npm run build`，随后在 PowerShell 执行 `$env:MOWO_CAPTURE_FIDELITY='1'; npx playwright test tests/e2e/visual-fidelity.spec.ts --workers=2`。超长全页截图固定使用低并发，避免本机资源争抢造成非功能性超时。截图位于被 Git 忽略的 `frontend-vue/test-results/visual-fidelity/`。
 
 | 阶段 | 关键结果 | 提交 |
 |---|---|---|
