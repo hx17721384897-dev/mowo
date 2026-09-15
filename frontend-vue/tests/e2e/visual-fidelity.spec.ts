@@ -266,6 +266,25 @@ function startLegacyServer(): Promise<{ server: Server; origin: string }> {
   })
 }
 
+test('公共 404 双视口稳定性截图', async ({ page }, testInfo) => {
+  const suffix = testInfo.project.name
+  await page.setViewportSize(
+    suffix === 'mobile-chromium' ? { width: 390, height: 844 } : { width: 1440, height: 900 }
+  )
+  await page.goto('/app/this-route-does-not-exist')
+  await expect(page.getByRole('heading', { name: '页面不存在' })).toBeVisible()
+  await expect(page.getByRole('link', { name: '返回首页' })).toHaveAttribute('href', '/app/')
+  await expect(page.getByText(/尚未迁移|旧功能|退役/)).toHaveCount(0)
+  const overflows = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1
+  )
+  expect(overflows).toBe(false)
+  await page.screenshot({
+    path: `test-results/visual-fidelity/vue-not-found-${suffix}.png`,
+    fullPage: true
+  })
+})
+
 for (const legalPage of [
   { name: '用户协议', legacy: 'user-agreement.html', vue: 'terms' },
   { name: '隐私政策', legacy: 'privacy-policy.html', vue: 'privacy' }
