@@ -664,7 +664,7 @@
   opacity: 1;
 }
 .mowo-nav-mid a.router-link-exact-active {
-  font-weight: 600;
+  font-weight: 700;
   opacity: 1;
 }
 .mowo-nav-mid a.router-link-exact-active::after {
