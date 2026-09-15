@@ -39,7 +39,12 @@ const router = createRouter({
           component: ProductIntroView,
           meta: { title: '产品介绍 · 哞屋 MOWO', pageOwnFooter: true }
         },
-        { path: 'faq', name: 'faq', component: FaqView, meta: { title: '常见问题 · 哞屋 MOWO' } },
+        {
+          path: 'faq',
+          name: 'faq',
+          component: FaqView,
+          meta: { title: '常见问题 · 哞屋 MOWO', pageOwnFooter: true }
+        },
         {
           path: 'showcase',
           name: 'collab-list',

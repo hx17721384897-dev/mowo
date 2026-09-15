@@ -161,6 +161,7 @@ function startLegacyServer(): Promise<{ server: Server; origin: string }> {
   const homeHtml = legacyFile('frontend/pages/index.html')
   const aboutHtml = legacyFile('frontend/pages/about.html')
   const productsHtml = legacyFile('frontend/pages/products.html')
+  const faqHtml = legacyFile('frontend/pages/faq.html')
   const pageHtml = legacyFile('frontend/pages/showcase.html')
   const detailHtml = legacyFile('frontend/pages/showcase-detail.html')
   const navCss = legacyFile('frontend/css/nav.css')
@@ -168,6 +169,7 @@ function startLegacyServer(): Promise<{ server: Server; origin: string }> {
   const detailJs = legacyFile('frontend/js/showcase-detail.js')
   const heroImage = legacyBinary('frontend/assets/hero-main.png')
   const boxDiagram = legacyBinary('frontend/assets/box-diagram.png')
+  const faqHero = legacyBinary('frontend/assets/images/faq-hero.png')
   const server = createServer((request, response) => {
     const path = new URL(request.url ?? '/', 'http://127.0.0.1').pathname
     if (path === '/pages/index.html') {
@@ -183,6 +185,11 @@ function startLegacyServer(): Promise<{ server: Server; origin: string }> {
     if (path === '/pages/products.html') {
       response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
       response.end(productsHtml)
+      return
+    }
+    if (path === '/pages/faq.html') {
+      response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
+      response.end(faqHtml)
       return
     }
     if (path === '/pages/showcase.html') {
@@ -215,6 +222,11 @@ function startLegacyServer(): Promise<{ server: Server; origin: string }> {
       response.end(path.endsWith('hero-main.png') ? heroImage : boxDiagram)
       return
     }
+    if (path === '/assets/images/faq-hero.png') {
+      response.writeHead(200, { 'content-type': 'image/png' })
+      response.end(faqHero)
+      return
+    }
     if (path === '/js/feature-flags.js') {
       response.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8' })
       response.end('window.getMowoFeatureFlags = async () => ({ onlineCheckout: false })')
@@ -241,6 +253,47 @@ function startLegacyServer(): Promise<{ server: Server; origin: string }> {
     })
   })
 }
+
+test('常见问题旧版与 Vue 版视觉验收截图', async ({ page }, testInfo) => {
+  const { server, origin } = await startLegacyServer()
+  const suffix = testInfo.project.name
+  try {
+    await page.setViewportSize(
+      suffix === 'mobile-chromium' ? { width: 390, height: 844 } : { width: 1440, height: 900 }
+    )
+    await page.route('https://fonts.googleapis.com/**', (route) => route.abort())
+    await page.route('https://fonts.gstatic.com/**', (route) => route.abort())
+    await page.route('https://cdn.jsdelivr.net/**', (route) =>
+      route.fulfill({
+        contentType: 'text/javascript; charset=utf-8',
+        body: 'window.Fuse=class{constructor(items){this.items=items}search(query){return this.items.filter((item)=>JSON.stringify(item).includes(query)).map((item)=>({item}))}}'
+      })
+    )
+    await page.goto(`${origin}/pages/faq.html`)
+    await expect(page.locator('.faq-item')).toHaveCount(20)
+    const oldHero = await page.locator('.faq-hero').boundingBox()
+    await page.screenshot({
+      path: `test-results/visual-fidelity/old-faq-${suffix}.png`,
+      fullPage: true
+    })
+
+    await page.goto('/app/faq')
+    await expect(page.locator('.faq-item')).toHaveCount(9)
+    const vueHero = await page.locator('.faq-hero').boundingBox()
+    expect(vueHero).toEqual(oldHero)
+    await expect(page.locator('.trust-section')).toHaveCount(0)
+    await expect(page.getByText(/社区|分红|提现|牛量|创作者自助/)).toHaveCount(0)
+    await page.screenshot({
+      path: `test-results/visual-fidelity/vue-faq-${suffix}.png`,
+      fullPage: true
+    })
+  } finally {
+    server.closeAllConnections()
+    await new Promise<void>((resolve, reject) =>
+      server.close((error) => (error ? reject(error) : resolve()))
+    )
+  }
+})
 
 test('产品介绍旧版与 Vue 版视觉验收截图', async ({ page }, testInfo) => {
   const { server, origin } = await startLegacyServer()

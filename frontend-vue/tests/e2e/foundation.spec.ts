@@ -23,12 +23,12 @@ test('public V1a pages have one working navigation shell', async ({ page }) => {
   await expect(page.getByRole('heading', { name: '常见问题' })).toBeVisible()
 })
 
-test('FAQ search reports current product boundaries', async ({ page }) => {
+test('FAQ search reports current payment boundaries', async ({ page }) => {
   await page.goto('/app/faq')
-  await page.getByRole('searchbox', { name: '搜索问题' }).fill('社区')
+  await page.getByRole('searchbox', { name: '搜索问题' }).fill('支付')
   await expect(page.getByText('找到 1 个问题')).toBeVisible()
-  await page.getByText('现在有社区、关注或收藏功能吗？').click()
-  await expect(page.getByText(/旧实现已经退役/)).toBeVisible()
+  await page.getByText('网页现在可以直接付款吗？').click()
+  await expect(page.getByText(/在线支付保持关闭/)).toBeVisible()
   await expect(page.getByText(/7 天无理由/)).toHaveCount(0)
 })
 
