@@ -19,7 +19,7 @@ test('public V1a pages have one working navigation shell', async ({ page }) => {
   await page.locator('.site-footer').getByRole('link', { name: '品牌故事' }).click()
   await expect(page.getByRole('heading', { name: /让每一帧热爱/ })).toBeVisible()
 
-  await page.locator('.site-footer').getByRole('link', { name: '常见问题' }).click()
+  await page.goto('/app/faq')
   await expect(page.getByRole('heading', { name: '常见问题' })).toBeVisible()
 })
 

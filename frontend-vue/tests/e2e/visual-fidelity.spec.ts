@@ -159,6 +159,7 @@ async function mockDetail(page: Page): Promise<void> {
 
 function startLegacyServer(): Promise<{ server: Server; origin: string }> {
   const homeHtml = legacyFile('frontend/pages/index.html')
+  const aboutHtml = legacyFile('frontend/pages/about.html')
   const pageHtml = legacyFile('frontend/pages/showcase.html')
   const detailHtml = legacyFile('frontend/pages/showcase-detail.html')
   const navCss = legacyFile('frontend/css/nav.css')
@@ -171,6 +172,11 @@ function startLegacyServer(): Promise<{ server: Server; origin: string }> {
     if (path === '/pages/index.html') {
       response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
       response.end(homeHtml)
+      return
+    }
+    if (path === '/pages/about.html') {
+      response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
+      response.end(aboutHtml)
       return
     }
     if (path === '/pages/showcase.html') {
@@ -229,6 +235,47 @@ function startLegacyServer(): Promise<{ server: Server; origin: string }> {
     })
   })
 }
+
+test('关于页旧版与 Vue 版视觉验收截图', async ({ page }, testInfo) => {
+  const { server, origin } = await startLegacyServer()
+  const suffix = testInfo.project.name
+  try {
+    await page.setViewportSize(
+      suffix === 'mobile-chromium' ? { width: 390, height: 844 } : { width: 1440, height: 900 }
+    )
+    await page.route('https://fonts.googleapis.com/**', (route) => route.abort())
+    await page.route('https://fonts.gstatic.com/**', (route) => route.abort())
+    await page.goto(`${origin}/pages/about.html`)
+    await page
+      .locator('.reveal')
+      .evaluateAll((elements) => elements.forEach((element) => element.classList.add('on')))
+    await page.waitForTimeout(1000)
+    const oldHero = await page.locator('#hero').boundingBox()
+    await page.screenshot({
+      path: `test-results/visual-fidelity/old-about-${suffix}.png`,
+      fullPage: true
+    })
+
+    await page.goto('/app/about')
+    await page
+      .locator('.reveal')
+      .evaluateAll((elements) => elements.forEach((element) => element.classList.add('on')))
+    await page.waitForTimeout(1000)
+    const vueHero = await page.locator('#hero').boundingBox()
+    expect(vueHero).toEqual(oldHero)
+    await expect(page.getByText('创作者平台')).toHaveCount(0)
+    await expect(page.getByText('百万播放')).toHaveCount(0)
+    await page.screenshot({
+      path: `test-results/visual-fidelity/vue-about-${suffix}.png`,
+      fullPage: true
+    })
+  } finally {
+    server.closeAllConnections()
+    await new Promise<void>((resolve, reject) =>
+      server.close((error) => (error ? reject(error) : resolve()))
+    )
+  }
+})
 
 test('首页旧版与 Vue 版视觉验收截图', async ({ page }, testInfo) => {
   const { server, origin } = await startLegacyServer()

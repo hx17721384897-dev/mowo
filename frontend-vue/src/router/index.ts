@@ -31,7 +31,7 @@ const router = createRouter({
           path: 'about',
           name: 'about',
           component: AboutView,
-          meta: { title: '关于我们 · 哞屋 MOWO' }
+          meta: { title: '关于我们 · 哞屋 MOWO', pageOwnFooter: true }
         },
         {
           path: 'products',
