@@ -21,7 +21,12 @@ const router = createRouter({
       path: '/',
       component: PublicLayout,
       children: [
-        { path: '', name: 'home', component: HomeView, meta: { title: '哞屋造物 MOWO' } },
+        {
+          path: '',
+          name: 'home',
+          component: HomeView,
+          meta: { title: '哞屋造物 MOWOBOX · 转动手柄，让创意动起来', pageOwnFooter: true }
+        },
         {
           path: 'about',
           name: 'about',

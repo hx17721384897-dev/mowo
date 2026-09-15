@@ -3,16 +3,16 @@ import { expect, test } from '@playwright/test'
 test('public V1a pages have one working navigation shell', async ({ page }) => {
   await page.goto('/app/')
   await expect(page.getByRole('heading', { name: /转动手柄/ })).toBeVisible()
-  await expect(page.getByRole('link', { name: '开始私人定制' }).first()).toHaveAttribute(
+  await expect(page.getByRole('link', { name: '开始制作' })).toHaveAttribute(
     'href',
     '/mowo/frontend/pages/customize-start.html'
   )
-  await expect(page.getByRole('link', { name: '浏览联名商品' })).toHaveAttribute(
+  await expect(page.getByRole('link', { name: '查看商品' })).toHaveAttribute(
     'href',
     '/app/showcase'
   )
 
-  await page.locator('.site-footer').getByRole('link', { name: '产品介绍' }).click()
+  await page.getByRole('link', { name: '产品介绍' }).last().click()
   await expect(page).toHaveURL(/\/app\/products$/)
   await expect(page.getByRole('heading', { name: /一台让逐帧画面/ })).toBeVisible()
 

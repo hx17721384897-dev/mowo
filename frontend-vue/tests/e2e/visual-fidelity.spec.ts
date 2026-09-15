@@ -15,6 +15,13 @@ function legacyFile(path: string): string {
   })
 }
 
+function legacyBinary(path: string): Buffer {
+  return execFileSync('git', ['show', `${legacyRevision}:${path}`], {
+    cwd: repoRoot,
+    maxBuffer: 5 * 1024 * 1024
+  })
+}
+
 function svgData(label: string, start: string, end: string): string {
   const source = `<svg xmlns="http://www.w3.org/2000/svg" width="720" height="720"><defs><linearGradient id="g" x2="1" y2="1"><stop stop-color="${start}"/><stop offset="1" stop-color="${end}"/></linearGradient></defs><rect width="720" height="720" fill="url(#g)"/><circle cx="360" cy="310" r="150" fill="rgba(255,255,255,.38)"/><text x="360" y="560" text-anchor="middle" font-family="sans-serif" font-size="48" font-weight="700" fill="#2c1f14">${label}</text></svg>`
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(source)}`
@@ -151,13 +158,21 @@ async function mockDetail(page: Page): Promise<void> {
 }
 
 function startLegacyServer(): Promise<{ server: Server; origin: string }> {
+  const homeHtml = legacyFile('frontend/pages/index.html')
   const pageHtml = legacyFile('frontend/pages/showcase.html')
   const detailHtml = legacyFile('frontend/pages/showcase-detail.html')
   const navCss = legacyFile('frontend/css/nav.css')
   const navJs = legacyFile('frontend/js/nav.js')
   const detailJs = legacyFile('frontend/js/showcase-detail.js')
+  const heroImage = legacyBinary('frontend/assets/hero-main.png')
+  const boxDiagram = legacyBinary('frontend/assets/box-diagram.png')
   const server = createServer((request, response) => {
     const path = new URL(request.url ?? '/', 'http://127.0.0.1').pathname
+    if (path === '/pages/index.html') {
+      response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
+      response.end(homeHtml)
+      return
+    }
     if (path === '/pages/showcase.html') {
       response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
       response.end(pageHtml)
@@ -181,6 +196,11 @@ function startLegacyServer(): Promise<{ server: Server; origin: string }> {
     if (path === '/js/showcase-detail.js') {
       response.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8' })
       response.end(detailJs)
+      return
+    }
+    if (path === '/assets/hero-main.png' || path === '/assets/box-diagram.png') {
+      response.writeHead(200, { 'content-type': 'image/png' })
+      response.end(path.endsWith('hero-main.png') ? heroImage : boxDiagram)
       return
     }
     if (path === '/js/feature-flags.js') {
@@ -209,6 +229,46 @@ function startLegacyServer(): Promise<{ server: Server; origin: string }> {
     })
   })
 }
+
+test('首页旧版与 Vue 版视觉验收截图', async ({ page }, testInfo) => {
+  const { server, origin } = await startLegacyServer()
+  const suffix = testInfo.project.name
+  try {
+    await page.setViewportSize(
+      suffix === 'mobile-chromium' ? { width: 390, height: 844 } : { width: 1440, height: 900 }
+    )
+    await mockList(page)
+    await page.goto(`${origin}/pages/index.html`)
+    await page
+      .locator('.reveal')
+      .evaluateAll((elements) => elements.forEach((element) => element.classList.add('in')))
+    const oldHero = await page.locator('.hero').boundingBox()
+    await page.screenshot({
+      path: `test-results/visual-fidelity/old-home-${suffix}.png`,
+      fullPage: true
+    })
+
+    await page.goto('/app/')
+    await expect(page.locator('.creative-card')).toHaveCount(4)
+    await page
+      .locator('.reveal')
+      .evaluateAll((elements) => elements.forEach((element) => element.classList.add('in')))
+    await expect(page.getByText('真实用户反馈')).toHaveCount(0)
+    await expect(page.getByText('全球配送')).toHaveCount(0)
+    await expect(page.getByText('7 天无理由退换')).toHaveCount(0)
+    const vueHero = await page.locator('.hero').boundingBox()
+    expect(vueHero).toEqual(oldHero)
+    await page.screenshot({
+      path: `test-results/visual-fidelity/vue-home-${suffix}.png`,
+      fullPage: true
+    })
+  } finally {
+    server.closeAllConnections()
+    await new Promise<void>((resolve, reject) =>
+      server.close((error) => (error ? reject(error) : resolve()))
+    )
+  }
+})
 
 test('联名列表旧版与 Vue 版视觉验收截图', async ({ page }, testInfo) => {
   const { server, origin } = await startLegacyServer()
