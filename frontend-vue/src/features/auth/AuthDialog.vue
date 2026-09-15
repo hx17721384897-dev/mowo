@@ -150,9 +150,13 @@ async function submit(): Promise<void> {
         <input v-model="agreed" type="checkbox" />
         <span>
           我已阅读并同意
-          <RouterLink to="/legal/terms" target="_blank">用户协议</RouterLink>
+          <RouterLink to="/legal/terms" target="_blank" rel="noopener noreferrer">
+            用户协议
+          </RouterLink>
           和
-          <RouterLink to="/legal/privacy" target="_blank">隐私政策</RouterLink>
+          <RouterLink to="/legal/privacy" target="_blank" rel="noopener noreferrer">
+            隐私政策
+          </RouterLink>
         </span>
       </label>
       <p v-if="error" class="auth-dialog__error" role="alert">{{ error }}</p>

@@ -42,6 +42,26 @@ test('legal drafts remain visibly non-production', async ({ page }) => {
   await expect(page.getByText(/当前网页不提供真实在线付款/)).toBeVisible()
 })
 
+test('public authentication dialog mounts once and keeps legal links isolated', async ({
+  page
+}) => {
+  await page.goto('/app/')
+  await page.getByRole('button', { name: '登录 / 个人中心' }).click()
+  const dialog = page.getByRole('dialog')
+  await expect(dialog).toHaveCount(1)
+  await page.getByRole('button', { name: '注册', exact: true }).click()
+  await expect(dialog.getByRole('link', { name: '用户协议' })).toHaveAttribute(
+    'rel',
+    'noopener noreferrer'
+  )
+  await expect(dialog.getByRole('link', { name: '隐私政策' })).toHaveAttribute(
+    'rel',
+    'noopener noreferrer'
+  )
+  await page.getByRole('button', { name: '关闭登录窗口' }).click()
+  await expect(page.getByRole('dialog')).not.toBeVisible()
+})
+
 test('mobile public navigation is usable without horizontal overflow', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/app/')

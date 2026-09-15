@@ -35,17 +35,6 @@ img {
   max-width: 100%;
 }
 
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
 button,
 a {
   font: inherit;
@@ -115,13 +104,6 @@ a {
   letter-spacing: 0.14em;
 }
 
-.foundation-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--mowo-space-4);
-}
-
-.app-state,
 .placeholder-card,
 .standalone-state {
   padding: var(--mowo-space-8);
@@ -131,26 +113,10 @@ a {
   box-shadow: var(--mowo-shadow-card);
 }
 
-.app-state h2 {
-  margin: var(--mowo-space-4) 0 var(--mowo-space-2);
-  font-size: 1rem;
-}
-
-.app-state p,
 .placeholder-card span {
   color: var(--mowo-color-muted);
   font-size: 0.875rem;
   line-height: 1.6;
-}
-
-.app-state__mark {
-  display: grid;
-  width: 2.5rem;
-  height: 2.5rem;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--mowo-color-accent);
-  font-weight: 900;
 }
 
 .standalone-state {
@@ -178,9 +144,5 @@ a {
 
   .app-shell__main {
     padding: 2.5rem 0;
-  }
-
-  .foundation-grid {
-    grid-template-columns: 1fr;
   }
 }
