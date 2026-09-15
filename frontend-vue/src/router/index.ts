@@ -39,7 +39,7 @@ const router = createRouter({
           path: 'showcase',
           name: 'collab-list',
           component: CollabListView,
-          meta: { title: '联名商品 · 哞屋 MOWO' }
+          meta: { title: '联名作品 — 哞屋 MOWO', pageOwnFooter: true }
         },
         {
           path: 'showcase-detail',

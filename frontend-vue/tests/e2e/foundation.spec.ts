@@ -47,7 +47,7 @@ test('mobile public navigation is usable without horizontal overflow', async ({ 
   await page.goto('/app/')
   await page.getByRole('button', { name: '打开或关闭导航' }).click()
   await expect(page.getByRole('navigation', { name: '主导航' })).toBeVisible()
-  await page.getByRole('link', { name: '产品介绍' }).first().click()
+  await page.getByRole('link', { name: '动盒系列' }).first().click()
   await expect(page).toHaveURL(/\/app\/products$/)
   const overflows = await page.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1

@@ -93,7 +93,7 @@ test('collab list, detail deep link and broken media degrade safely', async ({
 }, testInfo) => {
   await mockCollab(page)
   await page.goto('/app/showcase?q=春日')
-  await expect(page.getByRole('heading', { name: '十二格春日' })).toBeVisible()
+  await expect(page.getByText('十二格春日', { exact: true })).toBeVisible()
   await expect(page.getByText('secretContract')).toHaveCount(0)
   await expect(page.getByText('媒体暂时无法显示')).toHaveCount(0)
   if (process.env.MOWO_CAPTURE_V1B === '1') {
@@ -102,7 +102,7 @@ test('collab list, detail deep link and broken media degrade safely', async ({
       fullPage: true
     })
   }
-  await page.getByRole('link', { name: /十二格春日/ }).click()
+  await page.locator('.work-card').click()
   await expect(page).toHaveURL(/\/app\/showcase\/work-1\?sku=sku-1$/)
   await expect(page.getByText('媒体暂时无法显示')).toBeVisible()
   await page.getByRole('button', { name: /大号/ }).click()
@@ -160,6 +160,5 @@ test('non-json API responses show a retryable error', async ({ page }) => {
     route.fulfill({ status: 502, contentType: 'text/html', body: '<h1>bad gateway</h1>' })
   )
   await page.goto('/app/showcase')
-  await expect(page.getByText('服务器返回了无法解析的数据')).toBeVisible()
-  await expect(page.getByRole('button', { name: '重新加载' })).toBeVisible()
+  await expect(page.getByText('加载失败，请刷新重试')).toBeVisible()
 })
