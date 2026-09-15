@@ -3,7 +3,11 @@ export const USER_CACHE_KEY = 'mowo_user'
 
 export interface SessionUser {
   id: string
+  phone?: string
+  role?: number
   staffRole?: 'OWNER' | 'CUSTOMER_SERVICE' | 'PRODUCTION' | 'COLLAB_OPS' | null
+  nickname?: string | null
+  avatarUrl?: string | null
   profile?: { nickname?: string | null; avatarUrl?: string | null } | null
 }
 

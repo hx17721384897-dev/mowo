@@ -109,15 +109,20 @@ try {
     'check:production-scan-ui',
     'check:collab-storefront',
     'check:collab-sale-config',
-    'check:collab-product-ui',
-    'check:collab-detail-ui',
-    'check:collab-detail-browser',
-    'check:collab-listing'
+    'check:collab-product-ui'
   )
 } finally {
   Pop-Location -ErrorAction SilentlyContinue
   if ($WebProcess -and -not $WebProcess.HasExited) { Stop-Process -Id $WebProcess.Id -Force }
   if ($ApiProcess -and -not $ApiProcess.HasExited) { Stop-Process -Id $ApiProcess.Id -Force }
+}
+
+Push-Location (Join-Path $RepoRoot 'frontend-vue')
+try {
+  & npm.cmd run check
+  if ($LASTEXITCODE -ne 0) { throw 'Vue 前端全量门禁失败。' }
+} finally {
+  Pop-Location
 }
 
 Push-Location $ServiceRoot

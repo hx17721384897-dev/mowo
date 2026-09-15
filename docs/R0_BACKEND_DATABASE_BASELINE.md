@@ -44,7 +44,7 @@ pwsh -File scripts/local.ps1 stop
 |---|---|---|---|
 | 账户 | `/api/v1/auth/*`、`/api/v1/account/*`、`/api/addresses/*` | 会话与对象归属由后端验证；前端权限只做体验控制 | `check:staff-security`、`check:settings-ui`、`check:account-deletion` |
 | 私人定制 | `/api/custom-products/*`、`/api/customization-requests/*`、`/api/animation-assets/*` | 草稿、正式申请、动画资产与版本分离；私有文件使用受控短期地址 | `check:private-files`、`check:customization-flow`、`check:customization-ui` |
-| 联名货架 | `/api/collab/works*`；工作人员使用 `/api/admin/collab/*` 的保留商品工作区 | 公开响应使用字段白名单；历史 `/api/products`、`/api/animations` 不得消费 | `check:collab-storefront`、`check:collab-listing`、`check:collab-sale-config` |
+| 联名货架 | `/api/collab/works*`；工作人员使用 `/api/admin/collab/*` 的保留商品工作区 | 公开响应使用字段白名单；历史 `/api/products`、`/api/animations` 不得消费 | `check:collab-storefront`、`check:collab-sale-config`、Vue V1b unit/E2E |
 | 交易订单 | `/api/cart/*`、`/api/orders/*`；支付入口当前受 `ONLINE_CHECKOUT_ENABLED` 阻断 | 价格和库存以服务端冻结快照为准；重复提交依靠服务端幂等 | `check:sales-order-structure`、`check:mixed-checkout-ui` |
 | 库存生产 | `/api/inventory/*`、`/api/materials/*`、`/api/admin/production-*`、`/api/admin/frame-*` | 岗位权限、库存事务和扫码幂等由后端执行 | 9 个生产/库存专项与 `check:staff-security` |
 

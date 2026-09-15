@@ -11,6 +11,8 @@ import HomeView from '@/views/HomeView.vue'
 import LegalView from '@/views/LegalView.vue'
 import NotFoundView from '@/views/NotFoundView.vue'
 import ProductIntroView from '@/views/ProductIntroView.vue'
+import CollabListView from '@/views/CollabListView.vue'
+import CollabDetailView from '@/views/CollabDetailView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -33,6 +35,27 @@ const router = createRouter({
           meta: { title: '产品介绍 · 哞屋 MOWO' }
         },
         { path: 'faq', name: 'faq', component: FaqView, meta: { title: '常见问题 · 哞屋 MOWO' } },
+        {
+          path: 'showcase',
+          name: 'collab-list',
+          component: CollabListView,
+          meta: { title: '联名商品 · 哞屋 MOWO' }
+        },
+        {
+          path: 'showcase-detail',
+          redirect: (to) => {
+            const workId = typeof to.query.workId === 'string' ? to.query.workId : ''
+            return workId
+              ? { name: 'collab-detail', params: { workId }, query: { sku: to.query.sku } }
+              : { name: 'collab-list' }
+          }
+        },
+        {
+          path: 'showcase/:workId',
+          name: 'collab-detail',
+          component: CollabDetailView,
+          meta: { title: '联名商品详情 · 哞屋 MOWO' }
+        },
         {
           path: 'legal/terms',
           name: 'terms',

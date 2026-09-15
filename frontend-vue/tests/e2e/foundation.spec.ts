@@ -7,6 +7,10 @@ test('public V1a pages have one working navigation shell', async ({ page }) => {
     'href',
     '/mowo/frontend/pages/customize-start.html'
   )
+  await expect(page.getByRole('link', { name: '浏览联名商品' })).toHaveAttribute(
+    'href',
+    '/app/showcase'
+  )
 
   await page.locator('.site-footer').getByRole('link', { name: '产品介绍' }).click()
   await expect(page).toHaveURL(/\/app\/products$/)

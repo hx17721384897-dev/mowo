@@ -41,7 +41,7 @@ watch(
       >
         <RouterLink to="/">首页</RouterLink>
         <RouterLink to="/products">产品介绍</RouterLink>
-        <a :href="legacyPublicUrl('showcase')">联名商品</a>
+        <RouterLink to="/showcase">联名商品</RouterLink>
         <a :href="legacyPublicUrl('customize-start')">私人定制</a>
         <RouterLink to="/about">关于我们</RouterLink>
         <RouterLink to="/faq">常见问题</RouterLink>

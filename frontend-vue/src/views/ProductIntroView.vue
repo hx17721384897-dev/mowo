@@ -87,7 +87,7 @@ import { legacyPublicUrl } from '@/config/public-links'
       </div>
       <div class="action-row">
         <a class="primary-action" :href="legacyPublicUrl('customize-start')">开始私人定制</a>
-        <a class="secondary-action" :href="legacyPublicUrl('showcase')">浏览联名商品</a>
+        <RouterLink class="secondary-action" to="/showcase">浏览联名商品</RouterLink>
       </div>
     </section>
   </main>

@@ -262,7 +262,10 @@ try {
     method: 'POST',
     body: JSON.stringify({ cartItemIds: [cartBody.data.items[0].id], idempotencyKey: `collab-${runId}` }),
   })
-  assert(checkoutResponse.status === 400, '已暂停的联名商品无法继续结算')
+  const featureResponse = await request('/api/config/features')
+  const featureBody = await featureResponse.json()
+  const expectedCheckoutStatus = featureBody.data?.onlineCheckout === true ? 400 : 404
+  assert(checkoutResponse.status === expectedCheckoutStatus, '已暂停的联名商品无法继续结算')
 
   console.log('Collab storefront checks passed')
 } finally {

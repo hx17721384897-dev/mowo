@@ -7,7 +7,7 @@
 | 能力 | 当前/目标前端 | 后端边界 | 状态 | 负责人 | 验收证据 | 恢复规则 |
 |---|---|---|---|---|---|---|
 | 官网与静态信息 | 旧公开页；目标 `/app/` | 正式开放 | 正式开放 | Web | V0 E2E；后续 V1a 链接扫描 | 按 Vue 正式页面迭代 |
-| 联名商品货架/详情 | `showcase*.html`；目标 V1b | `/api/collab/works*` 正式开放 | 正式开放 | 联名运营 + Web | `check:collab-storefront/listing/detail-*` | 只演进正式 DTO，不恢复旧商品系统 |
+| 联名商品货架/详情 | Vue `/app/showcase*`；V1b 已完成 | `/api/collab/works*` 正式开放 | 正式开放 | 联名运营 + Web | `check:collab-storefront`、Vue unit/E2E | 只演进正式 DTO，不恢复旧 HTML 或旧商品系统 |
 | 人工联名审核、商品配置、合同 | 当前后台；目标 V4 | `/api/admin/collab/*`、`/api/admin/contracts*` 内部岗位权限 | 内部保留 | 联名运营 | `check:staff-security`、`check:collab-sale-config` | 保留权利人、授权、合同与线下约定 |
 | 私人定制与动画资产 | 当前定制页；目标 V2 | `/api/custom-products*`、`/api/customization-requests*`、`/api/animation-assets*` 正式开放/对象归属 | 正式开放 | 客服 + 生产 + Web | `check:customization-*`、`check:private-files` | 不得与旧 `/api/animations` 混用 |
 | 混合购物车和订单 | 当前交易页；目标 V3 | `/api/cart*`、`/api/orders*` 正式开放/对象归属 | 正式开放 | 交易后端 + Web | `check:sales-order-structure`、`check:mixed-checkout-ui` | 服务端价格、库存与幂等为准 |

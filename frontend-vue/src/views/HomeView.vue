@@ -13,7 +13,7 @@ import { legacyPublicUrl } from '@/config/public-links'
         </p>
         <div class="action-row">
           <a class="primary-action" :href="legacyPublicUrl('customize-start')">开始私人定制</a>
-          <a class="secondary-action" :href="legacyPublicUrl('showcase')">浏览联名商品</a>
+          <RouterLink class="secondary-action" to="/showcase">浏览联名商品</RouterLink>
         </div>
         <p class="scope-note">当前处于未上线开发阶段，网页真实支付暂未开放。</p>
       </div>
@@ -61,7 +61,7 @@ import { legacyPublicUrl } from '@/config/public-links'
             <p>联名商品</p>
             <h3>经过工作人员核验与配置的正式作品。</h3>
             <p>公开货架只展示明确审核、配置并上架的商品。</p>
-            <a :href="legacyPublicUrl('showcase')">进入联名货架 <span>↗</span></a>
+            <RouterLink to="/showcase">进入联名货架 <span>↗</span></RouterLink>
           </article>
           <article class="path-card path-card--custom">
             <p>私人定制</p>

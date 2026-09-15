@@ -45,12 +45,12 @@
     '<div class="mowo-nav-mid">' +
       '<a href="about.html"' + act(['about']) + '>关于我们</a>' +
       '<a href="products.html"' + act(['products']) + '>动盒系列</a>' +
-      '<a href="showcase.html"' + act(['showcase']) + '>联名作品</a>' +
+      '<a href="/app/showcase">联名作品</a>' +
       '<a href="customize-start.html"' + act(['customize', 'creator']) + '>创作中心</a>' +
       '<a href="contact.html"' + act(['contact']) + '>联络我们</a>' +
     '</div>' +
     '<div class="mowo-nav-right">' +
-      '<a class="mowo-nav-icon" href="showcase.html" aria-label="搜索">' + IC.search + '</a>' +
+      '<a class="mowo-nav-icon" href="/app/showcase" aria-label="搜索">' + IC.search + '</a>' +
       '<a class="mowo-nav-icon mowo-cart-btn" href="cart.html" data-count="0" aria-label="购物车">' + IC.cart + '</a>' +
       /* auth.js 会在 #navLoginBtn 之前插入 .nav-user 头像区，头像始终在最右 */
       '<button class="mowo-nav-icon nav-login-btn" id="navLoginBtn" aria-label="登录 / 个人中心">' + IC.user + '</button>' +
@@ -78,7 +78,7 @@
       '<div class="mowo-mobile-body">' +
         '<a href="about.html"' + act(['about']) + '>关于我们</a>' +
         '<a href="products.html"' + act(['products']) + '>动盒系列</a>' +
-        '<a href="showcase.html"' + act(['showcase']) + '>联名作品</a>' +
+        '<a href="/app/showcase">联名作品</a>' +
         '<a href="customize-start.html"' + act(['customize', 'creator']) + '>创作中心</a>' +
         '<a href="contact.html"' + act(['contact']) + '>联络我们</a>' +
         '<a href="cart.html">购物车</a>' +

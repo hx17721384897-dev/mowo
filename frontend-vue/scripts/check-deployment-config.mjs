@@ -7,6 +7,7 @@ const nginx = fs.readFileSync(path.join(root, 'deploy/nginx.app.conf'), 'utf8')
 const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8')
 const runtime = fs.readFileSync(path.join(root, 'public/runtime-config.js'), 'utf8')
 const redirects = fs.readFileSync(path.join(root, 'deploy/nginx.v1a-redirects.conf'), 'utf8')
+const viteConfig = fs.readFileSync(path.join(root, 'vite.config.ts'), 'utf8')
 
 const apiLocation = nginx.indexOf('location ^~ /api/')
 const appLocation = nginx.indexOf('location /app/')
@@ -32,7 +33,9 @@ const requiredRedirects = [
   ['products.html', '/app/products'],
   ['faq.html', '/app/faq'],
   ['user-agreement.html', '/app/legal/terms'],
-  ['privacy-policy.html', '/app/legal/privacy']
+  ['privacy-policy.html', '/app/legal/privacy'],
+  ['showcase.html', '/app/showcase'],
+  ['showcase-detail.html', '/app/showcase-detail']
 ]
 for (const [legacy, target] of requiredRedirects) {
   if (!redirects.includes(legacy) || !redirects.includes(`302 ${target}`)) {
@@ -42,11 +45,14 @@ for (const [legacy, target] of requiredRedirects) {
 if (!runtime.includes('legacyWebBase')) {
   throw new Error('运行时配置必须声明尚未迁移的旧公开页面基址')
 }
+if (!viteConfig.includes("'/api': 'http://127.0.0.1:3001'")) {
+  throw new Error('Vite 开发环境必须把同源 /api 请求代理到本地 API')
+}
 
-for (const file of ['showcase.html', 'customize-start.html', 'contact.html']) {
+for (const file of ['customize-start.html', 'contact.html']) {
   if (!fs.existsSync(path.join(root, '..', 'frontend', 'pages', file))) {
     throw new Error(`V1a 交接入口不存在：frontend/pages/${file}`)
   }
 }
 
-console.log('Vue deployment and V1a redirect boundaries passed')
+console.log('Vue deployment and public redirect boundaries passed')

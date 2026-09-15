@@ -1,9 +1,8 @@
 import { runtimeConfig } from './runtime'
 
-export type LegacyPublicPage = 'showcase' | 'customize-start' | 'contact'
+export type LegacyPublicPage = 'customize-start' | 'contact'
 
 const legacyFileByPage: Record<LegacyPublicPage, string> = {
-  showcase: 'showcase.html',
   'customize-start': 'customize-start.html',
   contact: 'contact.html'
 }
