@@ -74,9 +74,7 @@ describe('apiRequest', () => {
   })
 
   it('does not refresh endpoints that explicitly disable auth retries', async () => {
-    const fetchMock = vi.fn(async () =>
-      response(401, { success: false, code: 'INVALID_CODE' })
-    )
+    const fetchMock = vi.fn(async () => response(401, { success: false, code: 'INVALID_CODE' }))
     vi.stubGlobal('fetch', fetchMock)
 
     await expect(
