@@ -1,12 +1,21 @@
 <script setup lang="ts">
-import { onBeforeUnmount, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { legacyPublicUrl } from '@/config/public-links'
 import AuthDialog from '@/features/auth/AuthDialog.vue'
+import { safeInternalRedirect } from '@/router/safe-redirect'
+import { useSessionStore } from '@/stores/session'
 
 const route = useRoute()
+const router = useRouter()
+const session = useSessionStore()
 const menuOpen = ref(false)
 const authOpen = ref(false)
+const authIntro = computed(() =>
+  route.query.session === 'unavailable'
+    ? '暂时无法确认原有登录状态。你可以重新登录后继续，系统不会自动创建订单或付款。'
+    : undefined
+)
 
 watch(
   () => route.fullPath,
@@ -19,13 +28,32 @@ watch(menuOpen, (open) => {
   document.body.style.overflow = open ? 'hidden' : ''
 })
 
+watch(
+  () => route.query.auth,
+  (auth) => {
+    if (auth === '1') authOpen.value = true
+  },
+  { immediate: true }
+)
+
 onBeforeUnmount(() => {
   document.body.style.overflow = ''
 })
 
-function openAuth(): void {
+async function openAccount(): Promise<void> {
   menuOpen.value = false
+  await session.bootstrap()
+  if (session.isAuthenticated) {
+    await router.push('/account')
+    return
+  }
   authOpen.value = true
+}
+
+async function handleAuthenticated(): Promise<void> {
+  authOpen.value = false
+  const target = safeInternalRedirect(route.query.redirect)
+  await router.replace(target)
 }
 </script>
 
@@ -77,7 +105,7 @@ function openAuth(): void {
         class="mowo-nav-icon nav-login-btn"
         type="button"
         aria-label="登录 / 个人中心"
-        @click="openAuth"
+        @click="openAccount"
       >
         <svg viewBox="0 0 24 24">
           <circle cx="12" cy="8" r="4" />
@@ -106,12 +134,15 @@ function openAuth(): void {
       <a :href="legacyPublicUrl('orders')">我的订单</a>
       <a :href="legacyPublicUrl('settings')">账号设置</a>
     </div>
-    <div class="mowo-mobile-foot"><button type="button" @click="openAuth">登录 / 注册</button></div>
+    <div class="mowo-mobile-foot">
+      <button type="button" @click="openAccount">登录 / 注册</button>
+    </div>
   </div>
   <AuthDialog
     v-if="authOpen"
     :open="authOpen"
+    :intro="authIntro"
     @close="authOpen = false"
-    @authenticated="authOpen = false"
+    @authenticated="handleAuthenticated"
   />
 </template>

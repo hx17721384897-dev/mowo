@@ -103,9 +103,14 @@ test('mobile public navigation is usable without horizontal overflow', async ({ 
   expect(overflows).toBe(false)
 })
 
-test('four application areas and controlled 404 still render', async ({ page }) => {
+test('protected account area requests login and other application shells still render', async ({
+  page
+}) => {
   await page.goto('/app/account')
-  await expect(page.getByText('账户区域占位')).toBeVisible()
+  await expect(page).toHaveURL(/\/app\/?\?.*auth=1/)
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect(page.getByText(/返回你刚才访问的位置/)).toBeVisible()
+  await page.getByRole('button', { name: '关闭登录窗口' }).click()
   await page.goto('/app/admin')
   await expect(page.getByText('管理区域占位')).toBeVisible()
   await page.goto('/app/production')
@@ -115,4 +120,36 @@ test('four application areas and controlled 404 still render', async ({ page }) 
   const menuButton = page.getByRole('button', { name: '打开或关闭导航' })
   if (await menuButton.isVisible()) await menuButton.click()
   await expect(page.getByRole('navigation', { name: '主导航' })).toBeVisible()
+})
+
+test('trusted account calibration permits the protected route', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('mowo_token', 'test-access-token')
+    localStorage.setItem('mowo_user', JSON.stringify({ id: 'stale-user', nickname: '旧缓存' }))
+  })
+  await page.route('**/api/v1/account/me', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        data: {
+          id: 'trusted-user',
+          maskedPhone: '138****0000',
+          role: 0,
+          staffRole: null,
+          status: 'ACTIVE',
+          createdAt: '2026-09-17T00:00:00.000Z',
+          profile: { nickname: '可信资料', avatarUrl: null }
+        }
+      })
+    })
+  })
+
+  await page.goto('/app/account')
+  await expect(page).toHaveURL(/\/app\/account$/)
+  await expect(page.getByText('账户区域占位')).toBeVisible()
+  await expect
+    .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('mowo_user') || '{}').id))
+    .toBe('trusted-user')
 })

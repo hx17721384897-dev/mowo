@@ -4,7 +4,15 @@ import { ApiError } from '@/services/api-client'
 import { useSessionStore } from '@/stores/session'
 import { sendSms, verifySms, type SmsMode } from './api'
 
-const props = defineProps<{ open: boolean }>()
+const props = withDefaults(
+  defineProps<{
+    open: boolean
+    intro?: string
+  }>(),
+  {
+    intro: '登录完成后会返回你刚才访问的位置，不会自动创建订单或付款。'
+  }
+)
 const emit = defineEmits<{ close: []; authenticated: [] }>()
 const session = useSessionStore()
 const dialog = ref<HTMLDialogElement | null>(null)
@@ -104,7 +112,7 @@ async function submit(): Promise<void> {
       </button>
       <p class="section-kicker">ACCOUNT</p>
       <h2 id="auth-title">{{ mode === 'LOGIN' ? '登录后继续' : '注册哞屋账户' }}</h2>
-      <p class="auth-dialog__intro">登录完成后会保留当前商品和已选规格，不会自动创建订单或付款。</p>
+      <p class="auth-dialog__intro">{{ props.intro }}</p>
 
       <div class="auth-dialog__tabs" role="tablist" aria-label="登录或注册">
         <button type="button" :class="{ active: mode === 'LOGIN' }" @click="switchMode('LOGIN')">
@@ -165,7 +173,7 @@ async function submit(): Promise<void> {
         type="submit"
         :disabled="!validPhone || code.length !== 6 || verifying"
       >
-        {{ verifying ? '验证中…' : mode === 'LOGIN' ? '登录并返回商品' : '注册并返回商品' }}
+        {{ verifying ? '验证中…' : mode === 'LOGIN' ? '登录并继续' : '注册并继续' }}
       </button>
     </form>
   </dialog>

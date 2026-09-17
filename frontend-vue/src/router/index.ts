@@ -14,6 +14,7 @@ import ProductIntroView from '@/views/ProductIntroView.vue'
 import CollabListView from '@/views/CollabListView.vue'
 import CollabDetailView from '@/views/CollabDetailView.vue'
 import ContactView from '@/views/ContactView.vue'
+import { useSessionStore } from '@/stores/session'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -100,6 +101,7 @@ const router = createRouter({
     {
       path: '/account',
       component: AccountLayout,
+      meta: { requiresAuth: true },
       children: [
         {
           path: '',
@@ -148,6 +150,23 @@ const router = createRouter({
     }
   ],
   scrollBehavior: () => ({ top: 0 })
+})
+
+router.beforeEach(async (to) => {
+  if (!to.matched.some((record) => record.meta.requiresAuth === true)) return true
+
+  const session = useSessionStore()
+  await session.bootstrap()
+  if (session.isAuthenticated) return true
+
+  return {
+    name: 'home',
+    query: {
+      auth: '1',
+      redirect: to.fullPath,
+      ...(session.status === 'unavailable' ? { session: 'unavailable' } : {})
+    }
+  }
 })
 
 router.afterEach((to) => {
