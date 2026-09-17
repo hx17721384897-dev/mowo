@@ -9,9 +9,9 @@ export async function getCurrentAccount(): Promise<SessionUser> {
 }
 
 export async function logoutCurrentDevice(): Promise<void> {
-  await apiRequest('/api/v1/auth/logout', { method: 'POST', retryAuth: false })
+  await apiRequest('/api/v1/auth/logout', { method: 'POST' })
 }
 
 export async function logoutAllDevices(): Promise<void> {
-  await apiRequest('/api/v1/auth/logout-all', { method: 'POST', retryAuth: false })
+  await apiRequest('/api/v1/auth/logout-all', { method: 'POST' })
 }

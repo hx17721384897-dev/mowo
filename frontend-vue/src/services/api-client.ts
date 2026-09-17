@@ -108,7 +108,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       }
     })
 
-    if (response.status === 401 && options.retryAuth !== false && !path.includes('/auth/')) {
+    if (response.status === 401 && options.retryAuth !== false) {
       const refreshedToken = await refreshAccessToken()
       if (refreshedToken) return apiRequest<T>(path, { ...options, retryAuth: false })
       clearSession()
