@@ -72,7 +72,7 @@
 
 ## 页面行为
 
-`frontend/pages/my-animations.html` 同时请求正式资产和旧草稿：
+Vue `/app/account/animations` 同时请求正式资产和旧草稿；旧 `frontend/pages/my-animations.html` 仅保留到 V2-C2 人工验收完成：
 
 - “动画资产”显示 `ANM` 编号、当前 V 版本和长期预览；
 - “草稿”只显示尚未关联正式资产的 `CustomProduct` 和剩余有效期；
@@ -122,7 +122,7 @@ Vue `/app/account/customizations` 负责定制流程和状态；“我的动画�
 
 - `npm run check`：环境、JavaScript 语法和 Prisma Schema。
 - `npm run check:customization-flow`：验证两条来源、编号、跨账号隔离、重命名、联名删除/修改拦截、私人前台删除后后台版本保留、复购不新增版本，以及修改追加 V2、重试幂等、过期页面拦截、V1 和旧购买引用不变。
-- `npm run check:customization-ui`：真实 Edge 验证“我的动画”区分正式资产与临时草稿、重命名、选择兼容款式并进入结算，以及从当前版本修改并保存 V2。
+- `npm run check:customization-ui`：真实 Edge 验证 Vue“我的动画”区分正式资产与临时草稿、草稿重命名不覆盖工程配置、正式资产重命名、选择兼容款式并进入结算，以及从当前版本修改并保存 V2。
 
 曾出现“重命名弹窗正常，但保存后名称不变”：原因是 CORS 允许方法遗漏 `PATCH`，浏览器只完成 `OPTIONS` 预检，没有发送真正的修改请求。`src/index.js` 现已允许 `PATCH`。类似现象应先在浏览器网络面板检查是否只有 `OPTIONS` 而没有后续请求。
 

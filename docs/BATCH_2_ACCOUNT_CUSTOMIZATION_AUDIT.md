@@ -23,7 +23,7 @@
 | `frontend/js/auth.js` | 正式公共登录入口 | `/api/v1/auth/*`、`/api/v1/account/me` | 使用 `mowo_token` 与 `mowo_user` 本地缓存，并用 HttpOnly Refresh Cookie 刷新。需要逐页核对是否所有页面都复用它。 |
 | `frontend/pages/my-addresses.html` | 正式候选入口 | `/api/addresses/*` | 地址接口已在隔离库完成 CRUD 冒烟；仍需浏览器验收默认地址与错误态。 |
 | Vue `/app/account/customizations` | 正式入口 | `/api/customization-requests/mine*` | V2-C1 已迁移并完成负责人初验；旧 `frontend/pages/my-customizations.html` 已物理删除。 |
-| `frontend/pages/my-animations.html` | 正式候选入口 | `/api/animation-assets/*` | 私人动画资产与版本入口；需核对本人隔离、版本追加和软删除。 |
+| Vue `/app/account/animations` | 正式入口 | `/api/animation-assets/*`、`/api/custom-products/*` | V2-C2 已接管并通过本人隔离、版本追加、重命名、复购和软删除回归；旧页等待负责人验收后删除。 |
 | `customize-start/editor/confirm.html` | 正式私人定制入口 | 定制申请、私有上传、机型/SKU | 进入批次 B2-D/E 后按“自己筛帧”和“人工筛帧”分开回归。 |
 | `creator-profile.html`、`creator-certify.html` | 当前目录不存在 | 无 | 旧模块文档的“现行页面”记述已过期；本批次不恢复这些页面。 |
 

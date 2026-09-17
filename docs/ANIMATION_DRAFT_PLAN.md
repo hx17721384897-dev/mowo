@@ -177,5 +177,5 @@ Bucket 生命周期规则：
 | `content-service/src/routes/custom-products.js` | 草稿 CRUD + 上限校验 |
 | `frontend/pages/customize-editor.html` | 帧提取 + 筛选（待改造为 OSS 直传）|
 | `frontend/pages/customize-confirm.html` | 调用 `_createCustomProducts()` 保存工程 |
-| `frontend/pages/my-animations.html` | 普通用户查看草稿 + 「重新编辑」入口 |
+| Vue `/app/account/animations` | 普通用户查看草稿 + 「重新编辑」入口；旧页仅保留到 V2-C2 人工验收 |
 | `frontend/pages/creator-animations.html` | 创作者查看草稿 + 「重新编辑」入口 |

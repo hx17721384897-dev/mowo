@@ -505,7 +505,7 @@ function navGoTo(page) {
     orders:        'orders.html',
     customizations:'/app/account/customizations',
     addresses:     'my-addresses.html',
-    myAnimations:  'my-animations.html',
+    myAnimations:  '/app/account/animations',
     settings:      'settings.html',
     help:          '/app/contact',
     admin:         'admin-orders.html',

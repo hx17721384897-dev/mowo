@@ -118,6 +118,12 @@ const router = createRouter({
           name: 'my-customizations',
           component: () => import('@/views/MyCustomizationsView.vue'),
           meta: { title: '我的定制 — 哞屋 MOWO' }
+        },
+        {
+          path: 'animations',
+          name: 'my-animations',
+          component: () => import('@/views/MyAnimationsView.vue'),
+          meta: { title: '我的动画 — 哞屋 MOWO' }
         }
       ]
     },

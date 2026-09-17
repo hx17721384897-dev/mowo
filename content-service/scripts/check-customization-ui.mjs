@@ -112,6 +112,14 @@ try {
   })
   const created = await createResponse.json()
   if (!createResponse.ok || !created.success) throw new Error(created.message || '人工任务创建失败')
+  const renameDraft = await prisma.customProduct.create({ data:{
+    userId:customer.id,
+    animationFrames:'[]',
+    configJson:JSON.stringify({ animName:'浏览器草稿重命名测试', frameCount:1, preservedSetting:'must-remain' }),
+    frameCount:1,
+    draftExpiresAt:new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    status:'draft'
+  } })
 
   browser = await chromium.launch({ headless:true, executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe' })
   let context = await browser.newContext({ viewport:{ width:1440, height:900 } })
@@ -164,7 +172,7 @@ try {
   })
   console.log('PASS customer previews staff frames and submits the customization directly to checkout')
 
-  await page.goto(`${webBase}/my-animations.html`, { waitUntil:'networkidle' })
+  await page.goto(`${vueBase}/account/animations`, { waitUntil:'networkidle' })
   const assetCard = page.locator('.anim-card').filter({ hasText:'ANM-' }).first()
   await assetCard.waitFor({ timeout:10000 })
   if (!await assetCard.getByText(/动画资产/).count() || !await assetCard.getByText(/V1/).count()) {
@@ -177,6 +185,18 @@ try {
   await page.locator('#renameInput').fill('浏览器复购测试动画')
   await page.locator('#btnConfirmRename').click()
   await assetCard.getByText('浏览器复购测试动画').waitFor({ timeout:10000 })
+  const draftCard = page.locator('.anim-card').filter({ hasText:'浏览器草稿重命名测试' }).first()
+  await draftCard.getByRole('button', { name:/重命名/ }).click()
+  await page.locator('#renameInput').fill('浏览器草稿新名称')
+  await page.locator('#btnConfirmRename').click()
+  await page.locator('.anim-card').filter({ hasText:'浏览器草稿新名称' }).waitFor({ timeout:10000 })
+  const renamedDraft = await prisma.customProduct.findUnique({ where:{ id:renameDraft.id }, select:{ configJson:true } })
+  const renamedDraftConfig = JSON.parse(renamedDraft?.configJson || '{}')
+  if (renamedDraftConfig.animName !== '浏览器草稿新名称' || renamedDraftConfig.preservedSetting !== 'must-remain') {
+    throw new Error('草稿重命名覆盖了名称之外的工程配置')
+  }
+  await prisma.customProduct.delete({ where:{ id:renameDraft.id } })
+  console.log('PASS customer renames a draft without replacing its engineering configuration')
   await assetCard.getByRole('link', { name: /选择新款式/ }).click()
   await page.waitForURL(/customize-start\.html\?assetId=/, { timeout:10000 })
   await page.locator('#reuseBanner.show').waitFor({ timeout:10000 })
@@ -194,13 +214,13 @@ try {
   console.log('PASS customer renames and reuses an animation asset for a new SKU in browser')
   console.log('PASS my animations separates reusable assets from temporary drafts')
 
-  await page.goto(`${webBase}/my-animations.html`, { waitUntil:'networkidle' })
+  await page.goto(`${vueBase}/account/animations`, { waitUntil:'networkidle' })
   const editableAssetCard = page.locator('.anim-card').filter({ hasText:'浏览器复购测试动画' }).first()
   await editableAssetCard.getByRole('link', { name:/修改动画/ }).click()
   await page.waitForURL(/customize-editor\.html\?assetId=/, { timeout:10000 })
   await page.locator('#stateEditor.active').waitFor({ timeout:10000 })
   await page.getByRole('button', { name:/保存为 V2/ }).click()
-  await page.waitForURL(/my-animations\.html\?.*version=2/, { timeout:20000 })
+  await page.waitForURL(/\/app\/account\/animations\?.*version=2/, { timeout:20000 })
   const v2Card = page.locator('.anim-card').filter({ hasText:'浏览器复购测试动画' }).first()
   await v2Card.getByText(/V2/).waitFor({ timeout:10000 })
   console.log('PASS customer edits the current animation and saves an immutable V2 in browser')

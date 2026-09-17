@@ -86,7 +86,7 @@
 | `checkout.html` | 地址、创建预订单、轮询支付 | 已接 cart/addresses/payment | 真实支付发起未闭环；localhost 显示 Mock 支付 |
 | `orders.html` | 我的订单与确认收货 | 已接 orders | 空状态已改为联名作品入口 |
 | `order-detail.html` | 订单详情、取消、收货、售后、凭证上传 | 已接 orders/upload | 固定 localhost；社区导航已改为联名作品 |
-| `my-animations.html` | 定制动画列表、改名、删除、继续编辑 | 已接 custom-products | 使用公共 auth；依赖后端草稿语义 |
+| Vue `/app/account/animations` | 定制动画列表、改名、删除、继续编辑 | 已接 animation-assets + custom-products | 使用共享账户壳；旧页等待 V2-C2 人工验收后删除 |
 | `my-addresses.html` | 独立地址管理 | 已接 addresses | 未登录和 Logo 跳到不存在的 `frontend/index.html` |
 | `settings.html` | 资料、安全、通知、隐私、注销、地址 | 已接 v1 account/addresses | 阻断：`router.js` 含 ESM export，却按普通脚本加载，`Router` 无法可靠成为全局对象 |
 

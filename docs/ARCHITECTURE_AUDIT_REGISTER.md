@@ -73,7 +73,7 @@
 | 业务层 | 页面 | 初始结论 |
 |---|---|---|
 | 官网展示层 | `index`、`about`、`products`、`showcase`、`showcase-detail`、`faq`、`contact`、`privacy-policy`、`user-agreement`、`creator-profile` | 公开入口候选；待逐页核对公开 API、文案、资源和链接。 |
-| 用户交易层 | `customize-start`、`customize-editor`、`customize-confirm`、`cart`、`checkout`、`orders`、`order-detail`、`my-addresses`、`my-animations`、Vue `/app/account/customizations`、`settings` | B1 主流程候选；“我的定制”已于 V2-C1 迁移并删除旧页。 |
+| 用户交易层 | `customize-start`、`customize-editor`、`customize-confirm`、`cart`、`checkout`、`orders`、`order-detail`、`my-addresses`、Vue `/app/account/animations`、Vue `/app/account/customizations`、`settings` | B1 主流程候选；“我的定制”已删除旧页，“我的动画”等待 V2-C2 人工验收后删除旧页。 |
 | 创作者层 | `creator-animations`、`creator-certify`、`creator-collab`、`creator-dashboard`、`creator-earnings`、`creator-links`、`creator-notifications`、`creator-profile` | 横跨用户与后台运营；必须结合资格、岗位和功能开关审计。 |
 | 后台运营层 | 24 个 `admin-*.html` 页面，包括账号删除、联名、联络、合同、定制申请、帧图、库存、订单、用户和日志。 | 待建立“页面—路由—岗位权限”矩阵。 |
 | 生产履约层 | `production-inventory`、`production-scan`、`production-scan-frame`、`production-scan-material`、`production-scan-pairing`、`production-scan-packing` | 待核对是否统一进入生产工作台，旧入口是否只负责跳转。 |

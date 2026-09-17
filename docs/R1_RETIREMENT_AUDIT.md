@@ -36,7 +36,7 @@ R1-A 曾在物理删除前以临时服务端拒绝规则封死旧路径。R1-B �
 - `frontend/pages/_legacy/community.html`、`favorites.html`、`work-detail.html`。
 - `frontend/pages/admin-collab-activities.html`。
 
-混合文件中的旧财务副作用、Scheduler、权限映射、认证字段、社区/财务设置、后台活动与创作者自助处理分支也已拆除。`frontend/pages/products.html` 仍是正式产品介绍页，`my-animations.html` 仍是私人定制资产入口；二者与已删除的历史接口无关。
+混合文件中的旧财务副作用、Scheduler、权限映射、认证字段、社区/财务设置、后台活动与创作者自助处理分支也已拆除。`frontend/pages/products.html` 仍是正式产品介绍页，Vue `/app/account/animations` 是私人定制资产入口；二者与已删除的历史接口无关。
 
 数据库通过新增迁移 `20260914113000_retire_legacy_community_creator_finance` 删除无消费者的社区、认证、旧商品、线上财务、牛量和推广表/字段，并先清理已废弃枚举值与平台配置。历史迁移未改写。`CreatorContract`、订单金额与履约责任记录、联名作品和 `PlatformConfig` 中仍被违约政策使用的系统配置得到保留。
 

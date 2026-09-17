@@ -201,9 +201,9 @@ async function handleAuthenticated(): Promise<void> {
           <RouterLink class="dd-item" to="/account/customizations" @click="userMenuOpen = false">
             <span class="dd-item-icon" style="background: #fff3ee">✂</span>我的定制
           </RouterLink>
-          <a class="dd-item" :href="legacyPublicUrl('my-animations')">
+          <RouterLink class="dd-item" to="/account/animations" @click="userMenuOpen = false">
             <span class="dd-item-icon" style="background: #f0f4ff">🎬</span>我的动画
-          </a>
+          </RouterLink>
           <a v-if="isStaff" class="dd-item admin-only" :href="legacyPublicUrl('admin-orders')">
             <span class="dd-item-icon" style="background: #fff9c4">🛠</span>进入后台
           </a>

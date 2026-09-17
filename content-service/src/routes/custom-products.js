@@ -153,6 +153,44 @@ export default async function customProductRoutes(fastify) {
     return reply.send({ success: true, data: cp })
   })
 
+  // ── 只修改草稿名称，不接收或覆盖其他工程配置 ──
+  fastify.patch('/:id/title', {
+    preHandler: [fastify.authenticate]
+  }, async (req, reply) => {
+    const userId = req.user.userId
+    const { id } = req.params
+    const title = String(req.body?.title || '').trim()
+    if (!title || title.length > 40) {
+      return reply.code(400).send({ success: false, message: '动画名称需要包含 1 至 40 个字符' })
+    }
+
+    const cp = await prisma.customProduct.findUnique({ where: { id } })
+    if (!cp) return reply.code(404).send({ success: false, message: '草稿不存在' })
+    if (cp.userId !== userId) return reply.code(403).send({ success: false, message: '无权访问' })
+    if (cp.status === 'ordered' || cp.status === 'removed') {
+      return reply.code(400).send({ success: false, message: '该草稿已提交，不可再编辑' })
+    }
+    const customizationRequest = await prisma.customizationRequest.findFirst({
+      where: { customProductId: cp.id },
+      orderBy: { createdAt: 'desc' },
+      select: { status: true }
+    })
+    if (customizationRequest && customizationRequest.status !== 'DRAFT') {
+      return reply.code(409).send({ success: false, message: '该定制已提交或正在清理，不能修改名称' })
+    }
+
+    let config = {}
+    try {
+      const parsed = typeof cp.configJson === 'string' ? JSON.parse(cp.configJson) : cp.configJson
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) config = parsed
+    } catch {}
+    const updated = await prisma.customProduct.update({
+      where: { id },
+      data: { configJson: JSON.stringify({ ...config, animName: title }) }
+    })
+    return reply.send({ success: true, data: { id: updated.id, title } })
+  })
+
   // ── 更新草稿（延长有效期）──
   fastify.put('/:id', {
     preHandler: [fastify.authenticate]

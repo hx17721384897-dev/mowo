@@ -1022,7 +1022,7 @@ goState(S.UPLOAD);
       next.dataset.buyerLabel = `保存为 V${current.versionNo + 1}`;
       const back = document.querySelector('.ebar-back-btn');
       back.textContent = '← 返回我的动画';
-      back.setAttribute('onclick', "location.href='my-animations.html'");
+      back.setAttribute('onclick', "location.href='/app/account/animations'");
       const banner = document.createElement('div');
       banner.style.cssText = 'position:fixed;top:calc(var(--nav-h, 64px) + 8px);left:50%;transform:translateX(-50%);z-index:80;background:#FFF8D6;border:1px solid #E8D66D;border-radius:8px;padding:8px 14px;font-weight:800;font-size:12px;max-width:calc(100vw - 32px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
       banner.textContent = `正在修改 ${asset.title}（${asset.assetNo} · V${current.versionNo}），旧版本会继续保留`;
@@ -1053,7 +1053,7 @@ goState(S.UPLOAD);
     console.error('草稿加载失败：', e.message);
     if (assetId) {
       alert('动画加载失败：' + e.message);
-      location.replace('my-animations.html');
+      location.replace('/app/account/animations');
       return;
     }
     // 加载失败降级回上传界面，不中断用户操作
@@ -2390,7 +2390,7 @@ document.getElementById('btnNextStep').addEventListener('click', async ()=>{
       const result = await response.json();
       if (!response.ok || !result.success) throw new Error(result.message || '新版本保存失败');
       sessionStorage.removeItem(keyName);
-      location.href = `my-animations.html?updated=${encodeURIComponent(asset.id)}&version=${result.data.version.versionNo}`;
+      location.href = `/app/account/animations?updated=${encodeURIComponent(asset.id)}&version=${result.data.version.versionNo}`;
     } catch (error) {
       alert('保存失败：' + (error.message || '请重试'));
       button.disabled = false;
