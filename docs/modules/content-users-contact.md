@@ -55,7 +55,8 @@
 | `frontend/pages/_legacy/work-detail.html` | 遗留文章/商品详情和互动 | 文章详情、评论、点赞、收藏 |
 | `frontend/pages/creator-profile.html` | 当前公开创作者主页 | 用户、用户文章、旧商品和关注 API |
 | `frontend/pages/creator-certify.html` | 认证四步页面 | 当前没有认证 API 调用，作品只存 Data URL |
-| `frontend/pages/contact.html` | 六类联络表单和附件上传 | `/api/upload/presign`、`/api/contact` |
+| `frontend-vue/src/views/ContactView.vue` | 当前六类联络入口与数据驱动弹窗 | `/api/upload/presign`、`/api/contact` |
+| `frontend/pages/contact.html` | V1c 前旧联络页，2026-09-17 已物理删除 | 只由固定 Git 历史视觉基线读取 |
 | `frontend/pages/admin-contact.html` | 留言运营后台 | `/api/admin/contact/*` |
 | `frontend/pages/admin-users.html` | 用户角色和封禁后台 | `/api/admin/users/*` |
 

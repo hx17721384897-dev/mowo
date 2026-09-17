@@ -2,7 +2,7 @@
 
 > **文档状态（2026-09-08）：历史页面规划，禁止作为当前页面清单。** 当前 `frontend/pages/` 有 58 个 HTML 页面，公共脚本、联名唯一详情、定制、后台和生产导航均已变化。社区页面已退出正式路线，但部分旧 API/页面仍待删除；准确事实见 `modules/web-frontend.md` 和 `DOCUMENTATION_STATUS.md`。本文件将在逐页专项重新生成正式入口清单后压缩或删除。
 >
-> **V1c 当前事实（2026-09-16）：** 联络正式入口已迁移到 Vue `/app/contact`，六类均允许匿名提交。`frontend/pages/contact.html` 只在负责人完成视觉确认前作为临时对照基线，不是第二套正式实现；确认后物理删除。作品集只允许 JPG/PNG/PDF（单文件 20MB、最多 6 个），简历只允许一份 PDF（10MB）。
+> **V1c 当前事实（2026-09-17）：** 联络正式入口已迁移到 Vue `/app/contact`，六类均允许匿名提交；旧 `frontend/pages/contact.html` 已物理删除。作品集只允许 JPG/PNG/PDF（单文件 20MB、最多 6 个），简历只允许一份 PDF（10MB）。
 
 ---
 
@@ -35,7 +35,7 @@
 | `index.html` | 主页/落地页 | ✅ 保留 |
 | `about.html` | 关于我们 | ✅ 静态，保留 |
 | `products.html` | 产品介绍 | ✅ 静态，保留 |
-| Vue `/app/contact` | 联络我们 | ✅ 自动验收完成，待负责人视觉确认 |
+| Vue `/app/contact` | 联络我们 | ✅ V1c 已完成 |
 | `showcase.html` | 案例展示（联名作品，无评论无购买） | ⬜ 待开发 |
 
 ### 定制流程（初期上线）
