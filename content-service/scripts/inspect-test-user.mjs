@@ -23,6 +23,8 @@ if (!identifier) {
       console.log(`手机号：${user.phone || '已删除'}`)
       console.log(`昵称：${user.profile?.nickname || '已删除'}`)
       console.log(`账号状态：${user.status}`)
+      console.log(`兼容角色等级：${user.role}`)
+      console.log(`员工岗位：${user.staffRole || '无'}`)
       console.log(`注销任务：${user.deletionRequest?.status || '无'}`)
       if (user.deletionRequest?.scheduledAt) console.log(`计划处理：${user.deletionRequest.scheduledAt.toLocaleString('zh-CN')}`)
       if (user.deletionRequest?.completedAt) console.log(`完成时间：${user.deletionRequest.completedAt.toLocaleString('zh-CN')}`)

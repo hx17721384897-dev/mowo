@@ -42,6 +42,13 @@ async function main() {
   // ══════════════════════════════════════════
   const accounts = [
     {
+      phone:         '17721384897',
+      password:      demoPassword,
+      nickname:      '哞屋负责人',
+      role:          3,
+      staffRole:     'OWNER',
+    },
+    {
       phone:         '13800138000',
       password:      demoPassword,
       nickname:      '负责人测试',
@@ -222,7 +229,7 @@ async function main() {
   console.log('')
   console.log('🎉 种子数据写入完成！')
   console.log('')
-  console.log('  测试账号：13800138000 至 13800138004')
+  console.log('  测试账号：17721384897、13800138000 至 13800138004')
   console.log('  密码来自 DEMO_SEED_PASSWORD，出于安全不会输出。')
 }
 
