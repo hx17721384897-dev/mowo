@@ -533,7 +533,7 @@ async function navLogout() {
   document.getElementById('mowoDropdown')?.classList.remove('open');
   document.getElementById('mowoNavAvatarBtn')?.classList.remove('open');
   await logoutSession('current');
-  const protected_ = ['orders','cart','my-animations','my-customizations','settings','my-addresses'];
+  const protected_ = ['orders','cart','my-animations','settings','my-addresses'];
   const cur = window.location.pathname.split('/').pop().replace('.html','');
   if (protected_.includes(cur)) window.location.replace('index.html');
 }

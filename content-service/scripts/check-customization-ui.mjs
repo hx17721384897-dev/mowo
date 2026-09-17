@@ -7,6 +7,7 @@ requireIsolatedTestDatabase()
 const prisma = new PrismaClient()
 const apiBase = process.env.TEST_API_BASE || 'http://127.0.0.1:3001'
 const webBase = process.env.TEST_WEB_BASE || 'http://127.0.0.1:5500/mowo/frontend/pages'
+const vueBase = process.env.TEST_VUE_BASE || 'http://127.0.0.1:4173/app'
 const runId = String(Date.now()).slice(-7)
 const userIds = []
 const phones = []
@@ -146,7 +147,7 @@ try {
     window.MOWO_RUNTIME_API_BASE = apiBase
     localStorage.setItem('mowo_token', token)
   }, { token: customer.token, apiBase })
-  await page.goto(`${webBase}/my-customizations.html`, { waitUntil:'networkidle' })
+  await page.goto(`${vueBase}/account/customizations`, { waitUntil:'networkidle' })
   await page.getByRole('link', { name:'确认筛帧' }).click()
   await page.locator('#stateEditor.active').waitFor({ timeout:10000 })
   await page.getByRole('button', { name:/满意，选择款式/ }).click()
@@ -245,7 +246,7 @@ try {
   console.log('PASS self-screened request ignores stale human-screening state and enters checkout')
 
   await page.setViewportSize({ width:390, height:844 })
-  await page.goto(`${webBase}/my-customizations.html`, { waitUntil:'networkidle' })
+  await page.goto(`${vueBase}/account/customizations`, { waitUntil:'networkidle' })
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1)
   if (overflow) throw new Error('我的定制移动端出现横向溢出')
   console.log('PASS customer customization list has no mobile horizontal overflow')

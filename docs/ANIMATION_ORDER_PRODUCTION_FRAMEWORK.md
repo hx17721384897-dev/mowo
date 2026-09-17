@@ -28,7 +28,7 @@
 
 ## 页面职责
 
-`my-animations.html` 和 `my-customizations.html` 不应合并为同一种数据：
+“我的动画”和 Vue `/app/account/customizations` 不应合并为同一种数据：
 
 | 页面/概念 | 用户看到什么 | 管理的对象 |
 |---|---|---|

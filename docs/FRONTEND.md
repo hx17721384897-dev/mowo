@@ -45,7 +45,7 @@
 | `customize-start.html` | 选款式 | ✅ 已重写（走马灯+详情弹窗） |
 | `customize-editor.html` | 上传与筛帧 | ✅ 已对接 |
 | `customize-confirm.html` | 选配+提交 | ✅ 已对接 |
-| `my-customizations.html` | 我的定制、状态筛选和时间线 | ✅ 首批已完成 |
+| Vue `/app/account/customizations` | 我的定制、状态筛选和时间线 | ✅ V2-C1 已接管，旧页已删除 |
 
 定制编辑器保留原有设计器，并在第一屏增加“自己筛选”和“工作人员筛选”两个入口。登录用户进入确认页前，选中帧上传为私有帧图，原视频/原图上传为私有源素材；自己筛选先保存无编号草稿，提交订单时才生成定制编号。私人定制确认页按标准 SKU 价格直接进入购物车与结算，不做人工内容审核；联名公开上架另走独立审核。完整流程见 `modules/web-customization.md`。
 

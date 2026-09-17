@@ -73,7 +73,7 @@
 | 业务层 | 页面 | 初始结论 |
 |---|---|---|
 | 官网展示层 | `index`、`about`、`products`、`showcase`、`showcase-detail`、`faq`、`contact`、`privacy-policy`、`user-agreement`、`creator-profile` | 公开入口候选；待逐页核对公开 API、文案、资源和链接。 |
-| 用户交易层 | `customize-start`、`customize-editor`、`customize-confirm`、`cart`、`checkout`、`orders`、`order-detail`、`my-addresses`、`my-animations`、`my-customizations`、`settings` | B1 主流程候选；待核对会话、数据归属、订单状态和异常。 |
+| 用户交易层 | `customize-start`、`customize-editor`、`customize-confirm`、`cart`、`checkout`、`orders`、`order-detail`、`my-addresses`、`my-animations`、Vue `/app/account/customizations`、`settings` | B1 主流程候选；“我的定制”已于 V2-C1 迁移并删除旧页。 |
 | 创作者层 | `creator-animations`、`creator-certify`、`creator-collab`、`creator-dashboard`、`creator-earnings`、`creator-links`、`creator-notifications`、`creator-profile` | 横跨用户与后台运营；必须结合资格、岗位和功能开关审计。 |
 | 后台运营层 | 24 个 `admin-*.html` 页面，包括账号删除、联名、联络、合同、定制申请、帧图、库存、订单、用户和日志。 | 待建立“页面—路由—岗位权限”矩阵。 |
 | 生产履约层 | `production-inventory`、`production-scan`、`production-scan-frame`、`production-scan-material`、`production-scan-pairing`、`production-scan-packing` | 待核对是否统一进入生产工作台，旧入口是否只负责跳转。 |
@@ -186,7 +186,7 @@
 | P0-010 | `20260905190000_expand_collab_storefront_cover` 曾缺少 `migration.sql`；封面字段已由前一迁移建立。 | 新旧冲突 | 缺失文件曾使 Prisma 无法继续重放。 | 已补带说明的 no-op SQL 文件，并以全新 `mowo_b1_test` 完整重放验证；不对 `mowo_db` 手工执行。 | 已修复（空库链）。 |
 | P0-011 | 多个现行 Web 页面以“主机不是 `127.0.0.1` 就使用 `http://localhost:3001`”决定 API 地址；涉及定制、订单、联名、个人资料与创作者页面。 | 安全/上线阻断 | 部署后的访客会请求其自身电脑的 localhost，B1 无法在真实邀请环境运行。 | 建立统一的同源 `/api` 或受控运行时 API Origin；逐页迁移并增加部署冒烟测试。 | 已确认。 |
 | P0-012 | `auth.js` 提供新版 v1 会话能力，但多页仍直接读取 `mowo_token`/`mowo_user`、自行拼 API 地址和 Authorization 请求头。 | 新旧冲突 | 会话刷新、退出、权限判断和 API 行为会在页面间漂移；XSS 风险面也扩大。 | 建立页面—会话实现矩阵，先迁移 B1 现行页面到统一客户端；旧页按关闭保留处理。 | 进行中。 |
-| P0-013 | `my-customizations.html` 在未登录时跳转 `auth.html`，但当前顶层页面清单没有该文件。 | 未完成 | 受邀用户从“我的定制”进入时可能遇到失效登录入口。 | 静态链接检查覆盖全部现行页面；在用户交易层决定统一登录入口后修复。 | 已确认。 |
+| P0-013 | `my-customizations.html` 在未登录时跳转 `auth.html`，但当前顶层页面清单没有该文件。 | 已关闭 | V2-C1 已由 Vue 受保护路由和共享登录弹窗接管，旧页面已物理删除。 | Vue 路由守卫、登录安全回跳和桌面/手机回归通过。 | 已确认。 |
 | P0-014 | FAQ 和设置页从外部 CDN 加载 Fuse.js、Cropper.js；本批次尚未发现 SRI 或本地降级策略。 | 可用但有限制 | 外部网络可用性和供应链完整性会影响邀请测试；不等于当前功能失效。 | 记录所有第三方运行时资源，决定自托管、SRI 与降级策略。 | 进行中。 |
 | P0-015 | `_legacy/` 下仍保留社区、旧生产、旧创作者收益/作品等页面，并直接调用旧 API/本地购物车逻辑。 | 关闭但保留 | 历史追溯有价值，但若可被直接访问或被现行链接引用，会产生双轨业务入口。 | 核对现行页面引用、部署静态路径和功能开关；仅在证明无消费者后列为归档或删除候选。 | 进行中。 |
 | P0-016 | 小程序目录不在 Git；14 个注册页面中至少 9 个明确显示“开发中”。第一轮契约对照还确认：登录请求缺必填 `purpose`/`mode` 且同意字段名不符，购物车加购 DTO 已落后，通用未读通知路径未注册。 | 未完成 | 小程序不能作为 B1 必经交易客户端，也无法得到可靠版本回退；当前登录和加购已有可复现失败点。 | 先纳入版本控制；在批次 4 按“Web 领取—小程序身份—支付”目标重建页面、接口契约和验收顺序。 | 已确认。 |

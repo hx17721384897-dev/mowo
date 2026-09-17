@@ -22,7 +22,7 @@
 | `frontend/pages/settings.html` + `frontend/js/settings.js` | 正式保留 | `/api/v1/account/*`、`/api/upload/*`、`/api/addresses/*` | B1 正式账户设置入口；含资料、头像、密码、换绑手机号、通知、隐私、地址、设备退出和注销。认证展示区保留，不联动创作者平台。 |
 | `frontend/js/auth.js` | 正式公共登录入口 | `/api/v1/auth/*`、`/api/v1/account/me` | 使用 `mowo_token` 与 `mowo_user` 本地缓存，并用 HttpOnly Refresh Cookie 刷新。需要逐页核对是否所有页面都复用它。 |
 | `frontend/pages/my-addresses.html` | 正式候选入口 | `/api/addresses/*` | 地址接口已在隔离库完成 CRUD 冒烟；仍需浏览器验收默认地址与错误态。 |
-| `frontend/pages/my-customizations.html` | 正式候选入口 | `/api/customization-requests/mine*` | 已改为统一运行时 API 配置；未登录转至同目录 `index.html?auth=1` 的登录弹窗，登录后回到原路径。B2/B7 浏览器回归已通过。 |
+| Vue `/app/account/customizations` | 正式入口 | `/api/customization-requests/mine*` | V2-C1 已迁移并完成负责人初验；旧 `frontend/pages/my-customizations.html` 已物理删除。 |
 | `frontend/pages/my-animations.html` | 正式候选入口 | `/api/animation-assets/*` | 私人动画资产与版本入口；需核对本人隔离、版本追加和软删除。 |
 | `customize-start/editor/confirm.html` | 正式私人定制入口 | 定制申请、私有上传、机型/SKU | 进入批次 B2-D/E 后按“自己筛帧”和“人工筛帧”分开回归。 |
 | `creator-profile.html`、`creator-certify.html` | 当前目录不存在 | 无 | 旧模块文档的“现行页面”记述已过期；本批次不恢复这些页面。 |
@@ -108,7 +108,7 @@
 
 以下步骤将在对应子任务完成后由开发者执行前置检查，再交给产品在浏览器确认：
 
-1. 当前本机验收环境已启动：静态页为 `http://localhost:5500/mowo/frontend/pages/index.html`，API 为 `http://localhost:3001`，且 API **只连接**隔离库 `mowo_b1_test`。打开无痕窗口或先清除该站点 Local Storage，访问 `http://localhost:5500/mowo/frontend/pages/my-customizations.html`；应跳到首页并自动打开登录弹窗，地址带有 `auth=1` 和安全的 `redirect` 参数，不能出现 `auth.html` 或 404。
+1. 当前本机验收环境需同时启动静态页、Vue 和 API，且 API **只连接**隔离库 `mowo_b1_test`。打开无痕窗口或先清除该站点 Local Storage，访问 `http://127.0.0.1:4173/app/account/customizations`；应打开共享登录弹窗并保留安全回跳地址，不能出现旧 HTML 页面或 404。
 2. 在登录弹窗使用测试手机号注册/登录；开发模式短信验证码为 `123456`。登录完成后应自动回到“我的定制”，页面显示“这里暂时没有定制记录”，而不是空白、401 或错误页。
 3. 登录后从头像菜单打开“设置”，确认资料可读取、昵称保存提示、通知/隐私开关、地址入口和“哞屋认证”展示仍可见。不要在此阶段提交真实个人资料或发起注销。
 4. 如需检查退出，使用头像菜单退出后重新访问“我的定制”；应再次进入首页登录弹窗。此操作只影响测试库中的当前测试账号。

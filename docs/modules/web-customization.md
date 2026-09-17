@@ -111,7 +111,7 @@
 | Web | `frontend/pages/customize-start.html` | 选择机型 |
 | Web | `frontend/pages/customize-editor.html` | 双入口、浏览器筛帧、原素材提交 |
 | Web | `frontend/pages/customize-confirm.html` | 选择标准 SKU、提交订单并进入结算 |
-| Web | `frontend/pages/my-customizations.html` | 用户定制列表、状态筛选和时间线 |
+| Web | Vue `/app/account/customizations` | 用户定制列表、状态筛选和时间线 |
 | Web | `frontend/pages/admin-customization-requests.html` | 员工接收列表、详情和素材查看 |
 | 公共脚本 | `frontend/js/private-upload.js` | 私有文件上传；支持原 File/Blob 与帧图 |
 | 公共脚本 | `frontend/js/customization-review-editor.js` | 后台筛帧模式、任务锁续期、用户只读确认和流转 |
