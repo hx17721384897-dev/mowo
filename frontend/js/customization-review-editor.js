@@ -49,7 +49,7 @@
   function showFatal(message) {
     goState(S.UPLOAD)
     const upload = document.getElementById('stateUpload')
-    const returnPage = frameDraftId ? 'admin-frame-making.html' : adminRequestId ? 'admin-customization-requests.html' : 'my-customizations.html'
+    const returnPage = frameDraftId ? 'admin-frame-making.html' : adminRequestId ? 'admin-customization-requests.html' : '/app/account/customizations'
     upload.innerHTML = `<div style="max-width:680px;margin:70px auto;padding:32px;background:#fff;border:1px solid #ddd;text-align:center"><h2 style="font-size:22px;margin-bottom:12px">无法打开筛帧任务</h2><p style="color:#777;font-weight:700;line-height:1.7">${escapeHtml(message)}</p><a href="${returnPage}" style="display:inline-flex;margin-top:22px;padding:12px 22px;background:#111;color:#fff;text-decoration:none;font-weight:900">返回列表</a></div>`
   }
 
@@ -408,7 +408,7 @@
         method: 'POST', body: JSON.stringify({ message: message.trim() })
       })
       alert('调整意见已提交，工作人员会重新筛选')
-      location.href = 'my-customizations.html'
+      location.href = '/app/account/customizations'
     } catch (error) {
       alert(`提交失败：${error.message}`)
     }

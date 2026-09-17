@@ -1352,7 +1352,7 @@ async function submitHumanRequest() {
     if (!response.ok || !result.success) throw new Error(result.message || '提交失败');
     localStorage.removeItem('mowo_customize_request_draft_id');
     sessionStorage.removeItem('mowo_human_submission_key');
-    location.href = `my-customizations.html?submitted=${encodeURIComponent(result.data.requestNo)}`;
+    location.href = `/app/account/customizations?submitted=${encodeURIComponent(result.data.requestNo)}`;
   } catch (error) {
     alert('提交失败：' + (error.message || '请稍后重试'));
     button.disabled = false;

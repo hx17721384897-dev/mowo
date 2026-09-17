@@ -198,9 +198,9 @@ async function handleAuthenticated(): Promise<void> {
           <a class="dd-item" :href="legacyPublicUrl('orders')">
             <span class="dd-item-icon" style="background: #ebf5ff">📦</span>我的订单
           </a>
-          <a class="dd-item" :href="legacyPublicUrl('my-customizations')">
+          <RouterLink class="dd-item" to="/account/customizations" @click="userMenuOpen = false">
             <span class="dd-item-icon" style="background: #fff3ee">✂</span>我的定制
-          </a>
+          </RouterLink>
           <a class="dd-item" :href="legacyPublicUrl('my-animations')">
             <span class="dd-item-icon" style="background: #f0f4ff">🎬</span>我的动画
           </a>

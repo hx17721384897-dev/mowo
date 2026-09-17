@@ -112,6 +112,12 @@ const router = createRouter({
           name: 'account-settings',
           component: () => import('@/views/SettingsView.vue'),
           meta: { title: '账号设置 — 哞屋 MOWO' }
+        },
+        {
+          path: 'customizations',
+          name: 'my-customizations',
+          component: () => import('@/views/MyCustomizationsView.vue'),
+          meta: { title: '我的定制 — 哞屋 MOWO' }
         }
       ]
     },

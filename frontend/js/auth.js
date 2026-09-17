@@ -503,7 +503,7 @@ function navGoTo(page) {
   const map = {
     cart:          'cart.html',
     orders:        'orders.html',
-    customizations:'my-customizations.html',
+    customizations:'/app/account/customizations',
     addresses:     'my-addresses.html',
     myAnimations:  'my-animations.html',
     settings:      'settings.html',
