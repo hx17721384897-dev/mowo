@@ -34,6 +34,10 @@ export const useSessionStore = defineStore('session', {
       this.user = user
       this.status = 'authenticated'
     },
+    updateUser(user: SessionUser) {
+      saveCachedUser(user)
+      this.user = user
+    },
     markAnonymous() {
       this.accessToken = null
       this.user = null

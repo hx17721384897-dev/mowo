@@ -105,9 +105,13 @@ const router = createRouter({
       children: [
         {
           path: '',
-          name: 'account-shell',
-          component: AreaPlaceholderView,
-          props: { label: '账户区域占位' }
+          redirect: { name: 'account-settings' }
+        },
+        {
+          path: 'settings',
+          name: 'account-settings',
+          component: () => import('@/views/SettingsView.vue'),
+          meta: { title: '账号设置 — 哞屋 MOWO' }
         }
       ]
     },

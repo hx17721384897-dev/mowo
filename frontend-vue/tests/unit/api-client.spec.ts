@@ -82,4 +82,18 @@ describe('apiRequest', () => {
     ).rejects.toMatchObject({ status: 401, code: 'INVALID_CODE' })
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
+
+  it('does not refresh or clear the session for a business-level 401', async () => {
+    const fetchMock = vi.fn(async () =>
+      response(401, { success: false, code: 'PASSWORD_INCORRECT', message: '密码错误' })
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(apiRequest('/api/v1/account/password', { method: 'POST' })).rejects.toMatchObject({
+      status: 401,
+      code: 'PASSWORD_INCORRECT'
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(localStorage.getItem(ACCESS_TOKEN_KEY)).toBe('expired-token')
+  })
 })

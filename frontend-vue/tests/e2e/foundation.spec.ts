@@ -122,7 +122,7 @@ test('protected account area requests login and other application shells still r
   await expect(page.getByRole('navigation', { name: '主导航' })).toBeVisible()
 })
 
-test('trusted account calibration permits the protected route', async ({ page }) => {
+test('trusted account calibration permits the protected route', async ({ page }, testInfo) => {
   await page.addInitScript(() => {
     localStorage.setItem('mowo_token', 'test-access-token')
     localStorage.setItem('mowo_user', JSON.stringify({ id: 'stale-user', nickname: '旧缓存' }))
@@ -147,8 +147,12 @@ test('trusted account calibration permits the protected route', async ({ page })
   })
 
   await page.goto('/app/account')
-  await expect(page).toHaveURL(/\/app\/account$/)
-  await expect(page.getByText('账户区域占位')).toBeVisible()
+  await expect(page).toHaveURL(/\/app\/account\/settings$/)
+  await expect(page.getByRole('heading', { name: '账号设置' })).toBeVisible()
+  if (testInfo.project.name === 'mobile-chromium') {
+    await page.getByRole('button', { name: /基本信息/ }).click()
+  }
+  await expect(page.getByRole('heading', { name: '基本信息' })).toBeVisible()
   await expect
     .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('mowo_user') || '{}').id))
     .toBe('trusted-user')

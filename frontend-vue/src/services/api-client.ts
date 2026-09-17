@@ -2,6 +2,12 @@ import { runtimeConfig } from '@/config/runtime'
 import { clearSession, readAccessToken, saveAccessToken } from './auth-session'
 
 const DEFAULT_TIMEOUT_MS = 10_000
+const REFRESHABLE_AUTH_CODES = new Set([
+  'AUTH_REQUIRED',
+  'SESSION_REQUIRED',
+  'SESSION_REVOKED',
+  'UNAUTHORIZED'
+])
 let refreshPromise: Promise<string | null> | null = null
 
 export interface ApiEnvelope<T> {
@@ -108,13 +114,18 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       }
     })
 
-    if (response.status === 401 && options.retryAuth !== false) {
+    const envelope = await parseEnvelope<T>(response, requestId)
+
+    if (
+      response.status === 401 &&
+      options.retryAuth !== false &&
+      REFRESHABLE_AUTH_CODES.has(envelope.code ?? '')
+    ) {
       const refreshedToken = await refreshAccessToken()
       if (refreshedToken) return apiRequest<T>(path, { ...options, retryAuth: false })
       clearSession()
     }
 
-    const envelope = await parseEnvelope<T>(response, requestId)
     if (!response.ok || !envelope.success) {
       throw new ApiError(
         envelope.message || '请求失败',

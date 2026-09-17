@@ -1,11 +1,18 @@
 <template>
-  <BaseLayout
-    area="用户区域"
-    title="账户应用壳"
-    description="账户、定制、购物车和订单共享此受保护布局。"
-  />
+  <div class="account-shell">
+    <a class="skip-link" href="#account-main">跳到主要内容</a>
+    <PublicHeader />
+    <main id="account-main"><RouterView /></main>
+  </div>
 </template>
 
 <script setup lang="ts">
-import BaseLayout from './BaseLayout.vue'
+import PublicHeader from '@/components/PublicHeader.vue'
 </script>
+
+<style scoped>
+.account-shell {
+  min-height: 100vh;
+  background: #f5f3ef;
+}
+</style>

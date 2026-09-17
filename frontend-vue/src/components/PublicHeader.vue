@@ -132,7 +132,7 @@ async function handleAuthenticated(): Promise<void> {
       <RouterLink to="/contact" @click="menuOpen = false">联络我们</RouterLink>
       <a :href="legacyPublicUrl('cart')">购物车</a>
       <a :href="legacyPublicUrl('orders')">我的订单</a>
-      <a :href="legacyPublicUrl('settings')">账号设置</a>
+      <RouterLink to="/account/settings" @click="menuOpen = false">账号设置</RouterLink>
     </div>
     <div class="mowo-mobile-foot">
       <button type="button" @click="openAccount">登录 / 注册</button>

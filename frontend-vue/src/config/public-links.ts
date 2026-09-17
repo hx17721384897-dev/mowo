@@ -1,12 +1,11 @@
 import { runtimeConfig } from './runtime'
 
-export type LegacyPublicPage = 'customize-start' | 'cart' | 'orders' | 'settings'
+export type LegacyPublicPage = 'customize-start' | 'cart' | 'orders'
 
 const legacyFileByPage: Record<LegacyPublicPage, string> = {
   'customize-start': 'customize-start.html',
   cart: 'cart.html',
-  orders: 'orders.html',
-  settings: 'settings.html'
+  orders: 'orders.html'
 }
 
 export function legacyPublicUrl(page: LegacyPublicPage): string {
