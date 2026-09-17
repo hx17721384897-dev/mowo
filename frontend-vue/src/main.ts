@@ -7,6 +7,7 @@ import './styles/tokens.css'
 import './styles/base.css'
 import './styles/public.css'
 import './styles/legacy-fidelity.css'
+import './styles/legacy-auth.css'
 
 const app = createApp(App)
 const pinia = createPinia()

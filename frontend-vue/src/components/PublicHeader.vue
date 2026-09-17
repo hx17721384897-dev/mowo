@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { legacyPublicUrl } from '@/config/public-links'
+import { logoutCurrentDevice } from '@/features/account/api'
 import AuthDialog from '@/features/auth/AuthDialog.vue'
 import { safeInternalRedirect } from '@/router/safe-redirect'
 import { useSessionStore } from '@/stores/session'
@@ -10,17 +11,32 @@ const route = useRoute()
 const router = useRouter()
 const session = useSessionStore()
 const menuOpen = ref(false)
+const userMenuOpen = ref(false)
 const authOpen = ref(false)
+const userMenu = ref<HTMLElement | null>(null)
 const authIntro = computed(() =>
   route.query.session === 'unavailable'
     ? '暂时无法确认原有登录状态。你可以重新登录后继续，系统不会自动创建订单或付款。'
     : undefined
 )
+const nickname = computed(() => session.user?.profile?.nickname || session.user?.nickname || '用户')
+const avatarUrl = computed(
+  () => session.user?.profile?.avatarUrl || session.user?.avatarUrl || null
+)
+const avatarInitial = computed(() => nickname.value.trim().charAt(0).toUpperCase() || '?')
+const roleBadge = computed(() => {
+  const role = session.user?.role ?? 0
+  if (role >= 3) return { label: '⭐ 超级管理员', style: 'background:#FCE4EC;color:#C62828;' }
+  if (role === 2) return { label: '🛡 管理员', style: 'background:#FFF8E1;color:#B8860B;' }
+  return { label: '普通用户', style: '' }
+})
+const isStaff = computed(() => Boolean(session.staffRole))
 
 watch(
   () => route.fullPath,
   () => {
     menuOpen.value = false
+    userMenuOpen.value = false
   }
 )
 
@@ -38,6 +54,8 @@ watch(
 
 onBeforeUnmount(() => {
   document.body.style.overflow = ''
+  document.removeEventListener('pointerdown', closeUserMenuOutside)
+  document.removeEventListener('keydown', closeUserMenuOnEscape)
 })
 
 async function openAccount(): Promise<void> {
@@ -50,9 +68,43 @@ async function openAccount(): Promise<void> {
   authOpen.value = true
 }
 
+function toggleUserMenu(): void {
+  userMenuOpen.value = !userMenuOpen.value
+}
+
+function closeUserMenuOutside(event: PointerEvent): void {
+  if (!userMenu.value?.contains(event.target as Node)) userMenuOpen.value = false
+}
+
+function closeUserMenuOnEscape(event: KeyboardEvent): void {
+  if (event.key === 'Escape') userMenuOpen.value = false
+}
+
+watch(userMenuOpen, (open) => {
+  if (open) {
+    document.addEventListener('pointerdown', closeUserMenuOutside)
+    document.addEventListener('keydown', closeUserMenuOnEscape)
+  } else {
+    document.removeEventListener('pointerdown', closeUserMenuOutside)
+    document.removeEventListener('keydown', closeUserMenuOnEscape)
+  }
+})
+
+async function signOut(): Promise<void> {
+  userMenuOpen.value = false
+  try {
+    await logoutCurrentDevice()
+  } catch {
+    // 服务端暂时不可达时也必须清除当前浏览器凭证，避免继续显示伪登录状态。
+  } finally {
+    session.reset()
+    if (route.matched.some((record) => record.meta.requiresAuth === true)) await router.replace('/')
+  }
+}
+
 async function handleAuthenticated(): Promise<void> {
   authOpen.value = false
-  const target = safeInternalRedirect(route.query.redirect)
+  const target = safeInternalRedirect(route.query.redirect, route.path)
   await router.replace(target)
 }
 </script>
@@ -101,7 +153,75 @@ async function handleAuthenticated(): Promise<void> {
           <circle cx="18" cy="20" r="1.6" />
         </svg>
       </a>
+      <div
+        v-if="session.isAuthenticated"
+        ref="userMenu"
+        class="nav-user show"
+        :class="{ 'is-admin': isStaff }"
+      >
+        <button
+          class="nav-avatar-btn"
+          :class="{ open: userMenuOpen }"
+          type="button"
+          aria-label="打开个人中心菜单"
+          :aria-expanded="userMenuOpen"
+          aria-controls="mowo-user-dropdown"
+          @click="toggleUserMenu"
+        >
+          <span class="nav-avatar-circle">
+            <img v-if="avatarUrl" :src="avatarUrl" alt="头像" />
+            <span v-else>{{ avatarInitial }}</span>
+          </span>
+          <span class="nav-uname">{{ nickname }}</span>
+          <span class="nav-chevron" aria-hidden="true">▾</span>
+        </button>
+        <div id="mowo-user-dropdown" class="user-dropdown" :class="{ open: userMenuOpen }">
+          <div class="dd-head">
+            <div class="dd-av">
+              <img v-if="avatarUrl" :src="avatarUrl" alt="头像" />
+              <span v-else>{{ avatarInitial }}</span>
+            </div>
+            <div>
+              <p class="dd-name">{{ nickname }}</p>
+              <span
+                class="dd-badge"
+                :class="{ user: (session.user?.role ?? 0) < 2 }"
+                :style="roleBadge.style"
+              >
+                {{ roleBadge.label }}
+              </span>
+            </div>
+          </div>
+          <a class="dd-item" :href="legacyPublicUrl('cart')">
+            <span class="dd-item-icon" style="background: #fffbe6">🛒</span>购物车
+          </a>
+          <a class="dd-item" :href="legacyPublicUrl('orders')">
+            <span class="dd-item-icon" style="background: #ebf5ff">📦</span>我的订单
+          </a>
+          <a class="dd-item" :href="legacyPublicUrl('my-customizations')">
+            <span class="dd-item-icon" style="background: #fff3ee">✂</span>我的定制
+          </a>
+          <a class="dd-item" :href="legacyPublicUrl('my-animations')">
+            <span class="dd-item-icon" style="background: #f0f4ff">🎬</span>我的动画
+          </a>
+          <a v-if="isStaff" class="dd-item admin-only" :href="legacyPublicUrl('admin-orders')">
+            <span class="dd-item-icon" style="background: #fff9c4">🛠</span>进入后台
+          </a>
+          <div class="dd-divider"></div>
+          <RouterLink class="dd-item" to="/account/settings" @click="userMenuOpen = false">
+            <span class="dd-item-icon" style="background: #ebebea">⚙️</span>账号设置
+          </RouterLink>
+          <RouterLink class="dd-item" to="/contact" @click="userMenuOpen = false">
+            <span class="dd-item-icon" style="background: #ebebea">💬</span>帮助与反馈
+          </RouterLink>
+          <div class="dd-divider"></div>
+          <button class="dd-item danger" type="button" @click="signOut">
+            <span class="dd-item-icon" style="background: #fff5f5">🚪</span>退出登录
+          </button>
+        </div>
+      </div>
       <button
+        v-else
         class="mowo-nav-icon nav-login-btn"
         type="button"
         aria-label="登录 / 个人中心"
@@ -135,7 +255,26 @@ async function handleAuthenticated(): Promise<void> {
       <RouterLink to="/account/settings" @click="menuOpen = false">账号设置</RouterLink>
     </div>
     <div class="mowo-mobile-foot">
-      <button type="button" @click="openAccount">登录 / 注册</button>
+      <button
+        v-if="!session.isAuthenticated"
+        id="mobileLoginBtn"
+        type="button"
+        @click="openAccount"
+      >
+        登录 / 注册
+      </button>
+      <RouterLink
+        v-else
+        class="mowo-mobile-avatar show"
+        to="/account/settings"
+        @click="menuOpen = false"
+      >
+        <span class="mowo-mobile-avatar-img">
+          <img v-if="avatarUrl" :src="avatarUrl" alt="头像" />
+          <span v-else>{{ avatarInitial }}</span>
+        </span>
+        <span class="mowo-mobile-avatar-name">{{ nickname }}</span>
+      </RouterLink>
     </div>
   </div>
   <AuthDialog

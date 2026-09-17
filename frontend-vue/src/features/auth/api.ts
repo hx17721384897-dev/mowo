@@ -1,5 +1,5 @@
 import { apiRequest } from '@/services/api-client'
-import type { SessionUser } from '@/services/auth-session'
+import type { SessionProfile, SessionUser } from '@/services/auth-session'
 
 export type SmsMode = 'LOGIN' | 'REGISTER'
 
@@ -33,4 +33,16 @@ export async function verifySms(input: {
   const accessToken = data.accessToken ?? data.token
   if (!accessToken || !data.user) throw new Error('登录响应缺少会话信息')
   return { accessToken, user: data.user }
+}
+
+export async function completeRegistrationProfile(
+  accessToken: string,
+  nickname: string
+): Promise<SessionProfile> {
+  return apiRequest<SessionProfile>('/api/v1/account/profile', {
+    method: 'PUT',
+    body: { nickname },
+    headers: { Authorization: `Bearer ${accessToken}` },
+    retryAuth: false
+  })
 }

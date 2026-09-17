@@ -77,7 +77,7 @@ test('public authentication dialog mounts once and keeps legal links isolated', 
   await page.getByRole('button', { name: '登录 / 个人中心' }).click()
   const dialog = page.getByRole('dialog')
   await expect(dialog).toHaveCount(1)
-  await page.getByRole('button', { name: '注册', exact: true }).click()
+  await page.getByRole('tab', { name: '注册', exact: true }).click()
   await expect(dialog.getByRole('link', { name: '用户协议' })).toHaveAttribute(
     'rel',
     'noopener noreferrer'
@@ -88,6 +88,55 @@ test('public authentication dialog mounts once and keeps legal links isolated', 
   )
   await page.getByRole('button', { name: '关闭登录窗口' }).click()
   await expect(page.getByRole('dialog')).not.toBeVisible()
+})
+
+test('successful login restores the legacy avatar and account dropdown', async ({ page }) => {
+  await page.route('**/api/v1/auth/sms/verify', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        data: {
+          accessToken: 'signed-in-token',
+          user: {
+            id: 'signed-in-user',
+            role: 0,
+            staffRole: null,
+            profile: { nickname: '小哞', avatarUrl: null }
+          }
+        }
+      })
+    })
+  })
+
+  await page.goto('/app/')
+  const mobileMenu = page.getByRole('button', { name: '打开或关闭导航' })
+  if (await mobileMenu.isVisible()) {
+    await mobileMenu.click()
+    await page.locator('#mobileLoginBtn').click()
+  } else {
+    await page.getByRole('button', { name: '登录 / 个人中心' }).click()
+  }
+  await page.getByRole('textbox', { name: '手机号' }).fill('13800138003')
+  await page.getByRole('textbox', { name: '验证码' }).fill('123456')
+  await page.locator('.auth-submit-btn').click()
+
+  if (await mobileMenu.isVisible()) {
+    await mobileMenu.click()
+    await expect(page.locator('.mowo-mobile-avatar-name')).toHaveText('小哞')
+  } else {
+    const avatarButton = page.getByRole('button', { name: '打开个人中心菜单' })
+    await expect(avatarButton).toBeVisible()
+    await avatarButton.click()
+    const dropdown = page.locator('#mowo-user-dropdown')
+    await expect(dropdown).toHaveClass(/open/)
+    await expect(dropdown.getByText('小哞')).toBeVisible()
+    await expect(dropdown.getByRole('link', { name: /账号设置/ })).toHaveAttribute(
+      'href',
+      '/app/account/settings'
+    )
+  }
 })
 
 test('mobile public navigation is usable without horizontal overflow', async ({ page }) => {
@@ -109,7 +158,8 @@ test('protected account area requests login and other application shells still r
   await page.goto('/app/account')
   await expect(page).toHaveURL(/\/app\/?\?.*auth=1/)
   await expect(page.getByRole('dialog')).toBeVisible()
-  await expect(page.getByText(/返回你刚才访问的位置/)).toBeVisible()
+  await expect(page.getByText('哞屋 MOWO')).toBeVisible()
+  await expect(page.getByPlaceholder('请输入手机号')).toBeVisible()
   await page.getByRole('button', { name: '关闭登录窗口' }).click()
   await page.goto('/app/admin')
   await expect(page.getByText('管理区域占位')).toBeVisible()
@@ -143,6 +193,23 @@ test('trusted account calibration permits the protected route', async ({ page },
           profile: { nickname: '可信资料', avatarUrl: null }
         }
       })
+    })
+  })
+  await page.route('**/api/v1/account/password-status', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        data: { hasPassword: false, passwordLoginEnabled: false }
+      })
+    })
+  })
+  await page.route('**/api/addresses', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, data: [] })
     })
   })
 
