@@ -31,7 +31,7 @@ describe('session bootstrap', () => {
             role: 0,
             staffRole: null,
             status: 'ACTIVE',
-            profile: { nickname: '可信用户', notifyOrder: true }
+            profile: { nickname: '可信用户', gender: 2, notifyOrder: true }
           }
         })
       )
@@ -42,6 +42,7 @@ describe('session bootstrap', () => {
 
     expect(session.status).toBe('authenticated')
     expect(session.user?.id).toBe('trusted-user')
+    expect(session.user?.profile?.gender).toBe(2)
     expect(JSON.parse(localStorage.getItem(USER_CACHE_KEY) || '{}').id).toBe('trusted-user')
   })
 

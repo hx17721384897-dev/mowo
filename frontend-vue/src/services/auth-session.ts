@@ -8,7 +8,7 @@ export interface SessionProfile {
   nickname?: string | null
   avatarUrl?: string | null
   bio?: string | null
-  gender?: string | null
+  gender?: number | null
   birthday?: string | null
   nicknameUpdatedAt?: string | null
   notifyOrder?: boolean
@@ -23,9 +23,23 @@ export interface SessionUser {
   staffRole?: StaffRole | null
   status?: string
   createdAt?: string
+  deletionRequest?: AccountDeletionRequest | null
   nickname?: string | null
   avatarUrl?: string | null
   profile?: SessionProfile | null
+}
+
+export interface AccountDeletionRequest {
+  status: string
+  requestedAt?: string
+  scheduledAt?: string
+  processingStartedAt?: string | null
+  firstFailedAt?: string | null
+  manualReviewAt?: string | null
+  pauseUserMessage?: string | null
+  protectionMinutesLeft?: number | null
+  cleanupStarted?: boolean
+  canCancel?: boolean
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -43,7 +57,7 @@ function normalizeProfile(value: unknown): SessionProfile | null | undefined {
     nickname: optionalString(value.nickname),
     avatarUrl: optionalString(value.avatarUrl),
     bio: optionalString(value.bio),
-    gender: optionalString(value.gender),
+    gender: typeof value.gender === 'number' || value.gender === null ? value.gender : undefined,
     birthday: optionalString(value.birthday),
     nicknameUpdatedAt: optionalString(value.nicknameUpdatedAt),
     notifyOrder: typeof value.notifyOrder === 'boolean' ? value.notifyOrder : undefined,
@@ -67,9 +81,28 @@ export function normalizeSessionUser(value: unknown): SessionUser | null {
     staffRole,
     status: typeof value.status === 'string' ? value.status : undefined,
     createdAt: typeof value.createdAt === 'string' ? value.createdAt : undefined,
+    deletionRequest: normalizeDeletionRequest(value.deletionRequest),
     nickname: optionalString(value.nickname),
     avatarUrl: optionalString(value.avatarUrl),
     profile: normalizeProfile(value.profile)
+  }
+}
+
+function normalizeDeletionRequest(value: unknown): AccountDeletionRequest | null | undefined {
+  if (value === null) return null
+  if (!isRecord(value) || typeof value.status !== 'string') return undefined
+  return {
+    status: value.status,
+    requestedAt: typeof value.requestedAt === 'string' ? value.requestedAt : undefined,
+    scheduledAt: typeof value.scheduledAt === 'string' ? value.scheduledAt : undefined,
+    processingStartedAt: optionalString(value.processingStartedAt),
+    firstFailedAt: optionalString(value.firstFailedAt),
+    manualReviewAt: optionalString(value.manualReviewAt),
+    pauseUserMessage: optionalString(value.pauseUserMessage),
+    protectionMinutesLeft:
+      typeof value.protectionMinutesLeft === 'number' ? value.protectionMinutesLeft : undefined,
+    cleanupStarted: typeof value.cleanupStarted === 'boolean' ? value.cleanupStarted : undefined,
+    canCancel: typeof value.canCancel === 'boolean' ? value.canCancel : undefined
   }
 }
 
