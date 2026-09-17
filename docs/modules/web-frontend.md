@@ -153,7 +153,8 @@ index / products / showcase
    └─ cart -> checkout
 
 auth.js user menu
-├─ cart / orders / my-addresses / my-animations / settings
+├─ cart / orders / my-addresses / settings
+└─ Vue /app/account/animations /app/account/customizations
 ├─ creator-dashboard -> earnings / collab / links / notifications / animations
 └─ admin-orders -> 统一 admin-sidebar 中的后台页面
 ```

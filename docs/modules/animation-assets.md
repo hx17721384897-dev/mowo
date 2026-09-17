@@ -72,7 +72,7 @@
 
 ## 页面行为
 
-Vue `/app/account/animations` 同时请求正式资产和旧草稿；旧 `frontend/pages/my-animations.html` 仅保留到 V2-C2 人工验收完成：
+Vue `/app/account/animations` 同时请求正式资产和旧草稿；旧 `frontend/pages/my-animations.html` 已在 V2-C2 人工初验后物理删除：
 
 - “动画资产”显示 `ANM` 编号、当前 V 版本和长期预览；
 - “草稿”只显示尚未关联正式资产的 `CustomProduct` 和剩余有效期；
