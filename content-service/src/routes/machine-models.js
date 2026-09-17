@@ -109,12 +109,14 @@ export default async function machineModelRoutes(fastify) {
 
   // GET /api/machine-models/skus/:skuId/image-url
   // 获取SKU图片的预签名读取URL
-  fastify.get('/skus/:skuId/image-url', { preHandler: requireAdmin }, async (req, reply) => {
+  fastify.get('/skus/:skuId/image-url', async (req, reply) => {
     const { skuId } = req.params
-    const sku = await fastify.prisma.machineModelSku.findUnique({ where: { id: skuId } })
+    const sku = await fastify.prisma.machineModelSku.findFirst({
+      where: { id: skuId, isActive: true, model: { isActive: true } }
+    })
     if (!sku) return reply.code(404).send({ success: false, message: 'SKU不存在' })
     if (!sku.previewImage) return reply.send({ success: true, data: { previewUrl: null } })
-    const previewUrl = fastify.ossPresignGet(sku.previewImage, 3600)
+    const previewUrl = publicMediaUrl(fastify, sku.previewImage, 3600)
     return reply.send({ success: true, data: { previewUrl } })
   })
 
@@ -133,26 +135,23 @@ export default async function machineModelRoutes(fastify) {
   // GET /api/machine-models/:id/sku-sales — 获取该款式各SKU销量（热门排序用）
   fastify.get('/:id/sku-sales', async (req, reply) => {
     const { id } = req.params
-    // 统计 customize_orders 里各 skuId 的订单数
+    const skus = await fastify.prisma.machineModelSku.findMany({
+      where: { modelId: id, isActive: true, model: { isActive: true } },
+      select: { id: true }
+    })
+    if (!skus.length) return reply.send({ success: true, data: {} })
+    const skuIds = skus.map(sku => sku.id)
+    // 只统计当前公开款式下已付款以上的订单。
     const orders = await fastify.prisma.customizeOrder.groupBy({
       by: ['skuId'],
       where: {
-        skuId: { not: null },
-        // 只统计已付款以上的订单
+        skuId: { in: skuIds },
         status: { in: ['paid','producing','done','shipped'] }
       },
       _count: { skuId: true }
     })
-    // 过滤出属于本款式的 SKU
-    const skus = await fastify.prisma.machineModelSku.findMany({
-      where: { modelId: id },
-      select: { id: true }
-    })
-    const skuIdSet = new Set(skus.map(s => s.id))
     const result   = {}
-    orders.forEach(o => {
-      if (skuIdSet.has(o.skuId)) result[o.skuId] = o._count.skuId
-    })
+    orders.forEach(o => { result[o.skuId] = o._count.skuId })
     return reply.send({ success: true, data: result })
   })
 
@@ -167,26 +166,40 @@ export default async function machineModelRoutes(fastify) {
       select: {
         id: true, name: true, description: true,
         ratios: true, frameOptions: true, sizes: true,
-        previewImage: true, sortOrder: true, isActive: true,
+        previewImage: true, videoUrl: true, sortOrder: true, isActive: true,
         modelType: true
       }
     })
-    return reply.send({ success: true, data: models.map(parseModel) })
+    return reply.send({ success: true, data: models.map(model => parsePublicModel(model, fastify)) })
   })
 
   fastify.get('/:id', async (req, reply) => {
     const model = await fastify.prisma.machineModel.findUnique({ where: { id: req.params.id } })
     if (!model || !model.isActive)
       return reply.code(404).send({ success: false, message: '款式不存在' })
-    return reply.send({ success: true, data: parseModel(model) })
+    return reply.send({ success: true, data: parsePublicModel(model, fastify) })
   })
 
   fastify.get('/:id/skus', async (req, reply) => {
     const skus = await fastify.prisma.machineModelSku.findMany({
-      where: { modelId: req.params.id, isActive: true },
+      where: { modelId: req.params.id, isActive: true, model: { isActive: true } },
       orderBy: [{ size: 'asc' }, { material: 'asc' }, { frameCount: 'asc' }, { colorName: 'asc' }]
     })
-    return reply.send({ success: true, data: skus })
+    return reply.send({
+      success: true,
+      data: skus.map(sku => ({
+        id: sku.id,
+        modelId: sku.modelId,
+        size: sku.size,
+        material: sku.material,
+        frameCount: sku.frameCount,
+        colorName: sku.colorName,
+        colorHex: sku.colorHex,
+        price: sku.price,
+        previewImage: Boolean(sku.previewImage),
+        previewUrl: publicMediaUrl(fastify, sku.previewImage, 3600)
+      }))
+    })
   })
 
   // ─────────────────────────────────────────────
@@ -504,6 +517,28 @@ function parseModel(m) {
     ratios:       safeJson(m.ratios,       []),
     frameOptions: safeJson(m.frameOptions, []),
     sizes:        safeJson(m.sizes,        []),
+  }
+}
+
+function parsePublicModel(model, fastify) {
+  const parsed = parseModel(model)
+  const previewUrl = publicMediaUrl(fastify, parsed.previewImage, 3600)
+  return {
+    ...parsed,
+    previewImage: previewUrl,
+    previewUrl,
+    videoUrl: publicMediaUrl(fastify, parsed.videoUrl, 3600)
+  }
+}
+
+function publicMediaUrl(fastify, value, expiresIn) {
+  const media = typeof value === 'string' ? value.trim() : ''
+  if (!media) return null
+  if (/^https?:\/\//i.test(media) || (media.startsWith('/') && !media.startsWith('//'))) return media
+  try {
+    return fastify.ossPresignGet(media, expiresIn)
+  } catch {
+    return null
   }
 }
 

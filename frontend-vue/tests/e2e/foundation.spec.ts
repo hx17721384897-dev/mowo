@@ -5,7 +5,7 @@ test('public V1a pages have one working navigation shell', async ({ page }) => {
   await expect(page.getByRole('heading', { name: /转动手柄/ })).toBeVisible()
   await expect(page.getByRole('link', { name: '开始制作' })).toHaveAttribute(
     'href',
-    '/mowo/frontend/pages/customize-start.html'
+    '/app/customize'
   )
   await expect(page.getByRole('link', { name: '查看商品' })).toHaveAttribute(
     'href',

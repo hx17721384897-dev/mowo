@@ -2,7 +2,6 @@
 /* eslint-disable vue/html-closing-bracket-newline, vue/html-indent */
 import { computed, ref } from 'vue'
 import faqHeroUrl from '../../../frontend/assets/images/faq-hero.png'
-import { legacyPublicUrl } from '@/config/public-links'
 import { faqCategories, faqItems } from '@/content/public-content'
 
 const query = ref('')
@@ -220,7 +219,7 @@ function clearSearch(): void {
           <p class="foot-col-title">创作与合作</p>
           <div class="foot-col-links">
             <RouterLink to="/showcase">联名商品</RouterLink
-            ><a :href="legacyPublicUrl('customize-start')">私人定制</a>
+            ><RouterLink to="/customize">私人定制</RouterLink>
           </div>
         </div>
         <div class="foot-col">

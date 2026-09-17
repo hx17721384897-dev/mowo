@@ -79,7 +79,7 @@
 
 | 页面 | 当前职责 | API / 状态 | 主要缺口 |
 |---|---|---|---|
-| `customize-start.html` | 选择款式/SKU、配额检查 | 已接 machine-models/custom-products | 无真实图时显示 CSS 占位；中间数据写 localStorage |
+| Vue `/app/customize` | 选择款式/SKU、配额检查、动画复用 | 已接 machine-models/custom-products/animation-assets | V2-D1 已实现并自动回归；旧 HTML 仅留作人工视觉对照 |
 | `customize-editor.html` | 上传/筛帧、草稿创建与编辑 | 已接 custom-products | 约 2196 行；多段重复 API base；客户端保存帧 URL/流程状态 |
 | `customize-confirm.html` | 选配、创建/更新定制品、加购/立即购买 | 已接 custom-products/cart | 实物图为占位；依赖多组 local/session storage 状态 |
 | `cart.html` | 服务端购物车 | 已接 cart | 只加载登录购物车；未登录购买由详情页保留短期操作意图，登录后重新校验并写入服务端 |

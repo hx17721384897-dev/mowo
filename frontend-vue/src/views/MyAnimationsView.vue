@@ -87,7 +87,7 @@ function editorUrl(item: AnimationItem): string {
 }
 
 function reuseUrl(item: AnimationAssetItem): string {
-  return `${legacyPublicUrl('customize-start')}?assetId=${encodeURIComponent(item.id)}`
+  return `/app/customize?assetId=${encodeURIComponent(item.id)}`
 }
 
 function showToast(message: string): void {
@@ -231,9 +231,7 @@ onBeforeUnmount(() => {
         <p class="empty-sub">
           {{ filter === 'all' ? '去定制你的第一台专属动画机吧！' : '换个分类看看？' }}
         </p>
-        <a v-if="filter === 'all'" class="btn-go" :href="legacyPublicUrl('customize-start')">
-          开始定制 →
-        </a>
+        <RouterLink v-if="filter === 'all'" class="btn-go" to="/customize"> 开始定制 → </RouterLink>
       </div>
 
       <div v-else class="anim-grid">
@@ -294,7 +292,7 @@ onBeforeUnmount(() => {
             </div>
             <div v-else class="asset-actions">
               <a :href="editorUrl(item)" class="card-link">✏️ 重新编辑</a>
-              <a :href="legacyPublicUrl('customize-start')" class="card-link">去选配 →</a>
+              <RouterLink to="/customize" class="card-link">去选配 →</RouterLink>
             </div>
             <button class="card-delete-btn" type="button" @click="openDelete(item)">删除</button>
           </div>

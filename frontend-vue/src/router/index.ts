@@ -60,6 +60,12 @@ const router = createRouter({
           meta: { title: '联名作品 — 哞屋 MOWO', pageOwnFooter: true }
         },
         {
+          path: 'customize',
+          name: 'customize-start',
+          component: () => import('@/views/CustomizeStartView.vue'),
+          meta: { title: '选择款式 — 哞屋 MOWO' }
+        },
+        {
           path: 'showcase-detail',
           redirect: (to) => {
             const workId = typeof to.query.workId === 'string' ? to.query.workId : ''

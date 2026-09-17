@@ -46,7 +46,7 @@
       '<a href="about.html"' + act(['about']) + '>关于我们</a>' +
       '<a href="products.html"' + act(['products']) + '>动盒系列</a>' +
       '<a href="/app/showcase">联名作品</a>' +
-      '<a href="customize-start.html"' + act(['customize', 'creator']) + '>创作中心</a>' +
+      '<a href="/app/customize"' + act(['customize', 'creator']) + '>创作中心</a>' +
       '<a href="/app/contact"' + act(['contact']) + '>联络我们</a>' +
     '</div>' +
     '<div class="mowo-nav-right">' +
@@ -79,7 +79,7 @@
         '<a href="about.html"' + act(['about']) + '>关于我们</a>' +
         '<a href="products.html"' + act(['products']) + '>动盒系列</a>' +
         '<a href="/app/showcase">联名作品</a>' +
-        '<a href="customize-start.html"' + act(['customize', 'creator']) + '>创作中心</a>' +
+        '<a href="/app/customize"' + act(['customize', 'creator']) + '>创作中心</a>' +
         '<a href="/app/contact"' + act(['contact']) + '>联络我们</a>' +
         '<a href="cart.html">购物车</a>' +
         '<a href="orders.html">我的订单</a>' +

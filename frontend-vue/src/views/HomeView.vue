@@ -3,7 +3,6 @@
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import heroImageUrl from '../../../frontend/assets/hero-main.png'
 import boxDiagramUrl from '../../../frontend/assets/box-diagram.png'
-import { legacyPublicUrl } from '@/config/public-links'
 import { getCollabWorks } from '@/features/collab/api'
 import type { CollabWorkSummary } from '@/features/collab/types'
 
@@ -180,15 +179,16 @@ onBeforeUnmount(() => {
               ></span>
             </div>
           </RouterLink>
-          <a :href="legacyPublicUrl('customize-start')" class="style-card reveal"
-            ><div class="style-img style-img--gift">🎁</div>
+          <RouterLink to="/customize" class="style-card reveal">
+            <div class="style-img style-img--gift">🎁</div>
             <div class="style-body">
               <div class="style-name">私人定制</div>
               <div class="style-meta">用自己的视频或图片制作专属动画</div>
               <span class="style-more"
                 >开始制作 <svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7" /></svg
-              ></span></div
-          ></a>
+              ></span>
+            </div>
+          </RouterLink>
           <RouterLink to="/products" class="style-card reveal">
             <div class="style-img style-img--dark">📽️</div>
             <div class="style-body">
@@ -278,9 +278,9 @@ onBeforeUnmount(() => {
     <section class="cta-banner">
       <div class="container">
         <h2>准备好创造属于你的动画故事了吗？</h2>
-        <a :href="legacyPublicUrl('customize-start')" class="cta-banner-btn"
-          >开始你的动盒之旅 <svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7" /></svg
-        ></a>
+        <RouterLink to="/customize" class="cta-banner-btn">
+          开始你的动盒之旅 <svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7" /></svg>
+        </RouterLink>
       </div>
     </section>
 

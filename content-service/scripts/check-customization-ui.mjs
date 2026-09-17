@@ -198,7 +198,7 @@ try {
   await prisma.customProduct.delete({ where:{ id:renameDraft.id } })
   console.log('PASS customer renames a draft without replacing its engineering configuration')
   await assetCard.getByRole('link', { name: /选择新款式/ }).click()
-  await page.waitForURL(/customize-start\.html\?assetId=/, { timeout:10000 })
+  await page.waitForURL(/\/app\/customize\?assetId=/, { timeout:10000 })
   await page.locator('#reuseBanner.show').waitFor({ timeout:10000 })
   await page.locator('.model-card').first().getByRole('button', { name:'选择此款' }).click()
   await page.locator('#nextBtn').click()

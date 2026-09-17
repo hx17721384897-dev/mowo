@@ -108,7 +108,7 @@
 
 | 层 | 文件 | 作用 |
 |---|---|---|
-| Web | `frontend/pages/customize-start.html` | 选择机型 |
+| Web | Vue `/app/customize` | 选择机型；旧 `customize-start.html` 仅作 V2-D1 验收对照 |
 | Web | `frontend/pages/customize-editor.html` | 双入口、浏览器筛帧、原素材提交 |
 | Web | `frontend/pages/customize-confirm.html` | 选择标准 SKU、提交订单并进入结算 |
 | Web | Vue `/app/account/customizations` | 用户定制列表、状态筛选和时间线 |

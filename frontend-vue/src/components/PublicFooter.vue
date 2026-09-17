@@ -1,7 +1,3 @@
-<script setup lang="ts">
-import { legacyPublicUrl } from '@/config/public-links'
-</script>
-
 <template>
   <footer class="site-footer">
     <div class="site-footer__main">
@@ -19,7 +15,7 @@ import { legacyPublicUrl } from '@/config/public-links'
         <div>
           <strong>开始使用</strong>
           <RouterLink to="/showcase">联名商品</RouterLink>
-          <a :href="legacyPublicUrl('customize-start')">私人定制</a>
+          <RouterLink to="/customize">私人定制</RouterLink>
           <RouterLink to="/contact">联络我们</RouterLink>
         </div>
         <div>

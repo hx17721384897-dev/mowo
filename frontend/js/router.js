@@ -58,7 +58,7 @@ const Router = {
   // ─────────────────────────────────────────
 
   toCustomizeStart() {
-    this.go('/pages/customize-start.html')
+    this.go('/app/customize')
   },
 
   toCustomizeEditor(machine, frames) {

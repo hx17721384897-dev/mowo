@@ -104,7 +104,7 @@ onMounted(load)
         <h1 class="title">我的定制</h1>
         <p class="sub">查看草稿、人工处理进度和待确认方案</p>
       </div>
-      <a class="new-btn" :href="legacyPublicUrl('customize-start')">＋ 新建定制</a>
+      <RouterLink class="new-btn" to="/customize">＋ 新建定制</RouterLink>
     </header>
 
     <div v-if="submitted" class="submitted show" role="status">

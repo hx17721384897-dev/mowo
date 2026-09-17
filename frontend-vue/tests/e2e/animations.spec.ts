@@ -144,7 +144,7 @@ test('my animations preserves assets, drafts and safe mutations', async ({ page 
   )
   await expect(assetCard.getByRole('link', { name: /选择新款式/ })).toHaveAttribute(
     'href',
-    '/mowo/frontend/pages/customize-start.html?assetId=asset-1'
+    '/app/customize?assetId=asset-1'
   )
 
   await page.getByRole('tab', { name: '草稿' }).click()

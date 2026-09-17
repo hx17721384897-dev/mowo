@@ -2,7 +2,6 @@
 /* eslint-disable vue/html-closing-bracket-newline, vue/multiline-html-element-content-newline, vue/html-indent */
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { legacyPublicUrl } from '@/config/public-links'
 import { getCollabWorks } from '@/features/collab/api'
 import type { CollabCreatorFilter, CollabSort, CollabWorkSummary } from '@/features/collab/types'
 
@@ -453,7 +452,7 @@ onBeforeUnmount(() => {
           <RouterLink to="/about">关于我们</RouterLink
           ><RouterLink to="/products">产品介绍</RouterLink
           ><RouterLink to="/showcase">画师联名</RouterLink
-          ><a :href="legacyPublicUrl('customize-start')">创作中心</a
+          ><RouterLink to="/customize">创作中心</RouterLink
           ><RouterLink to="/contact">联络我们</RouterLink>
         </div>
       </div>

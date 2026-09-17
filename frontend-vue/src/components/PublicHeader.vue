@@ -131,7 +131,7 @@ async function handleAuthenticated(): Promise<void> {
       <RouterLink to="/about" @click="menuOpen = false">关于我们</RouterLink>
       <RouterLink to="/products" @click="menuOpen = false">动盒系列</RouterLink>
       <RouterLink to="/showcase" @click="menuOpen = false">联名作品</RouterLink>
-      <a :href="legacyPublicUrl('customize-start')">创作中心</a>
+      <RouterLink to="/customize">创作中心</RouterLink>
       <RouterLink to="/contact" @click="menuOpen = false">联络我们</RouterLink>
     </div>
     <div class="mowo-nav-right">
@@ -248,7 +248,7 @@ async function handleAuthenticated(): Promise<void> {
       <RouterLink to="/about" @click="menuOpen = false">关于我们</RouterLink>
       <RouterLink to="/products" @click="menuOpen = false">动盒系列</RouterLink>
       <RouterLink to="/showcase" @click="menuOpen = false">联名作品</RouterLink>
-      <a :href="legacyPublicUrl('customize-start')">创作中心</a>
+      <RouterLink to="/customize">创作中心</RouterLink>
       <RouterLink to="/contact" @click="menuOpen = false">联络我们</RouterLink>
       <a :href="legacyPublicUrl('cart')">购物车</a>
       <a :href="legacyPublicUrl('orders')">我的订单</a>

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 /* eslint-disable vue/html-closing-bracket-newline */
 import { onBeforeUnmount, onMounted, ref } from 'vue'
-import { legacyPublicUrl } from '@/config/public-links'
 
 const cursorDot = ref<HTMLElement | null>(null)
 const cursorRing = ref<HTMLElement | null>(null)
@@ -265,7 +264,7 @@ onBeforeUnmount(() => {
         </p>
         <div class="boundary-actions">
           <RouterLink to="/showcase" class="btn btn-dark">查看联名商品</RouterLink
-          ><a :href="legacyPublicUrl('customize-start')" class="btn btn-outline">开始私人定制</a>
+          ><RouterLink to="/customize" class="btn btn-outline">开始私人定制</RouterLink>
         </div>
       </div>
     </section>
@@ -277,7 +276,7 @@ onBeforeUnmount(() => {
       </p>
       <div class="cta-btns reveal d2">
         <RouterLink to="/showcase" class="btn btn-yellow">挑选联名作品 →</RouterLink
-        ><a :href="legacyPublicUrl('customize-start')" class="btn btn-white">开始创作 →</a
+        ><RouterLink to="/customize" class="btn btn-white">开始创作 →</RouterLink
         ><RouterLink to="/contact" class="btn btn-ghost">联络我们</RouterLink>
       </div>
     </section>
@@ -289,7 +288,7 @@ onBeforeUnmount(() => {
           <RouterLink to="/about">关于我们</RouterLink
           ><RouterLink to="/products">产品介绍</RouterLink
           ><RouterLink to="/showcase">联名商品</RouterLink
-          ><a :href="legacyPublicUrl('customize-start')">私人定制</a
+          ><RouterLink to="/customize">私人定制</RouterLink
           ><RouterLink to="/contact">联络我们</RouterLink>
         </div>
       </div>
