@@ -35,6 +35,7 @@ const requiredRedirects = [
   ['user-agreement.html', '/app/legal/terms'],
   ['privacy-policy.html', '/app/legal/privacy'],
   ['contact.html', '/app/contact'],
+  ['customize-start.html', '/app/customize'],
   ['showcase.html', '/app/showcase'],
   ['showcase-detail.html', '/app/showcase-detail']
 ]
@@ -50,9 +51,9 @@ if (!viteConfig.includes("'/api': 'http://127.0.0.1:3001'")) {
   throw new Error('Vite 开发环境必须把同源 /api 请求代理到本地 API')
 }
 
-for (const file of ['customize-start.html']) {
-  if (!fs.existsSync(path.join(root, '..', 'frontend', 'pages', file))) {
-    throw new Error(`V1a 交接入口不存在：frontend/pages/${file}`)
+for (const retired of ['customize-start.html', 'my-animations.html', 'my-customizations.html']) {
+  if (fs.existsSync(path.join(root, '..', 'frontend', 'pages', retired))) {
+    throw new Error(`已由 Vue 接管的旧页面不得继续存在：frontend/pages/${retired}`)
   }
 }
 

@@ -145,7 +145,7 @@
 
 ### 定制品
 
-1. `customize-start.html` 选择定制入口和基础机型。
+1. Vue `/app/customize` 选择定制入口和基础机型。
 2. `customize-editor.html` 保存私有素材、`CustomProduct` 帧草稿和 `CustomizationRequest` 定制草稿。
 3. `customize-confirm.html` 选择兼容 SKU，确认定制记录后把对应商品加入 `CUSTOM` 购物车。
 4. `cart.html` 修改数量和选择状态。

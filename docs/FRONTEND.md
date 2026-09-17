@@ -42,7 +42,7 @@
 
 | 文件名 | 页面 | 状态 |
 |--------|------|------|
-| `customize-start.html` | 选款式 | ✅ 已重写（走马灯+详情弹窗） |
+| Vue `/app/customize` | 选款式 | ✅ 已等价迁移；旧 HTML 已删除 |
 | `customize-editor.html` | 上传与筛帧 | ✅ 已对接 |
 | `customize-confirm.html` | 选配+提交 | ✅ 已对接 |
 | Vue `/app/account/customizations` | 我的定制、状态筛选和时间线 | ✅ V2-C1 已接管，旧页已删除 |
