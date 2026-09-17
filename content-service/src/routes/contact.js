@@ -28,6 +28,48 @@ const MAX_LENGTHS = {
   extra:   1000,
 }
 
+const EXTRA_FIELDS = Object.freeze({
+  artist: Object.freeze({ platform: 'text', fanbase: 'text', portfolioUrl: 'url' }),
+  channel: Object.freeze({ company: 'text', city: 'text', storeType: 'text' }),
+  media: Object.freeze({ platform: 'text', fanbase: 'text', profileUrl: 'url' }),
+  join: Object.freeze({ direction: 'text', experience: 'text', portfolioUrl: 'url' }),
+  feedback: Object.freeze({ feedbackType: 'text', wantBeta: 'boolean' }),
+  factory: Object.freeze({ company: 'text', city: 'text', category: 'text', capacity: 'text', brands: 'text', certUrl: 'url' })
+})
+
+function normalizeExtra(type, input) {
+  if (input == null) return { value: null }
+  if (typeof input !== 'object' || Array.isArray(input)) return { error: '补充信息格式无效' }
+  const rules = EXTRA_FIELDS[type]
+  const unknown = Object.keys(input).filter(key => !Object.hasOwn(rules, key))
+  if (unknown.length) return { error: '补充信息包含不支持的字段' }
+
+  const value = {}
+  for (const [key, kind] of Object.entries(rules)) {
+    const raw = input[key]
+    if (raw == null || raw === '') continue
+    if (kind === 'boolean') {
+      if (typeof raw !== 'boolean') return { error: '补充信息格式无效' }
+      value[key] = raw
+      continue
+    }
+    if (typeof raw !== 'string') return { error: '补充信息格式无效' }
+    const text = raw.trim()
+    if (!text) continue
+    if (text.length > 500) return { error: '补充信息字段过长' }
+    if (kind === 'url') {
+      let parsed
+      try { parsed = new URL(text) } catch { return { error: '外部链接格式无效' } }
+      if (!['http:', 'https:'].includes(parsed.protocol)) return { error: '外部链接只允许 HTTP 或 HTTPS' }
+      value[key] = parsed.toString()
+    } else {
+      value[key] = text
+    }
+  }
+  if (!checkLength(JSON.stringify(value), MAX_LENGTHS.extra)) return { error: '补充信息过长' }
+  return { value: Object.keys(value).length ? value : null }
+}
+
 function containsSpam(text) {
   if (!text) return false
   const lower = text.toLowerCase()
@@ -67,7 +109,7 @@ export default async function contactRoutes(fastify) {
           name: { type: 'string', minLength: 1, maxLength: MAX_LENGTHS.name },
           contact: { type: 'string', minLength: 1, maxLength: MAX_LENGTHS.contact },
           message: { type: 'string', minLength: 1, maxLength: MAX_LENGTHS.message },
-          extra: { type: 'object', additionalProperties: true },
+          extra: { type: 'object', maxProperties: 6, additionalProperties: true },
           attachments: {
             type: 'array', maxItems: 6,
             items: { type: 'string', minLength: 1, maxLength: 500 }
@@ -113,9 +155,8 @@ export default async function contactRoutes(fastify) {
     if (!checkLength(name,    MAX_LENGTHS.name))    return reply.code(400).send({ success: false, message: '姓名过长' })
     if (!checkLength(contact, MAX_LENGTHS.contact)) return reply.code(400).send({ success: false, message: '联系方式过长' })
     if (!checkLength(message, MAX_LENGTHS.message)) return reply.code(400).send({ success: false, message: `内容不能超过 ${MAX_LENGTHS.message} 字` })
-    if (extra && !checkLength(JSON.stringify(extra), MAX_LENGTHS.extra)) {
-      return reply.code(400).send({ success: false, message: '补充信息过长' })
-    }
+    const normalizedExtra = normalizeExtra(type, extra)
+    if (normalizedExtra.error) return reply.code(400).send({ success: false, message: normalizedExtra.error })
 
     const attachmentKeys = Array.isArray(attachments) ? attachments : []
     const allowedPurposes = type === 'artist'
@@ -181,8 +222,8 @@ export default async function contactRoutes(fastify) {
           name:            name.trim(),
           contact:         contact.trim(),
           message:         message.trim(),
-          extra:           extra ? JSON.stringify(extra) : null,
-          attachments:     attachments ? JSON.stringify(attachments) : null,
+          extra:           normalizedExtra.value ? JSON.stringify(normalizedExtra.value) : null,
+          attachments:     attachmentKeys.length ? JSON.stringify(attachmentKeys) : null,
           submitterUserId: ownerUserId,
           ip,
           userAgent:   request.headers['user-agent'] || null,
@@ -204,8 +245,8 @@ export default async function contactRoutes(fastify) {
         name:            name.trim(),
         contact:         contact.trim(),
         message:         message.trim(),
-        extra:           extra ? JSON.stringify(extra) : null,
-        attachments:     attachments ? JSON.stringify(attachments) : null,
+        extra:           normalizedExtra.value ? JSON.stringify(normalizedExtra.value) : null,
+        attachments:     attachmentKeys.length ? JSON.stringify(attachmentKeys) : null,
         submitterUserId: ownerUserId,
         ip,
         userAgent:   request.headers['user-agent'] || null,

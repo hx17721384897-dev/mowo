@@ -291,10 +291,10 @@ onBeforeUnmount(() => {
         </RouterLink>
         <div class="footer-links">
           <RouterLink to="/about">关于我们</RouterLink>
-          <a :href="legacyPublicUrl('contact')">帮助中心</a>
+          <RouterLink to="/contact">帮助中心</RouterLink>
           <RouterLink to="/legal/privacy">隐私政策</RouterLink>
           <RouterLink to="/legal/terms">用户协议</RouterLink>
-          <a :href="legacyPublicUrl('contact')">联系我们</a>
+          <RouterLink to="/contact">联系我们</RouterLink>
         </div>
       </div>
     </footer>

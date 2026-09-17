@@ -21,8 +21,8 @@ const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 const POLICIES = Object.freeze({
   AVATAR: { maxBytes: 5 * MiB, types: IMAGE_TYPES.slice(0, 3), extensions: ['jpg', 'jpeg', 'png', 'webp'], public: true },
   AFTERSALE_EVIDENCE: { maxBytes: 10 * MiB, types: IMAGE_TYPES, extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif'] },
-  CONTACT_PORTFOLIO: { maxBytes: 20 * MiB, types: [...IMAGE_TYPES, 'application/pdf'], extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'pdf'] },
-  CONTACT_RESUME: { maxBytes: 10 * MiB, types: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'], extensions: ['pdf', 'doc', 'docx'] },
+  CONTACT_PORTFOLIO: { maxBytes: 20 * MiB, types: ['image/jpeg', 'image/png', 'application/pdf'], extensions: ['jpg', 'jpeg', 'png', 'pdf'] },
+  CONTACT_RESUME: { maxBytes: 10 * MiB, types: ['application/pdf'], extensions: ['pdf'] },
   CREATOR_FRAME: { maxBytes: 10 * MiB, types: IMAGE_TYPES, extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif'] },
   CUSTOMIZATION_FRAME: { maxBytes: 20 * MiB, types: IMAGE_TYPES, extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif'] },
   CUSTOMIZATION_SOURCE: { maxBytes: 200 * MiB, types: [...IMAGE_TYPES, 'video/mp4', 'video/webm', 'video/quicktime'], extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'mp4', 'webm', 'mov'] },
@@ -87,7 +87,6 @@ export function detectMimeType(header) {
 
 export function detectedTypeAllowed(purpose, detected, declared) {
   if (!detected) return false
-  if (purpose === FILE_PURPOSE.CONTACT_RESUME && declared.endsWith('document') && detected === 'application/zip') return true
   if (purpose === FILE_PURPOSE.FRAME_PACK && detected === 'application/zip') return true
   if (declared === 'video/quicktime' && detected === 'video/mp4') return true
   return uploadPolicy(purpose)?.types.includes(detected) && detected === declared

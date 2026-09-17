@@ -20,7 +20,7 @@ import { legacyPublicUrl } from '@/config/public-links'
           <strong>开始使用</strong>
           <RouterLink to="/showcase">联名商品</RouterLink>
           <a :href="legacyPublicUrl('customize-start')">私人定制</a>
-          <a :href="legacyPublicUrl('contact')">联络我们</a>
+          <RouterLink to="/contact">联络我们</RouterLink>
         </div>
         <div>
           <strong>规则说明</strong>

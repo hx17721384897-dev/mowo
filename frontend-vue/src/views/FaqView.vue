@@ -73,7 +73,7 @@ function clearSearch(): void {
 
     <nav class="breadcrumb" aria-label="面包屑">
       <RouterLink to="/">首页</RouterLink><span class="breadcrumb-sep">›</span
-      ><a :href="legacyPublicUrl('contact')">联络我们</a><span class="breadcrumb-sep">›</span
+      ><RouterLink to="/contact">联络我们</RouterLink><span class="breadcrumb-sep">›</span
       ><span class="breadcrumb-cur">常见问题</span>
     </nav>
 
@@ -110,7 +110,7 @@ function clearSearch(): void {
         <div class="sidebar-contact">
           <p class="sc-title">还没解决问题？</p>
           <p class="sc-sub">通过联络表单告诉工作人员<br />我们会继续协助确认</p>
-          <a :href="legacyPublicUrl('contact')" class="sc-btn">联系我们 ↗</a>
+          <RouterLink to="/contact" class="sc-btn">联系我们 ↗</RouterLink>
           <div class="bear-wrap">
             <svg class="bear-svg" viewBox="0 0 100 100" fill="none">
               <circle cx="50" cy="55" r="28" fill="#c0aa88" />
@@ -190,7 +190,7 @@ function clearSearch(): void {
           <div class="nr-icon">🔍</div>
           <p class="nr-title">没有找到相关问题</p>
           <p class="nr-sub">
-            试试换个关键词，或者直接<a :href="legacyPublicUrl('contact')">联系我们</a>
+            试试换个关键词，或者直接<RouterLink to="/contact">联系我们</RouterLink>
           </p>
         </div>
         <div class="content-cta">
@@ -198,7 +198,7 @@ function clearSearch(): void {
             <p class="cta-title">没有找到你的问题？</p>
             <p class="cta-sub">尝试使用不同关键词，或通过联络表单告诉工作人员</p>
           </div>
-          <a :href="legacyPublicUrl('contact')" class="cta-btn">联系我们 ↗</a>
+          <RouterLink to="/contact" class="cta-btn">联系我们 ↗</RouterLink>
         </div>
       </main>
     </div>
@@ -227,7 +227,7 @@ function clearSearch(): void {
           <p class="foot-col-title">帮助中心</p>
           <div class="foot-col-links">
             <RouterLink to="/faq">常见问题</RouterLink
-            ><a :href="legacyPublicUrl('contact')">联络我们</a>
+            ><RouterLink to="/contact">联络我们</RouterLink>
           </div>
         </div>
       </div>

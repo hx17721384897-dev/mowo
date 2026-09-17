@@ -68,7 +68,7 @@ try {
   const navStyles = []
   for (const file of ['index.html', 'about.html', 'products.html']) {
     await page.goto(`${webBase}/${file}`, { waitUntil: 'domcontentloaded' })
-    navStyles.push(await page.locator('.mowo-nav-mid a[href="contact.html"]').evaluate(element => {
+    navStyles.push(await page.locator('.mowo-nav-mid a[href="/app/contact"]').evaluate(element => {
       const style = getComputedStyle(element)
       return { file: location.pathname.split('/').pop(), family: style.fontFamily, weight: style.fontWeight }
     }))

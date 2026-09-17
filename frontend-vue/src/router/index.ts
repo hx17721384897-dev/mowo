@@ -13,6 +13,7 @@ import NotFoundView from '@/views/NotFoundView.vue'
 import ProductIntroView from '@/views/ProductIntroView.vue'
 import CollabListView from '@/views/CollabListView.vue'
 import CollabDetailView from '@/views/CollabDetailView.vue'
+import ContactView from '@/views/ContactView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -44,6 +45,12 @@ const router = createRouter({
           name: 'faq',
           component: FaqView,
           meta: { title: '常见问题 · 哞屋 MOWO', pageOwnFooter: true }
+        },
+        {
+          path: 'contact',
+          name: 'contact',
+          component: ContactView,
+          meta: { title: '联络我们 · 哞屋 MOWO', pageOwnFooter: true }
         },
         {
           path: 'showcase',

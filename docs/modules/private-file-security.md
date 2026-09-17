@@ -27,8 +27,8 @@
 |---|---|---|---|
 | `AVATAR` | 用户头像 | JPG、PNG、WEBP | 5 MiB |
 | `AFTERSALE_EVIDENCE` | 售后凭证 | JPG、PNG、WEBP、GIF | 10 MiB |
-| `CONTACT_PORTFOLIO` | 联络作品集 | 图片、PDF | 20 MiB |
-| `CONTACT_RESUME` | 求职简历 | PDF、DOC、DOCX | 10 MiB |
+| `CONTACT_PORTFOLIO` | 联络作品集 | JPG、PNG、PDF | 20 MiB |
+| `CONTACT_RESUME` | 求职简历 | PDF | 10 MiB |
 | `CREATOR_FRAME` | 创作者帧图 | 图片 | 10 MiB |
 | `CUSTOMIZATION_FRAME` | 用户最终选中的定制帧图 | 图片 | 20 MiB |
 | `CUSTOMIZATION_SOURCE` | 定制原图/原视频 | 图片、MP4、WebM、MOV | 200 MiB |

@@ -240,6 +240,48 @@ try {
   console.log('PASS creator draft keeps private key and returns temporary preview')
 
   const guestSession = `guest_${runId}_secure_upload_session`
+  const forbiddenResume = await request('/api/upload/presign', null, {
+    method: 'POST',
+    headers: { 'X-Upload-Session': guestSession },
+    body: JSON.stringify({
+      purpose: 'CONTACT_RESUME',
+      fileName: 'resume.docx',
+      fileType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      fileSize: 1024
+    })
+  })
+  assertStatus('anonymous Word resume is rejected by server policy', forbiddenResume.status, 400)
+  const forbiddenPortfolio = await request('/api/upload/presign', null, {
+    method: 'POST',
+    headers: { 'X-Upload-Session': guestSession },
+    body: JSON.stringify({
+      purpose: 'CONTACT_PORTFOLIO',
+      fileName: 'animation.gif',
+      fileType: 'image/gif',
+      fileSize: 1024
+    })
+  })
+  assertStatus('anonymous GIF portfolio is rejected by server policy', forbiddenPortfolio.status, 400)
+
+  const unknownExtra = await request('/api/contact', null, {
+    method: 'POST',
+    headers: { 'X-Upload-Session': guestSession },
+    body: JSON.stringify({
+      type: 'feedback', name: 'Contract Probe', contact: 'test@example.invalid',
+      message: 'Contact extra whitelist probe', extra: { unexpected: 'must not persist' }
+    })
+  })
+  assertStatus('contact rejects unknown extra fields', unknownExtra.status, 400)
+  const unsafeLink = await request('/api/contact', null, {
+    method: 'POST',
+    headers: { 'X-Upload-Session': guestSession },
+    body: JSON.stringify({
+      type: 'artist', name: 'Contract Probe', contact: 'test@example.invalid',
+      message: 'Contact URL protocol probe', extra: { portfolioUrl: 'javascript:alert(1)' }
+    })
+  })
+  assertStatus('contact rejects non-HTTP external links', unsafeLink.status, 400)
+
   const resume = Buffer.from('%PDF-1.4\nprivate file test')
   const anonymousInit = await request('/api/upload/presign', null, {
     method: 'POST',

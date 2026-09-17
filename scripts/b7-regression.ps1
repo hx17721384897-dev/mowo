@@ -25,7 +25,7 @@ function Wait-Url([string]$Url) {
     } catch {}
     Start-Sleep -Milliseconds 250
   }
-  throw "服务未能就绪：$Url"
+  throw "Service did not become ready: $Url"
 }
 
 function Start-TestApi([string]$Phase) {
@@ -38,21 +38,21 @@ function Invoke-Checks([string[]]$Checks) {
   foreach ($check in $Checks) {
     Write-Host "`n=== $check ===" -ForegroundColor Cyan
     & npm.cmd run $check
-    if ($LASTEXITCODE -ne 0) { throw "自动回归失败：$check" }
+    if ($LASTEXITCODE -ne 0) { throw "Regression check failed: $check" }
   }
 }
 
-if (Test-Listening 3002) { throw '隔离测试端口 3002 已被占用，请先停止旧测试实例。' }
-if (Test-Listening 5500) { throw '浏览器回归端口 5500 已被占用，请先停止 Live Server 或其他静态服务。' }
+if (Test-Listening 3002) { throw 'Isolated test port 3002 is already in use.' }
+if (Test-Listening 5500) { throw 'Browser test port 5500 is already in use.' }
 
 $dbLine = Get-Content (Join-Path $ServiceRoot '.env') | Where-Object { $_ -match '^DATABASE_URL=' } | Select-Object -First 1
-if (-not $dbLine) { throw 'content-service/.env 缺少 DATABASE_URL。' }
+if (-not $dbLine) { throw 'content-service/.env is missing DATABASE_URL.' }
 $originalDatabaseUrl = $env:DATABASE_URL
 $originalPort = $env:PORT
 $originalApiBase = $env:TEST_API_BASE
 $originalOnlineCheckout = $env:ONLINE_CHECKOUT_ENABLED
 $env:DATABASE_URL = (($dbLine -replace '^DATABASE_URL=', '').Trim('"')) -replace '/mowo_db([?\"]|$)', '/mowo_b1_test$1'
-if ($env:DATABASE_URL -notmatch '/mowo_b1_test(?:\?|$)') { throw '无法安全生成 mowo_b1_test 连接地址。' }
+if ($env:DATABASE_URL -notmatch '/mowo_b1_test(?:\?|$)') { throw 'Could not safely construct the mowo_b1_test database URL.' }
 $env:PORT = '3002'
 $env:TEST_API_BASE = 'http://127.0.0.1:3002'
 $env:ONLINE_CHECKOUT_ENABLED = 'false'
@@ -62,7 +62,7 @@ New-Item -ItemType Directory -Force -Path $RunDir | Out-Null
 try {
   Push-Location $ServiceRoot
   & node scripts/test-database.mjs rebuild
-  if ($LASTEXITCODE -ne 0) { throw '隔离库重建失败。' }
+  if ($LASTEXITCODE -ne 0) { throw 'Isolated test database rebuild failed.' }
 
   $node = (Get-Command node).Source
   $ApiProcess = Start-TestApi 'closed'
@@ -120,7 +120,7 @@ try {
 Push-Location (Join-Path $RepoRoot 'frontend-vue')
 try {
   & npm.cmd run check
-  if ($LASTEXITCODE -ne 0) { throw 'Vue 前端全量门禁失败。' }
+  if ($LASTEXITCODE -ne 0) { throw 'Vue full quality gate failed.' }
 } finally {
   Pop-Location
 }
@@ -128,8 +128,8 @@ try {
 Push-Location $ServiceRoot
 try {
   & node scripts/check-backup-restore.mjs
-  if ($LASTEXITCODE -ne 0) { throw '备份恢复演练失败。' }
-  Write-Host "`nB7 全量自动回归和备份恢复演练全部通过。" -ForegroundColor Green
+  if ($LASTEXITCODE -ne 0) { throw 'Backup restore drill failed.' }
+  Write-Host "`nB7 full regression and backup restore drill passed." -ForegroundColor Green
 } finally {
   Pop-Location
   $env:DATABASE_URL = $originalDatabaseUrl

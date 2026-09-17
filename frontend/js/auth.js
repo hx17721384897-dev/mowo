@@ -507,7 +507,7 @@ function navGoTo(page) {
     addresses:     'my-addresses.html',
     myAnimations:  'my-animations.html',
     settings:      'settings.html',
-    help:          'contact.html',
+    help:          '/app/contact',
     admin:         'admin-orders.html',
   };
   window.location.href = map[page] || 'index.html';

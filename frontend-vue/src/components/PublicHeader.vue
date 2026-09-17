@@ -52,7 +52,7 @@ function openAuth(): void {
       <RouterLink to="/products" @click="menuOpen = false">动盒系列</RouterLink>
       <RouterLink to="/showcase" @click="menuOpen = false">联名作品</RouterLink>
       <a :href="legacyPublicUrl('customize-start')">创作中心</a>
-      <a :href="legacyPublicUrl('contact')">联络我们</a>
+      <RouterLink to="/contact" @click="menuOpen = false">联络我们</RouterLink>
     </div>
     <div class="mowo-nav-right">
       <RouterLink class="mowo-nav-icon" to="/showcase" aria-label="搜索">
@@ -101,7 +101,7 @@ function openAuth(): void {
       <RouterLink to="/products" @click="menuOpen = false">动盒系列</RouterLink>
       <RouterLink to="/showcase" @click="menuOpen = false">联名作品</RouterLink>
       <a :href="legacyPublicUrl('customize-start')">创作中心</a>
-      <a :href="legacyPublicUrl('contact')">联络我们</a>
+      <RouterLink to="/contact" @click="menuOpen = false">联络我们</RouterLink>
       <a :href="legacyPublicUrl('cart')">购物车</a>
       <a :href="legacyPublicUrl('orders')">我的订单</a>
       <a :href="legacyPublicUrl('settings')">账号设置</a>

@@ -302,8 +302,8 @@ onBeforeUnmount(() => {
               {{ item[1] }}
             </button>
           </div>
-          <a :href="legacyPublicUrl('contact')" class="incentive-link"
-            >联系我们，了解创作者合作方式 →</a
+          <RouterLink to="/contact" class="incentive-link"
+            >联系我们，了解创作者合作方式 →</RouterLink
           >
         </div>
       </div>
@@ -442,7 +442,7 @@ onBeforeUnmount(() => {
             </div>
           </div>
         </div>
-        <a :href="legacyPublicUrl('contact')" class="cta-action">联系工作人员了解合作 →</a>
+        <RouterLink to="/contact" class="cta-action">联系工作人员了解合作 →</RouterLink>
       </div>
     </section>
 
@@ -454,7 +454,7 @@ onBeforeUnmount(() => {
           ><RouterLink to="/products">产品介绍</RouterLink
           ><RouterLink to="/showcase">画师联名</RouterLink
           ><a :href="legacyPublicUrl('customize-start')">创作中心</a
-          ><a :href="legacyPublicUrl('contact')">联络我们</a>
+          ><RouterLink to="/contact">联络我们</RouterLink>
         </div>
       </div>
       <p class="foot-copy">© 2025 哞屋 MOWO. All rights reserved.</p>

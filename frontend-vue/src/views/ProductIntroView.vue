@@ -1,5 +1,5 @@
 <script setup lang="ts">
-/* eslint-disable vue/html-closing-bracket-newline, vue/html-indent */
+/* eslint-disable vue/html-closing-bracket-newline */
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { legacyPublicUrl } from '@/config/public-links'
 
@@ -247,9 +247,7 @@ onBeforeUnmount(() => {
           <p class="scene-desc">
             动画创作者可以通过联络页面提交作品和合作意向，由团队人工确认权利、生产效果和合作条件。
           </p>
-          <a :href="legacyPublicUrl('contact')" class="btn btn-yellow scene-action"
-            >了解合作方式 →</a
-          >
+          <RouterLink to="/contact" class="btn btn-yellow scene-action">了解合作方式 →</RouterLink>
         </div>
         <div class="scene-img">
           <div class="scene-img-placeholder">🌟</div>
@@ -280,7 +278,7 @@ onBeforeUnmount(() => {
       <div class="cta-btns reveal d2">
         <RouterLink to="/showcase" class="btn btn-yellow">挑选联名作品 →</RouterLink
         ><a :href="legacyPublicUrl('customize-start')" class="btn btn-white">开始创作 →</a
-        ><a :href="legacyPublicUrl('contact')" class="btn btn-ghost">联络我们</a>
+        ><RouterLink to="/contact" class="btn btn-ghost">联络我们</RouterLink>
       </div>
     </section>
 
@@ -292,7 +290,7 @@ onBeforeUnmount(() => {
           ><RouterLink to="/products">产品介绍</RouterLink
           ><RouterLink to="/showcase">联名商品</RouterLink
           ><a :href="legacyPublicUrl('customize-start')">私人定制</a
-          ><a :href="legacyPublicUrl('contact')">联络我们</a>
+          ><RouterLink to="/contact">联络我们</RouterLink>
         </div>
       </div>
       <p class="foot-copy">© {{ new Date().getFullYear() }} 哞屋 MOWO. All rights reserved.</p>

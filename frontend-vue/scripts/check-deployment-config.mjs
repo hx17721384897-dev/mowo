@@ -34,6 +34,7 @@ const requiredRedirects = [
   ['faq.html', '/app/faq'],
   ['user-agreement.html', '/app/legal/terms'],
   ['privacy-policy.html', '/app/legal/privacy'],
+  ['contact.html', '/app/contact'],
   ['showcase.html', '/app/showcase'],
   ['showcase-detail.html', '/app/showcase-detail']
 ]
@@ -49,7 +50,7 @@ if (!viteConfig.includes("'/api': 'http://127.0.0.1:3001'")) {
   throw new Error('Vite 开发环境必须把同源 /api 请求代理到本地 API')
 }
 
-for (const file of ['customize-start.html', 'contact.html']) {
+for (const file of ['customize-start.html']) {
   if (!fs.existsSync(path.join(root, '..', 'frontend', 'pages', file))) {
     throw new Error(`V1a 交接入口不存在：frontend/pages/${file}`)
   }

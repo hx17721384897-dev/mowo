@@ -1,13 +1,11 @@
 <script setup lang="ts">
 /* eslint-disable vue/html-closing-bracket-newline */
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted } from 'vue'
 import { legacyPublicUrl } from '@/config/public-links'
+import { useDecorativeCursor } from '@/composables/useDecorativeCursor'
 
-const cursorDot = ref<HTMLElement | null>(null)
-const cursorRing = ref<HTMLElement | null>(null)
+const decorativeCursor = useDecorativeCursor('a, button, .now-card, .belief-card')
 let observer: IntersectionObserver | null = null
-let animationFrame = 0
-let cleanupCursor: (() => void) | null = null
 
 onMounted(() => {
   observer = new IntersectionObserver(
@@ -23,55 +21,17 @@ onMounted(() => {
   document
     .querySelectorAll('.about-fidelity-page .reveal')
     .forEach((element) => observer?.observe(element))
-
-  if (!window.matchMedia('(pointer:fine)').matches || !cursorDot.value || !cursorRing.value) return
-  let mouseX = 0
-  let mouseY = 0
-  let ringX = 0
-  let ringY = 0
-  const move = (event: MouseEvent) => {
-    mouseX = event.clientX
-    mouseY = event.clientY
-    if (cursorDot.value) {
-      cursorDot.value.style.left = `${mouseX}px`
-      cursorDot.value.style.top = `${mouseY}px`
-    }
-  }
-  const hover = (event: MouseEvent) => {
-    const target = event.target as Element | null
-    const active = Boolean(target?.closest('a, button, .now-card, .belief-card'))
-    if (!cursorRing.value) return
-    cursorRing.value.classList.toggle('is-active', active)
-  }
-  const tick = () => {
-    ringX += (mouseX - ringX) * 0.12
-    ringY += (mouseY - ringY) * 0.12
-    if (cursorRing.value) {
-      cursorRing.value.style.left = `${ringX}px`
-      cursorRing.value.style.top = `${ringY}px`
-    }
-    animationFrame = window.requestAnimationFrame(tick)
-  }
-  document.addEventListener('mousemove', move)
-  document.addEventListener('mouseover', hover)
-  animationFrame = window.requestAnimationFrame(tick)
-  cleanupCursor = () => {
-    document.removeEventListener('mousemove', move)
-    document.removeEventListener('mouseover', hover)
-  }
 })
 
 onBeforeUnmount(() => {
   observer?.disconnect()
-  cleanupCursor?.()
-  window.cancelAnimationFrame(animationFrame)
 })
 </script>
 
 <template>
   <main class="about-fidelity-page">
-    <div ref="cursorDot" class="about-cursor-dot" />
-    <div ref="cursorRing" class="about-cursor-ring" />
+    <div :ref="decorativeCursor.cursorDot" class="about-cursor-dot" />
+    <div :ref="decorativeCursor.cursorRing" class="about-cursor-ring" />
 
     <section id="hero">
       <div class="hero-blob hero-blob-1" />
@@ -179,7 +139,7 @@ onBeforeUnmount(() => {
           <p>
             合作作品由工作人员人工核验权利、生产效果和合作条件。如果你认同实体动画的价值，欢迎把作品或合作想法告诉我们。
           </p>
-          <a :href="legacyPublicUrl('contact')" class="btn btn-black btn-fit">联络我们 →</a>
+          <RouterLink to="/contact" class="btn btn-black btn-fit">联络我们 →</RouterLink>
         </div>
         <div class="now-cards reveal d1">
           <article class="now-card">
@@ -214,8 +174,8 @@ onBeforeUnmount(() => {
       <h2 class="cta-title reveal d1">有作品或合作想法？</h2>
       <p class="cta-desc reveal d2">当前由工作人员人工沟通并确认作品权利、合作条件和生产可行性。</p>
       <div class="cta-btns reveal d3">
-        <a :href="legacyPublicUrl('contact')" class="btn btn-yellow">提交合作意向 →</a
-        ><a :href="legacyPublicUrl('contact')" class="btn btn-black">联络我们</a
+        <RouterLink to="/contact" class="btn btn-yellow">提交合作意向 →</RouterLink
+        ><RouterLink to="/contact" class="btn btn-black">联络我们</RouterLink
         ><RouterLink to="/products" class="btn btn-ghost">查看产品</RouterLink>
       </div>
     </section>
@@ -228,7 +188,7 @@ onBeforeUnmount(() => {
           ><RouterLink to="/products">产品介绍</RouterLink
           ><RouterLink to="/showcase">联名商品</RouterLink
           ><a :href="legacyPublicUrl('customize-start')">私人定制</a
-          ><a :href="legacyPublicUrl('contact')">联络我们</a>
+          ><RouterLink to="/contact">联络我们</RouterLink>
         </div>
       </div>
       <p class="foot-copy">© {{ new Date().getFullYear() }} 哞屋 MOWO. All rights reserved.</p>

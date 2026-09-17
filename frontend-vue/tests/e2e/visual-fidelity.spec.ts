@@ -162,6 +162,7 @@ function startLegacyServer(): Promise<{ server: Server; origin: string }> {
   const aboutHtml = legacyFile('frontend/pages/about.html')
   const productsHtml = legacyFile('frontend/pages/products.html')
   const faqHtml = legacyFile('frontend/pages/faq.html')
+  const contactHtml = legacyFile('frontend/pages/contact.html')
   const termsHtml = legacyFile('frontend/pages/user-agreement.html')
   const privacyHtml = legacyFile('frontend/pages/privacy-policy.html')
   const pageHtml = legacyFile('frontend/pages/showcase.html')
@@ -192,6 +193,11 @@ function startLegacyServer(): Promise<{ server: Server; origin: string }> {
     if (path === '/pages/faq.html') {
       response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
       response.end(faqHtml)
+      return
+    }
+    if (path === '/pages/contact.html') {
+      response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
+      response.end(contactHtml)
       return
     }
     if (path === '/pages/user-agreement.html') {
@@ -357,6 +363,74 @@ test('常见问题旧版与 Vue 版视觉验收截图', async ({ page }, testInf
     await page.screenshot({
       path: `test-results/visual-fidelity/vue-faq-${suffix}.png`,
       fullPage: true
+    })
+  } finally {
+    server.closeAllConnections()
+    await new Promise<void>((resolve, reject) =>
+      server.close((error) => (error ? reject(error) : resolve()))
+    )
+  }
+})
+
+test('联络页旧版与 Vue 版视觉验收截图', async ({ page }, testInfo) => {
+  const { server, origin } = await startLegacyServer()
+  const suffix = testInfo.project.name
+  try {
+    await page.setViewportSize(
+      suffix === 'mobile-chromium' ? { width: 390, height: 844 } : { width: 1440, height: 900 }
+    )
+    await page.route('https://fonts.googleapis.com/**', (route) => route.abort())
+    await page.route('https://fonts.gstatic.com/**', (route) => route.abort())
+
+    await page.goto(`${origin}/pages/contact.html`)
+    await page
+      .locator('.reveal')
+      .evaluateAll((elements) => elements.forEach((element) => element.classList.add('on')))
+    await page.waitForTimeout(900)
+    await expect(page.locator('.contact-card')).toHaveCount(6)
+    const oldHero = await page.locator('.page-hero').boundingBox()
+    const oldGrid = await page.locator('.cards-grid').boundingBox()
+    await page.screenshot({
+      path: `test-results/visual-fidelity/old-contact-${suffix}.png`,
+      fullPage: true
+    })
+    await page.locator('.contact-card').first().click()
+    await expect(page.locator('#modal-artist')).toHaveClass(/open/)
+    await page.waitForTimeout(500)
+    const oldModal = await page.locator('#modal-artist .modal').boundingBox()
+    await page.screenshot({
+      path: `test-results/visual-fidelity/old-contact-modal-${suffix}.png`
+    })
+
+    await page.goto('/app/contact')
+    await page
+      .locator('.reveal')
+      .evaluateAll((elements) => elements.forEach((element) => element.classList.add('on')))
+    await page.waitForTimeout(900)
+    await expect(page.locator('.contact-card')).toHaveCount(6)
+    const vueHero = await page.locator('.page-hero').boundingBox()
+    const vueGrid = await page.locator('.cards-grid').boundingBox()
+    expect(vueHero).toEqual(oldHero)
+    expect(vueGrid?.x).toBe(oldGrid?.x)
+    expect(vueGrid?.width).toBe(oldGrid?.width)
+    await expect(page.getByText(/100%|3 个工作日/)).toHaveCount(0)
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1
+      )
+    ).toBe(false)
+    await page.screenshot({
+      path: `test-results/visual-fidelity/vue-contact-${suffix}.png`,
+      fullPage: true
+    })
+    await page.locator('.contact-card').first().click()
+    await expect(page.locator('.contact-modal-backdrop')).toHaveClass(/open/)
+    await page.waitForTimeout(500)
+    const vueModal = await page.locator('.contact-modal').boundingBox()
+    expect(vueModal?.x).toBe(oldModal?.x)
+    expect(vueModal?.width).toBe(oldModal?.width)
+    await page.screenshot({
+      path: `test-results/visual-fidelity/vue-contact-modal-${suffix}.png`
     })
   } finally {
     server.closeAllConnections()

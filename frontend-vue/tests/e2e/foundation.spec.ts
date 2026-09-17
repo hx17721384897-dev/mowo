@@ -23,22 +23,32 @@ test('public V1a pages have one working navigation shell', async ({ page }) => {
   await expect(page.getByRole('heading', { name: '常见问题' })).toBeVisible()
 })
 
-test('shared public navigation stays geometrically stable across routes', async ({ page }) => {
+test('shared public navigation stays geometrically stable across routes', async ({
+  page
+}, testInfo) => {
   await page.goto('/app/')
+  const isMobile = testInfo.project.name === 'mobile-chromium'
   const nav = page.getByRole('navigation', { name: '主导航' })
-  const aboutLink = nav.getByRole('link', { name: '关于我们' })
+  const stableControl = isMobile
+    ? page.getByRole('button', { name: '打开或关闭导航' })
+    : nav.getByRole('link', { name: '关于我们' })
   const homeBox = await nav.boundingBox()
-  const homeLinkBox = await aboutLink.boundingBox()
+  const homeControlBox = await stableControl.boundingBox()
 
   await page.evaluate(() => window.scrollTo(0, 900))
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0)
-  await aboutLink.click()
+  if (isMobile) {
+    await stableControl.click()
+    await page.locator('#mowo-mobile-menu').getByRole('link', { name: '关于我们' }).click()
+  } else {
+    await stableControl.click()
+  }
   await expect(page).toHaveURL(/\/app\/about$/)
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0)
 
   expect(await nav.boundingBox()).toEqual(homeBox)
-  expect(await aboutLink.boundingBox()).toEqual(homeLinkBox)
-  await expect(aboutLink).toHaveCSS('font-weight', '700')
+  expect(await stableControl.boundingBox()).toEqual(homeControlBox)
+  if (!isMobile) await expect(stableControl).toHaveCSS('font-weight', '700')
 })
 
 test('FAQ search reports current payment boundaries', async ({ page }) => {

@@ -2,7 +2,6 @@
 /* eslint-disable vue/html-closing-bracket-newline, vue/multiline-html-element-content-newline, vue/html-indent */
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { legacyPublicUrl } from '@/config/public-links'
 import { getCollabWork, getCollabWorks, recordCollabView } from '@/features/collab/api'
 import CollabMediaGallery from '@/features/collab/CollabMediaGallery.vue'
 import type { CollabMedia, CollabWorkDetail, CollabWorkSummary } from '@/features/collab/types'
@@ -229,8 +228,8 @@ onBeforeUnmount(() => {
               </div>
             </div>
             <div class="actions single-action">
-              <a class="action buy cta" :href="legacyPublicUrl('contact')"
-                >联系工作人员了解邀请测试订购安排</a
+              <RouterLink class="action buy cta" to="/contact"
+                >联系工作人员了解邀请测试订购安排</RouterLink
               >
             </div>
             <div class="selection-hint" />

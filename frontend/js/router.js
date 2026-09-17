@@ -38,7 +38,7 @@ const Router = {
   },
 
   toContact() {
-    this.go('/pages/contact.html')
+    this.go('/app/contact')
   },
 
   toSupport() {

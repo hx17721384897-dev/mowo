@@ -123,6 +123,16 @@ Authorization: Bearer <accessToken>   // 需要登录的接口必须携带
 
 ---
 
+## 联络提交边界
+
+`POST /api/contact` 允许 `artist / channel / media / join / feedback / factory` 六类匿名提交；存在有效会话时由服务端绑定用户，客户端身份字段不可信也不接收。`extra` 按类型执行字段、类型、500 字符字段上限和 HTTP/HTTPS 链接白名单，未知字段直接返回 400。
+
+附件必须先通过 `/api/upload/presign` 和 `/api/upload/files/:id/complete` 登记、上传并完成真实文件校验，再由同一登录用户或同一高熵匿名上传会话绑定到联络记录。画师作品集仅接受 JPG/PNG/PDF，单文件最大 20 MiB、最多 6 个；求职简历仅接受一份 PDF，最大 10 MiB；其他四类不接受附件。
+
+公网开放匿名联络前仍需接入服务端可验证的人机挑战；现有数据库跨实例 IP 限流和反垃圾不能替代该发布门禁。
+
+---
+
 ## 账户安全 v1（推荐路径）
 
 ### POST `/api/v1/auth/sms/send`
