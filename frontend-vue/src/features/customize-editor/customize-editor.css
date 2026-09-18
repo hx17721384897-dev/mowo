@@ -1,0 +1,477 @@
+.customize-editor-page {
+  --white: #fff;
+  --cream: #f5f3ef;
+  --black: #111110;
+  --gray1: #ebebea;
+  --gray2: #c4c3bf;
+  --gray3: #787874;
+  --accent-y: #f0c040;
+  --accent-o: #e8662a;
+  --pad-mobile: 24px;
+  --pad-desk: 72px;
+  --prog-h: 44px;
+  min-height: 100vh;
+  color: var(--black);
+}
+
+.customize-editor-page .progress-steps {
+  position: fixed;
+  top: var(--nav-h);
+  right: 0;
+  left: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--prog-h);
+  padding: 10px var(--pad-mobile);
+  background: rgba(252, 226, 179, 0.92);
+  border-bottom: 1.5px solid rgba(44, 31, 20, 0.1);
+  backdrop-filter: blur(12px);
+}
+
+.customize-editor-page .progress-back {
+  position: absolute;
+  top: 50%;
+  left: var(--pad-mobile);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 10px;
+  color: var(--black);
+  font-size: 12px;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1.5px solid rgba(44, 31, 20, 0.18);
+  border-radius: 6px;
+  transform: translateY(-50%);
+  transition:
+    background 0.2s,
+    border-color 0.2s;
+}
+
+.customize-editor-page .progress-back:hover {
+  background: var(--white);
+  border-color: rgba(44, 31, 20, 0.4);
+}
+
+.customize-editor-page .progress-back-arrow {
+  font-size: 18px;
+  line-height: 1;
+}
+.customize-editor-page .step-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--gray2);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.customize-editor-page .step-item.active,
+.customize-editor-page .step-item.done {
+  color: var(--black);
+}
+.customize-editor-page .step-num {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  font-size: 11px;
+  font-weight: 900;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+}
+.customize-editor-page .step-item.active .step-num,
+.customize-editor-page .step-item.done .step-num {
+  color: var(--white);
+  background: var(--black);
+  border-color: var(--black);
+}
+.customize-editor-page .step-divider {
+  flex-shrink: 0;
+  width: clamp(20px, 4vw, 60px);
+  height: 2px;
+  margin: 0 4px;
+  background: var(--gray1);
+}
+
+.customize-editor-page #stateUpload {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  padding: calc(var(--prog-h) + 24px) var(--pad-mobile) 24px;
+}
+.customize-editor-page .upload-header {
+  width: 100%;
+  max-width: 760px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+.customize-editor-page .upload-eyebrow {
+  margin-bottom: 6px;
+  color: var(--gray3);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.customize-editor-page .upload-title {
+  margin-bottom: 8px;
+  color: var(--black);
+  font-size: clamp(26px, 3vw, 34px);
+  font-weight: 900;
+  line-height: 1.08;
+}
+.customize-editor-page .upload-title em {
+  position: relative;
+  display: inline-block;
+  font-style: normal;
+}
+.customize-editor-page .upload-title em::after {
+  position: absolute;
+  right: 0;
+  bottom: 1px;
+  left: 0;
+  z-index: -1;
+  height: 5px;
+  background: var(--accent-y);
+  border-radius: 3px;
+  content: '';
+}
+.customize-editor-page .upload-sub {
+  color: var(--gray3);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+.customize-editor-page .upload-method-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+  width: min(1080px, 100%);
+}
+.customize-editor-page .upload-method {
+  min-width: 0;
+  padding: 16px;
+  background: var(--white);
+  border: 2px solid var(--gray1);
+  border-radius: 18px;
+}
+.customize-editor-page .upload-method.self {
+  border-top: 6px solid var(--accent-y);
+}
+.customize-editor-page .upload-method.human {
+  border-top: 6px solid var(--accent-o);
+}
+.customize-editor-page .method-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.customize-editor-page .method-kicker {
+  margin-bottom: 3px;
+  color: var(--gray3);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+.customize-editor-page .method-title {
+  font-size: 19px;
+  font-weight: 900;
+}
+.customize-editor-page .method-desc {
+  margin-top: 4px;
+  color: var(--gray3);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+.customize-editor-page .method-icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  font-size: 19px;
+  background: var(--cream);
+  border-radius: 8px;
+}
+.customize-editor-page .drop-zone {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 160px;
+  padding: 20px 16px;
+  cursor: pointer;
+  background: var(--cream);
+  border: 2.5px dashed var(--gray2);
+  border-radius: 16px;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+}
+.customize-editor-page .drop-zone:hover,
+.customize-editor-page .drop-zone.dragover {
+  background: #eeecea;
+  border-color: var(--black);
+}
+.customize-editor-page .drop-icon {
+  font-size: 38px;
+  line-height: 1;
+}
+.customize-editor-page .drop-title {
+  color: var(--black);
+  font-size: 17px;
+  font-weight: 900;
+}
+.customize-editor-page .drop-sub {
+  color: var(--gray3);
+  font-size: 12px;
+  font-weight: 700;
+}
+.customize-editor-page .drop-formats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.customize-editor-page .fmt-tag {
+  padding: 5px 12px;
+  color: var(--gray3);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: var(--white);
+  border: 1.5px solid var(--gray1);
+  border-radius: 999px;
+}
+.customize-editor-page .fmt-video {
+  color: var(--accent-o);
+  background: #fff3ee;
+  border-color: #ffd0bc;
+}
+.customize-editor-page .fmt-img {
+  color: #1a5a8a;
+  background: #eef5fb;
+  border-color: #c6dcf0;
+}
+.customize-editor-page .drop-input {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+  opacity: 0;
+}
+.customize-editor-page .file-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-top: 14px;
+  padding: 14px 16px;
+  background: var(--white);
+  border: 2px solid var(--gray1);
+  border-radius: 12px;
+}
+.customize-editor-page .file-preview-icon {
+  flex-shrink: 0;
+  font-size: 28px;
+}
+.customize-editor-page .file-preview-info {
+  flex: 1;
+  min-width: 0;
+}
+.customize-editor-page .file-preview-name {
+  overflow: hidden;
+  color: var(--black);
+  font-size: 15px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.customize-editor-page .file-preview-meta {
+  margin-top: 3px;
+  color: var(--gray3);
+  font-size: 12px;
+  font-weight: 700;
+}
+.customize-editor-page .file-preview-remove {
+  flex-shrink: 0;
+  padding: 4px;
+  color: var(--gray2);
+  font: inherit;
+  font-size: 18px;
+  cursor: pointer;
+  background: none;
+  border: 0;
+}
+.customize-editor-page .method-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+.customize-editor-page .method-actions .btn {
+  flex: 1;
+  min-height: 44px;
+  padding: 10px 20px;
+  font-size: 13px;
+}
+.customize-editor-page .human-form {
+  display: none;
+  margin-top: 14px;
+}
+.customize-editor-page .human-form.visible {
+  display: block;
+}
+.customize-editor-page .human-note {
+  width: 100%;
+  min-height: 86px;
+  padding: 12px 14px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  resize: vertical;
+  border: 2px solid var(--gray1);
+  border-radius: 10px;
+  outline: none;
+}
+.customize-editor-page .human-note:focus {
+  border-color: var(--black);
+}
+.customize-editor-page .method-delay {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-top: 14px;
+  padding: 11px 12px;
+  color: #8a3d1c;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.55;
+  background: #fff3ee;
+  border-left: 4px solid var(--accent-o);
+}
+.customize-editor-page .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 14px 28px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  border: 0;
+  border-radius: 999px;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+}
+.customize-editor-page .btn:disabled {
+  pointer-events: none;
+  opacity: 0.38;
+}
+.customize-editor-page .btn-primary {
+  color: var(--white);
+  background: var(--black);
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.25);
+}
+.customize-editor-page .btn-secondary {
+  color: var(--black);
+  background: var(--white);
+  border: 2px solid var(--gray1);
+  box-shadow: 0 4px 0 var(--gray1);
+}
+.customize-editor-page .btn-yellow {
+  color: #2c1f14;
+  background: var(--accent-y);
+  box-shadow: 0 4px 0 #b89030;
+}
+.customize-editor-page .btn-sm {
+  min-height: 44px;
+  padding: 10px 20px;
+  font-size: 13px;
+}
+.customize-editor-page .editor-status {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+  color: var(--gray3);
+  font-weight: 800;
+  text-align: center;
+}
+.customize-editor-page .editor-error {
+  color: #9d2d12;
+}
+
+@media (min-width: 1024px) {
+  .customize-editor-page .progress-steps {
+    padding: 10px var(--pad-desk);
+  }
+  .customize-editor-page .progress-back {
+    left: var(--pad-desk);
+  }
+  .customize-editor-page #stateUpload {
+    padding-right: var(--pad-desk);
+    padding-left: var(--pad-desk);
+  }
+}
+@media (max-width: 900px) {
+  .customize-editor-page .progress-back {
+    width: 32px;
+    padding: 0;
+    justify-content: center;
+  }
+  .customize-editor-page .progress-back-label {
+    display: none;
+  }
+}
+@media (max-width: 800px) {
+  .customize-editor-page .upload-method-grid {
+    grid-template-columns: 1fr;
+  }
+  .customize-editor-page .upload-method {
+    padding: 18px;
+  }
+  .customize-editor-page .drop-zone {
+    min-height: 190px;
+  }
+  .customize-editor-page #stateUpload {
+    padding-top: calc(var(--prog-h) + 28px);
+    padding-bottom: 36px;
+  }
+}
+@media (max-width: 700px) {
+  .customize-editor-page .step-label {
+    display: none;
+  }
+  .customize-editor-page .step-item {
+    gap: 0;
+  }
+  .customize-editor-page .step-num {
+    width: 26px;
+    height: 26px;
+    font-size: 12px;
+  }
+  .customize-editor-page .step-divider {
+    width: 16px;
+  }
+}
