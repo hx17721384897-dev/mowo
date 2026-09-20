@@ -155,6 +155,7 @@ export default async function cartRoutes(fastify) {
   }, async (req, reply) => {
     const userId = req.user.userId
     const { itemType, contentId, hardwareSkuId, quantity = 1, sessionGroupId = null } = req.body
+    const idempotencyKey = String(req.body?.idempotencyKey || '').trim()
     const requestedQuantity = Number(quantity)
 
     if (!itemType || !contentId || !hardwareSkuId) {
@@ -163,8 +164,34 @@ export default async function cartRoutes(fastify) {
     if (!['MARKET', 'CUSTOM'].includes(itemType)) {
       return reply.code(400).send({ success: false, message: 'itemType 必须是 MARKET 或 CUSTOM' })
     }
+    if (idempotencyKey.length > 100) {
+      return reply.code(400).send({ success: false, message: '加购标识无效，请刷新后重试' })
+    }
     if (!Number.isInteger(requestedQuantity) || requestedQuantity < 1 || requestedQuantity > 10) {
       return reply.code(400).send({ success: false, message: '单个商品购买数量需为 1 至 10 件' })
+    }
+
+    const replayMutation = async () => {
+      if (!idempotencyKey) return null
+      const mutation = await prisma.cartMutation.findUnique({ where: { idempotencyKey } })
+      if (!mutation) return null
+      if (
+        mutation.userId !== userId ||
+        mutation.itemType !== itemType ||
+        mutation.contentId !== contentId ||
+        mutation.hardwareSkuId !== hardwareSkuId
+      ) {
+        return { conflict: true }
+      }
+      const item = await prisma.cartItem.findUnique({ where: { id: mutation.cartItemId } })
+      return item ? { item } : { conflict: true }
+    }
+    const replay = await replayMutation()
+    if (replay?.conflict) {
+      return reply.code(409).send({ success: false, message: '加购标识冲突，请刷新后重试' })
+    }
+    if (replay?.item) {
+      return reply.send({ success: true, data: replay.item, idempotent: true })
     }
 
     // 查询 SKU
@@ -241,12 +268,6 @@ export default async function cartRoutes(fastify) {
       snapshotPreviewUrl = cp.previewUrl || firstFrame || null
       customProductId = cp.id
 
-      // 更新草稿状态为 in_cart
-      await prisma.customProduct.update({
-        where: { id: contentId },
-        data: { status: 'in_cart' }
-      })
-
     } else {
       // MARKET 类型
       let offer
@@ -268,54 +289,81 @@ export default async function cartRoutes(fastify) {
 
     const cart = await getOrCreateCart(prisma, userId)
 
-    // 幂等：相同 contentId + hardwareSkuId 已存在则叠加数量
-    const existing = await prisma.cartItem.findFirst({
-      where: { cartId: cart.id, contentId, hardwareSkuId, status: { not: 'invalid' } }
-    })
-    if (existing) {
-      if (existing.quantity + requestedQuantity > 10) {
-        return reply.code(400).send({ success: false, message: '同一商品在购物车中最多保留 10 件' })
-      }
-      await cancelPendingPreOrdersForItems(prisma, userId, [existing.id])
-      const updated = await prisma.cartItem.update({
-        where: { id: existing.id },
-        data: {
-          quantity: existing.quantity + requestedQuantity,
-          snapshotPrice: resolvedPrice,
-          status: 'normal',
+    try {
+      const saved = await prisma.$transaction(async tx => {
+        if (itemType === 'CUSTOM') {
+          await tx.customProduct.update({ where: { id: contentId }, data: { status: 'in_cart' } })
         }
+
+        const existing = await tx.cartItem.findFirst({
+          where: { cartId: cart.id, contentId, hardwareSkuId, status: { not: 'invalid' } }
+        })
+        let item
+        let merged = false
+        if (existing) {
+          if (existing.quantity + requestedQuantity > 10) {
+            const error = new Error('同一商品在购物车中最多保留 10 件')
+            error.statusCode = 400
+            throw error
+          }
+          await cancelPendingPreOrdersForItems(tx, userId, [existing.id])
+          item = await tx.cartItem.update({
+            where: { id: existing.id },
+            data: {
+              quantity: existing.quantity + requestedQuantity,
+              snapshotPrice: resolvedPrice,
+              status: 'normal',
+            }
+          })
+          merged = true
+        } else {
+          item = await tx.cartItem.create({
+            data: {
+              cartId: cart.id,
+              itemType,
+              contentId,
+              hardwareSkuId,
+              hardwareSkuCode: sku.skuCode || null,
+              snapshotTitle,
+              snapshotPreviewUrl,
+              coverUrl,
+              configSnapshotJson,
+              snapshotPrice: resolvedPrice,
+              quantity: requestedQuantity,
+              selected: true,
+              creatorId,
+              status: 'normal',
+              customProductId,
+              sessionGroupId: sessionGroupId || null
+            }
+          })
+        }
+        if (idempotencyKey) {
+          await tx.cartMutation.create({ data: {
+            userId, idempotencyKey, itemType, contentId, hardwareSkuId, cartItemId: item.id
+          } })
+        }
+        await tx.cart.update({ where: { id: cart.id }, data: { updatedAt: new Date() } })
+        return { item, merged }
       })
-      return reply.send({ success: true, data: updated, merged: true })
-    }
-
-    // 价格快照
-    const snapshotPrice = resolvedPrice
-
-    const item = await prisma.cartItem.create({
-      data: {
-        cartId: cart.id,
-        itemType,
-        contentId,
-        hardwareSkuId,
-        hardwareSkuCode: sku.skuCode || null,
-        snapshotTitle,
-        snapshotPreviewUrl,
-        coverUrl,
-        configSnapshotJson,
-        snapshotPrice,
-        quantity: requestedQuantity,
-        selected: true,
-        creatorId,
-        status: 'normal',
-        customProductId,
-        sessionGroupId: sessionGroupId || null
+      return reply.code(saved.merged ? 200 : 201).send({
+        success: true,
+        data: saved.item,
+        ...(saved.merged ? { merged: true } : {})
+      })
+    } catch (error) {
+      if (idempotencyKey && error.code === 'P2002') {
+        const repeated = await replayMutation()
+        if (repeated?.item) {
+          return reply.send({ success: true, data: repeated.item, idempotent: true })
+        }
+        return reply.code(409).send({ success: false, message: '加购标识冲突，请刷新后重试' })
       }
-    })
-
-    // 更新 cart.updatedAt
-    await prisma.cart.update({ where: { id: cart.id }, data: { updatedAt: new Date() } })
-
-    return reply.code(201).send({ success: true, data: item })
+      if (error.statusCode === 400) {
+        return reply.code(400).send({ success: false, message: error.message })
+      }
+      throw error
+    }
   })
 
   // ── C.3 POST /api/cart/item/:id/update — 修改数量/选中状态 ──

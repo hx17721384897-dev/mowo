@@ -1,7 +1,7 @@
 // ================================================================
 // 哞屋 MOWO 平台 — Prisma Schema
 // 数据库：PostgreSQL
-// 当前共 81 个模型；以本文件和迁移链为准
+// 当前共 82 个模型；以本文件和迁移链为准
 // ================================================================
 
 generator client {
@@ -84,6 +84,7 @@ model User {
   // 收货地址
   addresses      UserAddress[]
   carts          Cart[]
+  cartMutations  CartMutation[]
   preOrders      PreOrder[]
   customProducts CustomProduct[]
 
@@ -1141,10 +1142,31 @@ model CartItem {
   updatedAt          DateTime @updatedAt @map("updated_at")
 
   cart Cart @relation(fields: [cartId], references: [id])
+  mutations CartMutation[]
 
   @@index([cartId])
   @@index([sessionGroupId])
   @@map("cart_items")
+}
+
+// 客户端加购动作的服务端幂等凭据。与购物车条目分表，避免同一条目后续正常加购
+// 覆盖旧凭据，也允许响应丢失后的原请求安全重放。
+model CartMutation {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  idempotencyKey String   @unique @map("idempotency_key") @db.VarChar(100)
+  itemType       String   @map("item_type")
+  contentId      String   @map("content_id")
+  hardwareSkuId  String   @map("hardware_sku_id")
+  cartItemId     String   @map("cart_item_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  cartItem CartItem @relation(fields: [cartItemId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([cartItemId])
+  @@map("cart_mutations")
 }
 
 // DIY 草稿工作区（7天有效，编辑器产出）

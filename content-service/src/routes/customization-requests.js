@@ -245,6 +245,67 @@ export default async function customizationRequestRoutes(fastify) {
     return reply.send({ success: true, data: updated })
   })
 
+  // 确认页只读取完成选配所需的白名单事实，不把私有帧 key 或编辑器工程暴露给页面。
+  fastify.get('/mine/:id/confirmation', { preHandler: [fastify.authenticate] }, async (request, reply) => {
+    const item = await prisma.customizationRequest.findUnique({ where: { id: request.params.id } })
+    if (!item) return reply.code(404).send({ success: false, message: '定制记录不存在' })
+    if (item.userId !== request.user.userId) {
+      return reply.code(403).send({ success: false, message: '无权查看该定制记录' })
+    }
+    const allowed = item.mode === 'SELF'
+      ? ['DRAFT', 'CONFIRMED']
+      : ['FRAME_ACCEPTED', 'STYLE_SELECTED', 'CONFIRMED']
+    if (!allowed.includes(item.status)) {
+      return reply.code(409).send({ success: false, message: '该定制当前不能选择款式' })
+    }
+    if (!item.customProductId || !item.machineModelId) {
+      return reply.code(409).send({ success: false, message: '定制记录缺少款式或动画信息' })
+    }
+    const [product, model, skus] = await Promise.all([
+      prisma.customProduct.findUnique({
+        where: { id: item.customProductId },
+        select: { id: true, userId: true, frameCount: true, status: true }
+      }),
+      prisma.machineModel.findUnique({
+        where: { id: item.machineModelId },
+        select: { id: true, name: true, modelType: true, isActive: true }
+      }),
+      prisma.machineModelSku.findMany({
+        where: { modelId: item.machineModelId, isActive: true, model: { isActive: true } },
+        select: { frameCount: true }
+      })
+    ])
+    if (!product || product.userId !== item.userId) {
+      return reply.code(409).send({ success: false, message: '定制动画记录不存在或归属异常' })
+    }
+    if (!model?.isActive) {
+      return reply.code(409).send({ success: false, message: '所选款式已停止销售，请重新选择' })
+    }
+    const baseFrameCount = Number(product.frameCount || 0)
+    if (!Number.isInteger(baseFrameCount) || baseFrameCount < 1) {
+      return reply.code(409).send({ success: false, message: '定制动画帧数信息不完整' })
+    }
+    const validTargets = [...new Set(skus
+      .map(sku => Number(sku.frameCount || 0))
+      .filter(frameCount => frameCount >= baseFrameCount && frameCount % baseFrameCount === 0)
+    )].sort((a, b) => a - b)
+    if (!validTargets.length) {
+      return reply.code(409).send({ success: false, message: '当前没有兼容且可售的规格' })
+    }
+    return reply.send({ success: true, data: {
+      request: {
+        id: item.id,
+        mode: item.mode,
+        status: item.status,
+        customProductId: product.id,
+        desiredSkuId: item.desiredSkuId
+      },
+      model: { id: model.id, name: model.name, modelType: model.modelType },
+      baseFrameCount,
+      validTargets
+    } })
+  })
+
   fastify.get('/mine', { preHandler: [fastify.authenticate] }, async (request, reply) => {
     const page = Math.max(1, Number(request.query.page || 1))
     const limit = Math.min(50, Math.max(1, Number(request.query.limit || 20)))

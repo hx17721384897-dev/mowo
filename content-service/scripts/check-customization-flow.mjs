@@ -401,6 +401,12 @@ try {
 
   const self = await createSelfDraft(customer, 'submit')
   if (self.request.requestNo || self.request.status !== 'DRAFT') throw new Error('cloud draft received a formal number too early')
+  assertStatus('owner reads self confirmation context', (await request(
+    `/api/customization-requests/mine/${self.request.id}/confirmation`, customer.token
+  )).status, 200)
+  assertStatus('other customer cannot read confirmation context', (await request(
+    `/api/customization-requests/mine/${self.request.id}/confirmation`, other.token
+  )).status, 403)
   assertStatus('unconfirmed customization cannot enter cart', (await request('/api/cart/add', customer.token, {
     method: 'POST', body: JSON.stringify({ itemType: 'CUSTOM', contentId: self.product.id, hardwareSkuId: skuId })
   })).status, 409)
@@ -431,9 +437,28 @@ try {
   assertStatus('submitted frame draft cannot be deleted', (await request(`/api/custom-products/${self.product.id}`, customer.token, {
     method: 'DELETE'
   })).status, 409)
-  assertStatus('confirmed self customization can enter cart', (await request('/api/cart/add', customer.token, {
-    method: 'POST', body: JSON.stringify({ itemType: 'CUSTOM', contentId: self.product.id, hardwareSkuId: skuId })
-  })).status, 201)
+  const selfCartPayload = {
+    itemType: 'CUSTOM', contentId: self.product.id, hardwareSkuId: skuId,
+    idempotencyKey: `custom-cart-${runId}-${self.request.id}`
+  }
+  const selfCartResponse = await request('/api/cart/add', customer.token, {
+    method: 'POST', body: JSON.stringify(selfCartPayload)
+  })
+  assertStatus('confirmed self customization can enter cart', selfCartResponse.status, 201)
+  const selfCartItem = (await selfCartResponse.json()).data
+  const selfCartReplay = await request('/api/cart/add', customer.token, {
+    method: 'POST', body: JSON.stringify(selfCartPayload)
+  })
+  assertStatus('custom cart replay is idempotent', selfCartReplay.status, 200)
+  const replayedCartItem = (await selfCartReplay.json()).data
+  const storedCartItem = await prisma.cartItem.findUnique({ where: { id: selfCartItem.id } })
+  if (replayedCartItem.id !== selfCartItem.id || storedCartItem?.quantity !== 1) {
+    throw new Error('custom cart replay changed quantity or created another cart item')
+  }
+  const conflictReplay = await request('/api/cart/add', customer.token, {
+    method: 'POST', body: JSON.stringify({ ...selfCartPayload, contentId: reusedPurchase.customProductId })
+  })
+  assertStatus('cart idempotency key cannot be rebound', conflictReplay.status, 409)
   assertStatus('customer can remove private asset from frontend', (await request(`/api/animation-assets/${selfAsset.id}`, customer.token, {
     method: 'DELETE'
   })).status, 200)
