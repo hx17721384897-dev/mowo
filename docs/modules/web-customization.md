@@ -111,7 +111,7 @@
 | Web | Vue `/app/customize` | 选择机型；旧 `customize-start.html` 已物理删除 |
 | Web | Vue `/app/customize/editor` | 用户新建定制双入口、浏览器筛帧、原素材提交 |
 | Web | `frontend/pages/customize-editor.html` | 仅承载尚未迁移的后台筛帧和帧图制作模式；所有用户参数转交 Vue |
-| Web | `frontend/pages/customize-confirm.html` | 选择标准 SKU、提交订单并进入结算 |
+| Web | `frontend/pages/customize-confirm.html`；Vue `/app/customize/confirm` 候选 | 选择标准 SKU、确认定制、幂等加购并进入结算；旧页仍为正式入口 |
 | Web | Vue `/app/account/customizations` | 用户定制列表、状态筛选和时间线 |
 | Web | `frontend/pages/admin-customization-requests.html` | 员工接收列表、详情和素材查看 |
 | 公共脚本 | `frontend/js/private-upload.js` | 私有文件上传；支持原 File/Blob 与帧图 |

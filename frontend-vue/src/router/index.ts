@@ -72,6 +72,16 @@ const router = createRouter({
           meta: { title: '上传 & 筛帧 — 哞屋 MOWO', pageOwnFooter: true }
         },
         {
+          path: 'customize/confirm',
+          name: 'customize-confirm',
+          component: () => import('@/views/CustomizeConfirmView.vue'),
+          meta: {
+            title: '选择款式 — 哞屋 MOWO',
+            pageOwnFooter: true,
+            requiresAuth: true
+          }
+        },
+        {
           path: 'showcase-detail',
           redirect: (to) => {
             const workId = typeof to.query.workId === 'string' ? to.query.workId : ''

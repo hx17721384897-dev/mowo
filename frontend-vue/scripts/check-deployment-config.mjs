@@ -8,6 +8,7 @@ const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8')
 const runtime = fs.readFileSync(path.join(root, 'public/runtime-config.js'), 'utf8')
 const redirects = fs.readFileSync(path.join(root, 'deploy/nginx.v1a-redirects.conf'), 'utf8')
 const viteConfig = fs.readFileSync(path.join(root, 'vite.config.ts'), 'utf8')
+const vueRouter = fs.readFileSync(path.join(root, 'src', 'router', 'index.ts'), 'utf8')
 const legacyEditor = fs.readFileSync(
   path.join(root, '..', 'frontend', 'pages', 'customize-editor.html'),
   'utf8'
@@ -56,6 +57,9 @@ if (
   !viteConfig.includes('changeOrigin: false')
 ) {
   throw new Error('Vite 开发环境必须把同源 /api 请求代理到本地 API')
+}
+if (!vueRouter.includes("path: 'customize/confirm'") || !vueRouter.includes("name: 'customize-confirm'")) {
+  throw new Error('Vue 必须保留定制确认候选路由及其深链接能力')
 }
 
 for (const retired of ['customize-start.html', 'my-animations.html', 'my-customizations.html']) {
