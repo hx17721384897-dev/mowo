@@ -16,7 +16,7 @@ let modelId = null
 let skuId = null
 let browser
 
-const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+X7S0WQAAAABJRU5ErkJggg==', 'base64')
+const PNG = await fs.readFile(new URL('../../frontend/assets/box-diagram.png', import.meta.url))
 
 async function api(path, token, options = {}) {
   return fetch(`${apiBase}${path}`, {
@@ -225,20 +225,25 @@ try {
   await v2Card.getByText(/V2/).waitFor({ timeout:10000 })
   console.log('PASS customer edits the current animation and saves an immutable V2 in browser')
 
-  await page.goto(`${webBase}/customize-editor.html?modelId=${encodeURIComponent(modelId)}`, { waitUntil:'networkidle' })
-  await page.evaluate(({ meta, staleHumanRequestId }) => {
+  const selfRequestCountBefore = await prisma.customizationRequest.count({
+    where:{ userId:customer.id, mode:'SELF' }
+  })
+  const selfProductCountBefore = await prisma.customProduct.count({
+    where:{ userId:customer.id }
+  })
+  await page.goto(`${vueBase}/customize/editor?modelId=${encodeURIComponent(modelId)}`, { waitUntil:'networkidle' })
+  await page.evaluate(staleHumanRequestId => {
     localStorage.removeItem('mowo_customize_request_draft_id')
     localStorage.removeItem('mowo_customize_request_draft_key')
     localStorage.removeItem('mowo_customize_request_draft_owner')
     localStorage.setItem('mowo_customize_human_request_id', staleHumanRequestId)
-    localStorage.setItem('mowo_customize_meta', JSON.stringify(meta))
-  }, {
-    meta:{ id:modelId, modelId, name:model.name, frames:[1], ratios:['1:1'], sizes:['S'], modelType:'single' },
-    staleHumanRequestId:created.data.id
-  })
+  }, created.data.id)
   await page.reload({ waitUntil:'networkidle' })
-  await page.locator('#fileInput').setInputFiles({ name:'self-source.png', mimeType:'image/png', buffer:PNG })
-  await page.locator('#btnStartEdit').click()
+  await page.getByLabel('选择自己筛选的素材').setInputFiles({ name:'self-source.png', mimeType:'image/png', buffer:PNG })
+  const ratioDialog = page.getByRole('dialog')
+  await ratioDialog.waitFor({ timeout:3000 }).catch(() => {})
+  if (await ratioDialog.isVisible()) await ratioDialog.getByRole('button', { name:'强制使用' }).click()
+  await page.getByRole('button', { name:'开始筛选 →' }).click()
   await page.locator('#stateEditor.active').waitFor({ timeout:10000 })
   await page.evaluate(() => {
     const block = 'x'.repeat(100 * 1024)
@@ -247,10 +252,21 @@ try {
     }
   })
   await page.getByRole('button', { name:/下一步/ }).click()
-  await page.waitForURL(/customize-confirm\.html/, { timeout:20000 })
+  await page.waitForURL(/customize-confirm\.html/, { timeout:20000 }).catch(() => {
+    throw new Error(`Vue 自助筛帧未进入确认页；停留在 ${page.url()}；页面提示：${orderDialogs.join(' | ') || '无'}`)
+  })
   if (!new URL(page.url()).searchParams.get('requestId')) throw new Error('选款式网址没有携带云端草稿编号')
   if (await page.evaluate(() => localStorage.getItem('mowo_customize_human_request_id'))) throw new Error('自己筛选没有清除旧人工筛选编号')
-  console.log('PASS customer self-screened image reaches style selection when browser storage is full')
+  const selfRequestCountAfter = await prisma.customizationRequest.count({
+    where:{ userId:customer.id, mode:'SELF' }
+  })
+  const selfProductCountAfter = await prisma.customProduct.count({
+    where:{ userId:customer.id }
+  })
+  if (selfRequestCountAfter !== selfRequestCountBefore + 1) throw new Error('Vue 自助筛帧产生了重复请求草稿')
+  if (selfProductCountAfter !== selfProductCountBefore + 1) throw new Error('Vue 自助筛帧产生了重复商品草稿')
+  console.log('PASS Vue formal editor reaches style selection when browser storage is full')
+  console.log('PASS Vue formal editor creates exactly one request draft and one product draft')
   await page.evaluate(() => Object.keys(localStorage).filter(key => key.startsWith('mowo_test_quota_')).forEach(key => localStorage.removeItem(key)))
 
   // 即使旧版页面或手工操作再次留下人工编号，本次网址中的自己筛选草稿仍必须优先。
@@ -270,6 +286,16 @@ try {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1)
   if (overflow) throw new Error('我的定制移动端出现横向溢出')
   console.log('PASS customer customization list has no mobile horizontal overflow')
+
+  await page.goto(`${webBase}/customize-editor.html?modelId=${encodeURIComponent(modelId)}`, { waitUntil:'domcontentloaded' })
+  await page.waitForURL(new RegExp(`/app/customize/editor\\?modelId=${modelId}$`), { timeout:10000 })
+  console.log('PASS legacy new-customization URL hands off to the Vue editor')
+
+  await page.goto(`${webBase}/customize-editor.html?adminRequestId=boundary-check`, { waitUntil:'domcontentloaded' })
+  if (!page.url().includes('/mowo/frontend/pages/customize-editor.html?adminRequestId=boundary-check')) {
+    throw new Error('旧共享编辑器错误重定向了尚未迁移的管理员模式')
+  }
+  console.log('PASS legacy editor retains the explicit unmigrated admin mode')
 
   if (pageErrors.length) throw new Error(`浏览器脚本错误：${pageErrors.join(' | ')}`)
   console.log('Customization browser UI checks passed')

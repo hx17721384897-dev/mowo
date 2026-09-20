@@ -73,7 +73,7 @@
 | 业务层 | 页面 | 初始结论 |
 |---|---|---|
 | 官网展示层 | `index`、`about`、`products`、`showcase`、`showcase-detail`、`faq`、`contact`、`privacy-policy`、`user-agreement`、`creator-profile` | 公开入口候选；待逐页核对公开 API、文案、资源和链接。 |
-| 用户交易层 | `customize-start`、`customize-editor`、`customize-confirm`、`cart`、`checkout`、`orders`、`order-detail`、`my-addresses`、Vue `/app/account/animations`、Vue `/app/account/customizations`、`settings` | B1 主流程候选；“我的定制”已删除旧页，“我的动画”等待 V2-C2 人工验收后删除旧页。 |
+| 用户交易层 | Vue `/app/customize`、Vue `/app/customize/editor`、`customize-confirm`、`cart`、`checkout`、`orders`、`order-detail`、Vue `/app/account/animations`、Vue `/app/account/customizations`、Vue `/app/account/settings` | B1 主流程；新建定制已由 Vue 接管。旧共享编辑器只临时承载 D2-D/V4/V5 未迁移模式。 |
 | 创作者层 | `creator-animations`、`creator-certify`、`creator-collab`、`creator-dashboard`、`creator-earnings`、`creator-links`、`creator-notifications`、`creator-profile` | 横跨用户与后台运营；必须结合资格、岗位和功能开关审计。 |
 | 后台运营层 | 24 个 `admin-*.html` 页面，包括账号删除、联名、联络、合同、定制申请、帧图、库存、订单、用户和日志。 | 待建立“页面—路由—岗位权限”矩阵。 |
 | 生产履约层 | `production-inventory`、`production-scan`、`production-scan-frame`、`production-scan-material`、`production-scan-pairing`、`production-scan-packing` | 待核对是否统一进入生产工作台，旧入口是否只负责跳转。 |
@@ -83,7 +83,7 @@
 
 | 环节 | 代码证据 | 初始判断 |
 |---|---|---|
-| 定制确认至结算 | `customization-review-editor.js` 与 `customize-editor.html` 进入 `customize-confirm.html`；该页创建 `CustomProduct`、加入 `/api/cart/add` 后跳转 `checkout.html`。 | 可用但有限制；需要在用户交易批次完成全流程、异常与数据归属验证。 |
+| 定制确认至结算 | Vue `/app/customize/editor` 处理用户新建并进入 `customize-confirm.html`；旧 `customization-review-editor.js` 与 `customize-editor.html` 暂供未迁移模式。确认页加入 `/api/cart/add` 后跳转 `checkout.html`。 | 新建路径已通过隔离库真实浏览器回归；确认页迁移仍属 V2-E。 |
 | 结算准备 | `/api/cart/checkout` 需要登录、按幂等键创建 10 分钟 `PreOrder`、冻结快照并预留库存。 | 可用但有限制；是交易准备记录，不能被误称为已付款订单。 |
 | 模拟付款 | `/api/payment/mock-pay/:preOrderId` 需要订单本人登录，并在 `NODE_ENV=production` 明确拒绝。 | 仅开发演示；不适合作为邀请测试的真实收款方式。 |
 | 支付回调 | `/api/payment/callback` 会将待支付记录转为已支付、建立 `SalesOrder`、订单明细和生产件；已做并发/重复通知的部分幂等处理。 | 安全/上线阻断；尚未验证微信签名或提供等效可信来源鉴别。 |

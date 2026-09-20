@@ -4,6 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>上传 & 筛帧 — 哞屋 MOWO</title>
+<script src="../js/runtime-config.js"></script>
+<script>
+;(function handoffNewCustomizationToVue() {
+  var params = new URLSearchParams(location.search)
+  var internalModeKeys = ['assetId', 'editId', 'productId', 'reviewRequestId', 'adminRequestId', 'frameDraftId']
+  if (internalModeKeys.some(function (key) { return params.has(key) })) return
+  var modelId = params.get('modelId')
+  var destination = modelId
+    ? window.MOWO_APP_BASE + '/customize/editor?' + params.toString()
+    : window.MOWO_APP_BASE + '/customize'
+  location.replace(destination)
+})()
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Noto+Sans+SC:wght@300;400;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../css/nav.css">
@@ -920,7 +933,6 @@ html.admin-frame-mode #mowo-mobile-overlay { display: none !important; }
   👆 点图片预览 · 长按或点「勾选」进入选择模式
 </div>
 
-<script src="../js/runtime-config.js"></script>
 <script src="../js/private-upload.js"></script>
 <script>
 'use strict';

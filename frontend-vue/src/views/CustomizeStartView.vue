@@ -42,7 +42,7 @@ const nextUrl = computed(() => {
   const model = selectedModel.value
   if (!model) return ''
   if (!reuseAsset.value) {
-    return `${legacyPublicUrl('customize-editor')}?modelId=${encodeURIComponent(model.id)}`
+    return router.resolve({ name: 'customize-editor', query: { modelId: model.id } }).href
   }
   const baseFrames = reuseAsset.value.baseFrameCount
   const targets = [

@@ -109,7 +109,8 @@
 | 层 | 文件 | 作用 |
 |---|---|---|
 | Web | Vue `/app/customize` | 选择机型；旧 `customize-start.html` 已物理删除 |
-| Web | `frontend/pages/customize-editor.html` | 双入口、浏览器筛帧、原素材提交 |
+| Web | Vue `/app/customize/editor` | 用户新建定制双入口、浏览器筛帧、原素材提交 |
+| Web | `frontend/pages/customize-editor.html` | 尚未迁移的草稿、动画、只读确认和后台内部模式；普通新建会转交 Vue |
 | Web | `frontend/pages/customize-confirm.html` | 选择标准 SKU、提交订单并进入结算 |
 | Web | Vue `/app/account/customizations` | 用户定制列表、状态筛选和时间线 |
 | Web | `frontend/pages/admin-customization-requests.html` | 员工接收列表、详情和素材查看 |

@@ -187,6 +187,14 @@ function closeRatioWarning(accepted: boolean): void {
   warning?.resolve(accepted)
 }
 
+function writeCompatibilityStorage(entries: ReadonlyArray<readonly [string, string]>): void {
+  try {
+    for (const [key, value] of entries) localStorage.setItem(key, value)
+  } catch {
+    // 云端草稿和网址 requestId 才是事实源；兼容缓存写满时不得重复提交或阻断后续确认页。
+  }
+}
+
 async function assignFiles(target: 'self' | 'human', files: File[]): Promise<void> {
   try {
     const validated = validateSourceFiles(files)
@@ -508,7 +516,7 @@ async function submitSelf(sources: string[], indexes: number[]): Promise<void> {
       savedSelfProductId = product.id
       uploadedSelfFrameKeys = product.frameKeys
     }
-    localStorage.setItem('mowo_customize_draft_id', savedSelfProductId)
+    writeCompatibilityStorage([['mowo_customize_draft_id', savedSelfProductId]])
     if (!uploadedSelfSourceKeys.length) {
       uploadedSelfSourceKeys = await uploadCustomizationFiles(
         selfFiles.value,
@@ -529,10 +537,16 @@ async function submitSelf(sources: string[], indexes: number[]): Promise<void> {
       trimStart: trimStart.value,
       trimEnd: trimEnd.value
     })
-    localStorage.setItem('mowo_customize_frame_keys', JSON.stringify(uploadedSelfFrameKeys))
-    localStorage.setItem('mowo_customize_frame_owner', session.user.id)
-    localStorage.setItem('mowo_customize_request_draft_id', requestId)
-    localStorage.removeItem('mowo_customize_human_request_id')
+    writeCompatibilityStorage([
+      ['mowo_customize_frame_keys', JSON.stringify(uploadedSelfFrameKeys)],
+      ['mowo_customize_frame_owner', session.user.id],
+      ['mowo_customize_request_draft_id', requestId]
+    ])
+    try {
+      localStorage.removeItem('mowo_customize_human_request_id')
+    } catch {
+      // requestId 查询参数优先于旧人工编号，存储不可写时仍可安全继续。
+    }
     sessionStorage.removeItem(PRODUCT_KEY)
     sessionStorage.removeItem(PRODUCT_OWNER)
     sessionStorage.removeItem(PRODUCT_SOURCE)

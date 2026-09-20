@@ -43,7 +43,8 @@
 | 文件名 | 页面 | 状态 |
 |--------|------|------|
 | Vue `/app/customize` | 选款式 | ✅ 已等价迁移；旧 HTML 已删除 |
-| `customize-editor.html` | 上传与筛帧 | ✅ 已对接 |
+| Vue `/app/customize/editor` | 用户新建定制的上传、裁剪、筛帧与人工处理 | ✅ 已接管正式用户入口 |
+| `customize-editor.html` | 草稿重编、动画改版、只读确认及后台内部模式 | ⚠️ 临时保留；新建定制会转交 Vue |
 | `customize-confirm.html` | 选配+提交 | ✅ 已对接 |
 | Vue `/app/account/customizations` | 我的定制、状态筛选和时间线 | ✅ V2-C1 已接管，旧页已删除 |
 

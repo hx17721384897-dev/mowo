@@ -20,12 +20,28 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     proxy: {
-      '/api': 'http://127.0.0.1:3001',
-      '/mowo/frontend': 'http://127.0.0.1:5500'
+      '/api': {
+        target: 'http://127.0.0.1:3001',
+        changeOrigin: false
+      },
+      '/mowo/frontend': {
+        target: 'http://127.0.0.1:5500',
+        changeOrigin: false
+      }
     }
   },
   preview: {
     port: 4173,
-    strictPort: true
+    strictPort: true,
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:3001',
+        changeOrigin: false
+      },
+      '/mowo/frontend': {
+        target: 'http://127.0.0.1:5500',
+        changeOrigin: false
+      }
+    }
   }
 })

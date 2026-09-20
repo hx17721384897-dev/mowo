@@ -8,6 +8,10 @@ const index = fs.readFileSync(path.join(root, 'index.html'), 'utf8')
 const runtime = fs.readFileSync(path.join(root, 'public/runtime-config.js'), 'utf8')
 const redirects = fs.readFileSync(path.join(root, 'deploy/nginx.v1a-redirects.conf'), 'utf8')
 const viteConfig = fs.readFileSync(path.join(root, 'vite.config.ts'), 'utf8')
+const legacyEditor = fs.readFileSync(
+  path.join(root, '..', 'frontend', 'pages', 'customize-editor.html'),
+  'utf8'
+)
 
 const apiLocation = nginx.indexOf('location ^~ /api/')
 const appLocation = nginx.indexOf('location /app/')
@@ -47,7 +51,10 @@ for (const [legacy, target] of requiredRedirects) {
 if (!runtime.includes('legacyWebBase')) {
   throw new Error('运行时配置必须声明尚未迁移的旧公开页面基址')
 }
-if (!viteConfig.includes("'/api': 'http://127.0.0.1:3001'")) {
+if (
+  !viteConfig.includes("target: 'http://127.0.0.1:3001'") ||
+  !viteConfig.includes('changeOrigin: false')
+) {
   throw new Error('Vite 开发环境必须把同源 /api 请求代理到本地 API')
 }
 
@@ -55,6 +62,13 @@ for (const retired of ['customize-start.html', 'my-animations.html', 'my-customi
   if (fs.existsSync(path.join(root, '..', 'frontend', 'pages', retired))) {
     throw new Error(`已由 Vue 接管的旧页面不得继续存在：frontend/pages/${retired}`)
   }
+}
+if (
+  !legacyEditor.includes('handoffNewCustomizationToVue') ||
+  !legacyEditor.includes("'adminRequestId'") ||
+  !legacyEditor.includes("'frameDraftId'")
+) {
+  throw new Error('旧共享编辑器必须把用户新建交给 Vue，同时保留明确的内部模式边界')
 }
 
 console.log('Vue deployment and public redirect boundaries passed')

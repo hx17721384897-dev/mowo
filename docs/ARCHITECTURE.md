@@ -92,7 +92,7 @@ content-service（统一处理）
 
 ### 定制购买流程（当前）
 ```
-Vue /app/customize → customize-editor.html → customize-confirm.html
+Vue /app/customize → Vue /app/customize/editor → customize-confirm.html
   → 上传帧图到OSS（预签名URL）
   → POST /api/customize-orders（创建订单）
   → 显示订单号 + 客服微信引导

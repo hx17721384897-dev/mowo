@@ -80,7 +80,8 @@
 | 页面 | 当前职责 | API / 状态 | 主要缺口 |
 |---|---|---|---|
 | Vue `/app/customize` | 选择款式/SKU、配额检查、动画复用 | 已接 machine-models/custom-products/animation-assets | V2-D1 已关闭；旧 HTML 已物理删除 |
-| `customize-editor.html` | 上传/筛帧、草稿创建与编辑 | 已接 custom-products | 约 2196 行；多段重复 API base；客户端保存帧 URL/流程状态 |
+| Vue `/app/customize/editor` | 用户新建定制的上传/筛帧、草稿创建及人工处理 | 已接 custom-products/customization-requests | D2-C 已接管正式新建入口；共享安全上传与幂等草稿 |
+| `customize-editor.html` | 草稿重编、动画改版、只读确认和后台内部模式 | 已接 custom-products/customization-requests | 临时共享旧实现；普通新建 URL 会转交 Vue，待 D2-D/V4/V5 清空消费者后删除 |
 | `customize-confirm.html` | 选配、创建/更新定制品、加购/立即购买 | 已接 custom-products/cart | 实物图为占位；依赖多组 local/session storage 状态 |
 | `cart.html` | 服务端购物车 | 已接 cart | 只加载登录购物车；未登录购买由详情页保留短期操作意图，登录后重新校验并写入服务端 |
 | `checkout.html` | 地址、创建预订单、轮询支付 | 已接 cart/addresses/payment | 真实支付发起未闭环；localhost 显示 Mock 支付 |
@@ -149,7 +150,7 @@
 index / products / showcase
 ├─ showcase-detail
 │  └─ cart -> checkout -> orders -> order-detail
-└─ customize-start -> customize-editor -> customize-confirm
+└─ Vue /app/customize -> Vue /app/customize/editor -> customize-confirm
    └─ cart -> checkout
 
 auth.js user menu

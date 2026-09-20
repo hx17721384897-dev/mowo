@@ -127,6 +127,14 @@ test('customize entry preserves selection, dialogs and browser safety', async ({
   expect(overflows).toBe(false)
 })
 
+test('new customization uses the Vue editor as its only formal handoff', async ({ page }) => {
+  await page.goto('/app/customize')
+  await page.getByRole('button', { name: '选择此款' }).first().click()
+  await page.locator('#nextBtn').click()
+  await expect(page).toHaveURL(/\/app\/customize\/editor\?modelId=model-1$/)
+  await expect(page.getByRole('heading', { name: /选择素材.*处理方式/ })).toBeVisible()
+})
+
 test('reuse deep link requires a session and only shows frame-compatible models', async ({
   page
 }) => {
