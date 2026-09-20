@@ -1151,6 +1151,7 @@ model CartItem {
 model CustomProduct {
   id                 String    @id @default(uuid())
   userId             String    @map("user_id")
+  clientDraftKey     String?   @unique @map("client_draft_key") @db.VarChar(80)
   animationFrames    String    @map("animation_frames") @db.Text // JSON 帧图列表
   draftData          String?   @map("draft_data") @db.Text // 工程文件（7天）
   draftExpiresAt     DateTime? @map("draft_expires_at")

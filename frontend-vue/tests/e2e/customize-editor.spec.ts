@@ -1,5 +1,10 @@
 import { expect, test, type Page } from '@playwright/test'
 
+const ONE_PIXEL_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+  'base64'
+)
+
 async function mockEditorModel(page: Page): Promise<void> {
   await page.route('**/api/machine-models', (route) =>
     route.fulfill({
@@ -59,7 +64,7 @@ test('new editor upload step preserves the legacy two-path structure', async ({ 
   await page.getByLabel('选择自己筛选的素材').setInputFiles({
     name: 'frame.png',
     mimeType: 'image/png',
-    buffer: Buffer.from([137, 80, 78, 71])
+    buffer: ONE_PIXEL_PNG
   })
   await expect(page.getByRole('button', { name: '开始筛选 →' })).toBeEnabled()
 
@@ -137,7 +142,7 @@ test('human path uploads privately and submits an idempotent request', async ({ 
   await page.getByLabel('选择提交给工作人员的素材').setInputFiles({
     name: 'source.png',
     mimeType: 'image/png',
-    buffer: Buffer.from([137, 80, 78, 71])
+    buffer: ONE_PIXEL_PNG
   })
   await page.getByPlaceholder(/希望保留的片段/).fill('保留中间动作')
   page.once('dialog', (dialog) => dialog.accept())
@@ -151,6 +156,170 @@ test('human path uploads privately and submits an idempotent request', async ({ 
     userNote: '保留中间动作'
   })
   expect(typeof submittedBody?.clientRequestKey).toBe('string')
+})
+
+test('image sequence enters the full editor and saves the self-screened draft', async ({
+  page
+}) => {
+  await page.addInitScript(() => localStorage.setItem('mowo_token', 'self-token'))
+  await page.route('**/api/v1/account/me', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        data: { id: 'user-self', role: 0, status: 'ACTIVE', profile: { nickname: '筛帧用户' } }
+      })
+    })
+  )
+  let uploadNumber = 0
+  await page.route('**/api/upload/presign', (route) => {
+    uploadNumber += 1
+    const purpose = (route.request().postDataJSON() as { purpose: string }).purpose
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        data: {
+          fileId: `file-${uploadNumber}`,
+          uploadUrl: `https://objects.example.invalid/upload-${uploadNumber}`,
+          objectKey: `private/${purpose.toLowerCase()}/file-${uploadNumber}`,
+          completeUrl: `/api/upload/files/file-${uploadNumber}/complete`,
+          purpose,
+          maxBytes: 5 * 1024 * 1024
+        }
+      })
+    })
+  })
+  await page.route('https://objects.example.invalid/upload-*', (route) =>
+    route.fulfill({ status: 200 })
+  )
+  await page.route('**/api/upload/files/*/complete', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, data: { status: 'READY' } })
+    })
+  )
+  await page.route('**/api/custom-products', (route) =>
+    route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        data: {
+          id: 'product-1',
+          animationFrames: JSON.stringify(['private/customization_frame/file-1'])
+        }
+      })
+    })
+  )
+  await page.route('**/api/customization-requests/draft', (route) =>
+    route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, data: { id: 'draft-1' } })
+    })
+  )
+
+  await page.goto('/app/customize/editor?modelId=model-1')
+  await page
+    .getByLabel('选择自己筛选的素材')
+    .setInputFiles('../frontend/assets/images/faq-hero.png')
+  await page.getByRole('button', { name: '开始筛选 →' }).click()
+  await expect(page.getByText('动画预览')).toBeVisible()
+  await expect(page.locator('.thumb-item')).toHaveCount(1)
+  await page.getByRole('button', { name: '克隆此帧' }).click()
+  await expect(page.locator('.thumb-item')).toHaveCount(2)
+  await page.getByRole('button', { name: '撤销' }).click()
+  await expect(page.locator('.thumb-item')).toHaveCount(1)
+  await page.getByRole('button', { name: '下一步 →' }).click()
+  await expect(page).toHaveURL(
+    /\/mowo\/frontend\/pages\/customize-confirm\.html\?.*requestId=draft-1/
+  )
+})
+
+test('browser-supported WebM enters the 0.5 to 8 second trim step', async ({ page }) => {
+  await page.goto('/app/customize/editor?modelId=model-1')
+  await page.evaluate(async () => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 64
+    canvas.height = 64
+    const context = canvas.getContext('2d')!
+    const stream = canvas.captureStream(12)
+    const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' })
+    const chunks: Blob[] = []
+    recorder.ondataavailable = (event) => chunks.push(event.data)
+    recorder.start(100)
+    for (let index = 0; index < 15; index += 1) {
+      context.fillStyle = index % 2 ? '#f0c040' : '#111110'
+      context.fillRect(0, 0, 64, 64)
+      await new Promise((resolve) => setTimeout(resolve, 80))
+    }
+    const stopped = new Promise<void>((resolve) => {
+      recorder.onstop = () => resolve()
+    })
+    recorder.stop()
+    await stopped
+    stream.getTracks().forEach((track) => track.stop())
+    const file = new File(chunks, 'browser.webm', { type: 'video/webm' })
+    const transfer = new DataTransfer()
+    transfer.items.add(file)
+    const input = document.querySelector<HTMLInputElement>(
+      'input[aria-label="选择自己筛选的素材"]'
+    )!
+    input.files = transfer.files
+    input.dispatchEvent(new Event('change', { bubbles: true }))
+  })
+  await page.getByRole('button', { name: '开始筛选 →' }).click()
+  await expect(page.getByText('裁剪视频片段')).toBeVisible()
+  await expect(page.getByRole('button', { name: '提取帧 →' })).toBeEnabled()
+  await expect(page.getByLabel('片段开始时间')).toHaveAttribute('max', /\d/)
+  await page.getByRole('button', { name: '提取帧 →' }).click()
+  await expect(page.getByText('动画预览')).toBeVisible({ timeout: 20_000 })
+  await expect(page.locator('.thumb-item').first()).toBeVisible()
+})
+
+test('GIF source is decoded into editable frames instead of being treated as video', async ({
+  page
+}) => {
+  await page.goto('/app/customize/editor?modelId=model-1')
+  await page.getByLabel('选择自己筛选的素材').setInputFiles({
+    name: 'single-frame.gif',
+    mimeType: 'image/gif',
+    buffer: Buffer.from('R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==', 'base64')
+  })
+  await page.getByRole('button', { name: '开始筛选 →' }).click()
+  await expect(page.getByText('动画预览')).toBeVisible()
+  await expect(page.locator('.thumb-item')).toHaveCount(1)
+})
+
+test('draft idempotency key survives reload for the same source and resets for new material', async ({
+  page
+}) => {
+  const source = '../frontend/assets/images/faq-hero.png'
+  await page.goto('/app/customize/editor?modelId=model-1')
+  await page.getByLabel('选择自己筛选的素材').setInputFiles(source)
+  await expect(page.getByRole('button', { name: '开始筛选 →' })).toBeEnabled()
+  await page.evaluate(() => sessionStorage.setItem('mowo_custom_product_draft_key', 'retry-key'))
+
+  await page.reload()
+  await page.getByLabel('选择自己筛选的素材').setInputFiles(source)
+  await expect
+    .poll(() => page.evaluate(() => sessionStorage.getItem('mowo_custom_product_draft_key')))
+    .toBe('retry-key')
+
+  await page.evaluate(() => sessionStorage.setItem('mowo_custom_product_draft_key', 'stale-key'))
+  await page.reload()
+  await page.getByLabel('选择自己筛选的素材').setInputFiles({
+    name: 'different.png',
+    mimeType: 'image/png',
+    buffer: ONE_PIXEL_PNG
+  })
+  await expect
+    .poll(() => page.evaluate(() => sessionStorage.getItem('mowo_custom_product_draft_key')))
+    .toBeNull()
 })
 
 test('unsupported shared-editor modes fail closed in the Vue route', async ({ page }) => {

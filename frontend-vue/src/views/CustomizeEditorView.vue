@@ -2,10 +2,27 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import SourcePicker from '@/features/customize-editor/SourcePicker.vue'
-import { submitHumanCustomization } from '@/features/customize-editor/api'
+import FrameEditor from '@/features/customize-editor/FrameEditor.vue'
+import VideoTrimPanel from '@/features/customize-editor/VideoTrimPanel.vue'
+import {
+  createSelfCustomizationDraft,
+  createSelfScreenedProduct,
+  submitHumanCustomization
+} from '@/features/customize-editor/api'
 import { resolveEditorEntry } from '@/features/customize-editor/editor-core'
-import { validateSourceFiles } from '@/features/customize-editor/source-validation'
+import {
+  extractVideoFrames,
+  processGif,
+  processImageSequence,
+  type ProcessedFrame
+} from '@/features/customize-editor/media-processing'
+import { ObjectUrlRegistry } from '@/features/customize-editor/object-url-registry'
+import {
+  validateSourceFiles,
+  type ValidatedSource
+} from '@/features/customize-editor/source-validation'
 import { uploadCustomizationFiles } from '@/features/customize-editor/upload-api'
+import { legacyPublicUrl } from '@/config/public-links'
 import { getMachineModels } from '@/features/customize-start/api'
 import type { MachineModel } from '@/features/customize-start/types'
 import { useSessionStore } from '@/stores/session'
@@ -13,6 +30,9 @@ import '@/features/customize-editor/customize-editor.css'
 
 const HUMAN_KEY = 'mowo_human_submission_key'
 const HUMAN_OWNER = 'mowo_human_submission_owner'
+const PRODUCT_KEY = 'mowo_custom_product_draft_key'
+const PRODUCT_OWNER = 'mowo_custom_product_draft_owner'
+const PRODUCT_SOURCE = 'mowo_custom_product_source_fingerprint'
 const route = useRoute()
 const router = useRouter()
 const session = useSessionStore()
@@ -26,16 +46,164 @@ const humanBusy = ref(false)
 const humanProgress = ref('')
 const pendingHumanSubmit = ref(false)
 const uploadedHumanKeys = ref<string[]>([])
+const screen = ref<'upload' | 'trim' | 'processing' | 'editor'>('upload')
+const sourceKind = ref<ValidatedSource['kind'] | null>(null)
+const sourceUrl = ref('')
+const videoDuration = ref(0)
+const processedFrames = ref<ProcessedFrame[]>([])
+const frameSources = ref<Array<{ source: string; selected: boolean }>>([])
+const processingProgress = ref(0)
+const selfBusy = ref(false)
+const selfProgress = ref('')
+const trimStart = ref(0)
+const trimEnd = ref(0)
+const pendingSelfSubmit = ref<{ sources: string[]; indexes: number[] } | null>(null)
+const ratioWarning = ref<{
+  actual: string
+  suggested: string
+  resolve: (accepted: boolean) => void
+} | null>(null)
+const objectUrls = new ObjectUrlRegistry()
+const blobByUrl = new Map<string, Blob>()
+let uploadedSelfFrameKeys: string[] = []
+let uploadedSelfSourceKeys: string[] = []
+let savedSelfProductId = ''
 const entry = computed(() =>
   resolveEditorEntry(new URLSearchParams(route.query as Record<string, string>))
 )
 
-function assignFiles(target: 'self' | 'human', files: File[]): void {
+interface SourceInspection {
+  sourceCount: number
+  totalBytes: number
+  formats: string[]
+  width: number | null
+  height: number | null
+  duration: number | null
+  ratioOk: boolean | null
+  ratioActual: string | null
+  ratioSuggested: string
+}
+const humanScreening = ref<SourceInspection | null>(null)
+
+function clearSelfDraftKeys(): void {
+  uploadedSelfFrameKeys = []
+  uploadedSelfSourceKeys = []
+  savedSelfProductId = ''
+  sessionStorage.removeItem(PRODUCT_KEY)
+  sessionStorage.removeItem(PRODUCT_OWNER)
+  sessionStorage.removeItem(PRODUCT_SOURCE)
+  sessionStorage.removeItem('mowo_customize_request_draft_key')
+  sessionStorage.removeItem('mowo_customize_request_draft_owner')
+}
+
+function sourceFingerprint(files: readonly File[]): string {
+  return JSON.stringify(
+    files.map((file) => [file.name, file.size, file.type, file.lastModified] as const)
+  )
+}
+
+function bindSelfDraftToFiles(files: readonly File[]): void {
+  const fingerprint = sourceFingerprint(files)
+  if (sessionStorage.getItem(PRODUCT_SOURCE) !== fingerprint) clearSelfDraftKeys()
+  sessionStorage.setItem(PRODUCT_SOURCE, fingerprint)
+}
+
+function assessRatio(
+  width: number,
+  height: number
+): {
+  ok: boolean | null
+  actual: string | null
+  suggested: string
+} {
+  const ratios = model.value?.ratios ?? []
+  if (!width || !height || !ratios.length)
+    return { ok: null, actual: null, suggested: ratios.join(' 或 ') }
+  const actual = width / height
+  const matches = ratios.some((ratio) => {
+    const [ratioWidth, ratioHeight] = ratio.split(':').map(Number)
+    const expected = ratioWidth! / ratioHeight!
+    return Number.isFinite(expected) && Math.abs(actual - expected) / expected <= 0.1
+  })
+  if (matches) return { ok: true, actual: null, suggested: ratios.join(' 或 ') }
+  return {
+    ok: false,
+    actual: width >= height ? `${actual.toFixed(2)}:1` : `1:${(1 / actual).toFixed(2)}`,
+    suggested: ratios.join(' 或 ')
+  }
+}
+
+async function inspectSource(files: File[], validated: ValidatedSource): Promise<SourceInspection> {
+  let width: number | null = null
+  let height: number | null = null
+  let duration: number | null = null
+  if (validated.kind === 'video') {
+    const url = URL.createObjectURL(files[0]!)
+    const video = document.createElement('video')
+    video.preload = 'metadata'
+    try {
+      await new Promise<void>((resolve, reject) => {
+        video.onloadedmetadata = () => resolve()
+        video.onerror = () => reject(new Error('视频无法读取，请更换格式后重试'))
+        video.src = url
+      })
+      width = video.videoWidth || null
+      height = video.videoHeight || null
+      duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : null
+    } finally {
+      video.removeAttribute('src')
+      video.load()
+      URL.revokeObjectURL(url)
+    }
+  } else {
+    const bitmap = await createImageBitmap(files[0]!)
+    width = bitmap.width
+    height = bitmap.height
+    bitmap.close()
+  }
+  const ratio = width && height ? assessRatio(width, height) : assessRatio(0, 0)
+  return {
+    sourceCount: files.length,
+    totalBytes: validated.totalBytes,
+    formats: [...new Set(files.map((file) => file.type || file.name.split('.').pop() || ''))],
+    width,
+    height,
+    duration,
+    ratioOk: ratio.ok,
+    ratioActual: ratio.actual,
+    ratioSuggested: ratio.suggested
+  }
+}
+
+function confirmRatio(actual: string, suggested: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    ratioWarning.value = { actual, suggested, resolve }
+  })
+}
+
+function closeRatioWarning(accepted: boolean): void {
+  const warning = ratioWarning.value
+  ratioWarning.value = null
+  warning?.resolve(accepted)
+}
+
+async function assignFiles(target: 'self' | 'human', files: File[]): Promise<void> {
   try {
-    validateSourceFiles(files)
-    if (target === 'self') selfFiles.value = files
-    else {
+    const validated = validateSourceFiles(files)
+    const inspection = await inspectSource(files, validated)
+    if (
+      target === 'self' &&
+      inspection.ratioOk === false &&
+      !(await confirmRatio(inspection.ratioActual!, inspection.ratioSuggested))
+    ) {
+      return
+    }
+    if (target === 'self') {
+      bindSelfDraftToFiles(files)
+      selfFiles.value = files
+    } else {
       humanFiles.value = files
+      humanScreening.value = inspection
       uploadedHumanKeys.value = []
     }
     error.value = ''
@@ -48,8 +216,14 @@ function clearHuman(): void {
   humanFiles.value = []
   uploadedHumanKeys.value = []
   humanNote.value = ''
+  humanScreening.value = null
   sessionStorage.removeItem(HUMAN_KEY)
   sessionStorage.removeItem(HUMAN_OWNER)
+}
+
+function clearSelfSelection(): void {
+  selfFiles.value = []
+  clearSelfDraftKeys()
 }
 
 function requestLogin(): void {
@@ -101,16 +275,11 @@ async function submitHuman(): Promise<void> {
       )
     }
     humanProgress.value = '正在提交'
-    const totalBytes = humanFiles.value.reduce((sum, file) => sum + file.size, 0)
     const result = await submitHumanCustomization({
       machineModelId: model.value.id,
       sourceKeys: uploadedHumanKeys.value,
       clientRequestKey: requestKey(session.user.id),
-      screeningData: {
-        sourceCount: humanFiles.value.length,
-        totalBytes,
-        formats: [...new Set(humanFiles.value.map((file) => file.type))]
-      },
+      screeningData: humanScreening.value ?? {},
       userNote: humanNote.value
     })
     localStorage.removeItem('mowo_customize_request_draft_id')
@@ -127,7 +296,262 @@ async function submitHuman(): Promise<void> {
 
 async function startSelfScreening(): Promise<void> {
   if (!selfFiles.value.length) return
-  window.alert('自己筛选编辑区仍在迁移校验中，当前正式入口尚未切换，请暂时返回上一步。')
+  const validated = validateSourceFiles(selfFiles.value)
+  sourceKind.value = validated.kind
+  if (validated.kind === 'image-sequence') {
+    await processImages()
+    return
+  }
+  if (validated.kind === 'gif') {
+    await processGifSource()
+    return
+  }
+  sourceUrl.value = objectUrls.create(selfFiles.value[0]!)
+  const probe = document.createElement('video')
+  probe.preload = 'metadata'
+  probe.src = sourceUrl.value
+  try {
+    await new Promise<void>((resolve, reject) => {
+      probe.onloadedmetadata = () => resolve()
+      probe.onerror = () => reject(new Error('视频无法读取，请更换格式后重试'))
+    })
+    videoDuration.value = await resolveVideoDuration(probe)
+    screen.value = 'trim'
+  } catch (cause) {
+    window.alert(cause instanceof Error ? cause.message : '视频无法读取')
+    reupload()
+  }
+}
+
+async function resolveVideoDuration(video: HTMLVideoElement): Promise<number> {
+  if (Number.isFinite(video.duration) && video.duration > 0) {
+    if (video.duration < 0.5) throw new Error('视频有效时长不足 0.5 秒')
+    return video.duration
+  }
+  await new Promise<void>((resolve, reject) => {
+    const timeout = window.setTimeout(() => {
+      cleanup()
+      reject(new Error('视频缺少可读取的时长信息，请转换格式后重试'))
+    }, 5_000)
+    const cleanup = () => {
+      window.clearTimeout(timeout)
+      video.removeEventListener('durationchange', changed)
+      video.removeEventListener('error', failed)
+    }
+    const changed = () => {
+      if (!Number.isFinite(video.duration) || video.duration <= 0) return
+      cleanup()
+      resolve()
+    }
+    const failed = () => {
+      cleanup()
+      reject(new Error('视频时长读取失败'))
+    }
+    video.addEventListener('durationchange', changed)
+    video.addEventListener('error', failed, { once: true })
+    video.currentTime = Number.MAX_SAFE_INTEGER
+  })
+  const duration = video.duration
+  video.currentTime = 0
+  if (!Number.isFinite(duration) || duration < 0.5) {
+    throw new Error('视频有效时长不足 0.5 秒')
+  }
+  return duration
+}
+
+function enterEditor(frames: ProcessedFrame[]): void {
+  processedFrames.value = frames
+  frameSources.value = frames.map((frame) => {
+    const url = objectUrls.create(frame.blob)
+    blobByUrl.set(url, frame.blob)
+    return { source: url, selected: frame.selected }
+  })
+  screen.value = 'editor'
+}
+
+async function processImages(): Promise<void> {
+  screen.value = 'processing'
+  processingProgress.value = 0
+  try {
+    enterEditor(
+      await processImageSequence(selfFiles.value, {
+        onProgress: ({ completed, total }) => {
+          processingProgress.value = Math.round((completed / total) * 100)
+        }
+      })
+    )
+  } catch (cause) {
+    window.alert(cause instanceof Error ? cause.message : '图片处理失败')
+    reupload()
+  }
+}
+
+async function processGifSource(): Promise<void> {
+  screen.value = 'processing'
+  processingProgress.value = 0
+  try {
+    enterEditor(
+      await processGif(selfFiles.value[0]!, {
+        onProgress: ({ completed, total }) => {
+          processingProgress.value = Math.round((completed / total) * 100)
+        }
+      })
+    )
+  } catch (cause) {
+    window.alert(cause instanceof Error ? cause.message : 'GIF 处理失败')
+    reupload()
+  }
+}
+
+async function processVideo(start: number, end: number): Promise<void> {
+  trimStart.value = start
+  trimEnd.value = end
+  screen.value = 'processing'
+  const video = document.createElement('video')
+  video.preload = 'auto'
+  video.src = sourceUrl.value
+  try {
+    await new Promise<void>((resolve, reject) => {
+      video.onloadeddata = () => resolve()
+      video.onerror = () => reject(new Error('视频无法解码'))
+    })
+    await resolveVideoDuration(video)
+    enterEditor(
+      await extractVideoFrames(video, start, end, {
+        onProgress: ({ completed, total }) => {
+          processingProgress.value = Math.round((completed / total) * 100)
+        }
+      })
+    )
+  } catch (cause) {
+    window.alert(cause instanceof Error ? cause.message : '视频抽帧失败')
+    screen.value = 'trim'
+  } finally {
+    video.pause()
+    video.removeAttribute('src')
+    video.load()
+  }
+}
+
+function reupload(): void {
+  screen.value = 'upload'
+  processedFrames.value = []
+  frameSources.value = []
+  sourceKind.value = null
+  sourceUrl.value = ''
+  blobByUrl.clear()
+  objectUrls.releaseAll()
+  clearSelfDraftKeys()
+}
+
+function selfDraftKey(ownerId: string): string {
+  const ownerKey = 'mowo_customize_request_draft_owner'
+  const keyName = 'mowo_customize_request_draft_key'
+  let key = sessionStorage.getItem(keyName)
+  if (!key || sessionStorage.getItem(ownerKey) !== ownerId) {
+    key = crypto.randomUUID()
+    sessionStorage.setItem(keyName, key)
+    sessionStorage.setItem(ownerKey, ownerId)
+  }
+  return key
+}
+
+function productDraftKey(ownerId: string): string {
+  let key = sessionStorage.getItem(PRODUCT_KEY)
+  if (!key || sessionStorage.getItem(PRODUCT_OWNER) !== ownerId) {
+    key = crypto.randomUUID()
+    sessionStorage.setItem(PRODUCT_KEY, key)
+    sessionStorage.setItem(PRODUCT_OWNER, ownerId)
+  }
+  return key
+}
+
+async function submitSelf(sources: string[], indexes: number[]): Promise<void> {
+  if (!model.value || selfBusy.value) return
+  await session.bootstrap()
+  if (!session.isAuthenticated || !session.user?.id) {
+    pendingSelfSubmit.value = { sources, indexes }
+    void router.replace({ query: { ...route.query, auth: '1', redirect: route.fullPath } })
+    return
+  }
+  selfBusy.value = true
+  try {
+    const frameFiles = sources.map(
+      (source, index) =>
+        new File([blobByUrl.get(source)!], `frame-${String(index + 1).padStart(3, '0')}.jpg`, {
+          type: 'image/jpeg'
+        })
+    )
+    if (!uploadedSelfFrameKeys.length) {
+      uploadedSelfFrameKeys = await uploadCustomizationFiles(
+        frameFiles,
+        'CUSTOMIZATION_FRAME',
+        (done, total) => {
+          selfProgress.value = `上传帧图 ${done}/${total}`
+        }
+      )
+    }
+    const targets = [...new Set(model.value.skus.map((sku) => sku.frameCount))].filter(
+      (target) => target >= sources.length && target % sources.length === 0
+    )
+    if (!savedSelfProductId) {
+      const product = await createSelfScreenedProduct({
+        clientDraftKey: productDraftKey(session.user.id),
+        frameKeys: uploadedSelfFrameKeys,
+        frameCount: sources.length,
+        modelId: model.value.id,
+        modelName: model.value.name,
+        selectedIndexes: indexes,
+        trimStart: trimStart.value,
+        trimEnd: trimEnd.value
+      })
+      savedSelfProductId = product.id
+      uploadedSelfFrameKeys = product.frameKeys
+    }
+    localStorage.setItem('mowo_customize_draft_id', savedSelfProductId)
+    if (!uploadedSelfSourceKeys.length) {
+      uploadedSelfSourceKeys = await uploadCustomizationFiles(
+        selfFiles.value,
+        'CUSTOMIZATION_SOURCE',
+        (done, total) => {
+          selfProgress.value = `上传原素材 ${done}/${total}`
+        }
+      )
+    }
+    const requestId = await createSelfCustomizationDraft({
+      clientDraftKey: selfDraftKey(session.user.id),
+      customProductId: savedSelfProductId,
+      machineModelId: model.value.id,
+      sourceKeys: uploadedSelfSourceKeys,
+      selectedFrameKeys: uploadedSelfFrameKeys,
+      selectedIndexes: indexes,
+      validTargets: targets,
+      trimStart: trimStart.value,
+      trimEnd: trimEnd.value
+    })
+    localStorage.setItem('mowo_customize_frame_keys', JSON.stringify(uploadedSelfFrameKeys))
+    localStorage.setItem('mowo_customize_frame_owner', session.user.id)
+    localStorage.setItem('mowo_customize_request_draft_id', requestId)
+    localStorage.removeItem('mowo_customize_human_request_id')
+    sessionStorage.removeItem(PRODUCT_KEY)
+    sessionStorage.removeItem(PRODUCT_OWNER)
+    sessionStorage.removeItem(PRODUCT_SOURCE)
+    sessionStorage.removeItem('mowo_customize_request_draft_key')
+    sessionStorage.removeItem('mowo_customize_request_draft_owner')
+    const next = new URL(legacyPublicUrl('customize-confirm'), window.location.origin)
+    next.searchParams.set('type', model.value.modelType || 'single')
+    next.searchParams.set('modelId', model.value.id)
+    next.searchParams.set('modelName', model.value.name)
+    next.searchParams.set('frames', String(sources.length))
+    next.searchParams.set('targets', targets.join(','))
+    next.searchParams.set('requestId', requestId)
+    window.location.assign(next)
+  } catch (cause) {
+    window.alert(`上传失败：${cause instanceof Error ? cause.message : '请重试'}`)
+  } finally {
+    selfBusy.value = false
+    selfProgress.value = ''
+  }
 }
 
 async function load(): Promise<void> {
@@ -151,6 +575,10 @@ watch(
     if (authenticated && pendingHumanSubmit.value) {
       pendingHumanSubmit.value = false
       void submitHuman()
+    } else if (authenticated && pendingSelfSubmit.value) {
+      const pending = pendingSelfSubmit.value
+      pendingSelfSubmit.value = null
+      void submitSelf(pending.sources, pending.indexes)
     }
   }
 )
@@ -158,6 +586,8 @@ watch(
 onMounted(() => void load())
 onBeforeUnmount(() => {
   pendingHumanSubmit.value = false
+  closeRatioWarning(false)
+  objectUrls.releaseAll()
 })
 </script>
 
@@ -189,7 +619,7 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <main id="stateUpload">
+    <main v-if="screen === 'upload'" id="stateUpload">
       <p v-if="loading" class="editor-status">正在确认所选款式…</p>
       <div v-else-if="error" class="editor-status editor-error">
         <p>{{ error }}</p>
@@ -219,8 +649,10 @@ onBeforeUnmount(() => {
               subtitle="拖拽文件，或点击选择"
               icon="🎞"
               accessible-label="选择自己筛选的素材"
+              video-label="MP4"
+              image-label="图片"
               @select="assignFiles('self', $event)"
-              @clear="selfFiles = []"
+              @clear="clearSelfSelection"
             />
             <div class="method-actions">
               <button
@@ -248,9 +680,11 @@ onBeforeUnmount(() => {
             <SourcePicker
               :files="humanFiles"
               title="上传原始素材"
-              subtitle="视频或一组图片"
+              subtitle="视频、GIF 或一组图片"
               icon="＋"
               accessible-label="选择提交给工作人员的素材"
+              video-label="视频"
+              image-label="图片"
               @select="assignFiles('human', $event)"
               @clear="clearHuman"
             />
@@ -261,6 +695,10 @@ onBeforeUnmount(() => {
                 maxlength="1000"
                 placeholder="希望保留的片段、画面重点或其他说明（选填)"
               ></textarea>
+              <p v-if="humanScreening?.ratioOk === false" class="human-screening">
+                画面比例约为 {{ humanScreening.ratioActual }}，工作人员会结合
+                {{ humanScreening.ratioSuggested }} 款式判断。
+              </p>
               <div class="method-delay">
                 <span>◷</span><span>人工筛选不会立即完成，提交后可凭定制编号查看处理进度。</span>
               </div>
@@ -279,5 +717,70 @@ onBeforeUnmount(() => {
         </div>
       </template>
     </main>
+    <VideoTrimPanel
+      v-else-if="screen === 'trim'"
+      :source="sourceUrl"
+      :duration="videoDuration"
+      @confirm="processVideo"
+      @cancel="reupload"
+    />
+    <main v-else-if="screen === 'processing'" id="stateLoading" class="active">
+      <span class="loading-anim">⚙️</span>
+      <p class="loading-title">正在提取帧…</p>
+      <p class="loading-sub">我们正在把文件拆解成一帧一帧的图片，请稍候。</p>
+      <div class="loading-bar-wrap">
+        <div class="loading-bar-track">
+          <div class="loading-bar-fill" :style="{ width: `${processingProgress}%` }"></div>
+        </div>
+        <div class="loading-bar-labels">
+          <span>正在处理素材…</span><strong>{{ processingProgress }}%</strong>
+        </div>
+      </div>
+      <div class="loading-tips">
+        <div class="loading-tip">
+          <span class="loading-tip-icon">⏱</span>
+          <p>文件越大等待越久，请勿关闭当前页面。</p>
+        </div>
+        <div class="loading-tip">
+          <span class="loading-tip-icon">✂️</span>
+          <p>下次可先裁剪视频再上传，只保留想要的片段，速度会快很多。</p>
+        </div>
+        <div class="loading-tip">
+          <span class="loading-tip-icon">🎞</span>
+          <p>提取完成后你可以手动筛帧，选出最终要使用的帧。</p>
+        </div>
+      </div>
+    </main>
+    <FrameEditor
+      v-else-if="screen === 'editor' && model"
+      :frames="frameSources"
+      :targets="[...new Set(model.skus.map((sku) => sku.frameCount))].sort((a, b) => a - b)"
+      :busy="selfBusy"
+      :progress="selfProgress"
+      @next="submitSelf"
+      @reupload="reupload"
+    />
+    <div v-if="ratioWarning" class="ratio-warning-overlay" role="dialog" aria-modal="true">
+      <div class="ratio-warning-card">
+        <div class="ratio-warning-icon" aria-hidden="true">⚠️</div>
+        <p class="ratio-warning-title">图片比例不符合要求</p>
+        <p class="ratio-warning-copy">
+          检测到您上传的内容比例约为
+          <strong>{{ ratioWarning.actual }}</strong
+          >，<br />
+          当前机型支持的比例为 <b>{{ ratioWarning.suggested }}</b
+          >。<br />
+          建议裁剪后重新上传，效果更佳。
+        </p>
+        <div class="ratio-warning-actions">
+          <button type="button" class="ratio-force" @click="closeRatioWarning(true)">
+            强制使用
+          </button>
+          <button type="button" class="ratio-cancel" @click="closeRatioWarning(false)">
+            重新上传
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>

@@ -16,6 +16,7 @@ export interface MachineModel {
   modelType: string
   previewUrl: string | null
   videoUrl: string | null
+  ratios: string[]
   skus: MachineSku[]
 }
 

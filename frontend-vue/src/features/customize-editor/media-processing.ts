@@ -1,3 +1,4 @@
+import { decompressFrames, parseGIF } from 'gifuct-js'
 import { MAX_EDITOR_FRAMES, validateTrimWindow } from './source-validation'
 
 const DEFAULT_FPS = 30
@@ -5,6 +6,9 @@ const DEFAULT_MAX_EDGE = 480
 const DEFAULT_JPEG_QUALITY = 0.85
 const DEFAULT_HASH_SIZE = 8
 const DEFAULT_HASH_THRESHOLD = 6
+const MAX_GIF_SOURCE_FRAMES = 300
+const MAX_GIF_PIXELS = 16_777_216
+const MAX_GIF_RENDER_PIXELS = 250_000_000
 
 export interface ProcessedFrame {
   blob: Blob
@@ -224,4 +228,70 @@ export async function processImageSequence(
   }
   throwIfAborted(options.signal)
   return finalizeFrames(rawFrames, options.maxFrames ?? MAX_EDITOR_FRAMES)
+}
+
+export async function processGif(
+  file: File,
+  options: MediaProcessingOptions = {}
+): Promise<ProcessedFrame[]> {
+  throwIfAborted(options.signal)
+  const parsed = parseGIF(await file.arrayBuffer())
+  const width = parsed.lsd.width
+  const height = parsed.lsd.height
+  const frameCount = parsed.frames.filter((frame) => 'image' in frame).length
+  if (width <= 0 || height <= 0 || width * height > MAX_GIF_PIXELS) {
+    throw new Error('GIF 画面尺寸过大或无效')
+  }
+  if (
+    frameCount <= 0 ||
+    frameCount > MAX_GIF_SOURCE_FRAMES ||
+    width * height * frameCount > MAX_GIF_RENDER_PIXELS
+  ) {
+    throw new Error(`GIF 帧数过多或解码规模过大（最多 ${MAX_GIF_SOURCE_FRAMES} 帧）`)
+  }
+
+  const frames = decompressFrames(parsed, true)
+  const maximum = options.maxFrames ?? MAX_EDITOR_FRAMES
+  const outputIndexes = new Set(boundedFrameIndexes(frames.length, maximum))
+  const [outputWidth, outputHeight] = scaledDimensions(width, height)
+  const { canvas: composition, context } = canvasFor(width, height)
+  const { canvas: patchCanvas, context: patchContext } = canvasFor(width, height)
+  const { canvas: output, context: outputContext } = canvasFor(outputWidth, outputHeight)
+  const rawFrames: RawFrame[] = []
+
+  for (let index = 0; index < frames.length; index += 1) {
+    throwIfAborted(options.signal)
+    const frame = frames[index]!
+    const previous = frame.disposalType === 3 ? context.getImageData(0, 0, width, height) : null
+    patchCanvas.width = frame.dims.width
+    patchCanvas.height = frame.dims.height
+    patchContext.putImageData(
+      new ImageData(Uint8ClampedArray.from(frame.patch), frame.dims.width, frame.dims.height),
+      0,
+      0
+    )
+    context.drawImage(patchCanvas, frame.dims.left, frame.dims.top)
+
+    if (outputIndexes.has(index)) {
+      outputContext.clearRect(0, 0, outputWidth, outputHeight)
+      outputContext.drawImage(composition, 0, 0, outputWidth, outputHeight)
+      rawFrames.push({
+        blob: await canvasBlob(output),
+        hash: frameHash(output),
+        sourceIndex: index,
+        time: null
+      })
+    }
+
+    if (frame.disposalType === 2) {
+      context.clearRect(frame.dims.left, frame.dims.top, frame.dims.width, frame.dims.height)
+    } else if (frame.disposalType === 3 && previous) {
+      context.putImageData(previous, 0, 0)
+    }
+    options.onProgress?.({ completed: index + 1, total: frames.length })
+    if ((index + 1) % 10 === 0) await new Promise((resolve) => window.setTimeout(resolve, 0))
+  }
+
+  throwIfAborted(options.signal)
+  return finalizeFrames(rawFrames, maximum)
 }

@@ -4,7 +4,7 @@ export const MAX_EDITOR_FRAMES = 150
 export const MIN_TRIM_SECONDS = 0.5
 export const MAX_TRIM_SECONDS = 8
 
-export type SourceKind = 'image-sequence' | 'video'
+export type SourceKind = 'image-sequence' | 'gif' | 'video'
 
 export interface ValidatedSource {
   kind: SourceKind
@@ -60,7 +60,10 @@ export function validateSourceFiles(
   const file = files[0]!
   const extension = extensions[0] ?? ''
   if (extension === 'gif' || file.type.toLowerCase() === 'image/gif') {
-    throw new Error('当前浏览器版暂不支持 GIF 解帧，请转换为 MP4、WebM 或图片序列')
+    if (extension !== 'gif' || (file.type !== '' && file.type.toLowerCase() !== 'image/gif')) {
+      throw new Error('GIF 文件扩展名与内容类型不一致')
+    }
+    return { kind: 'gif', files, totalBytes, videoMime: null }
   }
   const expectedMime = VIDEO_MIME_BY_EXTENSION[extension]
   if (!expectedMime || (file.type !== '' && file.type.toLowerCase() !== expectedMime)) {

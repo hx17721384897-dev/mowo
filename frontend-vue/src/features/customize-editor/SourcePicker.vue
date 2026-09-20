@@ -7,6 +7,8 @@ const props = defineProps<{
   subtitle: string
   icon: string
   accessibleLabel: string
+  videoLabel: string
+  imageLabel: string
 }>()
 const emit = defineEmits<{
   select: [files: File[]]
@@ -53,7 +55,7 @@ function drop(event: DragEvent): void {
       ref="input"
       class="drop-input"
       type="file"
-      accept=".mp4,.webm,.mov,.png,.jpg,.jpeg,.webp"
+      accept=".mp4,.webm,.mov,.gif,.png,.jpg,.jpeg,.webp"
       multiple
       :aria-label="accessibleLabel"
       @change="select(($event.target as HTMLInputElement).files)"
@@ -62,8 +64,9 @@ function drop(event: DragEvent): void {
     <p class="drop-title">{{ title }}</p>
     <p class="drop-sub">{{ subtitle }}</p>
     <div class="drop-formats" aria-hidden="true">
-      <span class="fmt-tag fmt-video">MP4 / WebM / MOV</span>
-      <span class="fmt-tag fmt-img">JPG / PNG / WEBP</span>
+      <span class="fmt-tag fmt-video">{{ videoLabel }}</span>
+      <span class="fmt-tag fmt-gif">GIF</span>
+      <span class="fmt-tag fmt-img">{{ imageLabel }}</span>
     </div>
   </div>
   <div v-else class="file-preview">

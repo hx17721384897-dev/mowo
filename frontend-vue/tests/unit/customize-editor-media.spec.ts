@@ -18,7 +18,7 @@ function file(name: string, type: string, bytes = 1): File {
 }
 
 describe('customization media boundary', () => {
-  it('accepts a strict image sequence and a supported single video', () => {
+  it('accepts a strict image sequence, GIF and a supported single video', () => {
     const images = validateSourceFiles([
       file('001.jpg', 'image/jpeg'),
       file('002.webp', 'image/webp')
@@ -26,12 +26,16 @@ describe('customization media boundary', () => {
     expect(images.kind).toBe('image-sequence')
     expect(images.videoMime).toBeNull()
 
+    const gif = validateSourceFiles([file('source.gif', 'image/gif')])
+    expect(gif.kind).toBe('gif')
+    expect(gif.videoMime).toBeNull()
+
     const video = validateSourceFiles([file('source.mp4', 'video/mp4')], () => true)
     expect(video.kind).toBe('video')
     expect(video.videoMime).toBe('video/mp4')
   })
 
-  it('rejects mixed inputs, disguised files, GIF and unsupported codecs', () => {
+  it('rejects mixed inputs, disguised files and unsupported codecs', () => {
     expect(() =>
       validateSourceFiles(
         [file('001.png', 'image/png'), file('source.mp4', 'video/mp4')],
@@ -39,7 +43,9 @@ describe('customization media boundary', () => {
       )
     ).toThrow('不能与视频混合')
     expect(() => validateSourceFiles([file('fake.png', 'text/html')])).toThrow('视频素材只允许')
-    expect(() => validateSourceFiles([file('source.gif', 'image/gif')])).toThrow('暂不支持 GIF')
+    expect(() => validateSourceFiles([file('source.gif', 'text/html')])).toThrow(
+      '扩展名与内容类型不一致'
+    )
     expect(() => validateSourceFiles([file('source.mov', 'video/quicktime')], () => false)).toThrow(
       '无法解码 MOV'
     )

@@ -6,6 +6,11 @@ import { FILE_PURPOSE, findOwnedReadyFiles, linkFiles } from '../lib/private-fil
 
 const DRAFT_LIMIT = 3
 
+function draftKey(value) {
+  const key = typeof value === 'string' ? value.trim() : ''
+  return key && key.length <= 80 ? key : null
+}
+
 export default async function customProductRoutes(fastify) {
   const { prisma } = fastify
 
@@ -14,6 +19,20 @@ export default async function customProductRoutes(fastify) {
     preHandler: [fastify.authenticate]
   }, async (req, reply) => {
     const userId = req.user.userId
+    const rawClientDraftKey = req.body?.clientDraftKey
+    const clientDraftKey = rawClientDraftKey == null ? null : draftKey(rawClientDraftKey)
+    if (rawClientDraftKey != null && !clientDraftKey) {
+      return reply.code(400).send({ success: false, message: '草稿标识无效，请刷新后重试' })
+    }
+    const existing = clientDraftKey
+      ? await prisma.customProduct.findUnique({ where: { clientDraftKey } })
+      : null
+    if (existing) {
+      if (existing.userId !== userId) {
+        return reply.code(409).send({ success: false, message: '草稿标识冲突，请刷新后重试' })
+      }
+      return reply.send({ success: true, data: existing, reused: true })
+    }
     const {
       animationFrames, // JSON 字符串，帧图 OSS URL 列表
       draftData,       // 工程文件 JSON
@@ -56,22 +75,32 @@ export default async function customProductRoutes(fastify) {
 
     const draftExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
 
-    const cp = await prisma.$transaction(async tx => {
-      const created = await tx.customProduct.create({ data: {
-        userId,
-        animationFrames: JSON.stringify(frameKeys),
-        draftData:        draftData || null,
-        draftExpiresAt,
-        previewUrl:       previewUrl || null,
-        staticPreviewUrl: staticPreviewUrl || null,
-        configJson:       configJson || null,
-        hardwareSkuId:    hardwareSkuId || null,
-        frameCount:       frameCount ? parseInt(frameCount) : null,
-        status:           'draft'
-      } })
-      await linkFiles(tx, ownedFrames, 'CUSTOM_PRODUCT', created.id)
-      return created
-    })
+    let cp
+    try {
+      cp = await prisma.$transaction(async tx => {
+        const created = await tx.customProduct.create({ data: {
+          userId, clientDraftKey,
+          animationFrames: JSON.stringify(frameKeys),
+          draftData:        draftData || null,
+          draftExpiresAt,
+          previewUrl:       previewUrl || null,
+          staticPreviewUrl: staticPreviewUrl || null,
+          configJson:       configJson || null,
+          hardwareSkuId:    hardwareSkuId || null,
+          frameCount:       frameCount ? parseInt(frameCount) : null,
+          status:           'draft'
+        } })
+        await linkFiles(tx, ownedFrames, 'CUSTOM_PRODUCT', created.id)
+        return created
+      })
+    } catch (error) {
+      if (error.code !== 'P2002' || !clientDraftKey) throw error
+      cp = await prisma.customProduct.findUnique({ where: { clientDraftKey } })
+      if (!cp || cp.userId !== userId) {
+        return reply.code(409).send({ success: false, message: '草稿标识冲突，请刷新后重试' })
+      }
+      return reply.send({ success: true, data: cp, reused: true })
+    }
 
     return reply.send({ success: true, data: cp })
   })

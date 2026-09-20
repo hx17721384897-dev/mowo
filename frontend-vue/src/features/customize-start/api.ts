@@ -57,7 +57,12 @@ function mapModel(value: unknown): Omit<MachineModel, 'skus'> {
     description: optionalString(row.description),
     modelType: optionalString(row.modelType) || 'single',
     previewUrl: mediaUrl(row.previewUrl ?? row.previewImage),
-    videoUrl: mediaUrl(row.videoUrl)
+    videoUrl: mediaUrl(row.videoUrl),
+    ratios: Array.isArray(row.ratios)
+      ? row.ratios.filter(
+          (ratio): ratio is string => typeof ratio === 'string' && /^\d+:\d+$/.test(ratio)
+        )
+      : []
   }
 }
 

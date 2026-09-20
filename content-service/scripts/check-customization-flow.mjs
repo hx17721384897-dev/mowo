@@ -81,12 +81,25 @@ async function createSelfDraft(user, suffix) {
   ])
   const productResponse = await request('/api/custom-products', user.token, {
     method: 'POST', body: JSON.stringify({
+      clientDraftKey: `product-${runId}-${suffix}`,
       animationFrames: JSON.stringify([frameKey]), frameCount: 1,
       configJson: JSON.stringify({ modelId, frameCount: 1 })
     })
   })
   assertStatus(`self product ${suffix}`, productResponse.status, 200)
   const product = (await productResponse.json()).data
+  const productReplay = await request('/api/custom-products', user.token, {
+    method: 'POST', body: JSON.stringify({
+      clientDraftKey: `product-${runId}-${suffix}`,
+      animationFrames: JSON.stringify([frameKey]), frameCount: 1,
+      configJson: JSON.stringify({ modelId, frameCount: 1 })
+    })
+  })
+  assertStatus(`self product replay ${suffix}`, productReplay.status, 200)
+  const replayBody = await productReplay.json()
+  if (!replayBody.reused || replayBody.data?.id !== product.id) {
+    throw new Error(`self product replay ${suffix}: idempotency contract failed`)
+  }
   const response = await request('/api/customization-requests/draft', user.token, {
     method: 'POST', body: JSON.stringify({
       clientDraftKey: `test-${runId}-${suffix}`,
