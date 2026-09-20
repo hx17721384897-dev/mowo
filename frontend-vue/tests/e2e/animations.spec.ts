@@ -140,7 +140,7 @@ test('my animations preserves assets, drafts and safe mutations', async ({ page 
   await expect(assetCard.getByText('V2')).toBeVisible()
   await expect(assetCard.getByRole('link', { name: '修改动画' })).toHaveAttribute(
     'href',
-    '/mowo/frontend/pages/customize-editor.html?assetId=asset-1'
+    '/app/customize/editor?assetId=asset-1'
   )
   await expect(assetCard.getByRole('link', { name: /选择新款式/ })).toHaveAttribute(
     'href',
@@ -153,7 +153,7 @@ test('my animations preserves assets, drafts and safe mutations', async ({ page 
   await expect(draftCard.getByText('标准款 5x5cm 8帧 椴木板 原木色')).toHaveCount(0)
   await expect(draftCard.getByRole('link', { name: /重新编辑/ })).toHaveAttribute(
     'href',
-    '/mowo/frontend/pages/customize-editor.html?editId=draft-1'
+    '/app/customize/editor?editId=draft-1'
   )
 
   await draftCard.getByRole('button', { name: /重命名/ }).click()

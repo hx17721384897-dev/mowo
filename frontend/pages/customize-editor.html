@@ -8,7 +8,7 @@
 <script>
 ;(function handoffNewCustomizationToVue() {
   var params = new URLSearchParams(location.search)
-  var internalModeKeys = ['assetId', 'editId', 'productId', 'reviewRequestId', 'adminRequestId', 'frameDraftId']
+  var internalModeKeys = ['adminRequestId', 'frameDraftId']
   if (internalModeKeys.some(function (key) { return params.has(key) })) return
   var modelId = params.get('modelId')
   var destination = modelId
@@ -983,8 +983,6 @@ ebarTargets.innerHTML = allowedFrames.map(f =>
 ══════════════ */
 const S = { UPLOAD:'upload', TRIM:'trim', LOAD:'load', EDIT:'edit' };
 let curState = S.UPLOAD;
-let _assetEditContext = null;
-const _assetFrameKeyByUrl = new Map();
 
 function goState(s) {
   curState = s;
@@ -995,83 +993,6 @@ function goState(s) {
   document.body.style.overflow = s === S.EDIT ? 'hidden' : '';
 }
 goState(S.UPLOAD);
-
-/* ══════════════════════════════════════════
-   「重新编辑」草稿加载
-   URL 参数 editId 或 productId 均支持
-══════════════════════════════════════════ */
-;(async function loadDraftIfNeeded() {
-  const params  = new URLSearchParams(location.search);
-  const assetId = params.get('assetId');
-  const draftId = params.get('editId') || params.get('productId');
-  if (!assetId && !draftId) return;        // 普通新建流程，不处理
-
-  const token = localStorage.getItem('mowo_token');
-  if (!token) return;
-
-  goState(S.LOAD);  // 显示加载动画
-  const CAPI = window.MOWO_API_BASE || '';
-  try {
-    if (assetId) {
-      const assetResponse = await fetch(`${CAPI}/api/animation-assets/${encodeURIComponent(assetId)}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const assetResult = await assetResponse.json();
-      if (!assetResponse.ok || !assetResult.success) throw new Error(assetResult.message || '动画资产不存在');
-      const asset = assetResult.data;
-      if (asset.assetType !== 'PRIVATE') throw new Error('联名动画不能在这里直接修改');
-      const current = (asset.versions || []).find(version => version.versionNo === asset.currentVersionNo);
-      if (!current?.frames?.length || current.frames.some(frame => !frame.url || !frame.key)) {
-        throw new Error('当前动画版本的帧图不完整');
-      }
-      _assetEditContext = { asset, version: current };
-      current.frames.forEach(frame => _assetFrameKeyByUrl.set(frame.url, frame.key));
-      document.title = `修改 ${asset.title} — 哞屋 MOWO`;
-      document.getElementById('targetTxt').textContent = `当前 V${current.versionNo}`;
-      document.getElementById('ebarTargets').innerHTML = `<span class="ebar-tgt on">保存后 V${current.versionNo + 1}</span>`;
-      const next = document.getElementById('btnNextStep');
-      next.textContent = `保存为 V${current.versionNo + 1}`;
-      next.dataset.buyerLabel = `保存为 V${current.versionNo + 1}`;
-      const back = document.querySelector('.ebar-back-btn');
-      back.textContent = '← 返回我的动画';
-      back.setAttribute('onclick', "location.href='/app/account/animations'");
-      const banner = document.createElement('div');
-      banner.style.cssText = 'position:fixed;top:calc(var(--nav-h, 64px) + 8px);left:50%;transform:translateX(-50%);z-index:80;background:#FFF8D6;border:1px solid #E8D66D;border-radius:8px;padding:8px 14px;font-weight:800;font-size:12px;max-width:calc(100vw - 32px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
-      banner.textContent = `正在修改 ${asset.title}（${asset.assetNo} · V${current.versionNo}），旧版本会继续保留`;
-      document.body.appendChild(banner);
-      initEditor(current.frames.map(frame => frame.url));
-      return;
-    }
-    const res  = await fetch(`${CAPI}/api/custom-products/${encodeURIComponent(draftId)}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    const json = await res.json();
-    if (!json.success) throw new Error(json.message || '草稿不存在');
-
-    let savedFrames = [];
-    try { savedFrames = JSON.parse(json.data.animationFrames || '[]'); } catch(e) {}
-
-    if (!Array.isArray(savedFrames) || savedFrames.length === 0) {
-      // 草稿里没有帧（可能已清除），回到上传界面
-      goState(S.UPLOAD);
-      return;
-    }
-
-    // 把已保存的帧载入编辑器，全部勾选——用户可以重新排序/增删
-    // 短期方案：这是用户上次筛选的结果帧，不是原始 100 帧
-    // 完整原始帧恢复见 docs/ANIMATION_DRAFT_PLAN.md（OSS 方案）
-    initEditor(savedFrames);
-  } catch(e) {
-    console.error('草稿加载失败：', e.message);
-    if (assetId) {
-      alert('动画加载失败：' + e.message);
-      location.replace('/app/account/animations');
-      return;
-    }
-    // 加载失败降级回上传界面，不中断用户操作
-    goState(S.UPLOAD);
-  }
-})();
 
 /* ══════════════
    比例检测
@@ -1375,7 +1296,7 @@ async function submitHumanRequest() {
 async function checkQuotaBeforeUpload() {
   /* 重新编辑已有动画时不受配额限制 */
   const params = new URLSearchParams(location.search);
-  if (params.get('assetId') || params.get('editId') || params.get('productId') || params.get('adminRequestId') || params.get('reviewRequestId')) return true;
+  if (params.get('adminRequestId') || params.get('frameDraftId')) return true;
 
   const token = localStorage.getItem('mowo_token');
   if (!token) return true; /* 未登录，让后续步骤兜底 */
@@ -1398,7 +1319,7 @@ async function checkQuotaBeforeUpload() {
 function handleFiles(files) {
   if (!files.length) return;
   const modeParams = new URLSearchParams(location.search);
-  if (!modeParams.get('adminRequestId') && !modeParams.get('reviewRequestId')) {
+  if (!modeParams.get('adminRequestId') && !modeParams.get('frameDraftId')) {
     sessionStorage.removeItem('mowo_customize_request_draft_key');
     sessionStorage.removeItem('mowo_customize_request_draft_owner');
     localStorage.removeItem('mowo_customize_request_draft_id');
@@ -1962,7 +1883,7 @@ function updatePreview() {
 /* ── 状态栏 ── */
 function updateStatus() {
   const cnt = checkedIdx().length;
-  const isAssetEdit = Boolean(_assetEditContext || new URLSearchParams(location.search).get('assetId') || new URLSearchParams(location.search).get('frameDraftId'));
+  const isAssetEdit = Boolean(new URLSearchParams(location.search).get('frameDraftId'));
   document.getElementById('selCount').textContent  = cnt;
   document.getElementById('totCount').textContent  = frames.length;
   document.getElementById('ebarSel').textContent   = cnt + ' 帧';
@@ -2353,7 +2274,7 @@ document.getElementById('btnNextStep').addEventListener('click', async ()=>{
   const cl = checkedIdx();
   const cnt = cl.length;
   const pageParams = new URLSearchParams(location.search);
-  const isAssetEdit = Boolean(pageParams.get('assetId') || pageParams.get('frameDraftId'));
+  const isAssetEdit = Boolean(pageParams.get('frameDraftId'));
   /* 整除验证 */
   const validTargets = isAssetEdit
     ? (cnt > 0 ? [cnt] : [])
@@ -2362,52 +2283,6 @@ document.getElementById('btnNextStep').addEventListener('click', async ()=>{
 
   if (window.MowoCustomizationReview?.active) {
     await window.MowoCustomizationReview.handleNext({ selectedIndexes:cl, selectedUrls:cl.map(i => frames[i]), frameCount:cnt, validTargets });
-    return;
-  }
-
-  /* ── 正式动画资产修改：只追加新版本，不进入订单或覆盖旧版本 ── */
-  if (isAssetEdit) {
-    if (!_assetEditContext) { alert('动画版本尚未加载完成，请稍后重试'); return; }
-    const token = localStorage.getItem('mowo_token');
-    if (!token) { if (typeof openAuthModal === 'function') openAuthModal(); return; }
-    const button = document.getElementById('btnNextStep');
-    const asset = _assetEditContext.asset;
-    const baseVersion = _assetEditContext.version;
-    const keyName = `mowo_asset_version_key_${asset.id}_${baseVersion.id}`;
-    let clientVersionKey = sessionStorage.getItem(keyName);
-    if (!clientVersionKey) {
-      clientVersionKey = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      sessionStorage.setItem(keyName, clientVersionKey);
-    }
-    try {
-      button.disabled = true;
-      const selectedSources = cl.map(index => _assetFrameKeyByUrl.get(frames[index]) || frames[index]);
-      const uploadedKeys = await window.MowoPrivateUpload.uploadSources({
-        sources: selectedSources,
-        token,
-        purpose: 'CUSTOMIZATION_FRAME',
-        onProgress: (done, total) => { button.textContent = `保存帧图 ${done}/${total}`; }
-      });
-      button.textContent = `正在生成 V${baseVersion.versionNo + 1}`;
-      const response = await fetch(`${CAPI_BASE}/api/animation-assets/${encodeURIComponent(asset.id)}/versions`, {
-        method: 'POST',
-        headers: { 'Content-Type':'application/json', Authorization:`Bearer ${token}` },
-        body: JSON.stringify({
-          baseVersionId: baseVersion.id,
-          clientVersionKey,
-          frameKeys: uploadedKeys,
-          editorData: { selectedIndexes:cl, selectedFrameCount:cnt, trimStart, trimEnd }
-        })
-      });
-      const result = await response.json();
-      if (!response.ok || !result.success) throw new Error(result.message || '新版本保存失败');
-      sessionStorage.removeItem(keyName);
-      location.href = `/app/account/animations?updated=${encodeURIComponent(asset.id)}&version=${result.data.version.versionNo}`;
-    } catch (error) {
-      alert('保存失败：' + (error.message || '请重试'));
-      button.disabled = false;
-      button.textContent = `保存为 V${baseVersion.versionNo + 1}`;
-    }
     return;
   }
 

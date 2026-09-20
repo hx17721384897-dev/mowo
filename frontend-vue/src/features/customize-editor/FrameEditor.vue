@@ -22,6 +22,10 @@ const props = defineProps<{
   targets: number[]
   busy: boolean
   progress: string
+  readOnly?: boolean
+  allowAnyFrameCount?: boolean
+  nextLabel?: string
+  backLabel?: string
 }>()
 const emit = defineEmits<{ next: [sources: string[], indexes: number[]]; reupload: [] }>()
 const session = useSessionStore()
@@ -50,7 +54,11 @@ const cursorPosition = computed(() =>
     selected.value.findIndex((frame) => frame.id === cursor.value?.id)
   )
 )
-const validTargets = computed(() => matchingFrameTargets(selected.value.length, props.targets))
+const validTargets = computed(() =>
+  props.allowAnyFrameCount && selected.value.length
+    ? [selected.value.length]
+    : matchingFrameTargets(selected.value.length, props.targets)
+)
 const visibleFrames = computed(() =>
   filterSelected.value ? state.value.frames.filter((frame) => frame.selected) : state.value.frames
 )
@@ -81,6 +89,7 @@ function togglePlay(): void {
   }
 }
 function toggle(id: string): void {
+  if (props.readOnly) return
   stop()
   state.value = toggleFrame(state.value, id)
 }
@@ -137,7 +146,7 @@ function frameClick(frameId: string): void {
   else state.value = setCursor(state.value, frameId)
 }
 function startLongPress(frameId: string): void {
-  if (window.innerWidth >= 768 || selectMode.value) return
+  if (props.readOnly || window.innerWidth >= 768 || selectMode.value) return
   longPressTimer = window.setTimeout(() => {
     suppressNextClick = true
     selectMode.value = true
@@ -161,10 +170,14 @@ function keyboard(event: KeyboardEvent): void {
   } else if (event.key === 'ArrowRight') {
     event.preventDefault()
     chooseAt(cursorPosition.value + 1)
-  } else if (event.key === 'Delete' || event.key === 'Backspace') {
+  } else if (!props.readOnly && (event.key === 'Delete' || event.key === 'Backspace')) {
     event.preventDefault()
     state.value = deselectCurrent(state.value)
-  } else if (event.key.toLowerCase() === 'z' && (event.ctrlKey || event.metaKey)) {
+  } else if (
+    !props.readOnly &&
+    event.key.toLowerCase() === 'z' &&
+    (event.ctrlKey || event.metaKey)
+  ) {
     event.preventDefault()
     state.value = undoEditor(state.value)
   }
@@ -207,7 +220,7 @@ onBeforeUnmount(() => {
         </div>
       </div>
       <div class="control-panel">
-        <div class="ctrl-section">
+        <div v-if="!readOnly" class="ctrl-section">
           <span class="ctrl-label">播放控制</span>
           <div class="speed-row">
             <span class="speed-label">速度</span
@@ -247,7 +260,7 @@ onBeforeUnmount(() => {
             </button>
           </div>
         </div>
-        <div class="ctrl-section">
+        <div v-if="!readOnly" class="ctrl-section">
           <span class="ctrl-label">编辑当前帧</span>
           <div class="edit-row">
             <button class="edit-btn btn-clone" type="button" @click="state = cloneCurrent(state)">
@@ -264,7 +277,7 @@ onBeforeUnmount(() => {
             </button>
           </div>
         </div>
-        <div class="ctrl-section">
+        <div v-if="!readOnly" class="ctrl-section">
           <div class="tool-card">
             <div class="tool-head">
               <span class="tool-name">🔍 智能去重</span><span class="tool-badge">感知哈希</span>
@@ -328,7 +341,7 @@ onBeforeUnmount(() => {
               >已选 <strong>{{ selected.length }}</strong> 帧
               <span>/ 共 {{ state.frames.length }} 帧</span></span
             >
-            <div class="thumb-bar-desktop">
+            <div v-if="!readOnly" class="thumb-bar-desktop">
               <button class="mini-btn" type="button" @click="state = setAllSelected(state, true)">
                 全选</button
               ><button class="mini-btn" type="button" @click="state = setAllSelected(state, false)">
@@ -342,7 +355,7 @@ onBeforeUnmount(() => {
                 仅看已选
               </button>
             </div>
-            <div class="thumb-bar-mobile" :class="{ hidden: selectMode }">
+            <div v-if="!readOnly" class="thumb-bar-mobile" :class="{ hidden: selectMode }">
               <button class="btn-select-mode" type="button" @click="selectMode = true">
                 ☑ 勾选
               </button>
@@ -355,7 +368,7 @@ onBeforeUnmount(() => {
                 仅看已选
               </button>
             </div>
-            <div class="thumb-bar-mobile" :class="{ hidden: !selectMode }">
+            <div v-if="!readOnly" class="thumb-bar-mobile" :class="{ hidden: !selectMode }">
               <button class="mini-btn" type="button" @click="state = setAllSelected(state, true)">
                 全选
               </button>
@@ -389,6 +402,7 @@ onBeforeUnmount(() => {
                 class="thumb-num"
                 >{{ originalPosition(frame.id) }}</span
               ><button
+                v-if="!readOnly"
                 class="thumb-check"
                 type="button"
                 :aria-label="`${frame.selected ? '取消' : '选择'}第 ${originalPosition(frame.id)} 帧`"
@@ -421,14 +435,15 @@ onBeforeUnmount(() => {
           </div>
         </div>
         <div class="ebar-r">
-          <button class="ebar-back-btn" type="button" @click="emit('reupload')">← 重新上传</button
+          <button class="ebar-back-btn" type="button" @click="emit('reupload')">
+            {{ backLabel || '← 重新上传' }}</button
           ><button
             class="btn btn-yellow btn-sm"
             type="button"
             :disabled="!validTargets.length || busy"
             @click="next"
           >
-            {{ progress || '下一步 →' }}
+            {{ progress || nextLabel || '下一步 →' }}
           </button>
         </div>
       </div>

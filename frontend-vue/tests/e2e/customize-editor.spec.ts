@@ -48,6 +48,23 @@ async function mockEditorModel(page: Page): Promise<void> {
   )
 }
 
+async function mockAuthenticatedUser(page: Page): Promise<void> {
+  await page.addInitScript(() => localStorage.setItem('mowo_token', 'editor-token'))
+  await page.route('**/api/v1/account/me', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        data: { id: 'user-1', role: 0, status: 'ACTIVE', profile: { nickname: '测试用户' } }
+      })
+    })
+  )
+  await page.route('**/api/files/editor-frame-*', (route) =>
+    route.fulfill({ status: 200, contentType: 'image/png', body: ONE_PIXEL_PNG })
+  )
+}
+
 test.beforeEach(async ({ page }) => {
   await mockEditorModel(page)
 })
@@ -322,8 +339,160 @@ test('draft idempotency key survives reload for the same source and resets for n
     .toBeNull()
 })
 
-test('unsupported shared-editor modes fail closed in the Vue route', async ({ page }) => {
-  await page.goto('/app/customize/editor?assetId=asset-1&modelId=model-1')
+test('private animation edit appends an immutable version in the Vue editor', async ({
+  page
+}, testInfo) => {
+  await mockAuthenticatedUser(page)
+  await page.route('**/api/animation-assets/asset-1', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        data: {
+          id: 'asset-1',
+          assetNo: 'AN-001',
+          title: '测试动画',
+          assetType: 'PRIVATE',
+          currentVersionNo: 1,
+          versions: [
+            {
+              id: 'version-1',
+              versionNo: 1,
+              frames: [
+                {
+                  key: 'private/frame-1.png',
+                  url: 'http://127.0.0.1:4173/api/files/editor-frame-1'
+                },
+                {
+                  key: 'private/frame-2.png',
+                  url: 'http://127.0.0.1:4173/api/files/editor-frame-2'
+                }
+              ]
+            }
+          ]
+        }
+      })
+    })
+  )
+  let submitted: Record<string, unknown> | null = null
+  await page.route('**/api/animation-assets/asset-1/versions', async (route) => {
+    submitted = route.request().postDataJSON() as Record<string, unknown>
+    await route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, data: { version: { versionNo: 2 } } })
+    })
+  })
+
+  await page.goto('/app/customize/editor?assetId=asset-1')
+  await expect(page.getByText(/正在修改 测试动画/)).toBeVisible()
+  if (testInfo.project.name === 'mobile-chromium') {
+    await page.getByRole('button', { name: /勾选/ }).click()
+  }
+  await page.getByRole('button', { name: '取消第 2 帧' }).click()
+  await page.getByRole('button', { name: '保存为 V2' }).click()
+  await expect(page).toHaveURL(/\/app\/account\/animations\?.*version=2/)
+  expect(submitted?.frameKeys).toEqual(['private/frame-1.png'])
+})
+
+test('customer review is read-only and accepts the staff frame selection', async ({ page }) => {
+  await mockAuthenticatedUser(page)
+  await page.route('**/api/customization-requests/mine/request-1/frame-selection', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        data: {
+          request: {
+            id: 'request-1',
+            requestNo: 'CR-001',
+            status: 'OPTIONS_READY',
+            customProductId: 'draft-1'
+          },
+          selection: {
+            version: 2,
+            staffMessage: '请确认',
+            frames: [
+              { key: 'private/frame-1.png', url: 'http://127.0.0.1:4173/api/files/editor-frame-1' }
+            ]
+          },
+          model: { id: 'model-1', name: '标准款', modelType: 'single', frameOptions: '[1,12]' }
+        }
+      })
+    })
+  )
+  await page.route('**/api/customization-requests/mine/request-1/frame-selection/accept', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, data: { id: 'request-1' } })
+    })
+  )
+  await page.route('**/mowo/frontend/pages/customize-confirm.html*', (route) =>
+    route.fulfill({ status: 200, contentType: 'text/html', body: '<title>确认</title>' })
+  )
+
+  await page.goto('/app/customize/editor?reviewRequestId=request-1')
+  await expect(page.getByText(/确认筛帧 · CR-001 · 第 2 版/)).toBeVisible()
+  await expect(page.getByRole('button', { name: /克隆此帧/ })).toHaveCount(0)
+  await expect(page.locator('.thumb-check')).toHaveCount(0)
+  await page.getByRole('button', { name: '满意，选择款式 →' }).click()
+  await expect(page).toHaveURL(/customize-confirm\.html\?.*humanRequestId=request-1/)
+})
+
+test('draft edit updates the original draft instead of creating a duplicate', async ({
+  page
+}, testInfo) => {
+  await mockAuthenticatedUser(page)
+  await page.route('**/api/custom-products/draft-1/editor', async (route) => {
+    if (route.request().method() === 'PATCH') {
+      const body = route.request().postDataJSON() as { frameKeys: string[] }
+      expect(body.frameKeys).toEqual(['private/frame-1.png'])
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          data: { id: 'draft-1', requestId: 'request-draft-1', frameCount: 1 }
+        })
+      })
+      return
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        data: {
+          id: 'draft-1',
+          status: 'draft',
+          frameCount: 2,
+          request: { id: 'request-draft-1', status: 'DRAFT', machineModelId: 'model-1' },
+          frames: [
+            { key: 'private/frame-1.png', url: 'http://127.0.0.1:4173/api/files/editor-frame-1' },
+            { key: 'private/frame-2.png', url: 'http://127.0.0.1:4173/api/files/editor-frame-2' }
+          ]
+        }
+      })
+    })
+  })
+  await page.route('**/mowo/frontend/pages/customize-confirm.html*', (route) =>
+    route.fulfill({ status: 200, contentType: 'text/html', body: '<title>确认</title>' })
+  )
+
+  await page.goto('/app/customize/editor?editId=draft-1')
+  await expect(page.getByText(/更新原草稿/)).toBeVisible()
+  if (testInfo.project.name === 'mobile-chromium')
+    await page.getByRole('button', { name: /勾选/ }).click()
+  await page.getByRole('button', { name: '取消第 2 帧' }).click()
+  await page.getByRole('button', { name: '下一步 →' }).click()
+  await expect(page).toHaveURL(/customize-confirm\.html\?.*requestId=request-draft-1/)
+})
+
+test('unsupported staff shared-editor modes fail closed in the Vue route', async ({ page }) => {
+  await page.goto('/app/customize/editor?adminRequestId=request-1&modelId=model-1')
   await expect(page.getByText('该编辑模式尚未迁移')).toBeVisible()
   await expect(page.getByRole('button', { name: '提交人工处理' })).toHaveCount(0)
 })

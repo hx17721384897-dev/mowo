@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import { legacyPublicUrl } from '@/config/public-links'
 import { deleteAnimation, getAnimationLibrary, renameAnimation } from '@/features/animation/api'
 import type {
   AnimationAssetItem,
@@ -83,7 +82,7 @@ function draftExpiryLabel(item: AnimationDraftItem): string {
 
 function editorUrl(item: AnimationItem): string {
   const parameter = item.kind === 'asset' ? 'assetId' : 'editId'
-  return `${legacyPublicUrl('customize-editor')}?${parameter}=${encodeURIComponent(item.id)}`
+  return `/app/customize/editor?${parameter}=${encodeURIComponent(item.id)}`
 }
 
 function reuseUrl(item: AnimationAssetItem): string {

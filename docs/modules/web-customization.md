@@ -110,12 +110,12 @@
 |---|---|---|
 | Web | Vue `/app/customize` | 选择机型；旧 `customize-start.html` 已物理删除 |
 | Web | Vue `/app/customize/editor` | 用户新建定制双入口、浏览器筛帧、原素材提交 |
-| Web | `frontend/pages/customize-editor.html` | 尚未迁移的草稿、动画、只读确认和后台内部模式；普通新建会转交 Vue |
+| Web | `frontend/pages/customize-editor.html` | 仅承载尚未迁移的后台筛帧和帧图制作模式；所有用户参数转交 Vue |
 | Web | `frontend/pages/customize-confirm.html` | 选择标准 SKU、提交订单并进入结算 |
 | Web | Vue `/app/account/customizations` | 用户定制列表、状态筛选和时间线 |
 | Web | `frontend/pages/admin-customization-requests.html` | 员工接收列表、详情和素材查看 |
 | 公共脚本 | `frontend/js/private-upload.js` | 私有文件上传；支持原 File/Blob 与帧图 |
-| 公共脚本 | `frontend/js/customization-review-editor.js` | 后台筛帧模式、任务锁续期、用户只读确认和流转 |
+| 公共脚本 | `frontend/js/customization-review-editor.js` | 后台筛帧、任务锁续期和后台帧图制作；用户确认分支已删除 |
 | 公共脚本 | `frontend/js/admin-customization-workbench.js` | 后台领取、岗位按钮、处理人和快速下一条 |
 | 公共脚本 | `frontend/js/auth.js` | 账号下拉菜单增加“我的定制” |
 | 后端 | `src/routes/customization-requests.js` | 用户草稿、提交、列表和详情 |

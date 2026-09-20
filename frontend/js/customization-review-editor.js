@@ -3,9 +3,8 @@
 
   const params = new URLSearchParams(location.search)
   const adminRequestId = params.get('adminRequestId')
-  const reviewRequestId = params.get('reviewRequestId')
   const frameDraftId = params.get('frameDraftId')
-  if (!adminRequestId && !reviewRequestId && !frameDraftId) return
+  if (!adminRequestId && !frameDraftId) return
 
   const API = window.MOWO_API_BASE || ''
   const token = localStorage.getItem('mowo_token') || ''
@@ -49,7 +48,7 @@
   function showFatal(message) {
     goState(S.UPLOAD)
     const upload = document.getElementById('stateUpload')
-    const returnPage = frameDraftId ? 'admin-frame-making.html' : adminRequestId ? 'admin-customization-requests.html' : '/app/account/customizations'
+    const returnPage = frameDraftId ? 'admin-frame-making.html' : 'admin-customization-requests.html'
     upload.innerHTML = `<div style="max-width:680px;margin:70px auto;padding:32px;background:#fff;border:1px solid #ddd;text-align:center"><h2 style="font-size:22px;margin-bottom:12px">无法打开筛帧任务</h2><p style="color:#777;font-weight:700;line-height:1.7">${escapeHtml(message)}</p><a href="${returnPage}" style="display:inline-flex;margin-top:22px;padding:12px 22px;background:#111;color:#fff;text-decoration:none;font-weight:900">返回列表</a></div>`
   }
 
@@ -108,31 +107,6 @@
     document.getElementById('btnNextStep').insertAdjacentElement('afterend', next)
     const primary = document.getElementById('btnNextStep')
     new MutationObserver(() => { next.disabled = primary.disabled }).observe(primary, { attributes:true, attributeFilter:['disabled'] })
-  }
-
-  function addReviewActions() {
-    document.body.classList.add('customer-frame-review')
-    const style = document.createElement('style')
-    style.textContent = `
-      .customer-frame-review .control-panel .ctrl-section:not(:first-child){display:none}
-      .customer-frame-review .thumb-bar-desktop,.customer-frame-review .thumb-bar-mobile,.customer-frame-review #btnSort{display:none!important}
-      .customer-frame-review #thumbGrid{pointer-events:none}
-      .customer-frame-review .ebar-back-btn{display:none}
-    `
-    document.head.appendChild(style)
-    document.getElementById('btnNextStep').textContent = '满意，选择款式 →'
-    const revise = document.createElement('button')
-    revise.className = 'ebar-back-btn'
-    revise.id = 'btnRequestRevision'
-    revise.textContent = '需要调整'
-    revise.addEventListener('click', requestRevision)
-    document.getElementById('btnNextStep').insertAdjacentElement('beforebegin', revise)
-    document.addEventListener('keydown', event => {
-      if (['Delete', 'Backspace'].includes(event.key) || ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z')) {
-        event.preventDefault()
-        event.stopImmediatePropagation()
-      }
-    }, true)
   }
 
   function applyFrameMakingChrome() {
@@ -226,29 +200,6 @@
     btnStart.click()
     saveTimer = setInterval(saveStaffDraft, 15000)
     heartbeatTimer = setInterval(sendHeartbeat, 4 * 60 * 1000)
-  }
-
-  async function loadUserReview() {
-    if (!token) throw new Error('请先登录后确认筛帧结果')
-    const data = await api(`/api/customization-requests/mine/${encodeURIComponent(reviewRequestId)}/frame-selection`)
-    task = data
-    applyModel(data.model)
-    const urls = data.selection.frames.map(frame => frame.url)
-    const keys = data.selection.frames.map(frame => frame.key)
-    localStorage.removeItem('mowo_customize_frames')
-    localStorage.setItem('mowo_customize_frame_keys', JSON.stringify(keys))
-    const ownerUserId = window.MowoPrivateUpload?.tokenUserId(token) || ''
-    if (ownerUserId) localStorage.setItem('mowo_customize_frame_owner', ownerUserId)
-    localStorage.setItem('mowo_customize_human_request_id', reviewRequestId)
-    if (data.request.customProductId) localStorage.setItem('mowo_customize_draft_id', data.request.customProductId)
-    const meta = JSON.parse(localStorage.getItem('mowo_customize_meta') || '{}')
-    meta.frameCount = urls.length
-    meta.validTargets = allowedFrames.filter(value => value >= urls.length && value % urls.length === 0)
-    localStorage.setItem('mowo_customize_meta', JSON.stringify(meta))
-    addModeBar('确认筛帧', `${data.request.requestNo} · 第 ${data.selection.version} 版${data.selection.staffMessage ? ` · ${data.selection.staffMessage}` : ''}`)
-    addReviewActions()
-    goState(S.LOAD)
-    initEditor(urls)
   }
 
   async function saveStaffDraft() {
@@ -400,20 +351,6 @@
     }
   }
 
-  async function requestRevision() {
-    const message = prompt('请告诉工作人员需要调整什么：')
-    if (!message?.trim()) return
-    try {
-      await api(`/api/customization-requests/mine/${encodeURIComponent(reviewRequestId)}/frame-selection/revision`, {
-        method: 'POST', body: JSON.stringify({ message: message.trim() })
-      })
-      alert('调整意见已提交，工作人员会重新筛选')
-      location.href = '/app/account/customizations'
-    } catch (error) {
-      alert(`提交失败：${error.message}`)
-    }
-  }
-
   function frameMetadataDialog() {
     let overlay = document.getElementById('frameMetadataDialog')
     if (overlay) return overlay
@@ -524,18 +461,6 @@
     }
     if (adminRequestId) {
       openSubmitDialog(false)
-      return
-    }
-    const button = document.getElementById('btnNextStep')
-    button.disabled = true
-    button.textContent = '正在确认'
-    try {
-      await api(`/api/customization-requests/mine/${encodeURIComponent(reviewRequestId)}/frame-selection/accept`, { method: 'POST' })
-      location.href = `customize-confirm.html?type=${encodeURIComponent(machineType)}&frames=${frames.length}&targets=${allowedFrames.filter(value => value >= frames.length && value % frames.length === 0).join(',')}&humanRequestId=${encodeURIComponent(reviewRequestId)}`
-    } catch (error) {
-      alert(`确认失败：${error.message}`)
-      button.disabled = false
-      button.textContent = '满意，选择款式 →'
     }
   }
 
@@ -562,5 +487,5 @@
 
   window.MowoCustomizationReview = { active: true, onEditorReady, handleNext, handleBack }
   goState(S.LOAD)
-  ;(frameDraftId ? loadFrameDraft() : adminRequestId ? loadAdminTask() : loadUserReview()).catch(error => showFatal(error.message))
+  ;(frameDraftId ? loadFrameDraft() : loadAdminTask()).catch(error => showFatal(error.message))
 })()

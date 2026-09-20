@@ -162,6 +162,10 @@ try {
   await page.waitForURL(/customize-confirm\.html/, { timeout:10000 })
   if (await page.locator('.price-card-btns input[type="checkbox"]').count()) throw new Error('私人定制仍显示联名或版权勾选项')
   if (await page.getByText(/当前金额为参考价格/).count()) throw new Error('私人定制仍显示人工确认价格提示')
+  await page.locator('#frameOptions .opt-btn').first().waitFor({ timeout:10000 }).catch(async () => {
+    const body = (await page.locator('body').innerText().catch(() => '')).slice(0, 500)
+    throw new Error(`人工筛帧确认页未显示规格；网址：${page.url()}；标题：${await page.title()}；内容：${body}`)
+  })
   await page.locator('#frameOptions .opt-btn').first().click()
   await page.locator('#sizeOptions .opt-btn').first().click()
   await page.locator('#materialOptions .opt-btn').first().click()
@@ -217,7 +221,7 @@ try {
   await page.goto(`${vueBase}/account/animations`, { waitUntil:'networkidle' })
   const editableAssetCard = page.locator('.anim-card').filter({ hasText:'浏览器复购测试动画' }).first()
   await editableAssetCard.getByRole('link', { name:/修改动画/ }).click()
-  await page.waitForURL(/customize-editor\.html\?assetId=/, { timeout:10000 })
+  await page.waitForURL(/\/app\/customize\/editor\?assetId=/, { timeout:10000 })
   await page.locator('#stateEditor.active').waitFor({ timeout:10000 })
   await page.getByRole('button', { name:/保存为 V2/ }).click()
   await page.waitForURL(/\/app\/account\/animations\?.*version=2/, { timeout:20000 })
@@ -255,7 +259,8 @@ try {
   await page.waitForURL(/customize-confirm\.html/, { timeout:20000 }).catch(() => {
     throw new Error(`Vue 自助筛帧未进入确认页；停留在 ${page.url()}；页面提示：${orderDialogs.join(' | ') || '无'}`)
   })
-  if (!new URL(page.url()).searchParams.get('requestId')) throw new Error('选款式网址没有携带云端草稿编号')
+  const selfRequestId = new URL(page.url()).searchParams.get('requestId')
+  if (!selfRequestId) throw new Error('选款式网址没有携带云端草稿编号')
   if (await page.evaluate(() => localStorage.getItem('mowo_customize_human_request_id'))) throw new Error('自己筛选没有清除旧人工筛选编号')
   const selfRequestCountAfter = await prisma.customizationRequest.count({
     where:{ userId:customer.id, mode:'SELF' }
@@ -268,6 +273,28 @@ try {
   console.log('PASS Vue formal editor reaches style selection when browser storage is full')
   console.log('PASS Vue formal editor creates exactly one request draft and one product draft')
   await page.evaluate(() => Object.keys(localStorage).filter(key => key.startsWith('mowo_test_quota_')).forEach(key => localStorage.removeItem(key)))
+
+  const editableRequest = await prisma.customizationRequest.findUnique({ where:{ id:selfRequestId } })
+  if (!editableRequest?.customProductId) throw new Error('自助筛帧没有形成可重编的商品草稿')
+  const foreignRead = await api(`/api/custom-products/${editableRequest.customProductId}/editor`, owner.token)
+  if (foreignRead.status !== 404) throw new Error('其他账号能够读取用户草稿编辑数据')
+  const foreignWrite = await api(`/api/custom-products/${editableRequest.customProductId}/editor`, owner.token, {
+    method:'PATCH', body:JSON.stringify({ frameKeys:editableRequest.selectedFrameKeys || [] })
+  })
+  if (foreignWrite.status !== 404) throw new Error('其他账号能够修改用户草稿编辑数据')
+  const requestRowsBeforeEdit = await prisma.customizationRequest.count({ where:{ userId:customer.id } })
+  const productRowsBeforeEdit = await prisma.customProduct.count({ where:{ userId:customer.id } })
+  await page.goto(`${vueBase}/customize/editor?editId=${encodeURIComponent(editableRequest.customProductId)}`, { waitUntil:'networkidle' })
+  await page.locator('#stateEditor.active').waitFor({ timeout:10000 })
+  await page.getByRole('button', { name:'下一步 →' }).click()
+  await page.waitForURL(/customize-confirm\.html/, { timeout:20000 }).catch(() => {
+    throw new Error(`草稿重编未进入确认页；停留在 ${page.url()}；页面提示：${orderDialogs.join(' | ') || '无'}`)
+  })
+  if (new URL(page.url()).searchParams.get('requestId') !== selfRequestId) throw new Error('草稿重编没有复用原定制请求')
+  if (await prisma.customizationRequest.count({ where:{ userId:customer.id } }) !== requestRowsBeforeEdit) throw new Error('草稿重编产生了重复请求')
+  if (await prisma.customProduct.count({ where:{ userId:customer.id } }) !== productRowsBeforeEdit) throw new Error('草稿重编产生了重复商品草稿')
+  console.log('PASS draft editor denies cross-account read and write')
+  console.log('PASS Vue draft edit updates the original request and product without duplicate rows')
 
   // 即使旧版页面或手工操作再次留下人工编号，本次网址中的自己筛选草稿仍必须优先。
   await page.evaluate(staleHumanRequestId => localStorage.setItem('mowo_customize_human_request_id', staleHumanRequestId), created.data.id)

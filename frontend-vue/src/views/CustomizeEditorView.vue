@@ -5,9 +5,21 @@ import SourcePicker from '@/features/customize-editor/SourcePicker.vue'
 import FrameEditor from '@/features/customize-editor/FrameEditor.vue'
 import VideoTrimPanel from '@/features/customize-editor/VideoTrimPanel.vue'
 import {
+  acceptReview,
   createSelfCustomizationDraft,
   createSelfScreenedProduct,
-  submitHumanCustomization
+  getAssetVersionEditor,
+  getDraftEditor,
+  getReviewEditor,
+  requestReviewRevision,
+  saveAssetVersion,
+  submitHumanCustomization,
+  updateDraftEditor
+} from '@/features/customize-editor/api'
+import type {
+  AssetVersionEditorData,
+  DraftEditorData,
+  ReviewEditorData
 } from '@/features/customize-editor/api'
 import { resolveEditorEntry } from '@/features/customize-editor/editor-core'
 import {
@@ -52,6 +64,12 @@ const sourceUrl = ref('')
 const videoDuration = ref(0)
 const processedFrames = ref<ProcessedFrame[]>([])
 const frameSources = ref<Array<{ source: string; selected: boolean }>>([])
+const existingFrameKeys = new Map<string, string>()
+const assetEditor = ref<AssetVersionEditorData | null>(null)
+const draftEditor = ref<DraftEditorData | null>(null)
+const reviewEditor = ref<ReviewEditorData | null>(null)
+const existingBusy = ref(false)
+const existingProgress = ref('')
 const processingProgress = ref(0)
 const selfBusy = ref(false)
 const selfProgress = ref('')
@@ -70,6 +88,27 @@ let uploadedSelfSourceKeys: string[] = []
 let savedSelfProductId = ''
 const entry = computed(() =>
   resolveEditorEntry(new URLSearchParams(route.query as Record<string, string>))
+)
+const editorTargets = computed(() => {
+  if (entry.value.mode === 'asset-version') return []
+  if (entry.value.mode === 'customer-review') return reviewEditor.value?.model.frameOptions ?? []
+  return model.value
+    ? [...new Set(model.value.skus.map((sku) => sku.frameCount))].sort((a, b) => a - b)
+    : []
+})
+const editorReady = computed(() => entry.value.mode !== 'new-customization' || Boolean(model.value))
+const editorReadOnly = computed(() => entry.value.mode === 'customer-review')
+const editorNextLabel = computed(() => {
+  if (entry.value.mode === 'asset-version')
+    return assetEditor.value ? `保存为 V${assetEditor.value.version.versionNo + 1}` : '保存新版本'
+  if (entry.value.mode === 'customer-review')
+    return reviewEditor.value?.request.status === 'OPTIONS_READY'
+      ? '满意，选择款式 →'
+      : '继续选择款式 →'
+  return '下一步 →'
+})
+const editorBackLabel = computed(() =>
+  entry.value.mode === 'new-customization' ? '← 重新上传' : '← 返回列表'
 )
 
 interface SourceInspection {
@@ -568,9 +607,161 @@ async function submitSelf(sources: string[], indexes: number[]): Promise<void> {
   }
 }
 
+function existingVersionKey(asset: AssetVersionEditorData): string {
+  const name = `mowo_asset_version_key_${asset.asset.id}_${asset.version.id}`
+  let value = sessionStorage.getItem(name)
+  if (!value) {
+    value = crypto.randomUUID()
+    sessionStorage.setItem(name, value)
+  }
+  return value
+}
+
+async function submitExisting(sources: string[], indexes: number[]): Promise<void> {
+  if (existingBusy.value) return
+  existingBusy.value = true
+  try {
+    if (entry.value.mode === 'draft-edit' && draftEditor.value) {
+      const data = draftEditor.value
+      const frameKeys = sources.map((source) => existingFrameKeys.get(source))
+      if (frameKeys.some((key) => !key)) throw new Error('草稿帧图来源不完整，请刷新后重试')
+      const requestId = await updateDraftEditor({
+        draftId: data.id,
+        frameKeys: frameKeys as string[],
+        selectedIndexes: indexes
+      })
+      writeCompatibilityStorage([['mowo_customize_draft_id', data.id]])
+      if (requestId) writeCompatibilityStorage([['mowo_customize_request_draft_id', requestId]])
+      const next = new URL(legacyPublicUrl('customize-confirm'), window.location.origin)
+      next.searchParams.set('modelId', model.value?.id ?? '')
+      next.searchParams.set('frames', String(frameKeys.length))
+      next.searchParams.set(
+        'targets',
+        editorTargets.value
+          .filter((value) => value >= frameKeys.length && value % frameKeys.length === 0)
+          .join(',')
+      )
+      if (requestId) next.searchParams.set('requestId', requestId)
+      window.location.assign(next)
+      return
+    }
+    if (entry.value.mode === 'asset-version' && assetEditor.value) {
+      const data = assetEditor.value
+      const keyName = `mowo_asset_version_key_${data.asset.id}_${data.version.id}`
+      const frameKeys = sources.map((source) => existingFrameKeys.get(source))
+      if (frameKeys.some((key) => !key)) throw new Error('动画帧图来源不完整，请刷新后重试')
+      const versionNo = await saveAssetVersion({
+        assetId: data.asset.id,
+        baseVersionId: data.version.id,
+        clientVersionKey: existingVersionKey(data),
+        frameKeys: frameKeys as string[],
+        selectedIndexes: indexes
+      })
+      sessionStorage.removeItem(keyName)
+      await router.push(
+        `/account/animations?updated=${encodeURIComponent(data.asset.id)}&version=${versionNo}`
+      )
+      return
+    }
+    if (entry.value.mode === 'customer-review' && reviewEditor.value) {
+      const data = reviewEditor.value
+      if (data.request.status === 'OPTIONS_READY') await acceptReview(data.request.id)
+      writeCompatibilityStorage([
+        [
+          'mowo_customize_frame_keys',
+          JSON.stringify(data.selection.frames.map((frame) => frame.key))
+        ],
+        ['mowo_customize_human_request_id', data.request.id],
+        ...(data.request.customProductId
+          ? [['mowo_customize_draft_id', data.request.customProductId] as const]
+          : [])
+      ])
+      const next = new URL(legacyPublicUrl('customize-confirm'), window.location.origin)
+      next.searchParams.set('type', data.model.modelType)
+      next.searchParams.set('modelId', data.model.id)
+      next.searchParams.set('modelName', data.model.name)
+      next.searchParams.set('frames', String(data.selection.frames.length))
+      next.searchParams.set(
+        'targets',
+        editorTargets.value
+          .filter(
+            (value) =>
+              value >= data.selection.frames.length && value % data.selection.frames.length === 0
+          )
+          .join(',')
+      )
+      next.searchParams.set('humanRequestId', data.request.id)
+      window.location.assign(next)
+    }
+  } catch (cause) {
+    window.alert(cause instanceof Error ? cause.message : '保存失败，请重试')
+  } finally {
+    existingBusy.value = false
+    existingProgress.value = ''
+  }
+}
+
+function handleEditorNext(sources: string[], indexes: number[]): void {
+  if (entry.value.mode === 'new-customization') void submitSelf(sources, indexes)
+  else void submitExisting(sources, indexes)
+}
+
+async function reviseReview(): Promise<void> {
+  if (!reviewEditor.value || reviewEditor.value.request.status !== 'OPTIONS_READY') return
+  const message = window.prompt('请告诉工作人员需要调整什么：')?.trim()
+  if (!message) return
+  try {
+    await requestReviewRevision(reviewEditor.value.request.id, message)
+    await router.push('/account/customizations')
+  } catch (cause) {
+    window.alert(cause instanceof Error ? cause.message : '提交失败，请重试')
+  }
+}
+
+function leaveExistingEditor(): void {
+  if (entry.value.mode === 'customer-review') void router.push('/account/customizations')
+  else void router.push('/account/animations')
+}
+
 async function load(): Promise<void> {
   loading.value = true
   try {
+    if (['asset-version', 'customer-review', 'draft-edit'].includes(entry.value.mode)) {
+      await session.bootstrap()
+      if (!session.isAuthenticated) {
+        void router.replace({ query: { ...route.query, auth: '1', redirect: route.fullPath } })
+        throw new Error('请先登录后继续')
+      }
+      existingFrameKeys.clear()
+      if (entry.value.mode === 'draft-edit') {
+        const data = await getDraftEditor(entry.value.resourceId!)
+        draftEditor.value = data
+        data.frames.forEach((frame) => existingFrameKeys.set(frame.url, frame.key))
+        frameSources.value = data.frames.map((frame) => ({ source: frame.url, selected: true }))
+        if (!data.machineModelId) throw new Error('草稿没有关联可用款式，请重新开始定制')
+        const models = await getMachineModels()
+        model.value = models.find((item) => item.id === data.machineModelId) ?? null
+        if (!model.value) throw new Error('草稿关联款式已下架，请重新开始定制')
+      } else if (entry.value.mode === 'asset-version') {
+        const data = await getAssetVersionEditor(entry.value.resourceId!)
+        assetEditor.value = data
+        data.version.frames.forEach((frame) => existingFrameKeys.set(frame.url, frame.key))
+        frameSources.value = data.version.frames.map((frame) => ({
+          source: frame.url,
+          selected: true
+        }))
+      } else {
+        const data = await getReviewEditor(entry.value.resourceId!)
+        reviewEditor.value = data
+        data.selection.frames.forEach((frame) => existingFrameKeys.set(frame.url, frame.key))
+        frameSources.value = data.selection.frames.map((frame) => ({
+          source: frame.url,
+          selected: true
+        }))
+      }
+      screen.value = 'editor'
+      return
+    }
     if (entry.value.mode !== 'new-customization') throw new Error('该编辑模式尚未迁移')
     if (!entry.value.modelId) throw new Error('没有找到已选款式，请返回上一步重新选择')
     const models = await getMachineModels()
@@ -593,6 +784,8 @@ watch(
       const pending = pendingSelfSubmit.value
       pendingSelfSubmit.value = null
       void submitSelf(pending.sources, pending.indexes)
+    } else if (authenticated && entry.value.mode !== 'new-customization') {
+      void load()
     }
   }
 )
@@ -731,6 +924,28 @@ onBeforeUnmount(() => {
         </div>
       </template>
     </main>
+    <div v-if="screen === 'editor' && assetEditor" class="editor-mode-banner">
+      正在修改 {{ assetEditor.asset.title }}（{{ assetEditor.asset.assetNo }} · V{{
+        assetEditor.version.versionNo
+      }}），旧版本会继续保留
+    </div>
+    <div v-if="screen === 'editor' && draftEditor" class="editor-mode-banner">
+      正在重新编辑草稿；保存时更新原草稿，不会新建重复记录
+    </div>
+    <div v-if="screen === 'editor' && reviewEditor" class="editor-mode-banner">
+      确认筛帧 · {{ reviewEditor.request.requestNo }} · 第 {{ reviewEditor.selection.version }} 版
+      <span v-if="reviewEditor.selection.staffMessage">
+        · {{ reviewEditor.selection.staffMessage }}</span
+      >
+      <button
+        v-if="reviewEditor.request.status === 'OPTIONS_READY'"
+        type="button"
+        class="btn btn-secondary btn-sm"
+        @click="reviseReview"
+      >
+        需要调整
+      </button>
+    </div>
     <VideoTrimPanel
       v-else-if="screen === 'trim'"
       :source="sourceUrl"
@@ -766,13 +981,17 @@ onBeforeUnmount(() => {
       </div>
     </main>
     <FrameEditor
-      v-else-if="screen === 'editor' && model"
+      v-if="screen === 'editor' && editorReady"
       :frames="frameSources"
-      :targets="[...new Set(model.skus.map((sku) => sku.frameCount))].sort((a, b) => a - b)"
-      :busy="selfBusy"
-      :progress="selfProgress"
-      @next="submitSelf"
-      @reupload="reupload"
+      :targets="editorTargets"
+      :busy="entry.mode === 'new-customization' ? selfBusy : existingBusy"
+      :progress="entry.mode === 'new-customization' ? selfProgress : existingProgress"
+      :read-only="editorReadOnly"
+      :allow-any-frame-count="entry.mode === 'asset-version'"
+      :next-label="editorNextLabel"
+      :back-label="editorBackLabel"
+      @next="handleEditorNext"
+      @reupload="entry.mode === 'new-customization' ? reupload() : leaveExistingEditor()"
     />
     <div v-if="ratioWarning" class="ratio-warning-overlay" role="dialog" aria-modal="true">
       <div class="ratio-warning-card">

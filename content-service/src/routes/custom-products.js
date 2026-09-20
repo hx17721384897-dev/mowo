@@ -168,6 +168,85 @@ export default async function customProductRoutes(fastify) {
     })
   })
 
+  // Vue 编辑器只读取草稿重编所需字段和短期帧地址，不返回整行内部数据。
+  fastify.get('/:id/editor', { preHandler: [fastify.authenticate] }, async (req, reply) => {
+    const userId = req.user.userId
+    const cp = await prisma.customProduct.findUnique({ where: { id: req.params.id } })
+    if (!cp || cp.userId !== userId || ['ordered', 'removed'].includes(cp.status)) {
+      return reply.code(404).send({ success: false, message: '可编辑草稿不存在' })
+    }
+    const request = await prisma.customizationRequest.findFirst({
+      where: { customProductId: cp.id }, orderBy: { createdAt: 'desc' }
+    })
+    if (request && request.status !== 'DRAFT') {
+      return reply.code(409).send({ success: false, message: '该定制已提交，不能继续修改帧图' })
+    }
+    let frameKeys = []
+    try { frameKeys = JSON.parse(cp.animationFrames || '[]') } catch {}
+    if (!Array.isArray(frameKeys) || !frameKeys.length) {
+      return reply.code(409).send({ success: false, message: '草稿没有可恢复的帧图' })
+    }
+    const uniqueKeys = [...new Set(frameKeys)]
+    const files = await prisma.privateFile.findMany({ where: {
+      objectKey: { in: uniqueKeys }, ownerUserId: userId, status: 'READY', deletedAt: null,
+      linkedResourceType: 'CUSTOM_PRODUCT', linkedResourceId: cp.id
+    } })
+    if (files.length !== uniqueKeys.length) {
+      return reply.code(409).send({ success: false, message: '草稿帧图不完整，请重新上传素材' })
+    }
+    const frames = frameKeys.map(key => {
+      const signed = fastify.storagePresignGet(key, 1800)
+      return { key, url: signed.startsWith('/') ? `${req.protocol}://${req.headers.host}${signed}` : signed }
+    })
+    let config = {}
+    try { config = JSON.parse(cp.configJson || '{}') } catch {}
+    return reply.send({ success: true, data: {
+      id: cp.id, status: cp.status, frameCount: cp.frameCount, frames, config,
+      request: request ? { id: request.id, status: request.status, machineModelId: request.machineModelId } : null
+    } })
+  })
+
+  // 原位更新同一商品草稿及其 DRAFT 请求，禁止重编时另建第二份草稿。
+  fastify.patch('/:id/editor', { preHandler: [fastify.authenticate] }, async (req, reply) => {
+    const userId = req.user.userId
+    const cp = await prisma.customProduct.findUnique({ where: { id: req.params.id } })
+    if (!cp || cp.userId !== userId || ['ordered', 'removed'].includes(cp.status)) {
+      return reply.code(404).send({ success: false, message: '可编辑草稿不存在' })
+    }
+    const frameKeys = Array.isArray(req.body?.frameKeys) ? req.body.frameKeys : []
+    if (!frameKeys.length || frameKeys.length > 50 || frameKeys.some(key => typeof key !== 'string')) {
+      return reply.code(400).send({ success: false, message: '草稿帧图数据无效' })
+    }
+    const request = await prisma.customizationRequest.findFirst({
+      where: { customProductId: cp.id }, orderBy: { createdAt: 'desc' }
+    })
+    if (request && request.status !== 'DRAFT') {
+      return reply.code(409).send({ success: false, message: '该定制已提交，不能继续修改帧图' })
+    }
+    const uniqueKeys = [...new Set(frameKeys)]
+    const files = await prisma.privateFile.findMany({ where: {
+      objectKey: { in: uniqueKeys }, ownerUserId: userId, status: 'READY', deletedAt: null,
+      linkedResourceType: 'CUSTOM_PRODUCT', linkedResourceId: cp.id
+    } })
+    if (files.length !== uniqueKeys.length) {
+      return reply.code(400).send({ success: false, message: '草稿帧图不存在或不属于当前账号' })
+    }
+    const updated = await prisma.$transaction(async tx => {
+      const product = await tx.customProduct.update({ where: { id: cp.id }, data: {
+        animationFrames: JSON.stringify(frameKeys), frameCount: frameKeys.length,
+        draftData: req.body?.editorData ? JSON.stringify(req.body.editorData) : cp.draftData,
+        draftExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+      } })
+      if (request) await tx.customizationRequest.update({ where: { id: request.id }, data: {
+        selectedFrameKeys: frameKeys,
+        screeningData: { selectedFrameCount: frameKeys.length },
+        editorData: req.body?.editorData || request.editorData || undefined
+      } })
+      return product
+    })
+    return reply.send({ success: true, data: { id: updated.id, requestId: request?.id || null, frameCount: updated.frameCount } })
+  })
+
   // ── 获取草稿详情 ──
   fastify.get('/:id', {
     preHandler: [fastify.authenticate]

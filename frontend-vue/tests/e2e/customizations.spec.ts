@@ -97,7 +97,7 @@ test('my customizations preserves filters, timeline and editor handoff', async (
   await expect(page.getByText('未提交草稿')).toHaveCount(0)
   await expect(page.getByRole('link', { name: '确认筛帧' })).toHaveAttribute(
     'href',
-    '/mowo/frontend/pages/customize-editor.html?reviewRequestId=request-action'
+    '/app/customize/editor?reviewRequestId=request-action'
   )
 
   await page.getByRole('button', { name: '查看' }).click()

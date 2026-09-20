@@ -88,7 +88,7 @@
 - 头像、中断定制上传和 7 天定制草稿清理：`src/lib/private-file-cleanup.js`，由 `src/lib/scheduler.js` 定时调用。
 - 注销文件分类和删除重试：`src/lib/account-deletion.js`，由 `src/lib/scheduler.js` 扫描到期申请。
 - 业务绑定：`routes/contact.js`、`routes/orders.js`、`routes/custom-products.js`。
-- 用户新建定制由 Vue `services/private-upload.ts` 统一上传；旧 `frontend/js/private-upload.js` 仅供尚未迁移的 `customize-editor.html` 内部模式和 `customize-confirm.html` 使用。
+- 用户编辑模式由 Vue `services/private-upload.ts` 统一上传；旧 `frontend/js/private-upload.js` 仅供 `customize-editor.html` 的 `adminRequestId` / `frameDraftId` 后台模式和尚未迁移的 `customize-confirm.html` 使用。
 - 自动测试：`npm run check:private-files`、`npm run check:customization-flow`。
 
 ## 验证结果

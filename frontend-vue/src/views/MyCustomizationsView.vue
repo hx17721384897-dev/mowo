@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { legacyPublicUrl } from '@/config/public-links'
 import { getMyCustomization, getMyCustomizations } from '@/features/customization/api'
 import {
   CUSTOMIZATION_STATUS_LABEL,
@@ -59,7 +58,7 @@ function formatTime(value: string): string {
 }
 
 function reviewUrl(item: CustomizationSummary): string {
-  return `${legacyPublicUrl('customize-editor')}?reviewRequestId=${encodeURIComponent(item.id)}`
+  return `/app/customize/editor?reviewRequestId=${encodeURIComponent(item.id)}`
 }
 
 async function load(): Promise<void> {

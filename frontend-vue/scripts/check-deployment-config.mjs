@@ -65,10 +65,9 @@ for (const retired of ['customize-start.html', 'my-animations.html', 'my-customi
 }
 if (
   !legacyEditor.includes('handoffNewCustomizationToVue') ||
-  !legacyEditor.includes("'adminRequestId'") ||
-  !legacyEditor.includes("'frameDraftId'")
+  !legacyEditor.includes("var internalModeKeys = ['adminRequestId', 'frameDraftId']")
 ) {
-  throw new Error('旧共享编辑器必须把用户新建交给 Vue，同时保留明确的内部模式边界')
+  throw new Error('旧共享编辑器必须把全部用户模式交给 Vue，仅保留明确的后台模式边界')
 }
 
 console.log('Vue deployment and public redirect boundaries passed')
