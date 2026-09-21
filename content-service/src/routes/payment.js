@@ -216,8 +216,12 @@ export default async function paymentRoutes(fastify) {
   fastify.post('/mock-pay/:preOrderId', {
     preHandler: [fastify.authenticate]
   }, async (req, reply) => {
-    if (process.env.NODE_ENV === 'production') {
-      return reply.code(403).send({ success: false, message: '生产环境不允许 mock 支付' })
+    if (!fastify.config.features.mockPayment) {
+      return reply.code(404).send({
+        success: false,
+        code: 'FEATURE_NOT_AVAILABLE',
+        message: '模拟支付仅在隔离测试模式开放'
+      })
     }
 
     const { preOrderId } = req.params

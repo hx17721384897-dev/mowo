@@ -51,11 +51,13 @@ $originalDatabaseUrl = $env:DATABASE_URL
 $originalPort = $env:PORT
 $originalApiBase = $env:TEST_API_BASE
 $originalOnlineCheckout = $env:ONLINE_CHECKOUT_ENABLED
+$originalMockPayment = $env:MOCK_PAYMENT_ENABLED
 $env:DATABASE_URL = (($dbLine -replace '^DATABASE_URL=', '').Trim('"')) -replace '/mowo_db([?\"]|$)', '/mowo_b1_test$1'
 if ($env:DATABASE_URL -notmatch '/mowo_b1_test(?:\?|$)') { throw 'Could not safely construct the mowo_b1_test database URL.' }
 $env:PORT = '3002'
 $env:TEST_API_BASE = 'http://127.0.0.1:3002'
 $env:ONLINE_CHECKOUT_ENABLED = 'false'
+$env:MOCK_PAYMENT_ENABLED = 'false'
 
 New-Item -ItemType Directory -Force -Path $RunDir | Out-Null
 
@@ -86,6 +88,7 @@ try {
   Stop-Process -Id $ApiProcess.Id -Force
   Wait-Process -Id $ApiProcess.Id -ErrorAction SilentlyContinue
   $env:ONLINE_CHECKOUT_ENABLED = 'true'
+  $env:MOCK_PAYMENT_ENABLED = 'true'
   $ApiProcess = Start-TestApi 'workflow'
 
   Invoke-Checks @(
@@ -136,4 +139,5 @@ try {
   $env:PORT = $originalPort
   $env:TEST_API_BASE = $originalApiBase
   $env:ONLINE_CHECKOUT_ENABLED = $originalOnlineCheckout
+  $env:MOCK_PAYMENT_ENABLED = $originalMockPayment
 }

@@ -37,6 +37,14 @@ pwsh -File scripts/local.ps1 status
 pwsh -File scripts/local.ps1 stop
 ```
 
+需要人工验证“结算 → 模拟支付 → 后台订单”时，停止现有服务后使用：
+
+```powershell
+pwsh -File scripts/local.ps1 start -EnableMockPayment
+```
+
+该模式仍强制连接 `mowo_b1_test`；生产环境、其他数据库或未同时开启结算时均拒绝模拟支付。`status` 会明确显示 `isolated-mock-payment` 或 `closed-checkout`。
+
 启动入口会：
 
 - 在 3001 启动 API，在 5500 启动仅映射 `frontend/` 的静态服务器；
@@ -100,7 +108,7 @@ P0（越权、隐私、数据破坏、资金或重复生产）立即暂停；P1�
 
 ## 6. 本地人工验收
 
-先在根目录运行 `pwsh -File scripts/local.ps1 start`。短信为本地模拟，已建立测试账号登录验证码统一使用 `123456`；不要输入真实手机号或上传真实隐私材料。
+先在根目录运行 `pwsh -File scripts/local.ps1 start`。只有需要验证后台正式订单时才改用 `pwsh -File scripts/local.ps1 start -EnableMockPayment`。短信为本地模拟，已建立测试账号登录验证码统一使用 `123456`；不要输入真实手机号或上传真实隐私材料。
 
 ### 6.1 公开和用户路径
 
@@ -108,10 +116,10 @@ P0（越权、隐私、数据破坏、资金或重复生产）立即暂停；P1�
 2. 另行启动 `frontend-vue` 后打开联名列表：`http://127.0.0.1:5173/app/showcase`。种子库没有已上架联名商品时，空状态应正常，不应出现报错或虚假商品。
 3. 打开定制入口：`http://127.0.0.1:4173/app/customize`，确认步骤说明和开始按钮可用。
 4. 点击头像登录，使用普通用户 `13800138003`、验证码 `123456`。
-5. 打开设置：`http://127.0.0.1:5500/mowo/frontend/pages/settings.html`，确认头像菜单、资料、手机号、安全、通知、隐私和地址分区可进入；可用合成图片测试头像，不使用真实照片。
+5. 打开设置：`http://127.0.0.1:4173/app/account/settings`，确认头像菜单、资料、手机号、安全、地址、设备退出和注销分区可进入；可用合成图片测试头像，不使用真实照片。
 6. 打开我的定制：`http://127.0.0.1:4173/app/account/customizations`，空列表应正常；退出后直接访问应打开共享登录弹窗并保留安全回跳地址。
 7. 打开我的动画：`http://127.0.0.1:4173/app/account/animations`，确认正式资产与草稿分层、筛选、重命名和删除确认正常；修改动画与选择新款式应继续交接现有定制流程。
-8. 打开订单：`http://127.0.0.1:5500/mowo/frontend/pages/orders.html`，空列表应正常。日常本地服务必须保持在线结算关闭，不能出现真实付款承诺。
+8. 打开订单：`http://127.0.0.1:5500/mowo/frontend/pages/orders.html`，空列表应正常。普通模式保持在线结算关闭；显式模拟支付模式应清楚标记“开发模式”，不得出现真实付款承诺。
 
 ### 6.2 后台岗位路径
 

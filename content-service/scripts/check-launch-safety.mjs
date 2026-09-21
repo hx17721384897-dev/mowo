@@ -63,7 +63,7 @@ try {
   const signedFileProbe = await request('/api/storage/local')
   assert(signedFileProbe.headers.get('cross-origin-resource-policy') === 'cross-origin', 'signed local file responses can render from the static frontend origin')
   const flags = (await flagsResponse.json()).data
-  for (const feature of ['onlineCheckout']) {
+  for (const feature of ['onlineCheckout', 'mockPayment']) {
     assert(flags[feature] === false, `${feature} is disabled for local baseline testing`)
   }
   for (const retiredFeature of ['community', 'creatorFinance', 'bullSystem', 'mockCertification']) {

@@ -1,4 +1,5 @@
 import { publicFeatureFlags, requiredFeatureForRequest } from '../src/lib/features.js'
+import { loadConfig } from '../src/config/env.js'
 
 const activeGates = [
   ['/api/cart/checkout', 'onlineCheckout'],
@@ -25,9 +26,49 @@ for (const path of openPaths) {
   console.log(`PASS open or staff-protected ${path}`)
 }
 
-const flags = publicFeatureFlags({ features: { onlineCheckout: false, passwordLogin: false } })
+const flags = publicFeatureFlags({
+  features: { onlineCheckout: false, mockPayment: false, passwordLogin: false }
+})
+if (flags.mockPayment !== false) throw new Error('mockPayment: expected a closed public test flag')
 for (const retired of ['community', 'creatorFinance', 'bullSystem', 'mockCertification']) {
   if (retired in flags) throw new Error(`${retired}: retired feature leaked into public configuration`)
 }
+
+const baseEnv = {
+  NODE_ENV: 'development',
+  DATABASE_URL: 'postgresql://test:test@127.0.0.1:5432/mowo_b1_test',
+  JWT_SECRET: 'test-jwt-secret',
+  COOKIE_SECRET: 'test-cookie-secret',
+  SMS_MOCK: 'true',
+  ONLINE_CHECKOUT_ENABLED: 'true',
+  MOCK_PAYMENT_ENABLED: 'true'
+}
+const mockConfig = loadConfig(baseEnv)
+if (!mockConfig.features.mockPayment) throw new Error('isolated test database should allow explicit mock payment mode')
+
+for (const [name, override] of [
+  ['closed checkout', { ONLINE_CHECKOUT_ENABLED: 'false' }],
+  ['non-test database', { DATABASE_URL: 'postgresql://test:test@127.0.0.1:5432/mowo_db' }],
+  ['production', { NODE_ENV: 'production' }]
+]) {
+  try {
+    loadConfig({ ...baseEnv, ...override })
+    throw new Error(`${name}: unsafe mock payment configuration was accepted`)
+  } catch (error) {
+    if (String(error?.message).includes('unsafe mock payment configuration was accepted')) throw error
+  }
+  console.log(`PASS mock payment rejects ${name}`)
+}
+
+try {
+  loadConfig({ ...baseEnv, NODE_ENV: 'production', MOCK_PAYMENT_ENABLED: 'false' })
+  throw new Error('production online checkout without verified callbacks was accepted')
+} catch (error) {
+  if (String(error?.message).includes('was accepted')) throw error
+  if (!String(error?.message).includes('ONLINE_CHECKOUT_ENABLED must be false in production')) {
+    throw new Error('production checkout rejection did not report the payment verification boundary')
+  }
+}
+console.log('PASS production cannot enable online checkout before verified payment callbacks exist')
 
 console.log(`Active feature mapping passed for ${activeGates.length} gated paths and ${openPaths.length} retained paths`)

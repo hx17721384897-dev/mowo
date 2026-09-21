@@ -206,6 +206,24 @@ try {
     quantity: 1,
     creatorId: userId,
   } }))
+
+  browser = await chromium.launch({
+    headless: true,
+    executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
+  })
+  const checkoutContext = await browser.newContext({ viewport: { width: 1440, height: 900 } })
+  const checkoutPage = await checkoutContext.newPage()
+  await checkoutPage.addInitScript(({ token, apiBase, cartItemIds }) => {
+    window.MOWO_RUNTIME_API_BASE = apiBase
+    localStorage.setItem('mowo_token', token)
+    sessionStorage.setItem('mowo_checkout_items', JSON.stringify(cartItemIds))
+  }, { token, apiBase, cartItemIds: cartItems.map(item => item.id) })
+  await checkoutPage.goto(`${webBase}/checkout.html`, { waitUntil: 'networkidle' })
+  await checkoutPage.locator('#btnPay').waitFor({ timeout: 10000 })
+  assert(await checkoutPage.locator('#btnMockPay').isVisible(), '隔离测试模式由服务端配置显示模拟支付入口')
+  await checkoutContext.close()
+  browser = null
+
   const checkoutResponse = await request('/api/cart/checkout', token, {
     method: 'POST', body: JSON.stringify({
       cartItemIds: [cartItems[0].id, cartItems[1].id, cartItems[2].id, cartItems[1].id],

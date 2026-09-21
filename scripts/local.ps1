@@ -1,7 +1,8 @@
 param(
   [Parameter(Position = 0)]
   [ValidateSet('start', 'stop', 'status')]
-  [string]$Action = 'status'
+  [string]$Action = 'status',
+  [switch]$EnableMockPayment
 )
 
 $ErrorActionPreference = 'Stop'
@@ -9,6 +10,7 @@ $RepoRoot = Split-Path -Parent $PSScriptRoot
 $RunDir = Join-Path $RepoRoot '.local-run'
 $ApiPidFile = Join-Path $RunDir 'api.pid'
 $WebPidFile = Join-Path $RunDir 'web.pid'
+$ModeFile = Join-Path $RunDir 'mode.txt'
 
 function Test-Listening([int]$Port) {
   $client = [System.Net.Sockets.TcpClient]::new()
@@ -75,14 +77,19 @@ function Stop-OwnedProcess([string]$PidFile) {
 }
 
 if ($Action -eq 'status') {
-  Write-Host "API 3001: $(if (Test-Listening 3001) { 'running' } else { 'stopped' })"
-  Write-Host "Web 5500: $(if (Test-Listening 5500) { 'running' } else { 'stopped' })"
+  $apiRunning = Test-Listening 3001
+  $webRunning = Test-Listening 5500
+  Write-Host "API 3001: $(if ($apiRunning) { 'running' } else { 'stopped' })"
+  Write-Host "Web 5500: $(if ($webRunning) { 'running' } else { 'stopped' })"
+  $mode = if (-not $apiRunning) { 'stopped' } elseif (Test-Path -LiteralPath $ModeFile) { (Get-Content -LiteralPath $ModeFile -Raw).Trim() } else { 'unknown' }
+  Write-Host "Checkout mode: $mode"
   exit 0
 }
 
 if ($Action -eq 'stop') {
   Stop-OwnedProcess $WebPidFile
   Stop-OwnedProcess $ApiPidFile
+  if (Test-Path -LiteralPath $ModeFile) { Remove-Item -LiteralPath $ModeFile -Force }
   Write-Host 'Stopped local services owned by scripts/local.ps1.'
   exit 0
 }
@@ -95,6 +102,10 @@ $dbLine = Get-Content (Join-Path $RepoRoot 'content-service/.env') | Where-Objec
 if (-not $dbLine) { throw 'content-service/.env is missing DATABASE_URL.' }
 $env:DATABASE_URL = (($dbLine -replace '^DATABASE_URL=', '').Trim('"')) -replace '/mowo_db([?\"]|$)', '/mowo_b1_test$1'
 if ($env:DATABASE_URL -notmatch '/mowo_b1_test(?:\?|$)') { throw 'Could not safely derive the mowo_b1_test database URL.' }
+$env:ONLINE_CHECKOUT_ENABLED = if ($EnableMockPayment) { 'true' } else { 'false' }
+$env:MOCK_PAYMENT_ENABLED = if ($EnableMockPayment) { 'true' } else { 'false' }
+$mode = if ($EnableMockPayment) { 'isolated-mock-payment' } else { 'closed-checkout' }
+Set-Content -LiteralPath $ModeFile -Value $mode -Encoding Ascii
 
 $node = (Get-Command node).Source
 $api = Start-Process -FilePath $node -ArgumentList 'src/index.js' -WorkingDirectory (Join-Path $RepoRoot 'content-service') -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $RunDir 'api.out.log') -RedirectStandardError (Join-Path $RunDir 'api.err.log')
@@ -115,4 +126,5 @@ try {
 Write-Host 'Local services started (database: mowo_b1_test):'
 Write-Host '  Legacy web: http://127.0.0.1:5500/mowo/frontend/pages/index.html'
 Write-Host '  API: http://127.0.0.1:3001/'
+Write-Host "  Checkout mode: $mode"
 Write-Host 'Stop command: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/local.ps1 stop'

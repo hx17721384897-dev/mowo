@@ -13,6 +13,7 @@ export function requiredFeatureForRequest(url) {
 export function publicFeatureFlags(config) {
   return {
     onlineCheckout: config.features.onlineCheckout,
+    mockPayment: config.features.mockPayment,
     passwordLogin: config.features.passwordLogin
   }
 }

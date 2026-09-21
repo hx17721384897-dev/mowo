@@ -195,9 +195,8 @@ window._smartParseCheckout = async function(text) {
 </script>
 <script>
 const API = window.MOWO_API_BASE || ''
-// Mock 付款只供自动化/开发工具显式开启；普通本机访问也不能看到伪支付入口。
-// 服务端功能闸门仍是最终边界，不能信任此浏览器变量。
-const SHOW_TEST_MOCK_PAYMENT = window.MOWO_TEST_MOCK_PAYMENT === true
+// Mock 付款只由服务端隔离测试模式开放；普通本机访问不能自动看到伪支付入口。
+let showTestMockPayment = false
 let cartItemIds = []
 let cartItems = []
 let preOrderId = null
@@ -226,11 +225,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // 并行加载购物车和地址数据，两者都完成后再统一渲染
   await Promise.all([
+    loadFeatureFlags(),
     loadCartItems(token),
     loadSavedAddresses(token)
   ])
   renderCheckoutPage()
 })
+
+async function loadFeatureFlags() {
+  try {
+    const res = await fetch(`${API}/api/config/features`)
+    const data = await res.json()
+    showTestMockPayment = data.success === true && data.data?.mockPayment === true
+  } catch {
+    showTestMockPayment = false
+  }
+}
 
 async function loadCartItems(token) {
   try {
@@ -426,7 +436,7 @@ function renderCheckoutPage() {
   document.getElementById('pageContent').innerHTML = html
 
   // 仅显式测试会话显示 mock 按钮，不能仅凭 localhost 自动开放。
-  if (SHOW_TEST_MOCK_PAYMENT) {
+  if (showTestMockPayment) {
     document.getElementById('btnMockPay').style.display = 'block'
   }
 
@@ -532,7 +542,7 @@ function renderPaymentPending(preOrder) {
       <p style="margin-top:16px;font-size:12px;font-weight:700;color:var(--gray3);">
         微信小程序付款入口将在后续阶段接入
       </p>
-      <button class="btn-mock-pay" id="btnMockPay2" onclick="mockPay()" style="${SHOW_TEST_MOCK_PAYMENT ? 'display:block' : 'display:none'}">
+      <button class="btn-mock-pay" id="btnMockPay2" onclick="mockPay()" style="${showTestMockPayment ? 'display:block' : 'display:none'}">
         🧪 开发模式：模拟支付成功
       </button>
       <a href="./cart.html" class="btn-secondary">返回购物车</a>

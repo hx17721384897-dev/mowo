@@ -62,6 +62,14 @@ pwsh -File scripts/local.ps1 status
 pwsh -File scripts/local.ps1 stop
 ```
 
+需要把隔离库测试订单推进到后台时，可用显式模拟支付模式启动：
+
+```powershell
+pwsh -File scripts/local.ps1 start -EnableMockPayment
+```
+
+该参数只允许 `mowo_b1_test` 且生产环境会拒绝；普通启动仍关闭在线结算与模拟付款。
+
 首页为 `http://127.0.0.1:5500/mowo/frontend/pages/index.html`。完整的空库、全量回归、备份恢复和人工验收流程见 [`docs/BATCH_7_LOCAL_ACCEPTANCE_AND_RECOVERY.md`](docs/BATCH_7_LOCAL_ACCEPTANCE_AND_RECOVERY.md)。
 
 ---

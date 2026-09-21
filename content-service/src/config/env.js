@@ -125,6 +125,26 @@ export function loadConfig(env = process.env) {
     'ONLINE_CHECKOUT_ENABLED',
     errors
   )
+  const mockPaymentEnabled = parseBoolean(
+    env.MOCK_PAYMENT_ENABLED,
+    false,
+    'MOCK_PAYMENT_ENABLED',
+    errors
+  )
+  if (mockPaymentEnabled && !onlineCheckoutEnabled) {
+    errors.push('MOCK_PAYMENT_ENABLED requires ONLINE_CHECKOUT_ENABLED=true')
+  }
+  if (onlineCheckoutEnabled && isProduction) {
+    errors.push(
+      'ONLINE_CHECKOUT_ENABLED must be false in production until verified payment callbacks are implemented'
+    )
+  }
+  if (mockPaymentEnabled && isProduction) {
+    errors.push('MOCK_PAYMENT_ENABLED must be false in production')
+  }
+  if (mockPaymentEnabled && !/\/mowo_b1_test(?:\?|$)/.test(databaseUrl)) {
+    errors.push('MOCK_PAYMENT_ENABLED requires the isolated mowo_b1_test database')
+  }
   const avatarRetentionHours = parsePositiveInteger(
     env.AVATAR_ORPHAN_RETENTION_HOURS,
     24,
@@ -240,6 +260,7 @@ export function loadConfig(env = process.env) {
     passwordLoginEnabled,
     features: Object.freeze({
       onlineCheckout: onlineCheckoutEnabled,
+      mockPayment: mockPaymentEnabled,
       passwordLogin: passwordLoginEnabled
     }),
     rateLimits: Object.freeze({
