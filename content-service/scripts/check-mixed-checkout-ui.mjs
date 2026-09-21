@@ -20,5 +20,6 @@ assert(checkout.includes('data.data?.mockPayment === true') && !checkout.include
 assert(!checkout.includes('原则上不支持退款'), '结算页不展示未经确认的退款承诺')
 assert(cartRoute.includes('checkoutSnapshot') && cartRoute.includes('reserveCheckoutInventory'), '服务端在同一结算流程冻结商品并预锁库存')
 assert(paymentRoute.includes('readCheckoutSnapshot(preOrder.checkoutSnapshot)') && !paymentRoute.includes('tx.cartItem.findMany'), '付款落单只使用冻结快照，不回读可变购物车')
+assert(paymentRoute.includes("await closePreOrderAndRelease(prisma, preOrder, 'expired')"), '付款状态轮询触发超时时通过统一事务释放预留库存')
 
 console.log('Mixed checkout UI checks passed')

@@ -194,7 +194,7 @@ function goCheckout(): void {
   if (!ids.length || checkoutBlockedByPrice.value) return
   sessionStorage.setItem('mowo_checkout_items', JSON.stringify(ids))
   closeCheckout()
-  window.location.assign('/mowo/frontend/pages/checkout.html')
+  void router.push('/checkout')
 }
 
 function handleEscape(event: KeyboardEvent): void {

@@ -21,6 +21,7 @@ const props = withDefaults(
 )
 const emit = defineEmits<{
   'update:modelValue': [id: string]
+  selected: [address: Address | null]
   notice: [message: string, tone: 'success' | 'error' | 'neutral']
 }>()
 
@@ -43,15 +44,25 @@ async function load(): Promise<void> {
   loadError.value = ''
   try {
     addresses.value = await listAddresses()
-    if (props.mode === 'select' && !props.modelValue) {
-      const preferred = addresses.value.find((address) => address.isDefault) ?? addresses.value[0]
-      if (preferred) emit('update:modelValue', preferred.id)
+    if (props.mode === 'select') {
+      const preferred =
+        addresses.value.find((address) => address.id === props.modelValue) ??
+        addresses.value.find((address) => address.isDefault) ??
+        addresses.value[0]
+      if (preferred) select(preferred)
+      else emit('selected', null)
     }
   } catch (cause) {
     loadError.value = messageOf(cause, '加载失败，请刷新重试')
   } finally {
     loading.value = false
   }
+}
+
+function select(address: Address): void {
+  if (props.mode !== 'select') return
+  emit('update:modelValue', address.id)
+  emit('selected', address)
 }
 
 function openCreate(): void {
@@ -74,7 +85,7 @@ async function save(input: AddressInput): Promise<void> {
     editorOpen.value = false
     emit('notice', editingAddress.value ? '地址已更新' : '地址已添加', 'success')
     await load()
-    if (props.mode === 'select') emit('update:modelValue', saved.id)
+    if (props.mode === 'select') select(saved)
   } catch (cause) {
     emit('notice', messageOf(cause, '保存失败'), 'error')
   } finally {
@@ -140,7 +151,7 @@ onMounted(load)
           'is-default': address.isDefault,
           'is-selected': mode === 'select' && modelValue === address.id
         }"
-        @click="mode === 'select' && emit('update:modelValue', address.id)"
+        @click="select(address)"
       >
         <input
           v-if="mode === 'select'"
@@ -150,7 +161,7 @@ onMounted(load)
           :value="address.id"
           :checked="modelValue === address.id"
           :aria-label="`选择 ${address.name} 的地址`"
-          @change="emit('update:modelValue', address.id)"
+          @change="select(address)"
         />
         <div class="card-main">
           <div class="card-top">

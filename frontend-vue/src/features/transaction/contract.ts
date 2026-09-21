@@ -7,6 +7,7 @@ import type {
   CartItemStatus,
   CartItemType,
   CheckoutProblemDto,
+  CheckoutCapabilitiesDto,
   CreatorProfileDto,
   MockPaymentResultDto,
   OrderActionsDto,
@@ -180,6 +181,14 @@ export function parseCheckoutProblems(value: unknown): CheckoutProblemDto[] {
       reason: requiredString(problem.reason, '结算失败原因')
     }
   })
+}
+
+export function parseCheckoutCapabilitiesDto(value: unknown): CheckoutCapabilitiesDto {
+  const row = record(value, '交易功能配置')
+  return {
+    onlineCheckout: boolean(row.onlineCheckout, '在线结算开关'),
+    mockPayment: boolean(row.mockPayment, '模拟支付开关')
+  }
 }
 
 export function parsePaymentStatusDto(value: unknown): PaymentStatusDto {

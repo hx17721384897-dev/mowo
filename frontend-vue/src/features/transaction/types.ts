@@ -58,6 +58,11 @@ export interface CheckoutProblemDto {
   reason: string
 }
 
+export interface CheckoutCapabilitiesDto {
+  onlineCheckout: boolean
+  mockPayment: boolean
+}
+
 export interface PreOrderDto {
   id: string
   status: PreOrderStatus

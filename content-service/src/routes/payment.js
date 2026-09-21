@@ -193,10 +193,9 @@ export default async function paymentRoutes(fastify) {
 
     // 检查是否已超时
     if (preOrder.status === 'pending_payment' && preOrder.expiresAt < new Date()) {
-      await prisma.preOrder.update({
-        where: { id: preOrderId },
-        data: { status: 'expired' }
-      }).catch(() => {})
+      // 必须通过统一事务关闭预订单并释放预留库存。仅修改状态会让定时任务
+      // 再也选不中该记录，造成库存永久占用。
+      await closePreOrderAndRelease(prisma, preOrder, 'expired')
       return reply.send({ success: true, data: { status: 'expired', expired: true } })
     }
 

@@ -2,6 +2,7 @@ import { ApiError, apiRequest } from '@/services/api-client'
 import {
   parseAftersaleRequestDto,
   parseCartDto,
+  parseCheckoutCapabilitiesDto,
   parseCheckoutProblems,
   parseMockPaymentResultDto,
   parseOrderDto,
@@ -14,6 +15,7 @@ import type {
   AftersaleType,
   CartDto,
   CheckoutAddressDto,
+  CheckoutCapabilitiesDto,
   CheckoutProblemDto,
   MockPaymentResultDto,
   OrderDto,
@@ -24,6 +26,10 @@ import type {
 
 export async function getCart(): Promise<CartDto> {
   return parseCartDto(await apiRequest<unknown>('/api/cart'))
+}
+
+export async function getCheckoutCapabilities(): Promise<CheckoutCapabilitiesDto> {
+  return parseCheckoutCapabilitiesDto(await apiRequest<unknown>('/api/config/features'))
 }
 
 export async function updateCartItem(

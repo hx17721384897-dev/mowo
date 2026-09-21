@@ -88,6 +88,12 @@ const router = createRouter({
           meta: { title: '购物车 — 哞屋 MOWO', requiresAuth: true }
         },
         {
+          path: 'checkout',
+          name: 'checkout',
+          component: () => import('@/views/CheckoutView.vue'),
+          meta: { title: '确认订单 — 哞屋 MOWO', requiresAuth: true }
+        },
+        {
           path: 'showcase-detail',
           redirect: (to) => {
             const workId = typeof to.query.workId === 'string' ? to.query.workId : ''

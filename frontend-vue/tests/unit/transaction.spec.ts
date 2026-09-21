@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   parseCartDto,
+  parseCheckoutCapabilitiesDto,
   parseCheckoutProblems,
   parseOrderDto,
   parsePaymentStatusDto,
@@ -12,6 +13,12 @@ import {
   toCartViewModel,
   toOrderViewModel
 } from '@/features/transaction/view-model'
+import {
+  clearCheckoutSession,
+  getOrCreateCheckoutAttempt,
+  readCheckoutItemIds,
+  saveCheckoutPreOrder
+} from '@/features/transaction/checkout-session'
 
 const now = '2026-09-21T08:00:00.000Z'
 
@@ -191,6 +198,16 @@ describe('transaction DTO boundary', () => {
     ).toEqual([{ id: 'item-1', reason: '价格已变动' }])
   })
 
+  it('requires explicit server booleans for checkout capabilities', () => {
+    expect(parseCheckoutCapabilitiesDto({ onlineCheckout: true, mockPayment: false })).toEqual({
+      onlineCheckout: true,
+      mockPayment: false
+    })
+    expect(() =>
+      parseCheckoutCapabilitiesDto({ onlineCheckout: 'true', mockPayment: false })
+    ).toThrow('在线结算开关')
+  })
+
   it('requires server-supplied order capabilities instead of deriving permissions in a page', () => {
     const parsed = parseOrderDto(orderFixture())
     expect(parsed.actions).toEqual({
@@ -200,6 +217,48 @@ describe('transaction DTO boundary', () => {
       canRequestQuality: false
     })
     expect(() => parseOrderDto({ ...orderFixture(), actions: undefined })).toThrow('订单操作能力')
+  })
+})
+
+describe('checkout session idempotency', () => {
+  it('deduplicates selected ids and keeps one stable attempt across refreshes', () => {
+    sessionStorage.setItem('mowo_checkout_items', '["item-b","item-a","item-a",null]')
+    const ids = readCheckoutItemIds()
+    const first = getOrCreateCheckoutAttempt(ids)
+    const second = getOrCreateCheckoutAttempt([...ids].reverse())
+    expect(ids).toEqual(['item-b', 'item-a'])
+    expect(second.idempotencyKey).toBe(first.idempotencyKey)
+  })
+
+  it('keeps a validated preorder for refresh recovery and rotates when selection changes', () => {
+    const first = getOrCreateCheckoutAttempt(['item-a'])
+    const saved = saveCheckoutPreOrder(first, {
+      id: 'pre-1',
+      status: 'pending_payment',
+      totalAmount: 20,
+      expiresAt: now,
+      createdAt: now
+    })
+    expect(getOrCreateCheckoutAttempt(['item-a']).preOrder).toEqual(saved.preOrder)
+    expect(getOrCreateCheckoutAttempt(['item-b']).idempotencyKey).not.toBe(first.idempotencyKey)
+  })
+
+  it('fails closed for a tampered preorder cache and clears only checkout session keys', () => {
+    sessionStorage.setItem('mowo_checkout_items', '["item-a"]')
+    sessionStorage.setItem(
+      'mowo_checkout_attempt_v1',
+      JSON.stringify({
+        signature: 'item-a',
+        idempotencyKey: 'checkout-forged',
+        preOrder: { id: 'pre-1', status: 'forged' }
+      })
+    )
+    sessionStorage.setItem('unrelated-draft', 'keep')
+    expect(getOrCreateCheckoutAttempt(['item-a']).preOrder).toBeNull()
+    clearCheckoutSession()
+    expect(sessionStorage.getItem('mowo_checkout_items')).toBeNull()
+    expect(sessionStorage.getItem('mowo_checkout_attempt_v1')).toBeNull()
+    expect(sessionStorage.getItem('unrelated-draft')).toBe('keep')
   })
 })
 

@@ -142,12 +142,15 @@ test('cart candidate has no horizontal overflow on mobile', async ({ page }) => 
     clientWidth: document.documentElement.clientWidth,
     overflowing: [...document.querySelectorAll<HTMLElement>('body *')]
       .filter(
-        element =>
+        (element) =>
           !element.closest('.mowo-mobile-menu') &&
           element.getBoundingClientRect().right > document.documentElement.clientWidth + 1
       )
       .slice(0, 8)
-      .map(element => ({ className: element.className, right: element.getBoundingClientRect().right }))
+      .map((element) => ({
+        className: element.className,
+        right: element.getBoundingClientRect().right
+      }))
   }))
   expect(layout).toEqual({ scrollWidth: 390, clientWidth: 390, overflowing: [] })
 })
