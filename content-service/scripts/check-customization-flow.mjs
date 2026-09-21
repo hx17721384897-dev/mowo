@@ -455,6 +455,25 @@ try {
   if (replayedCartItem.id !== selfCartItem.id || storedCartItem?.quantity !== 1) {
     throw new Error('custom cart replay changed quantity or created another cart item')
   }
+  const concurrentCartPayload = {
+    ...selfCartPayload,
+    idempotencyKey: `custom-cart-race-${runId}-${self.request.id}`
+  }
+  const concurrentCartResponses = await Promise.all([
+    request('/api/cart/add', customer.token, {
+      method: 'POST', body: JSON.stringify(concurrentCartPayload)
+    }),
+    request('/api/cart/add', customer.token, {
+      method: 'POST', body: JSON.stringify(concurrentCartPayload)
+    })
+  ])
+  concurrentCartResponses.forEach((response, index) => {
+    assertStatus(`concurrent custom cart replay ${index + 1}`, response.status, 200)
+  })
+  const cartItemAfterRace = await prisma.cartItem.findUnique({ where: { id: selfCartItem.id } })
+  if (cartItemAfterRace?.quantity !== 2) {
+    throw new Error('concurrent cart replay applied the same intended addition more than once')
+  }
   const conflictReplay = await request('/api/cart/add', customer.token, {
     method: 'POST', body: JSON.stringify({ ...selfCartPayload, contentId: reusedPurchase.customProductId })
   })
