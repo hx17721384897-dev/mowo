@@ -15,6 +15,9 @@ import CollabListView from '@/views/CollabListView.vue'
 import CollabDetailView from '@/views/CollabDetailView.vue'
 import ContactView from '@/views/ContactView.vue'
 import { useSessionStore } from '@/stores/session'
+import type { StaffRole } from '@/services/auth-session'
+
+const adminRoles: StaffRole[] = ['OWNER', 'CUSTOMER_SERVICE', 'PRODUCTION', 'COLLAB_OPS']
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -183,6 +186,7 @@ const router = createRouter({
     {
       path: '/admin',
       component: AdminLayout,
+      meta: { requiresAuth: true, staffRoles: adminRoles },
       children: [
         {
           path: '',
@@ -226,7 +230,15 @@ router.beforeEach(async (to) => {
 
   const session = useSessionStore()
   await session.bootstrap()
-  if (session.isAuthenticated) return true
+  if (session.isAuthenticated) {
+    const blockedByRole = to.matched.some(
+      (record) =>
+        Array.isArray(record.meta.staffRoles) &&
+        (!session.staffRole || !(record.meta.staffRoles as StaffRole[]).includes(session.staffRole))
+    )
+    if (blockedByRole) return { name: 'forbidden' }
+    return true
+  }
 
   return {
     name: 'home',

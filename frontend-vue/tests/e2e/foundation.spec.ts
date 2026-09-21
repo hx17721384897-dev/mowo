@@ -152,7 +152,7 @@ test('mobile public navigation is usable without horizontal overflow', async ({ 
   expect(overflows).toBe(false)
 })
 
-test('protected account area requests login and other application shells still render', async ({
+test('protected account and admin areas request login while production shell still renders', async ({
   page
 }) => {
   await page.goto('/app/account')
@@ -162,7 +162,8 @@ test('protected account area requests login and other application shells still r
   await expect(page.getByPlaceholder('请输入手机号')).toBeVisible()
   await page.getByRole('button', { name: '关闭登录窗口' }).click()
   await page.goto('/app/admin')
-  await expect(page.getByText('管理区域占位')).toBeVisible()
+  await expect(page).toHaveURL(/\/app\/\?.*auth=1/)
+  await expect(page.getByRole('dialog')).toBeVisible()
   await page.goto('/app/production')
   await expect(page.getByText('生产区域占位')).toBeVisible()
   await page.goto('/app/does-not-exist')
