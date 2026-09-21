@@ -159,7 +159,7 @@ try {
   await page.getByRole('link', { name:'确认筛帧' }).click()
   await page.locator('#stateEditor.active').waitFor({ timeout:10000 })
   await page.getByRole('button', { name:/满意，选择款式/ }).click()
-  await page.waitForURL(/customize-confirm\.html/, { timeout:10000 })
+  await page.waitForURL(/\/app\/customize\/confirm/, { timeout:10000 })
   if (await page.locator('.price-card-btns input[type="checkbox"]').count()) throw new Error('私人定制仍显示联名或版权勾选项')
   if (await page.getByText(/当前金额为参考价格/).count()) throw new Error('私人定制仍显示人工确认价格提示')
   await page.locator('#frameOptions .opt-btn').first().waitFor({ timeout:10000 }).catch(async () => {
@@ -206,7 +206,7 @@ try {
   await page.locator('#reuseBanner.show').waitFor({ timeout:10000 })
   await page.locator('.model-card').first().getByRole('button', { name:'选择此款' }).click()
   await page.locator('#nextBtn').click()
-  await page.waitForURL(/customize-confirm\.html\?.*assetId=/, { timeout:10000 })
+  await page.waitForURL(/\/app\/customize\/confirm\?.*assetId=/, { timeout:10000 })
   await page.locator('#frameOptions .opt-btn').first().click()
   await page.locator('#sizeOptions .opt-btn').first().click()
   await page.locator('#materialOptions .opt-btn').first().click()
@@ -256,7 +256,7 @@ try {
     }
   })
   await page.getByRole('button', { name:/下一步/ }).click()
-  await page.waitForURL(/customize-confirm\.html/, { timeout:20000 }).catch(() => {
+  await page.waitForURL(/\/app\/customize\/confirm/, { timeout:20000 }).catch(() => {
     throw new Error(`Vue 自助筛帧未进入确认页；停留在 ${page.url()}；页面提示：${orderDialogs.join(' | ') || '无'}`)
   })
   const selfRequestId = new URL(page.url()).searchParams.get('requestId')
@@ -287,7 +287,7 @@ try {
   await page.goto(`${vueBase}/customize/editor?editId=${encodeURIComponent(editableRequest.customProductId)}`, { waitUntil:'networkidle' })
   await page.locator('#stateEditor.active').waitFor({ timeout:10000 })
   await page.getByRole('button', { name:'下一步 →' }).click()
-  await page.waitForURL(/customize-confirm\.html/, { timeout:20000 }).catch(() => {
+  await page.waitForURL(/\/app\/customize\/confirm/, { timeout:20000 }).catch(() => {
     throw new Error(`草稿重编未进入确认页；停留在 ${page.url()}；页面提示：${orderDialogs.join(' | ') || '无'}`)
   })
   if (new URL(page.url()).searchParams.get('requestId') !== selfRequestId) throw new Error('草稿重编没有复用原定制请求')

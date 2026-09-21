@@ -41,6 +41,9 @@ const requiredRedirects = [
   ['privacy-policy.html', '/app/legal/privacy'],
   ['contact.html', '/app/contact'],
   ['customize-start.html', '/app/customize'],
+  ['customize-confirm.html', '/app/customize/confirm'],
+  ['settings.html', '/app/account/settings'],
+  ['my-addresses.html', '/app/account/settings'],
   ['showcase.html', '/app/showcase'],
   ['showcase-detail.html', '/app/showcase-detail']
 ]
@@ -58,11 +61,21 @@ if (
 ) {
   throw new Error('Vite 开发环境必须把同源 /api 请求代理到本地 API')
 }
-if (!vueRouter.includes("path: 'customize/confirm'") || !vueRouter.includes("name: 'customize-confirm'")) {
-  throw new Error('Vue 必须保留定制确认候选路由及其深链接能力')
+if (
+  !vueRouter.includes("path: 'customize/confirm'") ||
+  !vueRouter.includes("name: 'customize-confirm'")
+) {
+  throw new Error('Vue 必须保留正式定制确认路由及其深链接能力')
 }
 
-for (const retired of ['customize-start.html', 'my-animations.html', 'my-customizations.html']) {
+for (const retired of [
+  'customize-start.html',
+  'customize-confirm.html',
+  'settings.html',
+  'my-addresses.html',
+  'my-animations.html',
+  'my-customizations.html'
+]) {
   if (fs.existsSync(path.join(root, '..', 'frontend', 'pages', retired))) {
     throw new Error(`已由 Vue 接管的旧页面不得继续存在：frontend/pages/${retired}`)
   }

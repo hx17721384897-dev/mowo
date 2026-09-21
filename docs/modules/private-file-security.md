@@ -8,7 +8,7 @@
 
 阿里云 OSS 当前未充值，本地开发使用 `STORAGE_PROVIDER=local`，文件保存在 `content-service/storage/private/`。该目录已加入 `.gitignore`，不会进入代码仓库，也不会由前端静态服务器直接公开。正式环境必须改为 `STORAGE_PROVIDER=oss`，生产配置会拒绝本地存储。
 
-本地前端必须从 `frontend/` 目录启动。若编辑器占用或错误配置了 `5500`，可在该目录使用 `python -m http.server 5501 --bind 127.0.0.1`，然后打开 `http://127.0.0.1:5501/pages/settings.html`；开发环境已允许 `5500` 与 `5501` 访问本地 API。
+本地账户设置页由 Vue 提供，应按仓库脚本启动 API/旧静态服务，并在 `frontend-vue` 启动开发或预览服务后打开 `http://127.0.0.1:4173/app/account/settings`。旧 `settings.html` 已删除；私有上传仍由 API 3001 提供签名和完成确认。
 
 ## 当前存储方式
 
@@ -88,7 +88,7 @@
 - 头像、中断定制上传和 7 天定制草稿清理：`src/lib/private-file-cleanup.js`，由 `src/lib/scheduler.js` 定时调用。
 - 注销文件分类和删除重试：`src/lib/account-deletion.js`，由 `src/lib/scheduler.js` 扫描到期申请。
 - 业务绑定：`routes/contact.js`、`routes/orders.js`、`routes/custom-products.js`。
-- 用户编辑模式由 Vue `services/private-upload.ts` 统一上传；旧 `frontend/js/private-upload.js` 仅供 `customize-editor.html` 的 `adminRequestId` / `frameDraftId` 后台模式和尚未迁移的 `customize-confirm.html` 使用。
+- 用户编辑模式由 Vue `services/private-upload.ts` 统一上传；旧 `frontend/js/private-upload.js` 仅供 `customize-editor.html` 的 `adminRequestId` / `frameDraftId` 两个后台模式使用，待 V4/V5 接管后删除。
 - 自动测试：`npm run check:private-files`、`npm run check:customization-flow`。
 
 ## 验证结果

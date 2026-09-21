@@ -215,7 +215,7 @@ onMounted(async () => {
           <div class="config-section reveal d1 on">
             <div class="config-label"><span class="config-label-num">1</span>选择帧数规格</div>
             <p class="config-desc">根据你上传的动画，以下规格可用。帧数越多动画越流畅。</p>
-            <div class="option-row">
+            <div id="frameOptions" class="option-row">
               <button
                 v-for="frame in context.validTargets"
                 :key="frame"
@@ -235,7 +235,7 @@ onMounted(async () => {
           <div v-if="selectedFrame" class="config-section reveal d2 on">
             <div class="config-label"><span class="config-label-num">2</span>选择尺寸</div>
             <p class="config-desc">尺寸影响最终产品大小。</p>
-            <div class="option-row">
+            <div id="sizeOptions" class="option-row">
               <button
                 v-for="size in sizes"
                 :key="size"
@@ -250,7 +250,7 @@ onMounted(async () => {
           <div v-if="selectedSize" class="config-section reveal d2 on">
             <div class="config-label"><span class="config-label-num">3</span>选择材质</div>
             <p class="config-desc">不同材质影响重量、手感和价格。</p>
-            <div class="option-row">
+            <div id="materialOptions" class="option-row">
               <button
                 v-for="material in materials"
                 :key="material"
@@ -265,7 +265,7 @@ onMounted(async () => {
           <div v-if="selectedMaterial" class="config-section reveal d3 on">
             <div class="config-label"><span class="config-label-num">4</span>选择颜色</div>
             <p class="config-desc">颜色选项根据所选材质自动更新。</p>
-            <div class="option-row color-row">
+            <div id="colorOptions" class="option-row color-row">
               <button
                 v-for="sku in colorSkus"
                 :key="sku.id"

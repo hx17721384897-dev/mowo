@@ -73,7 +73,7 @@
 | 业务层 | 页面 | 初始结论 |
 |---|---|---|
 | 官网展示层 | `index`、`about`、`products`、`showcase`、`showcase-detail`、`faq`、`contact`、`privacy-policy`、`user-agreement`、`creator-profile` | 公开入口候选；待逐页核对公开 API、文案、资源和链接。 |
-| 用户交易层 | Vue `/app/customize`、Vue `/app/customize/editor`、`customize-confirm`、`cart`、`checkout`、`orders`、`order-detail`、Vue `/app/account/animations`、Vue `/app/account/customizations`、Vue `/app/account/settings` | B1 主流程；全部用户编辑模式已由 Vue 接管。旧共享编辑器仅临时承载 V4/V5 后台模式。 |
+| 用户交易层 | Vue `/app/customize`、Vue `/app/customize/editor`、Vue `/app/customize/confirm`、`cart`、`checkout`、`orders`、`order-detail`、Vue `/app/account/animations`、Vue `/app/account/customizations`、Vue `/app/account/settings` | B1 主流程；账户、全部用户编辑模式和确认页已由 Vue 接管。旧共享编辑器仅临时承载 V4/V5 后台模式。 |
 | 创作者层 | `creator-animations`、`creator-certify`、`creator-collab`、`creator-dashboard`、`creator-earnings`、`creator-links`、`creator-notifications`、`creator-profile` | 横跨用户与后台运营；必须结合资格、岗位和功能开关审计。 |
 | 后台运营层 | 24 个 `admin-*.html` 页面，包括账号删除、联名、联络、合同、定制申请、帧图、库存、订单、用户和日志。 | 待建立“页面—路由—岗位权限”矩阵。 |
 | 生产履约层 | `production-inventory`、`production-scan`、`production-scan-frame`、`production-scan-material`、`production-scan-pairing`、`production-scan-packing` | 待核对是否统一进入生产工作台，旧入口是否只负责跳转。 |
@@ -83,12 +83,12 @@
 
 | 环节 | 代码证据 | 初始判断 |
 |---|---|---|
-| 定制确认至结算 | Vue `/app/customize/editor` 处理用户新建并进入 `customize-confirm.html`；旧 `customization-review-editor.js` 与 `customize-editor.html` 暂供未迁移模式。确认页加入 `/api/cart/add` 后跳转 `checkout.html`。 | 新建路径已通过隔离库真实浏览器回归；确认页迁移仍属 V2-E。 |
+| 定制确认至结算 | Vue `/app/customize/editor` 处理全部用户编辑模式并进入 Vue `/app/customize/confirm`；服务端确认上下文提供可信事实，加购以用户绑定幂等键写入购物车后进入 `checkout.html`。 | V2-E 已通过隔离库真实浏览器回归；旧确认页已删除。旧共享编辑器仅保留 V4/V5 后台模式。 |
 | 结算准备 | `/api/cart/checkout` 需要登录、按幂等键创建 10 分钟 `PreOrder`、冻结快照并预留库存。 | 可用但有限制；是交易准备记录，不能被误称为已付款订单。 |
 | 模拟付款 | `/api/payment/mock-pay/:preOrderId` 需要订单本人登录，并在 `NODE_ENV=production` 明确拒绝。 | 仅开发演示；不适合作为邀请测试的真实收款方式。 |
 | 支付回调 | `/api/payment/callback` 会将待支付记录转为已支付、建立 `SalesOrder`、订单明细和生产件；已做并发/重复通知的部分幂等处理。 | 安全/上线阻断；尚未验证微信签名或提供等效可信来源鉴别。 |
 | 页面支付文案 | `checkout.html` 明确提示微信小程序付款尚待接入；`user-agreement.html` 也说明邀请测试不承诺网页直接付款。`faq.html` 却称目前支持微信和支付宝、30 分钟付款。 | 新旧冲突；公开信息与当前 B1 范围不一致。 |
-| 遗留确认弹窗 | `customize-confirm.html` 仍保留“订单已创建、联系客服付款”的成功弹窗与函数，但静态调用图未见触发点；当前购买路径实际跳至 `checkout.html`。 | 可归档候选；先做浏览器覆盖和消费者确认，不能仅凭静态扫描删除。 |
+| 遗留确认弹窗 | 初始审计发现旧页保留“订单已创建、联系客服付款”的死代码；V2-E 未迁移该交易叙事，并在闭环回归后物理删除整页。 | 已解决（2026-09-21）；当前唯一后续路径为购物车与现有结算页。 |
 
 ### 4.3 小程序—服务端契约抽样
 
@@ -198,12 +198,12 @@
 | P0-022 | 根路径仅返回 API 运行消息；未发现独立 readiness/liveness、SIGTERM/SIGINT 优雅停止或 Scheduler Timer 停止管理。 | 可用但有限制 | 邀请测试期间无法区分“进程活着”与“数据库/存储可用”，停止时可能中断请求或任务。 | 建立最小健康端点、优雅关闭和单实例运行约定。 | 已确认。 |
 | P0-023 | B7 综合入口、空库重建、种子及生产写库专项均强制数据库名严格等于 `mowo_b1_test`；综合入口会从零重建隔离库并在结束时恢复备份。零散专项仍应只通过受控入口运行。 | L0 可用 | 当前可防止综合回归误写 `mowo_db`，但未来 CI/B1 必须使用各自独立数据库和凭据。 | 保持数据库硬闸门；新增写库检查必须纳入 `check:b7` 或实现同级保护。 | L0 已验证。 |
 | P0-024 | 静态链接扫描确认 `admin-orders`、`admin-print-production`、`admin-production-batches` 在登录失败路径引用不存在的 `auth.html`；`admin-print-production` 还引用不存在的 `../css/style.css`。 | 未完成 | 后台会在会话过期或加载样式时出现断链，影响内部 B0/B1 演练。 | 建立唯一登录入口和静态链接 CI；修复前不将这些页判为完整可用。 | 已确认。 |
-| P0-025 | `my-addresses.html` 返回链接使用 `../index.html`，会跳出 `frontend/pages` 目录。 | 未完成 | 用户账户路径存在可复现断链。 | 在用户交易层统一页面相对路径或路由工具后修复，并纳入链接回归。 | 已确认。 |
+| P0-025 | `my-addresses.html` 返回链接使用 `../index.html`，会跳出 `frontend/pages` 目录。 | 已解决 | 用户账户路径存在可复现断链。 | V2 已由 Vue 设置页共享地址组件接管并物理删除旧独立地址页；旧 URL 临时 302 到 `/app/account/settings#addresses`。 | 已关闭（2026-09-21）。 |
 | P0-026 | `_legacy/` 页面迁入子目录后仍使用旧相对路径：例如 `../js/auth.js`、同级公开页面链接，解析后均不指向现有资源。 | 关闭但保留 | 历史页面不具备可运行保证；若直接暴露会造成资源/导航失败。 | 明确 `_legacy` 仅归档，或设置受控重定向；不得将其当作现行能力。 | 已确认。 |
 | P0-027 | 短信发送接口会对 `LOGIN` 返回“账号不存在”、对 `REGISTER` 返回“账号已注册”；验证码验证也保留相同差异。 | 可用但有限制 | 攻击者可利用手机号探测注册状态，虽有 IP/手机号限流，仍不符合最小披露的邀请测试预期。 | B1 前决定是否统一为中性响应；至少对公网入口增加网关防刷与安全测试。 | 已确认。 |
 | P0-028 | `/api/payment/callback` 当前不验证微信签名、订单号、金额或其他可信支付来源；任意请求只要提供处于 `pending_payment` 的 `preOrderId` 且不传失败标记，即可进入“支付成功”建单逻辑。 | 安全/上线阻断 | 可被伪造支付成功、无款建单并占用库存/生产资源；不能连接真实支付，也不应暴露在 B1 公网流程中。 | B1 明确禁用/隔离该回调与模拟支付；C 阶段接入官方验签、原始报文校验、金额/商户订单对账、重放保护和告警后才可开放。 | 已确认。 |
 | P0-029 | 当前公开 FAQ 声称已支持微信和支付宝、30 分钟付款；结算页和用户协议则说明微信小程序付款尚待接入、邀请测试不承诺网页直接付款。 | 新旧冲突 | 受邀用户可能按错误承诺发起付款，造成投诉、资金和客服风险。 | 在 B1 前统一所有公开支付、退款、物流与售后文案，使其与实际可执行流程和联系人一致。 | 已确认。 |
-| P0-030 | `customize-confirm.html` 保留未见调用的“订单已创建—联系客服付款”成功弹窗、外链和复制订单号函数；现行购买路径已改为购物车和结算页。 | 可归档候选 | 同一页面保留两种交易叙事，会提高后续维护、误接回旧流程和文案失真的风险。 | 在用户交易批次做浏览器/消费者确认；确认无入口后作为受控清理候选，而非立即删除。 | 已确认。 |
+| P0-030 | `customize-confirm.html` 保留未见调用的“订单已创建—联系客服付款”成功弹窗、外链和复制订单号函数；现行购买路径已改为购物车和结算页。 | 已解决 | 同一页面保留两种交易叙事，会提高后续维护、误接回旧流程和文案失真的风险。 | V2-E 已完成消费者确认、真实闭环和入口切换；旧页面于 2026-09-21 物理删除，部署门禁阻止恢复。 | 已关闭。 |
 | P0-031 | 多个后台/生产路由仍保留自行 `decode + verify` Token、按数字 `role` 判断的本地中间件；同一路径当前还依赖全局“路径—岗位权限—活动会话”Hook。 | 新旧冲突 | 双层保护在当前映射覆盖时可工作，但权限含义和会话校验分散；未来路径调整一旦漏配全局 Hook，可能退化为不检查撤销会话、账户状态和细粒度岗位的旧规则。 | 先建立完整端点矩阵并以全局权限模型为唯一策略源；逐路由迁移/删除旧中间件前做岗位与撤销会话回归测试。 | 已确认。 |
 
 ## 8. 批次 0 进度

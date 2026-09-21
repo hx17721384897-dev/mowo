@@ -83,7 +83,7 @@
         '<a href="/app/contact"' + act(['contact']) + '>联络我们</a>' +
         '<a href="cart.html">购物车</a>' +
         '<a href="orders.html">我的订单</a>' +
-        '<a href="settings.html">账号设置</a>' +
+        '<a href="/app/account/settings">账号设置</a>' +
       '</div>' +
       '<div class="mowo-mobile-foot">' +
         '<button id="mobileLoginBtn">登录 / 注册</button>' +

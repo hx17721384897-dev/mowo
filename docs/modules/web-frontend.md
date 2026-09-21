@@ -2,6 +2,7 @@
 
 > 初始调查基准：2026-08-12。2026-08-13 已完成账号/文件安全阶段的页面整改：协议链接、登录设备按钮、联名展示命名及首发功能入口已更新；以下未标注“已整改”的内容仍是调查事实。
 > R1-B 更新（2026-09-14）：退役页面、消费者和旧功能开关脚本已删除，并已建立独立 `frontend-vue/` V0 脚手架。V1b 更新（2026-09-15）：Vue 已接管联名货架与详情，旧 `showcase*.html` 和专用 JS 已删除；下文 2026-08 页面清单仅用于历史追溯，不代表现行入口。
+> V2 更新（2026-09-21）：Vue 已接管账户设置、共享地址管理、动画、定制列表及用户定制全流程；对应旧用户页已物理删除。旧共享编辑器只保留 V4/V5 后台模式。本文“技术形态”和旧页面调查段落属于历史快照，现行入口以“定制、购物车与用户中心”表为准。
 
 ## 2026-08-13 首发显示状态
 
@@ -23,7 +24,7 @@
 - 公共导航使用 `nav.js` + `nav.css`；登录弹窗、Token 刷新和用户下拉使用 `auth.js`。
 - 管理后台部分复用 `admin-sidebar.js`，但每页仍各自实现 API client、鉴权跳转、表格和弹窗。
 - 地址解析使用 ES module `address-utils.js` 和本地 `assets/regions.json`。
-- 设置页业务在 `settings.js`；`router.js` 仅被设置页引用。
+- 该条为 2026-08 历史形态；现行设置业务位于 Vue `SettingsView` 与共享 `AddressBook`，旧 `settings.js` 已删除。
 - 管理订单页本地携带 `jszip.min.js` 和 `xlsx.full.min.js`；FAQ 从 CDN 加载 Fuse.js，设置页从 CDN 加载 Cropper.js；大量页面加载 Google Fonts。
 - 页面体量较大：`customize-editor.html` 约 2196 行，`admin-inventory.html` 约 2049 行，`creator-collab.html` 约 1700 行；多个页面超过 1000 行并包含完整样式和业务逻辑。
 
@@ -35,7 +36,7 @@
 | `js/nav.js` | 注入桌面/移动导航 | 当前展示“联名作品”；依据 localStorage 同步用户状态 |
 | `js/admin-sidebar.js` | 注入后台分组侧栏 | 按员工岗位和服务端首发开关裁剪；实际权限仍以后端为准 |
 | `js/feature-flags.js` | 读取首发功能状态并隐藏/拦截旧入口 | 服务端开关是最终边界；读取失败按全部未来功能关闭处理 |
-| `js/settings.js` | 设置页 profile、安全、通知、隐私、注销和地址 | 功能覆盖较全，但依赖全局 `Router` 和 `MOWO_API_BASE` |
+| `js/settings.js`（已删除） | 旧设置页业务 | V2 真实接口回归通过后随旧页物理删除 |
 | `js/router.js` | 页面跳转和本地角色检查 | 2026-08-13 已改为 `window.Router` 供普通 script 使用；多数历史目标页仍已不存在或移入 `_legacy` |
 | `js/address-utils.js` | 行政区加载、地址解析、三级联动 | ES module；结算、独立地址页和设置页分别接入 |
 | `js/jszip.min.js` | 浏览器 ZIP | 仅 `admin-orders.html` 使用 |
@@ -82,14 +83,14 @@
 | Vue `/app/customize` | 选择款式/SKU、配额检查、动画复用 | 已接 machine-models/custom-products/animation-assets | V2-D1 已关闭；旧 HTML 已物理删除 |
 | Vue `/app/customize/editor` | 用户新建、草稿重编、动画改版和人工结果只读确认 | 已接 custom-products/customization-requests/animation-assets | D2-C/D2-D 已接管全部用户编辑模式；共享安全上传、能力矩阵与幂等草稿 |
 | `customize-editor.html` | 后台筛帧和后台帧图制作 | 已接后台 customization/frame-making API | 仅保留 `adminRequestId` / `frameDraftId`；待 V4/V5 接管后删除 |
-| `customize-confirm.html` / Vue `/app/customize/confirm` 候选 | 选配、确认定制、幂等加购并进入结算 | Vue 候选已接确认上下文/customization-requests/animation-assets/cart | 旧页仍为正式入口；负责人视觉检查和 E3 真实闭环后切换 |
+| Vue `/app/customize/confirm` | 选配、确认定制、幂等加购并进入结算 | 已接确认上下文/customization-requests/animation-assets/cart | 已接管三类正式入口；旧 HTML 已删除，旧 URL 临时 302 |
 | `cart.html` | 服务端购物车 | 已接 cart | 只加载登录购物车；未登录购买由详情页保留短期操作意图，登录后重新校验并写入服务端 |
 | `checkout.html` | 地址、创建预订单、轮询支付 | 已接 cart/addresses/payment | 真实支付发起未闭环；localhost 显示 Mock 支付 |
 | `orders.html` | 我的订单与确认收货 | 已接 orders | 空状态已改为联名作品入口 |
 | `order-detail.html` | 订单详情、取消、收货、售后、凭证上传 | 已接 orders/upload | 固定 localhost；社区导航已改为联名作品 |
-| Vue `/app/account/animations` | 定制动画列表、改名、删除、继续编辑 | 已接 animation-assets + custom-products | 使用共享账户壳；旧页等待 V2-C2 人工验收后删除 |
-| `my-addresses.html` | 独立地址管理 | 已接 addresses | 未登录和 Logo 跳到不存在的 `frontend/index.html` |
-| `settings.html` | 资料、安全、通知、隐私、注销、地址 | 已接 v1 account/addresses | 阻断：`router.js` 含 ESM export，却按普通脚本加载，`Router` 无法可靠成为全局对象 |
+| Vue `/app/account/animations` | 定制动画列表、改名、删除、继续编辑 | 已接 animation-assets + custom-products | 使用共享账户壳；旧页已删除 |
+| Vue `/app/account/settings#addresses` | 地址新增、编辑、删除、默认地址 | 已接 addresses | 与 V3 结算选择模式复用同一 `AddressBook` 领域组件；旧独立地址页已删除 |
+| Vue `/app/account/settings` | 资料、头像、安全、设备退出、注销、地址 | 已接 v1 account/upload/addresses | 已通过真实隔离库回归；旧 HTML/JS 已删除 |
 
 ### 创作者页面
 
@@ -150,12 +151,12 @@
 index / products / showcase
 ├─ showcase-detail
 │  └─ cart -> checkout -> orders -> order-detail
-└─ Vue /app/customize -> Vue /app/customize/editor -> customize-confirm
+└─ Vue /app/customize -> Vue /app/customize/editor -> Vue /app/customize/confirm
    └─ cart -> checkout
 
 auth.js user menu
-├─ cart / orders / my-addresses / settings
-└─ Vue /app/account/animations /app/account/customizations
+├─ cart / orders
+└─ Vue /app/account/settings /app/account/animations /app/account/customizations
 ├─ creator-dashboard -> earnings / collab / links / notifications / animations
 └─ admin-orders -> 统一 admin-sidebar 中的后台页面
 ```

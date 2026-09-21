@@ -92,20 +92,20 @@ content-service（统一处理）
 
 ### 定制购买流程（当前）
 ```
-Vue /app/customize → Vue /app/customize/editor → customize-confirm.html
-  → 上传帧图到OSS（预签名URL）
-  → POST /api/customize-orders（创建订单）
-  → 显示订单号 + 客服微信引导
-  → 管理员手动确认收款 → 改状态为paid
-  → 待生产看板自动显示
+Vue /app/customize → Vue /app/customize/editor → Vue /app/customize/confirm
+  → 私有素材/帧图经预签名 URL 上传
+  → 服务端确认定制状态并以幂等键加入 CUSTOM 购物车
+  → cart.html → checkout.html
+  → POST /api/cart/checkout 创建不可变 PreOrder 快照并预留库存
+  → 当前真实支付关闭；后续由微信小程序支付交接完成付款
 ```
 
 ### 定制购买流程（后期接小程序）
 ```
-同上 → 显示订单号 + 小程序二维码
-  → 用户扫码进小程序 → 输入订单号
-  → 小程序显示订单详情 → 用户支付
-  → CRMEB回调 → content-service改状态为paid
+同上 → Web 结算生成 PreOrder
+  → 微信小程序读取本人待支付记录并发起支付
+  → 可信微信支付回调验签、核对商户订单和金额
+  → content-service 幂等转为已支付销售订单
   → 待生产看板自动显示
 ```
 

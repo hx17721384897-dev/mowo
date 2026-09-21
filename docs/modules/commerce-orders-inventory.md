@@ -147,7 +147,7 @@
 
 1. Vue `/app/customize` 选择定制入口和基础机型。
 2. Vue `/app/customize/editor` 保存私有素材、`CustomProduct` 帧草稿和 `CustomizationRequest` 定制草稿。
-3. `customize-confirm.html` 选择兼容 SKU，确认定制记录后把对应商品加入 `CUSTOM` 购物车。
+3. Vue `/app/customize/confirm` 选择兼容 SKU，确认定制记录后以用户绑定幂等键把对应商品加入 `CUSTOM` 购物车。
 4. `cart.html` 修改数量和选择状态。
 5. `checkout.html` 选择地址并调用 `/api/cart/checkout`。
 6. 后端在同一事务中复核全部条目、创建不可变 `PreOrder` 快照并预锁两类商品共同使用的 SKU 库存。

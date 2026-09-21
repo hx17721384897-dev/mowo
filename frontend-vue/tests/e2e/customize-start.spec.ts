@@ -177,9 +177,12 @@ test('reuse deep link requires a session and only shows frame-compatible models'
   await expect(page.getByText('八帧款')).toHaveCount(0)
   await page.getByRole('button', { name: '选择此款' }).click()
   await page.locator('#nextBtn').click()
-  await expect(page).toHaveURL(
-    /\/mowo\/frontend\/pages\/customize-confirm\.html\?.*assetId=asset-1.*modelId=model-1.*frames=6.*targets=12%2C24/
-  )
+  await expect(page).toHaveURL(/\/app\/customize\/confirm\?/)
+  const confirmationUrl = new URL(page.url())
+  expect(confirmationUrl.searchParams.get('assetId')).toBe('asset-1')
+  expect(confirmationUrl.searchParams.get('modelId')).toBe('model-1')
+  expect(confirmationUrl.searchParams.get('frames')).toBe('6')
+  expect(confirmationUrl.searchParams.get('targets')).toBe('12,24')
 })
 
 test('draft quota blocks editor handoff without losing the selected model', async ({ page }) => {

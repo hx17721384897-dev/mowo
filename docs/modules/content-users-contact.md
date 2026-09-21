@@ -178,7 +178,7 @@
 | `_legacy/work-detail.html` | 遗留 | 真实调用文章、评论、点赞和收藏；正文用 `innerHTML` 输出，重新上线前存在存储型 XSS 风险 |
 | `creator-profile.html` | 现行 | 真实拉用户、文章和旧商品；关注成功后错误读取 `json.data.following`，后端实际返回根级 `following` |
 | `creator-certify.html` | 现行入口、演示逻辑 | 无 `/api/certify` 调用；还把字符串 Token 当 JSON 解析，侧栏信息通常无法正常读取 |
-| `settings.html` | 现行 | 只按 `/api/v1/account/me` 返回的缓存状态渲染四种认证状态，不读取最新申请拒绝原因 |
+| Vue `/app/account/settings` | 现行 | 由可信会话校准后渲染当前账户资料与安全能力；旧设置页已删除，创作者自助申请不在首发范围 |
 | `contact.html` | 现行 | 前端强制登录和上传附件，但提交请求不带 Authorization，只把 localStorage 用户 ID 放入 body |
 | `admin-contact.html` | 现行 | 真实接通列表、统计、详情、状态、星标和备注；删除/封 IP 后端有接口但页面无入口 |
 | `admin-users.html` | 现行 | 真实接通列表、改角色和封禁；页面发送 `keyword`，后端列表忽略该参数，搜索/高亮找人可能失效 |

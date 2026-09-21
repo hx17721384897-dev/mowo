@@ -109,7 +109,7 @@ npm run test-sms:reset -- 18800009101
 ### 快速确认
 
 1. 使用图片组或视频完成筛帧并点击“下一步”。
-2. 地址应进入 `customize-confirm.html`，并包含非空的 `requestId`。
+2. 地址应进入 `http://127.0.0.1:4173/app/customize/confirm`，并包含非空的 `requestId`。
 3. 在开发者工具“应用程序”中的 Local Storage 检查，不应出现 `mowo_customize_frames`。
 4. 若仍显示旧行为，先在当前页面按 `Ctrl + F5`，再确认网页使用标准 `5500` 地址、后端 `3001` 正常运行。
 

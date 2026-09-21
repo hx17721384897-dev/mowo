@@ -504,9 +504,9 @@ function navGoTo(page) {
     cart:          'cart.html',
     orders:        'orders.html',
     customizations:'/app/account/customizations',
-    addresses:     'my-addresses.html',
+    addresses:     '/app/account/settings#addresses',
     myAnimations:  '/app/account/animations',
-    settings:      'settings.html',
+    settings:      '/app/account/settings',
     help:          '/app/contact',
     admin:         'admin-orders.html',
   };

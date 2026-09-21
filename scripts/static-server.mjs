@@ -11,6 +11,12 @@ const root = resolve(args.root || 'frontend')
 const mount = `/${String(args.mount || 'mowo/frontend').replace(/^\/+|\/+$/g, '')}`
 const port = Number(args.port || 5500)
 const host = args.host || '127.0.0.1'
+const appBase = String(args['app-base'] || `http://${host}:4173/app`).replace(/\/+$/, '')
+const legacyVueRedirects = new Map([
+  ['pages/settings.html', { pathname: `${appBase}/account/settings`, hash: '' }],
+  ['pages/my-addresses.html', { pathname: `${appBase}/account/settings`, hash: '#addresses' }],
+  ['pages/customize-confirm.html', { pathname: `${appBase}/customize/confirm`, hash: '' }]
+])
 
 const mime = {
   '.css': 'text/css; charset=utf-8',
@@ -27,13 +33,24 @@ const mime = {
 }
 
 createServer((request, response) => {
-  const pathname = decodeURIComponent(new URL(request.url || '/', `http://${host}`).pathname)
+  const requestUrl = new URL(request.url || '/', `http://${host}`)
+  const pathname = decodeURIComponent(requestUrl.pathname)
   if (pathname !== mount && !pathname.startsWith(`${mount}/`)) {
     response.writeHead(404).end('Not found')
     return
   }
 
   const relative = pathname.slice(mount.length).replace(/^\/+/, '') || 'pages/index.html'
+  const redirect = legacyVueRedirects.get(relative)
+  if (redirect) {
+    response
+      .writeHead(302, {
+        Location: `${redirect.pathname}${requestUrl.search}${redirect.hash}`,
+        'Cache-Control': 'no-store'
+      })
+      .end()
+    return
+  }
   const target = resolve(root, relative)
   if (target !== root && !target.startsWith(`${root}${sep}`)) {
     response.writeHead(403).end('Forbidden')

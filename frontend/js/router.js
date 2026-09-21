@@ -66,7 +66,7 @@ const Router = {
   },
 
   toCustomizeConfirm() {
-    this.go('/pages/customize-confirm.html')
+    this.go('/app/customize/confirm')
   },
 
   // ─────────────────────────────────────────

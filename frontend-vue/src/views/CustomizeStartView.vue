@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { legacyPublicUrl } from '@/config/public-links'
 import CustomizeHelpDialog from '@/features/customize-start/CustomizeHelpDialog.vue'
 import CustomizeProgress from '@/features/customize-start/CustomizeProgress.vue'
 import GameplayDialog from '@/features/customize-start/GameplayDialog.vue'
@@ -50,14 +49,16 @@ const nextUrl = computed(() => {
       model.skus.filter((sku) => sku.frameCount % baseFrames === 0).map((sku) => sku.frameCount)
     )
   ].sort((a, b) => a - b)
-  const params = new URLSearchParams({
-    assetId: reuseAsset.value.id,
-    modelId: model.id,
-    modelName: model.name,
-    frames: String(baseFrames),
-    targets: targets.join(',')
-  })
-  return `${legacyPublicUrl('customize-confirm')}?${params.toString()}`
+  return router.resolve({
+    name: 'customize-confirm',
+    query: {
+      assetId: reuseAsset.value.id,
+      modelId: model.id,
+      modelName: model.name,
+      frames: String(baseFrames),
+      targets: targets.join(',')
+    }
+  }).href
 })
 
 watch(anyDialogOpen, (open) => {

@@ -2370,7 +2370,7 @@ document.getElementById('btnNextStep').addEventListener('click', async ()=>{
   }
 
   const meta = currentModelMeta();
-  const nextUrl = new URL('customize-confirm.html', location.href);
+  const nextUrl = new URL((window.MOWO_APP_BASE || '/app') + '/customize/confirm', location.origin);
   nextUrl.searchParams.set('type', machineType);
   nextUrl.searchParams.set('modelId', meta.id);
   nextUrl.searchParams.set('modelName', meta.name || machineName);

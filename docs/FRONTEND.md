@@ -45,7 +45,7 @@
 | Vue `/app/customize` | 选款式 | ✅ 已等价迁移；旧 HTML 已删除 |
 | Vue `/app/customize/editor` | 新建定制、草稿重编、动画改版、人工结果只读确认 | ✅ 已接管全部用户编辑模式 |
 | `customize-editor.html` | 后台筛帧与后台帧图制作 | ⚠️ 仅保留 `adminRequestId` / `frameDraftId`，由 V4/V5 删除 |
-| `customize-confirm.html` / Vue `/app/customize/confirm` 候选 | 选配+提交 | Vue 候选自动门禁通过；旧页等待视觉验收后切换 |
+| Vue `/app/customize/confirm` | 选配、确认定制、幂等加购并进入结算 | ✅ 已接管三类正式入口；旧 HTML 已删除，旧 URL 临时 302 |
 | Vue `/app/account/customizations` | 我的定制、状态筛选和时间线 | ✅ V2-C1 已接管，旧页已删除 |
 
 定制编辑器保留原有设计器，并在第一屏增加“自己筛选”和“工作人员筛选”两个入口。登录用户进入确认页前，选中帧上传为私有帧图，原视频/原图上传为私有源素材；自己筛选先保存无编号草稿，提交订单时才生成定制编号。私人定制确认页按标准 SKU 价格直接进入购物车与结算，不做人工内容审核；联名公开上架另走独立审核。完整流程见 `modules/web-customization.md`。
@@ -74,7 +74,7 @@
 
 ### 账号设置与设备退出
 
-- `settings.html#account` 提供“退出当前设备”和“退出全部设备”。
+- Vue `/app/account/settings#account` 提供“退出当前设备”和“退出全部设备”；旧设置页已删除。
 - 头像菜单“退出登录”与前者相同，只退出当前浏览器。
 - `auth.js` 在退出时停止自动刷新并统一清理登录状态，防止并发续期重新登录。
 - `router.js` 通过 `window.Router` 供普通脚本使用；退出按钮在其他数据加载前完成事件绑定。

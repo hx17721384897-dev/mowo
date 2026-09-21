@@ -34,7 +34,6 @@ import {
   type ValidatedSource
 } from '@/features/customize-editor/source-validation'
 import { uploadCustomizationFiles } from '@/features/customize-editor/upload-api'
-import { legacyPublicUrl } from '@/config/public-links'
 import { getMachineModels } from '@/features/customize-start/api'
 import type { MachineModel } from '@/features/customize-start/types'
 import { useSessionStore } from '@/stores/session'
@@ -232,6 +231,10 @@ function writeCompatibilityStorage(entries: ReadonlyArray<readonly [string, stri
   } catch {
     // 云端草稿和网址 requestId 才是事实源；兼容缓存写满时不得重复提交或阻断后续确认页。
   }
+}
+
+function confirmationUrl(query: Record<string, string>): string {
+  return router.resolve({ name: 'customize-confirm', query }).href
 }
 
 async function assignFiles(target: 'self' | 'human', files: File[]): Promise<void> {
@@ -591,14 +594,16 @@ async function submitSelf(sources: string[], indexes: number[]): Promise<void> {
     sessionStorage.removeItem(PRODUCT_SOURCE)
     sessionStorage.removeItem('mowo_customize_request_draft_key')
     sessionStorage.removeItem('mowo_customize_request_draft_owner')
-    const next = new URL(legacyPublicUrl('customize-confirm'), window.location.origin)
-    next.searchParams.set('type', model.value.modelType || 'single')
-    next.searchParams.set('modelId', model.value.id)
-    next.searchParams.set('modelName', model.value.name)
-    next.searchParams.set('frames', String(sources.length))
-    next.searchParams.set('targets', targets.join(','))
-    next.searchParams.set('requestId', requestId)
-    window.location.assign(next)
+    window.location.assign(
+      confirmationUrl({
+        type: model.value.modelType || 'single',
+        modelId: model.value.id,
+        modelName: model.value.name,
+        frames: String(sources.length),
+        targets: targets.join(','),
+        requestId
+      })
+    )
   } catch (cause) {
     window.alert(`上传失败：${cause instanceof Error ? cause.message : '请重试'}`)
   } finally {
@@ -632,16 +637,14 @@ async function submitExisting(sources: string[], indexes: number[]): Promise<voi
       })
       writeCompatibilityStorage([['mowo_customize_draft_id', data.id]])
       if (requestId) writeCompatibilityStorage([['mowo_customize_request_draft_id', requestId]])
-      const next = new URL(legacyPublicUrl('customize-confirm'), window.location.origin)
-      next.searchParams.set('modelId', model.value?.id ?? '')
-      next.searchParams.set('frames', String(frameKeys.length))
-      next.searchParams.set(
-        'targets',
-        editorTargets.value
+      const next = confirmationUrl({
+        modelId: model.value?.id ?? '',
+        frames: String(frameKeys.length),
+        targets: editorTargets.value
           .filter((value) => value >= frameKeys.length && value % frameKeys.length === 0)
-          .join(',')
-      )
-      if (requestId) next.searchParams.set('requestId', requestId)
+          .join(','),
+        ...(requestId ? { requestId } : {})
+      })
       window.location.assign(next)
       return
     }
@@ -676,21 +679,19 @@ async function submitExisting(sources: string[], indexes: number[]): Promise<voi
           ? [['mowo_customize_draft_id', data.request.customProductId] as const]
           : [])
       ])
-      const next = new URL(legacyPublicUrl('customize-confirm'), window.location.origin)
-      next.searchParams.set('type', data.model.modelType)
-      next.searchParams.set('modelId', data.model.id)
-      next.searchParams.set('modelName', data.model.name)
-      next.searchParams.set('frames', String(data.selection.frames.length))
-      next.searchParams.set(
-        'targets',
-        editorTargets.value
+      const next = confirmationUrl({
+        type: data.model.modelType,
+        modelId: data.model.id,
+        modelName: data.model.name,
+        frames: String(data.selection.frames.length),
+        targets: editorTargets.value
           .filter(
             (value) =>
               value >= data.selection.frames.length && value % data.selection.frames.length === 0
           )
-          .join(',')
-      )
-      next.searchParams.set('humanRequestId', data.request.id)
+          .join(','),
+        humanRequestId: data.request.id
+      })
       window.location.assign(next)
     }
   } catch (cause) {

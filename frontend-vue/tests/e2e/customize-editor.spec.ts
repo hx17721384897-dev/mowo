@@ -252,9 +252,7 @@ test('image sequence enters the full editor and saves the self-screened draft', 
   await page.getByRole('button', { name: '撤销' }).click()
   await expect(page.locator('.thumb-item')).toHaveCount(1)
   await page.getByRole('button', { name: '下一步 →' }).click()
-  await expect(page).toHaveURL(
-    /\/mowo\/frontend\/pages\/customize-confirm\.html\?.*requestId=draft-1/
-  )
+  await expect(page).toHaveURL(/\/app\/customize\/confirm\?.*requestId=draft-1/)
 })
 
 test('browser-supported WebM enters the 0.5 to 8 second trim step', async ({ page }) => {
@@ -430,16 +428,12 @@ test('customer review is read-only and accepts the staff frame selection', async
       body: JSON.stringify({ success: true, data: { id: 'request-1' } })
     })
   )
-  await page.route('**/mowo/frontend/pages/customize-confirm.html*', (route) =>
-    route.fulfill({ status: 200, contentType: 'text/html', body: '<title>确认</title>' })
-  )
-
   await page.goto('/app/customize/editor?reviewRequestId=request-1')
   await expect(page.getByText(/确认筛帧 · CR-001 · 第 2 版/)).toBeVisible()
   await expect(page.getByRole('button', { name: /克隆此帧/ })).toHaveCount(0)
   await expect(page.locator('.thumb-check')).toHaveCount(0)
   await page.getByRole('button', { name: '满意，选择款式 →' }).click()
-  await expect(page).toHaveURL(/customize-confirm\.html\?.*humanRequestId=request-1/)
+  await expect(page).toHaveURL(/\/app\/customize\/confirm\?.*humanRequestId=request-1/)
 })
 
 test('draft edit updates the original draft instead of creating a duplicate', async ({
@@ -478,17 +472,13 @@ test('draft edit updates the original draft instead of creating a duplicate', as
       })
     })
   })
-  await page.route('**/mowo/frontend/pages/customize-confirm.html*', (route) =>
-    route.fulfill({ status: 200, contentType: 'text/html', body: '<title>确认</title>' })
-  )
-
   await page.goto('/app/customize/editor?editId=draft-1')
   await expect(page.getByText(/更新原草稿/)).toBeVisible()
   if (testInfo.project.name === 'mobile-chromium')
     await page.getByRole('button', { name: /勾选/ }).click()
   await page.getByRole('button', { name: '取消第 2 帧' }).click()
   await page.getByRole('button', { name: '下一步 →' }).click()
-  await expect(page).toHaveURL(/customize-confirm\.html\?.*requestId=request-draft-1/)
+  await expect(page).toHaveURL(/\/app\/customize\/confirm\?.*requestId=request-draft-1/)
 })
 
 test('unsupported staff shared-editor modes fail closed in the Vue route', async ({ page }) => {
