@@ -80,7 +80,7 @@ async function chooseOnlyVariant(page: Page): Promise<void> {
   await page.getByRole('button', { name: '原木色' }).click()
 }
 
-test('self confirmation preserves legacy selection and idempotent checkout handoff', async ({
+test('self confirmation preserves selection and idempotent Vue checkout handoff', async ({
   page
 }) => {
   await mockConfirmation(page)
@@ -102,9 +102,6 @@ test('self confirmation preserves legacy selection and idempotent checkout hando
       body: JSON.stringify({ success: true, data: { id: 'cart-1' } })
     })
   })
-  await page.route('**/mowo/frontend/pages/checkout.html', (route) =>
-    route.fulfill({ status: 200, contentType: 'text/html', body: '<title>checkout</title>' })
-  )
 
   await page.goto('/app/customize/confirm?requestId=request-1')
   await expect(page.locator('.price-card-machine')).toHaveText('<img src=x onerror=alert(1)>标准款')
@@ -114,7 +111,7 @@ test('self confirmation preserves legacy selection and idempotent checkout hando
   await expect(page.locator('.added-item')).toHaveCount(1)
   await page.getByPlaceholder('订单备注（选填）').fill('请仔细包装')
   await page.getByRole('button', { name: '提交订单 →' }).click()
-  await page.waitForURL(/checkout\.html/)
+  await page.waitForURL('**/app/checkout')
 
   expect(submitBody).toMatchObject({ desiredSkuId: 'sku-12', userNote: '请仔细包装' })
   expect(cartBodies).toHaveLength(1)
@@ -165,14 +162,11 @@ test('human confirmation uses accepted request instead of route metadata', async
       body: JSON.stringify({ success: true, data: { id: 'human-cart' } })
     })
   )
-  await page.route('**/mowo/frontend/pages/checkout.html', (route) =>
-    route.fulfill({ status: 200, contentType: 'text/html', body: 'checkout' })
-  )
   await page.goto('/app/customize/confirm?humanRequestId=human-1&modelName=伪造款式&frames=999')
   await expect(page.locator('.price-card-machine')).toHaveText('服务端标准款')
   await chooseOnlyVariant(page)
   await page.getByRole('button', { name: '提交订单 →' }).click()
-  await page.waitForURL(/checkout\.html/)
+  await page.waitForURL('**/app/checkout')
   expect(chooseBody).toMatchObject({ desiredSkuId: 'sku-12' })
 })
 
@@ -241,13 +235,10 @@ test('animation reuse pins the current private version and stable request key', 
       body: JSON.stringify({ success: true, data: { id: 'asset-cart' } })
     })
   )
-  await page.route('**/mowo/frontend/pages/checkout.html', (route) =>
-    route.fulfill({ status: 200, contentType: 'text/html', body: 'checkout' })
-  )
   await page.goto('/app/customize/confirm?assetId=asset-1&modelId=model-1&frames=999')
   await chooseOnlyVariant(page)
   await page.getByRole('button', { name: '提交订单 →' }).click()
-  await page.waitForURL(/checkout\.html/)
+  await page.waitForURL('**/app/checkout')
   expect(reuseBody).toMatchObject({ machineModelId: 'model-1', desiredSkuId: 'sku-12' })
   expect(String(reuseBody?.clientRequestKey)).toMatch(/^confirm-/)
 })

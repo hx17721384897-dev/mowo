@@ -5,7 +5,7 @@ import { requireIsolatedTestDatabase } from './test-db-guard.mjs'
 requireIsolatedTestDatabase()
 const prisma = new PrismaClient()
 const apiBase = process.env.TEST_API_BASE || 'http://127.0.0.1:3002'
-const webBase = process.env.TEST_WEB_BASE || 'http://127.0.0.1:5500/mowo/frontend/pages'
+const vueBase = process.env.TEST_VUE_BASE || 'http://127.0.0.1:4173/app'
 const runId = String(Date.now()).slice(-7)
 const phone = `197${runId}1`
 let userId
@@ -49,25 +49,25 @@ try {
 
   browser = await chromium.launch({ headless: true, executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe' })
   const context = await browser.newContext()
-  await context.addInitScript(({ token, apiBase }) => {
-    window.MOWO_RUNTIME_API_BASE = apiBase
+  await context.addInitScript(({ token }) => {
     localStorage.setItem('mowo_token', token)
-  }, { token: login.data.accessToken, apiBase })
+  }, { token: login.data.accessToken })
   const page = await context.newPage()
   page.setDefaultTimeout(10000)
 
-  await page.goto(`${webBase}/orders.html`, { waitUntil: 'domcontentloaded' })
-  await page.locator('#listWrap .empty, #listWrap .order-list').waitFor()
-  assert(page.url().includes('/orders.html'), '有效会话可以进入我的订单')
+  await page.goto(`${vueBase}/orders`, { waitUntil: 'domcontentloaded' })
+  await page.locator('.orders-page .empty, .orders-page .order-list').waitFor()
+  assert(page.url().includes('/app/orders'), '有效会话可以进入 Vue 我的订单')
 
-  await page.evaluate(() => window.mowoLogout())
-  await page.goto(`${webBase}/orders.html`, { waitUntil: 'domcontentloaded' })
-  await page.waitForURL(url => url.pathname.endsWith('/index.html') && url.searchParams.get('auth') === '1')
+  await page.getByRole('button', { name: '打开个人中心菜单' }).click()
+  await page.getByRole('button', { name: /退出登录/ }).click()
+  await page.goto(`${vueBase}/orders`, { waitUntil: 'domcontentloaded' })
+  await page.waitForURL(url => url.pathname === '/app/' && url.searchParams.get('auth') === '1')
   assert(true, '退出后直接访问我的订单会返回登录入口')
 
   const navStyles = []
-  for (const file of ['index.html', 'about.html', 'products.html']) {
-    await page.goto(`${webBase}/${file}`, { waitUntil: 'domcontentloaded' })
+  for (const file of ['', 'about', 'products']) {
+    await page.goto(`${vueBase}/${file}`, { waitUntil: 'domcontentloaded' })
     navStyles.push(await page.locator('.mowo-nav-mid a[href="/app/contact"]').evaluate(element => {
       const style = getComputedStyle(element)
       return { file: location.pathname.split('/').pop(), family: style.fontFamily, weight: style.fontWeight }

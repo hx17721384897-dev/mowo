@@ -1,11 +1,9 @@
 import { PrismaClient } from '@prisma/client'
-import { chromium } from 'file:///C:/Users/25839/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs'
 import { requireIsolatedTestDatabase } from './test-db-guard.mjs'
 
 requireIsolatedTestDatabase()
 const prisma = new PrismaClient()
 const apiBase = process.env.TEST_API_BASE || 'http://127.0.0.1:3001'
-const webBase = process.env.TEST_WEB_BASE || 'http://127.0.0.1:5500/mowo/frontend/pages'
 const runId = String(Date.now()).slice(-8)
 let userId
 let outsiderId
@@ -17,7 +15,6 @@ let modelId
 let skuId
 let collabWorkId
 const productIds = []
-let browser
 
 function assert(condition, message) {
   if (!condition) throw new Error(message)
@@ -223,22 +220,8 @@ try {
     creatorId: userId,
   } }))
 
-  browser = await chromium.launch({
-    headless: true,
-    executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
-  })
-  const checkoutContext = await browser.newContext({ viewport: { width: 1440, height: 900 } })
-  const checkoutPage = await checkoutContext.newPage()
-  await checkoutPage.addInitScript(({ token, apiBase, cartItemIds }) => {
-    window.MOWO_RUNTIME_API_BASE = apiBase
-    localStorage.setItem('mowo_token', token)
-    sessionStorage.setItem('mowo_checkout_items', JSON.stringify(cartItemIds))
-  }, { token, apiBase, cartItemIds: cartItems.map(item => item.id) })
-  await checkoutPage.goto(`${webBase}/checkout.html`, { waitUntil: 'networkidle' })
-  await checkoutPage.locator('#btnPay').waitFor({ timeout: 10000 })
-  assert(await checkoutPage.locator('#btnMockPay').isVisible(), '隔离测试模式由服务端配置显示模拟支付入口')
-  await checkoutContext.close()
-  browser = null
+  const features = (await (await request('/api/config/features', token)).json()).data
+  assert(features.onlineCheckout === true && features.mockPayment === true, '隔离测试模式由服务端配置开放模拟支付能力')
 
   const checkoutResponse = await request('/api/cart/checkout', token, {
     method: 'POST', body: JSON.stringify({
@@ -376,26 +359,7 @@ try {
   assert((await prisma.skuInventory.findUnique({ where: { skuId } })).reservedStock === 4, '库存不足时不留下部分锁定')
   assert(await prisma.preOrder.count({ where: { checkoutIdempotencyKey: `sales-order-insufficient-${runId}` } }) === 0, '库存锁定失败时不留下空的付款前订单')
 
-  browser = await chromium.launch({
-    headless: true,
-    executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
-  })
-  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
-  const page = await context.newPage()
-  await page.addInitScript(({ token, apiBase }) => {
-    window.MOWO_RUNTIME_API_BASE = apiBase
-    localStorage.setItem('mowo_token', token)
-  }, { token, apiBase })
-  await page.goto(`${webBase}/orders.html`, { waitUntil: 'networkidle' })
-  const card = page.locator('.order-card').filter({ hasText: order.orderNo })
-  await card.waitFor({ timeout: 10000 })
-  assert(await page.locator('.order-card').count() === 1, '订单页只显示一张用户订单卡片')
-  assert(await card.getByText('测试商品 1').count() === 1 && await card.getByText('混合订单联名商品', { exact: false }).count() === 1, '一张订单卡片同时展示私人定制和联名商品')
-  await page.goto(`${webBase}/order-detail.html?id=${encodeURIComponent(order.id)}`, { waitUntil: 'networkidle' })
-  await page.locator('.order-item').first().waitFor({ timeout: 10000 })
-  assert(await page.locator('.order-item').count() === 3, '订单详情页展示三条订单商品')
-  assert(await page.getByText(/已生成 2 个生产任务/).count() === 1, '数量二正确展示为两个生产任务')
-  await context.close()
+  // Vue 列表/详情浏览器表现由 frontend-vue/tests/e2e/orders.spec.ts 负责；此脚本只检验 API 与事务。
 
   await prisma.customizeOrder.updateMany({ where: { id: { in: tasks.map(task => task.id) } }, data: { status: 'shipped' } })
   const shippedDetail = (await (await request(`/api/orders/${order.id}`, token)).json()).data
@@ -425,7 +389,6 @@ try {
 
   console.log('Sales order structure checks passed')
 } finally {
-  if (browser) await browser.close().catch(() => {})
   await cleanup().catch(error => console.error('cleanup failed:', error.message))
   await prisma.$disconnect()
 }

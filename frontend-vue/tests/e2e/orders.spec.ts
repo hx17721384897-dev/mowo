@@ -213,3 +213,9 @@ test('售后提交只发送一次，仍不产生定制草稿', async ({ page }) 
   expect(aftersaleWrites).toBe(1)
   expect(state.draftWrites()).toBe(0)
 })
+
+test('未登录访问订单返回登录弹窗并保留安全回跳', async ({ page }) => {
+  await page.goto('/app/orders')
+  await expect(page).toHaveURL((url) => url.pathname === '/app/' && url.searchParams.get('auth') === '1' && url.searchParams.get('redirect') === '/orders')
+  await expect(page.getByRole('dialog')).toBeVisible()
+})

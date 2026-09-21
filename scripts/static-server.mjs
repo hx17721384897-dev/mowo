@@ -15,7 +15,11 @@ const appBase = String(args['app-base'] || `http://${host}:4173/app`).replace(/\
 const legacyVueRedirects = new Map([
   ['pages/settings.html', { pathname: `${appBase}/account/settings`, hash: '' }],
   ['pages/my-addresses.html', { pathname: `${appBase}/account/settings`, hash: '#addresses' }],
-  ['pages/customize-confirm.html', { pathname: `${appBase}/customize/confirm`, hash: '' }]
+  ['pages/customize-confirm.html', { pathname: `${appBase}/customize/confirm`, hash: '' }],
+  ['pages/cart.html', { pathname: `${appBase}/cart`, hash: '' }],
+  ['pages/checkout.html', { pathname: `${appBase}/checkout`, hash: '' }],
+  ['pages/orders.html', { pathname: `${appBase}/orders`, hash: '' }],
+  ['pages/order-detail.html', { pathname: `${appBase}/order-detail`, hash: '' }]
 ])
 
 const mime = {

@@ -35,7 +35,7 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:3001',
+        target: process.env.TEST_API_BASE || 'http://127.0.0.1:3001',
         changeOrigin: false
       },
       '/mowo/frontend': {

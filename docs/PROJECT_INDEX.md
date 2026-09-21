@@ -4,13 +4,14 @@
 >
 > 调查基准：2026-08-13，进度更新：2026-09-11。本文档区分“已核对代码事实”“原规划”“待确认”，不把规划自动视为已实现。
 
-> 当前进度：B0-B7 的 L0 本地整理基线已完成并以 `l0-engineering-baseline-20260910` 封存；R0 后端/数据库证据已固化，R1-A 已把社区、线上财务、牛量/推广、模拟认证和创作者自助旧接口永久隔离。当前 B7 包含 59/59 空库迁移、33 项综合检查、退役接口 504 种负向调用和测试库备份恢复。R1-B 物理删除、真实 OSS 恶意文件扫描、售后后台闭环、服务器备份恢复、监控、CI、真实支付和小程序交易仍未完成，不能据此邀请真实用户。后续执行入口为 `VUE_FRONTEND_REFACTOR_PLAN.md`。
+> 当前进度（2026-09-21）：L0 基线、R0/R1、V0～V3 的 Vue 工程迁移已完成；正式 Web 公开页、用户定制和交易使用 `frontend-vue/`，四个旧交易 HTML 已删除，旧 URL 临时 302。V3 最终人工视觉/交互复查、V4 后台、V5 生产、V6 前端根目录收口及真实支付等仍待完成，不能据此邀请真实用户。历史 L0 数字和旧退役状态见对应日期记录；当前执行入口为 `VUE_FRONTEND_REFACTOR_PLAN.md`，交易细节见 `V3_TRANSACTION_MIGRATION.md`。
 
 ## 建议阅读顺序
 
 1. `README.md`：产品定位、启动方式和最短项目简介。
 2. `docs/PROJECT_ENGINEERING_AND_ARCHITECTURE_PLAN.md`：已封版 L0 的证据、边界和历史批次。
 3. `docs/VUE_FRONTEND_REFACTOR_PLAN.md`：当前接续计划、H0/R0/R1/V0-V6 顺序和验收门槛。
+   交易页正式入口、旧 URL 和隔离验收见 `docs/V3_TRANSACTION_MIGRATION.md`。
 4. `docs/PROJECT_INDEX.md`：项目地图、文档分层和调查进度。
 5. `docs/R0_BACKEND_DATABASE_BASELINE.md`：Vue 可消费的后端/数据库证据、隔离边界和失败处置。
 6. `docs/R1_RETIREMENT_AUDIT.md`：退役接口硬隔离、负向矩阵、保留责任和 R1-B 删除清单。
@@ -51,7 +52,8 @@
 
 ### 主仓库 `mowo/`
 
-- `frontend/`：纯 HTML、CSS、原生 JavaScript 主站，包含公共页面、定制流程、用户中心、创作者中心、管理后台和生产端页面。
+- `frontend-vue/`：当前正式 Web 公共页、用户定制、混合购物车、结算和订单页；V6 前保留独立工程目录。
+- `frontend/`：尚未迁移的管理后台、生产和共享编辑器内部模式等旧 HTML/JS；用户交易四页已物理删除。
 - `content-service/`：Node.js ESM + Fastify 5 API 服务，Prisma 5 访问 PostgreSQL；本地开发使用私有目录保存测试文件，正式环境计划使用私有阿里云 OSS。
 - `crmeb/`：当前只有 `.gitkeep` 占位文件，没有外部商城代码；早期规划曾拟接 CRMEB，首发已决定不接入。
 - `docs/`：架构、接口、数据库、前端清单、用户场景和专项计划。

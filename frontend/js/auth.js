@@ -501,8 +501,8 @@ function navGoTo(page) {
   document.getElementById('mowoDropdown')?.classList.remove('open');
   document.getElementById('mowoNavAvatarBtn')?.classList.remove('open');
   const map = {
-    cart:          'cart.html',
-    orders:        'orders.html',
+    cart:          '/app/cart',
+    orders:        '/app/orders',
     customizations:'/app/account/customizations',
     addresses:     '/app/account/settings#addresses',
     myAnimations:  '/app/account/animations',

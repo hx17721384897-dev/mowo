@@ -141,18 +141,13 @@ async function handleAuthenticated(): Promise<void> {
           <path d="m20 20-3.5-3.5" />
         </svg>
       </RouterLink>
-      <a
-        class="mowo-nav-icon mowo-cart-btn"
-        :href="legacyPublicUrl('cart')"
-        data-count="0"
-        aria-label="购物车"
-      >
+      <RouterLink class="mowo-nav-icon mowo-cart-btn" to="/cart" data-count="0" aria-label="购物车">
         <svg viewBox="0 0 24 24">
           <path d="M3 4h2l2.5 12h11l2.5-9H6" />
           <circle cx="9" cy="20" r="1.6" />
           <circle cx="18" cy="20" r="1.6" />
         </svg>
-      </a>
+      </RouterLink>
       <div
         v-if="session.isAuthenticated"
         ref="userMenu"
@@ -192,12 +187,12 @@ async function handleAuthenticated(): Promise<void> {
               </span>
             </div>
           </div>
-          <a class="dd-item" :href="legacyPublicUrl('cart')">
+          <RouterLink class="dd-item" to="/cart" @click="userMenuOpen = false">
             <span class="dd-item-icon" style="background: #fffbe6">🛒</span>购物车
-          </a>
-          <a class="dd-item" :href="legacyPublicUrl('orders')">
+          </RouterLink>
+          <RouterLink class="dd-item" to="/orders" @click="userMenuOpen = false">
             <span class="dd-item-icon" style="background: #ebf5ff">📦</span>我的订单
-          </a>
+          </RouterLink>
           <RouterLink class="dd-item" to="/account/customizations" @click="userMenuOpen = false">
             <span class="dd-item-icon" style="background: #fff3ee">✂</span>我的定制
           </RouterLink>
@@ -250,8 +245,8 @@ async function handleAuthenticated(): Promise<void> {
       <RouterLink to="/showcase" @click="menuOpen = false">联名作品</RouterLink>
       <RouterLink to="/customize">创作中心</RouterLink>
       <RouterLink to="/contact" @click="menuOpen = false">联络我们</RouterLink>
-      <a :href="legacyPublicUrl('cart')">购物车</a>
-      <a :href="legacyPublicUrl('orders')">我的订单</a>
+      <RouterLink to="/cart" @click="menuOpen = false">购物车</RouterLink>
+      <RouterLink to="/orders" @click="menuOpen = false">我的订单</RouterLink>
       <RouterLink to="/account/settings" @click="menuOpen = false">账号设置</RouterLink>
     </div>
     <div class="mowo-mobile-foot">

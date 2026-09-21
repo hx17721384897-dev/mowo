@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import CustomizeProgress from '@/features/customize-start/CustomizeProgress.vue'
 import {
   addCustomizationToCart,
@@ -9,10 +9,10 @@ import {
   parseConfirmationEntry
 } from '@/features/customize-confirm/api'
 import type { ConfirmationContext, SelectedVariant } from '@/features/customize-confirm/types'
-import { runtimeConfig } from '@/config/runtime'
 import '@/features/customize-confirm/customize-confirm.css'
 
 const route = useRoute()
+const router = useRouter()
 const loading = ref(true)
 const error = ref('')
 const context = ref<ConfirmationContext | null>(null)
@@ -165,7 +165,7 @@ async function submit(): Promise<void> {
     sessionStorage.setItem('mowo_checkout_items', JSON.stringify(itemIds))
     sessionStorage.removeItem(`${storageKey}:variants`)
     sessionStorage.removeItem(`${storageKey}:note`)
-    window.location.assign(`${runtimeConfig.legacyWebBase}/checkout.html`)
+    await router.push('/checkout')
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : '提交失败，请稍后重试'
   } finally {

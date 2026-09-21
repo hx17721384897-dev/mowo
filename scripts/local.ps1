@@ -10,6 +10,7 @@ $RepoRoot = Split-Path -Parent $PSScriptRoot
 $RunDir = Join-Path $RepoRoot '.local-run'
 $ApiPidFile = Join-Path $RunDir 'api.pid'
 $WebPidFile = Join-Path $RunDir 'web.pid'
+$VuePidFile = Join-Path $RunDir 'vue.pid'
 $ModeFile = Join-Path $RunDir 'mode.txt'
 
 function Test-Listening([int]$Port) {
@@ -71,6 +72,7 @@ function Get-OwnedProcess([string]$PidFile) {
 }
 
 function Stop-OwnedProcess([string]$PidFile) {
+  if (-not (Test-Path -LiteralPath $PidFile)) { return }
   $process = Get-OwnedProcess $PidFile
   if ($process) { Stop-Process -Id $process.Id -Force }
   Remove-Item -LiteralPath $PidFile -Force
@@ -79,14 +81,17 @@ function Stop-OwnedProcess([string]$PidFile) {
 if ($Action -eq 'status') {
   $apiRunning = Test-Listening 3001
   $webRunning = Test-Listening 5500
+  $vueRunning = Test-Listening 4173
   Write-Host "API 3001: $(if ($apiRunning) { 'running' } else { 'stopped' })"
   Write-Host "Web 5500: $(if ($webRunning) { 'running' } else { 'stopped' })"
+  Write-Host "Vue 4173: $(if ($vueRunning) { 'running' } else { 'stopped' })"
   $mode = if (-not $apiRunning) { 'stopped' } elseif (Test-Path -LiteralPath $ModeFile) { (Get-Content -LiteralPath $ModeFile -Raw).Trim() } else { 'unknown' }
   Write-Host "Checkout mode: $mode"
   exit 0
 }
 
 if ($Action -eq 'stop') {
+  Stop-OwnedProcess $VuePidFile
   Stop-OwnedProcess $WebPidFile
   Stop-OwnedProcess $ApiPidFile
   if (Test-Path -LiteralPath $ModeFile) { Remove-Item -LiteralPath $ModeFile -Force }
@@ -97,11 +102,23 @@ if ($Action -eq 'stop') {
 New-Item -ItemType Directory -Force -Path $RunDir | Out-Null
 if (Test-Listening 3001) { throw 'Port 3001 is already in use; inspect the existing API before starting another one.' }
 if (Test-Listening 5500) { throw 'Port 5500 is already in use; inspect the existing web service before starting another one.' }
+if (Test-Listening 4173) { throw 'Port 4173 is already in use; inspect the existing Vue preview before starting another one.' }
 
 $dbLine = Get-Content (Join-Path $RepoRoot 'content-service/.env') | Where-Object { $_ -match '^DATABASE_URL=' } | Select-Object -First 1
 if (-not $dbLine) { throw 'content-service/.env is missing DATABASE_URL.' }
 $env:DATABASE_URL = (($dbLine -replace '^DATABASE_URL=', '').Trim('"')) -replace '/mowo_db([?\"]|$)', '/mowo_b1_test$1'
 if ($env:DATABASE_URL -notmatch '/mowo_b1_test(?:\?|$)') { throw 'Could not safely derive the mowo_b1_test database URL.' }
+$env:TEST_API_BASE = 'http://127.0.0.1:3001'
+
+$VueRoot = Join-Path $RepoRoot 'frontend-vue'
+Push-Location $VueRoot
+try {
+  & npm.cmd run build
+  if ($LASTEXITCODE -ne 0) { throw 'Vue build failed; local services were not started.' }
+} finally {
+  Pop-Location
+}
+
 $env:ONLINE_CHECKOUT_ENABLED = if ($EnableMockPayment) { 'true' } else { 'false' }
 $env:MOCK_PAYMENT_ENABLED = if ($EnableMockPayment) { 'true' } else { 'false' }
 $mode = if ($EnableMockPayment) { 'isolated-mock-payment' } else { 'closed-checkout' }
@@ -115,8 +132,13 @@ $webArgs = @((Join-Path $RepoRoot 'scripts/static-server.mjs'), '--root=frontend
 $web = Start-Process -FilePath $node -ArgumentList $webArgs -WorkingDirectory $RepoRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $RunDir 'web.out.log') -RedirectStandardError (Join-Path $RunDir 'web.err.log')
 Save-OwnedProcess $web $WebPidFile 'static-server.mjs' $node
 
+$vueArgs = @((Join-Path $VueRoot 'node_modules/vite/bin/vite.js'), 'preview', '--host', '127.0.0.1')
+$vue = Start-Process -FilePath $node -ArgumentList $vueArgs -WorkingDirectory $VueRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $RunDir 'vue.out.log') -RedirectStandardError (Join-Path $RunDir 'vue.err.log')
+Save-OwnedProcess $vue $VuePidFile 'vite.js' $node
+
 try {
   Wait-Url 'http://127.0.0.1:3001/'
+  Wait-Url 'http://127.0.0.1:4173/app/'
   Wait-Url 'http://127.0.0.1:5500/mowo/frontend/pages/index.html'
 } catch {
   & $PSCommandPath stop
@@ -125,6 +147,7 @@ try {
 
 Write-Host 'Local services started (database: mowo_b1_test):'
 Write-Host '  Legacy web: http://127.0.0.1:5500/mowo/frontend/pages/index.html'
+Write-Host '  Vue web: http://127.0.0.1:4173/app/'
 Write-Host '  API: http://127.0.0.1:3001/'
 Write-Host "  Checkout mode: $mode"
 Write-Host 'Stop command: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/local.ps1 stop'

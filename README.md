@@ -37,9 +37,10 @@ mowo/
 ├── README.md
 ├── docs/                # 项目文档
 ├── frontend/
-│   ├── pages/           # HTML页面
+│   ├── pages/           # 尚未迁移的后台/生产 HTML 页面
 │   └── js/
-│       └── auth.js      # 公共登录状态管理
+│       └── auth.js      # 尚未迁移页面的旧会话脚本
+├── frontend-vue/        # 当前正式 Web 公共页、用户定制与交易入口
 ├── content-service/     # Node.js + Fastify 内容后端
 │   └── src/templates/   # 对照清单/条形码清单 docx 模板
 └── crmeb/               # 仅有历史占位文件；当前方案不接入 CRMEB
@@ -57,20 +58,20 @@ npm run test-db:rebuild
 cd ..
 
 # 日常启动、查看状态和停止；默认只连接 mowo_b1_test
-pwsh -File scripts/local.ps1 start
-pwsh -File scripts/local.ps1 status
-pwsh -File scripts/local.ps1 stop
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\local.ps1 start
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\local.ps1 status
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\local.ps1 stop
 ```
 
 需要把隔离库测试订单推进到后台时，可用显式模拟支付模式启动：
 
 ```powershell
-pwsh -File scripts/local.ps1 start -EnableMockPayment
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\local.ps1 start -EnableMockPayment
 ```
 
 该参数只允许 `mowo_b1_test` 且生产环境会拒绝；普通启动仍关闭在线结算与模拟付款。
 
-首页为 `http://127.0.0.1:5500/mowo/frontend/pages/index.html`。完整的空库、全量回归、备份恢复和人工验收流程见 [`docs/BATCH_7_LOCAL_ACCEPTANCE_AND_RECOVERY.md`](docs/BATCH_7_LOCAL_ACCEPTANCE_AND_RECOVERY.md)。
+本地启动会先构建 Vue，再同时启动 API 3001、Vue 预览 4173 和尚未迁移页面的静态服务 5500。正式首页为 `http://127.0.0.1:4173/app/`；购物车、结算、订单分别在 `/app/cart`、`/app/checkout`、`/app/orders`。完整的空库、全量回归、备份恢复和人工验收流程见 [`docs/BATCH_7_LOCAL_ACCEPTANCE_AND_RECOVERY.md`](docs/BATCH_7_LOCAL_ACCEPTANCE_AND_RECOVERY.md)。
 
 ---
 

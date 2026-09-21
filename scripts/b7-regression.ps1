@@ -4,6 +4,7 @@ $ServiceRoot = Join-Path $RepoRoot 'content-service'
 $RunDir = Join-Path $RepoRoot '.local-run'
 $ApiProcess = $null
 $WebProcess = $null
+$VueProcess = $null
 
 function Test-Listening([int]$Port) {
   $client = [System.Net.Sockets.TcpClient]::new()
@@ -44,6 +45,7 @@ function Invoke-Checks([string[]]$Checks) {
 
 if (Test-Listening 3002) { throw 'Isolated test port 3002 is already in use.' }
 if (Test-Listening 5500) { throw 'Browser test port 5500 is already in use.' }
+if (Test-Listening 4173) { throw 'Vue preview test port 4173 is already in use.' }
 
 $dbLine = Get-Content (Join-Path $ServiceRoot '.env') | Where-Object { $_ -match '^DATABASE_URL=' } | Select-Object -First 1
 if (-not $dbLine) { throw 'content-service/.env is missing DATABASE_URL.' }
@@ -61,6 +63,14 @@ $env:MOCK_PAYMENT_ENABLED = 'false'
 
 New-Item -ItemType Directory -Force -Path $RunDir | Out-Null
 
+Push-Location (Join-Path $RepoRoot 'frontend-vue')
+try {
+  & npm.cmd run build
+  if ($LASTEXITCODE -ne 0) { throw 'Vue preview build failed.' }
+} finally {
+  Pop-Location
+}
+
 try {
   Push-Location $ServiceRoot
   & node scripts/test-database.mjs rebuild
@@ -70,8 +80,12 @@ try {
   $ApiProcess = Start-TestApi 'closed'
   $webArgs = @((Join-Path $RepoRoot 'scripts/static-server.mjs'), '--root=frontend', '--mount=mowo/frontend', '--port=5500')
   $WebProcess = Start-Process -FilePath $node -ArgumentList $webArgs -WorkingDirectory $RepoRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $RunDir 'b7-web.out.log') -RedirectStandardError (Join-Path $RunDir 'b7-web.err.log')
+  $vueRoot = Join-Path $RepoRoot 'frontend-vue'
+  $vueArgs = @((Join-Path $vueRoot 'node_modules/vite/bin/vite.js'), 'preview', '--host', '127.0.0.1')
+  $VueProcess = Start-Process -FilePath $node -ArgumentList $vueArgs -WorkingDirectory $vueRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $RunDir 'b7-vue.out.log') -RedirectStandardError (Join-Path $RunDir 'b7-vue.err.log')
 
   Wait-Url 'http://127.0.0.1:5500/mowo/frontend/pages/index.html'
+  Wait-Url 'http://127.0.0.1:4173/app/'
 
   Invoke-Checks @(
     'check',
@@ -117,6 +131,7 @@ try {
 } finally {
   Pop-Location -ErrorAction SilentlyContinue
   if ($WebProcess -and -not $WebProcess.HasExited) { Stop-Process -Id $WebProcess.Id -Force }
+  if ($VueProcess -and -not $VueProcess.HasExited) { Stop-Process -Id $VueProcess.Id -Force }
   if ($ApiProcess -and -not $ApiProcess.HasExited) { Stop-Process -Id $ApiProcess.Id -Force }
 }
 

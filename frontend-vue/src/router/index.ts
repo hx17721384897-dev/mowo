@@ -106,6 +106,13 @@ const router = createRouter({
           meta: { title: '订单详情 — 哞屋 MOWO', requiresAuth: true }
         },
         {
+          path: 'order-detail',
+          redirect: (to) => {
+            const id = typeof to.query.id === 'string' ? to.query.id : ''
+            return id ? { name: 'order-detail', params: { id } } : { name: 'orders' }
+          }
+        },
+        {
           path: 'showcase-detail',
           redirect: (to) => {
             const workId = typeof to.query.workId === 'string' ? to.query.workId : ''
