@@ -1,4 +1,5 @@
 import { CollabStorefrontError, resolveCollabOffer } from './collab-storefront.js'
+import { resolveConfirmedCustomProductSelection } from './custom-product-selection.js'
 
 const SNAPSHOT_VERSION = 1
 
@@ -82,18 +83,13 @@ export async function buildCheckoutItemSnapshot(prisma, item, userId) {
   }
 
   if (item.itemType !== 'CUSTOM') throw new Error('购物车商品类型异常')
-  const product = await prisma.customProduct.findUnique({
-    where: { id: item.customProductId || item.contentId },
-    include: { animationVersion: true },
+  const { product } = await resolveConfirmedCustomProductSelection(prisma, {
+    userId,
+    customProductId: item.customProductId || item.contentId,
+    sku,
   })
-  if (!product || product.userId !== userId) throw new Error('私人定制不存在或不属于当前账号')
-  if (['ordered', 'removed'].includes(product.status)) throw new Error('私人定制已失效或已下单')
-  if (product.hardwareSkuId !== sku.id) throw new Error('私人定制的款式与购物车不一致')
   if (!product.animationAssetId || !product.animationVersionId || !product.animationVersion) {
     throw new Error('私人定制尚未生成可生产的动画版本')
-  }
-  if (product.frameCount && sku.frameCount && sku.frameCount % product.frameCount !== 0) {
-    throw new Error('私人定制动画与所选帧数不兼容')
   }
 
   const unitPrice = money(sku.price)

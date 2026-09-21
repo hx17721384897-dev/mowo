@@ -13,6 +13,10 @@ import {
   createCheckoutSnapshot,
   reserveCheckoutInventory,
 } from '../lib/checkout-snapshot.js'
+import {
+  CustomProductSelectionError,
+  resolveConfirmedCustomProductSelection,
+} from '../lib/custom-product-selection.js'
 
 function validateCheckoutAddress({ receiverName, receiverPhone, receiverAddress, receiverCity }) {
   const name = String(receiverName || '').trim()
@@ -211,36 +215,19 @@ export default async function cartRoutes(fastify) {
 
     // ── 物理约束校验 ──
     if (itemType === 'CUSTOM') {
-      const cp = await prisma.customProduct.findUnique({ where: { id: contentId } })
-      if (!cp) return reply.code(404).send({ success: false, message: '定制草稿不存在' })
-      if (cp.userId !== userId) return reply.code(403).send({ success: false, message: '无权操作此草稿' })
-      if (cp.status === 'ordered' || cp.status === 'removed') {
-        return reply.code(400).send({ success: false, message: '该草稿已提交，不可再加入购物车' })
-      }
-      const confirmedRequest = await prisma.customizationRequest.findFirst({
-        where: {
+      let cp
+      try {
+        const selection = await resolveConfirmedCustomProductSelection(prisma, {
           userId,
-          customProductId: cp.id,
-          status: 'CONFIRMED'
-        },
-        select: { id: true, machineModelId: true, desiredSkuId: true, editorData: true }
-      })
-      const requestedOptions = Array.isArray(confirmedRequest?.editorData?.requestedOptions)
-        ? confirmedRequest.editorData.requestedOptions
-        : []
-      const skuWasSelected = confirmedRequest?.desiredSkuId === hardwareSkuId || requestedOptions.some(item => item?.skuId === hardwareSkuId)
-      if (!confirmedRequest || confirmedRequest.machineModelId !== sku.modelId || !skuWasSelected) {
-        return reply.code(409).send({
-          success: false,
-          message: '该定制款式尚未确认，请返回定制页面重新选择'
+          customProductId: contentId,
+          sku,
         })
-      }
-      // 帧数兼容性校验（支持循环补帧：sku.frameCount 必须是 cp.frameCount 的整数倍）
-      if (cp.frameCount && sku.frameCount && sku.frameCount % cp.frameCount !== 0) {
-        return reply.code(400).send({
-          success: false,
-          message: `当前动画为 ${cp.frameCount} 帧，无法匹配 ${sku.frameCount} 帧底座（需整数倍才可循环补帧）`
-        })
+        cp = selection.product
+      } catch (error) {
+        if (error instanceof CustomProductSelectionError) {
+          return reply.code(error.statusCode).send({ success: false, message: error.message })
+        }
+        throw error
       }
 
       // 拼完整规格快照：合并 customProduct 级别配置 + 当前 SKU 的规格

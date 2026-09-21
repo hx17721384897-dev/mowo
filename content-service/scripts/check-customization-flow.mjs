@@ -6,6 +6,7 @@ import {
   cleanupAbandonedCustomizationFiles,
   cleanupExpiredCustomizationDrafts
 } from '../src/lib/private-file-cleanup.js'
+import { buildCheckoutItemSnapshot } from '../src/lib/checkout-snapshot.js'
 
 requireIsolatedTestDatabase()
 const prisma = new PrismaClient()
@@ -15,6 +16,7 @@ const users = []
 const keys = []
 let modelId = null
 let skuId = null
+let alternateSkuId = null
 
 const PNG = Buffer.from([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
@@ -141,7 +143,8 @@ async function cleanup() {
     await prisma.userProfile.deleteMany({ where: { userId: { in: ids } } })
     await prisma.user.deleteMany({ where: { id: { in: ids } } })
   }
-  if (skuId) await prisma.machineModelSku.deleteMany({ where: { id: skuId } })
+  const skuIds = [skuId, alternateSkuId].filter(Boolean)
+  if (skuIds.length) await prisma.machineModelSku.deleteMany({ where: { id: { in: skuIds } } })
   if (modelId) await prisma.machineModel.deleteMany({ where: { id: modelId } })
   for (const key of keys) await storageDelete(key).catch(() => {})
 }
@@ -163,6 +166,11 @@ try {
     colorName: `测试色-${runId}`, colorHex: '#FFFFFF', price: 199
   } })
   skuId = sku.id
+  const alternateSku = await prisma.machineModelSku.create({ data: {
+    modelId, size: 'S', material: 'TEST', frameCount: 1,
+    colorName: `测试色B-${runId}`, colorHex: '#111111', price: 209
+  } })
+  alternateSkuId = alternateSku.id
 
   const manualSource = await upload(customer, 'CUSTOMIZATION_SOURCE', 'manual-source.png')
   const manualPayload = {
@@ -411,7 +419,11 @@ try {
     method: 'POST', body: JSON.stringify({ itemType: 'CUSTOM', contentId: self.product.id, hardwareSkuId: skuId })
   })).status, 409)
   const submitResponse = await request(`/api/customization-requests/${self.request.id}/submit`, customer.token, {
-    method: 'POST', body: JSON.stringify({ desiredSkuId: skuId, userNote: '自己筛选完成' })
+    method: 'POST', body: JSON.stringify({
+      desiredSkuId: skuId,
+      userNote: '自己筛选完成',
+      editorData: { requestedOptions: [{ skuId }, { skuId: alternateSkuId }] }
+    })
   })
   assertStatus('self-screened draft submits', submitResponse.status, 200)
   const submittedSelf = (await submitResponse.json()).data
@@ -438,7 +450,7 @@ try {
     method: 'DELETE'
   })).status, 409)
   const selfCartPayload = {
-    itemType: 'CUSTOM', contentId: self.product.id, hardwareSkuId: skuId,
+    itemType: 'CUSTOM', contentId: self.product.id, hardwareSkuId: alternateSkuId,
     idempotencyKey: `custom-cart-${runId}-${self.request.id}`
   }
   const selfCartResponse = await request('/api/cart/add', customer.token, {
@@ -455,6 +467,12 @@ try {
   if (replayedCartItem.id !== selfCartItem.id || storedCartItem?.quantity !== 1) {
     throw new Error('custom cart replay changed quantity or created another cart item')
   }
+  const storedSelfProduct = await prisma.customProduct.findUnique({ where: { id: self.product.id } })
+  const checkoutItem = await buildCheckoutItemSnapshot(prisma, storedCartItem, customer.id)
+  if (storedSelfProduct?.hardwareSkuId !== null || checkoutItem.sku.id !== alternateSkuId) {
+    throw new Error('checkout did not use the confirmed request as the SKU authorization source')
+  }
+  console.log('PASS checkout accepts a confirmed customization whose product has no single SKU')
   const concurrentCartPayload = {
     ...selfCartPayload,
     idempotencyKey: `custom-cart-race-${runId}-${self.request.id}`

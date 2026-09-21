@@ -35,6 +35,19 @@ async function request(path, token, options = {}) {
   })
 }
 
+async function createConfirmedSelection(customProductId) {
+  await prisma.customizationRequest.create({ data: {
+    userId,
+    mode: 'SELF',
+    status: 'CONFIRMED',
+    customProductId,
+    machineModelId: modelId,
+    desiredSkuId: skuId,
+    sourceKeys: [],
+    editorData: { requestedOptions: [{ skuId }] },
+  } })
+}
+
 async function cleanup() {
   if (!userId) return
   await prisma.aftersaleRequest.deleteMany({ where: { userId } })
@@ -42,6 +55,8 @@ async function cleanup() {
   await prisma.salesOrderItem.deleteMany({ where: { salesOrder: { userId } } })
   await prisma.salesOrder.deleteMany({ where: { userId } })
   await prisma.preOrder.deleteMany({ where: { userId } })
+  await prisma.customizationRequestEvent.deleteMany({ where: { request: { userId } } })
+  await prisma.customizationRequest.deleteMany({ where: { userId } })
   const userCarts = await prisma.cart.findMany({ where: { userId }, select: { id: true } })
   if (userCarts.length) await prisma.cartItem.deleteMany({ where: { cartId: { in: userCarts.map(cart => cart.id) } } })
   await prisma.cart.deleteMany({ where: { userId } })
@@ -171,13 +186,14 @@ try {
       userId,
       animationFrames: JSON.stringify(['private/test/frame.png']),
       configJson: JSON.stringify({ modelId: sku.modelId, modelName: model.name, frameCount: 1 }),
-      hardwareSkuId: sku.id,
+      hardwareSkuId: null,
       frameCount: 1,
       animationAssetId: assetId,
       animationVersionId: versionId,
       status: 'in_cart'
     } })
     productIds.push(product.id)
+    await createConfirmedSelection(product.id)
   }
 
   const cart = await prisma.cart.create({ data: { userId } })
@@ -306,10 +322,11 @@ try {
   const cancellableProduct = await prisma.customProduct.create({ data: {
     userId, animationFrames: JSON.stringify(['private/test/frame.png']),
     configJson: JSON.stringify({ modelId, modelName: model.name, frameCount: 1 }),
-    hardwareSkuId: sku.id, frameCount: 1, animationAssetId: assetId,
+    hardwareSkuId: null, frameCount: 1, animationAssetId: assetId,
     animationVersionId: versionId, status: 'in_cart',
   } })
   productIds.push(cancellableProduct.id)
+  await createConfirmedSelection(cancellableProduct.id)
   const cancellableItem = await prisma.cartItem.create({ data: {
     cartId, itemType: 'CUSTOM', contentId: cancellableProduct.id,
     customProductId: cancellableProduct.id, hardwareSkuId: sku.id,
@@ -337,10 +354,11 @@ try {
   const insufficientProduct = await prisma.customProduct.create({ data: {
     userId, animationFrames: JSON.stringify(['private/test/frame.png']),
     configJson: JSON.stringify({ modelId, modelName: model.name, frameCount: 1 }),
-    hardwareSkuId: sku.id, frameCount: 1, animationAssetId: assetId,
+    hardwareSkuId: null, frameCount: 1, animationAssetId: assetId,
     animationVersionId: versionId, status: 'in_cart',
   } })
   productIds.push(insufficientProduct.id)
+  await createConfirmedSelection(insufficientProduct.id)
   const insufficientItem = await prisma.cartItem.create({ data: {
     cartId, itemType: 'CUSTOM', contentId: insufficientProduct.id,
     customProductId: insufficientProduct.id, hardwareSkuId: sku.id,
