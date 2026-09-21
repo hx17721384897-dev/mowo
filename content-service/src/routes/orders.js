@@ -1,7 +1,7 @@
 // routes/orders.js — 用户端订单查询、确认收货、取消订单
 // 注册前缀：/api/orders
 
-import { unlockInventoryInTransaction, makeIdempotencyKey } from '../lib/inventory.js'
+import { unlockInventoryInTransaction } from '../lib/inventory.js'
 import { FILE_PURPOSE, findOwnedReadyFiles, linkFiles } from '../lib/private-files.js'
 import { summarizeProductionStatus } from '../lib/sales-orders.js'
 
@@ -157,34 +157,7 @@ async function orderRoutes(fastify, opts) {
     const salesOrders = await prisma.salesOrder.findMany({
       where: { userId }, include: SALES_ORDER_INCLUDE, orderBy: { createdAt: 'desc' }
     })
-    // 旧测试数据没有订单头，继续作为单商品旧订单显示，避免本地历史记录突然消失。
-    const legacy = await prisma.customizeOrder.findMany({
-      where: { userId, salesOrderItemId: null }, orderBy: { createdAt: 'desc' }
-    })
-    const legacyResult = legacy.map(order => {
-      const display = STATUS_MAP[order.status] || { label: order.status, group: 'unknown', step: -1 }
-      let coverUrl = null
-      try { coverUrl = ossSign(fastify, JSON.parse(order.frameUrls || '[]')[0]) } catch {}
-      return {
-        id: order.id, orderNo: order.orderNo, status: order.status,
-        displayStatus: display.label, statusGroup: display.group, statusStep: display.step,
-        sourceType: order.sourceType, platform: order.platform,
-        productTitle: `DIY 定制款 · ${order.size} ${order.frameCount}帧 ${order.colorName}`,
-        modelName: order.modelName, size: order.size, material: order.material,
-        frameCount: order.frameCount, colorName: order.colorName, totalAmount: 0,
-        itemCount: 1, totalQuantity: 1, coverUrl,
-        actions: orderActions([order]),
-        receiverName: order.receiverName, receiverCity: order.receiverCity,
-        trackingNo: order.trackingNo, trackingCompany: order.trackingCompany,
-        shippedAt: order.shippedAt, receivedAt: order.receivedAt,
-        createdAt: order.createdAt, updatedAt: order.updatedAt,
-        legacy: true
-      }
-    })
-    const all = [
-      ...salesOrders.map(order => serializeSalesOrder(fastify, order)),
-      ...legacyResult
-    ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    const all = salesOrders.map(order => serializeSalesOrder(fastify, order))
     const visible = tab === 'active' ? all.filter(order => ACTIVE_STATUSES.includes(order.status)) : all
     const activeCount = all.filter(order => ACTIVE_STATUSES.includes(order.status)).length
     const totalCount = all.length
@@ -231,26 +204,7 @@ async function orderRoutes(fastify, opts) {
       return reply.send({ success: true, data: { status: 'received' } })
     }
 
-    const order = await prisma.customizeOrder.findFirst({ where: { id, userId } })
-    if (!order) {
-      return reply.code(404).send({ success: false, message: '订单不存在' })
-    }
-    if (order.status !== 'shipped') {
-      return reply.code(400).send({
-        success: false,
-        message: `当前订单状态「${STATUS_MAP[order.status]?.label || order.status}」不可确认收货`,
-      })
-    }
-
-    // 事务：更新订单状态。
-    await prisma.$transaction(async tx => {
-      await tx.customizeOrder.update({
-        where: { id },
-        data: { status: 'received', receivedAt: new Date() },
-      })
-    })
-
-    return reply.send({ success: true, data: { status: 'received' } })
+    return reply.code(404).send({ success: false, message: '订单不存在' })
   })
 
   // ──────────────────────────────────────────────
@@ -281,28 +235,7 @@ async function orderRoutes(fastify, opts) {
       return reply.send({ success: true, data: { status: 'cancelled' } })
     }
 
-    const order = await prisma.customizeOrder.findFirst({ where: { id, userId } })
-    if (!order) {
-      return reply.code(404).send({ success: false, message: '订单不存在' })
-    }
-
-    const cancellable = ['pending', 'paid']
-    if (!cancellable.includes(order.status)) {
-      return reply.code(400).send({
-        success: false,
-        message: `订单已进入「${STATUS_MAP[order.status]?.label || order.status}」状态，如需取消请联系客服`,
-      })
-    }
-
-    await prisma.$transaction(async tx => {
-      await tx.customizeOrder.update({ where: { id }, data: { status: 'cancelled' } })
-      // paid 状态已锁定库存，必须与订单状态一起提交。
-      if (order.status === 'paid' && order.skuId) {
-        await unlockInventoryInTransaction(tx, order.skuId, 1, order.id, makeIdempotencyKey('cancel_order', order.id))
-      }
-    })
-
-    return reply.send({ success: true, data: { status: 'cancelled' } })
+    return reply.code(404).send({ success: false, message: '订单不存在' })
   })
 
   // ──────────────────────────────────────────────
@@ -320,65 +253,7 @@ async function orderRoutes(fastify, opts) {
       return reply.send({ success: true, data: serializeSalesOrder(fastify, salesOrder, true) })
     }
 
-    const order = await prisma.customizeOrder.findFirst({ where: { id, userId } })
-    if (!order) {
-      return reply.code(404).send({ success: false, message: '订单不存在' })
-    }
-
-    const display  = STATUS_MAP[order.status] || { label: order.status, group: 'unknown', step: -1 }
-    const collab   = order.collabWorkId
-      ? await prisma.collabWork.findUnique({
-          where: { id: order.collabWorkId },
-          select: { id: true, coverUrl: true, title: true },
-        })
-      : null
-
-    const productTitle = order.sourceType === 'collab' && collab
-      ? collab.title
-      : `DIY 定制款 · ${order.size} ${order.frameCount}帧 ${order.colorName}`
-
-    // 缩略图：联名取 coverUrl，自定义取 frameUrls 第一帧，经 ossSign 安全处理
-    let previewUrl = null
-    try {
-      if (order.sourceType === 'collab' && collab?.coverUrl) {
-        previewUrl = ossSign(fastify, collab.coverUrl)
-      } else {
-        const frames = JSON.parse(order.frameUrls || '[]')
-        if (frames[0]) previewUrl = ossSign(fastify, frames[0])
-      }
-    } catch {}
-
-    return reply.send({
-      success: true,
-      data: {
-        id:              order.id,
-        orderNo:         order.orderNo,
-        status:          order.status,
-        displayStatus:   display.label,
-        statusGroup:     display.group,
-        statusStep:      display.step,
-        sourceType:      order.sourceType,
-        modelName:       order.modelName,
-        size:            order.size,
-        material:        order.material,
-        frameCount:      order.frameCount,
-        colorName:       order.colorName,
-        productTitle,
-        totalAmount:     Number(order.totalAmount || 0),
-        actions:         orderActions([order]),
-        trackingNo:      order.trackingNo     || null,
-        trackingCompany: order.trackingCompany || null,
-        shippedAt:       order.shippedAt      || null,
-        receivedAt:      order.receivedAt     || null,
-        receiverName:    order.receiverName   || null,
-        receiverPhone:   order.receiverPhone  || null,
-        receiverAddress: order.receiverAddress || null,
-        receiverCity:    order.receiverCity   || null,
-        coverUrl:        previewUrl,
-        createdAt:       order.createdAt,
-        updatedAt:       order.updatedAt,
-      },
-    })
+    return reply.code(404).send({ success: false, message: '订单不存在' })
   })
   // ──────────────────────────────────────────────
   // POST /api/orders/:id/aftersale
@@ -388,28 +263,34 @@ async function orderRoutes(fastify, opts) {
   fastify.post('/:id/aftersale', async (req, reply) => {
     const userId = req.user.userId
     const { id } = req.params
-    const { type, reason, description, imageUrls = [] } = req.body
+    const payload = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {}
+    const { type, reason, description, imageUrls = [] } = payload
 
     // 参数校验
     const VALID_TYPES = ['refund', 'quality']
     if (!VALID_TYPES.includes(type)) {
       return reply.code(400).send({ success: false, message: '申请类型无效' })
     }
-    if (!reason || !reason.trim()) {
-      return reply.code(400).send({ success: false, message: '请选择申请原因' })
+    if (typeof reason !== 'string' || !reason.trim() || reason.trim().length > 100) {
+      return reply.code(400).send({ success: false, message: '申请原因无效' })
+    }
+    if (description != null && (typeof description !== 'string' || description.length > 300)) {
+      return reply.code(400).send({ success: false, message: '补充说明无效' })
+    }
+    if (!Array.isArray(imageUrls) || imageUrls.length > 3 || imageUrls.some(key => typeof key !== 'string' || !key.trim())) {
+      return reply.code(400).send({ success: false, message: '售后图片无效' })
     }
 
     const salesOrder = await prisma.salesOrder.findFirst({
       where: { id, userId }, include: SALES_ORDER_INCLUDE
     })
-    const salesTasks = salesOrder?.items.flatMap(item => item.productionTasks) || []
-    const order = salesOrder
-      ? salesTasks[0]
-      : await prisma.customizeOrder.findFirst({ where: { id, userId } })
-    if (!order) return reply.code(404).send({ success: false, message: '订单不存在' })
+    if (!salesOrder) return reply.code(404).send({ success: false, message: '订单不存在' })
+    const salesTasks = salesOrder.items.flatMap(item => item.productionTasks)
+    const order = salesTasks[0]
+    if (!order) return reply.code(400).send({ success: false, message: '订单生产任务不存在' })
 
     const AFTERSALE_ALLOW = ['paid', 'locked', 'processing', 'producing', 'shipped', 'received']
-    const relevantTasks = salesOrder ? salesTasks : [order]
+    const relevantTasks = salesTasks
     if (!relevantTasks.length || relevantTasks.some(task => !AFTERSALE_ALLOW.includes(task.status))) {
       return reply.code(400).send({
         success: false,
@@ -446,7 +327,7 @@ async function orderRoutes(fastify, opts) {
           userId,
           type,
           reason: reason.trim(),
-          description: [salesOrder ? `用户订单：${salesOrder.orderNo}` : null, description?.trim() || null].filter(Boolean).join('\n') || null,
+          description: [`用户订单：${salesOrder.orderNo}`, description?.trim() || null].filter(Boolean).join('\n'),
           imageUrls: JSON.stringify(Array.isArray(imageUrls) ? imageUrls : []),
         },
       })
@@ -456,10 +337,8 @@ async function orderRoutes(fastify, opts) {
         data: { status: 'aftersale' },
       })
       await tx.customizeOrder.update({ where: { id: order.id }, data: { aftersaleCount: { increment: 1 } } })
-      if (salesOrder) {
-        await tx.salesOrderItem.updateMany({ where: { salesOrderId: salesOrder.id }, data: { status: 'aftersale' } })
-        await tx.salesOrder.update({ where: { id: salesOrder.id }, data: { status: 'aftersale' } })
-      }
+      await tx.salesOrderItem.updateMany({ where: { salesOrderId: salesOrder.id }, data: { status: 'aftersale' } })
+      await tx.salesOrder.update({ where: { id: salesOrder.id }, data: { status: 'aftersale' } })
     })
 
     return reply.send({ success: true, data: { status: 'aftersale' } })
@@ -476,12 +355,11 @@ async function orderRoutes(fastify, opts) {
     const salesOrder = await prisma.salesOrder.findFirst({
       where: { id, userId }, include: SALES_ORDER_INCLUDE
     })
-    const taskIds = salesOrder?.items.flatMap(item => item.productionTasks.map(task => task.id)) || []
-    const order = salesOrder ? null : await prisma.customizeOrder.findFirst({ where: { id, userId } })
-    if (!salesOrder && !order) return reply.code(404).send({ success: false, message: '订单不存在' })
+    if (!salesOrder) return reply.code(404).send({ success: false, message: '订单不存在' })
+    const taskIds = salesOrder.items.flatMap(item => item.productionTasks.map(task => task.id))
 
     const request = await prisma.aftersaleRequest.findFirst({
-      where: { orderId: salesOrder ? { in: taskIds } : id },
+      where: { orderId: { in: taskIds } },
       orderBy: { createdAt: 'desc' },
     })
 

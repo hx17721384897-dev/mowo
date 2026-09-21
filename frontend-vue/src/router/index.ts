@@ -94,6 +94,18 @@ const router = createRouter({
           meta: { title: '确认订单 — 哞屋 MOWO', requiresAuth: true }
         },
         {
+          path: 'orders',
+          name: 'orders',
+          component: () => import('@/views/OrdersView.vue'),
+          meta: { title: '我的订单 — 哞屋 MOWO', requiresAuth: true }
+        },
+        {
+          path: 'orders/:id',
+          name: 'order-detail',
+          component: () => import('@/views/OrderDetailView.vue'),
+          meta: { title: '订单详情 — 哞屋 MOWO', requiresAuth: true }
+        },
+        {
           path: 'showcase-detail',
           redirect: (to) => {
             const workId = typeof to.query.workId === 'string' ? to.query.workId : ''

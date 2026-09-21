@@ -328,7 +328,7 @@ onBeforeUnmount(() => {
         <div class="pay-status-icon">🎉</div>
         <div class="pay-status-title">支付成功！</div>
         <div class="pay-status-desc">付款结果已确认，可在“我的订单”中查看订单和生产进度。</div>
-        <a href="/mowo/frontend/pages/orders.html" class="btn-secondary">我的订单</a>
+        <RouterLink :to="{ name: 'orders' }" class="btn-secondary">我的订单</RouterLink>
         <RouterLink to="/customize" class="btn-secondary">继续定制</RouterLink>
         <RouterLink to="/showcase" class="btn-secondary">看看联名作品</RouterLink>
       </div>
