@@ -49,10 +49,22 @@ function parseConfig(value) {
   try { return JSON.parse(value || '{}') } catch { return {} }
 }
 
+function orderActions(tasks) {
+  const statuses = tasks.map(task => task.status)
+  const allIn = allowed => statuses.length > 0 && statuses.every(status => allowed.includes(status))
+  return {
+    canCancel: allIn(['pending', 'paid']),
+    canConfirmReceipt: statuses.some(status => status === 'shipped') && allIn(['shipped', 'received']),
+    canRequestRefund: allIn(['paid', 'locked', 'processing', 'producing', 'shipped', 'received']),
+    canRequestQuality: allIn(['received']),
+  }
+}
+
 function serializeSalesOrder(fastify, order, includeAddress = false) {
   const tasks = order.items.flatMap(item => item.productionTasks)
   const status = summarizeProductionStatus(tasks)
   const display = STATUS_MAP[status] || { label: status, group: 'unknown', step: -1 }
+  const actions = orderActions(tasks)
   const items = order.items.map(item => {
     const config = parseConfig(item.configSnapshotJson)
     const firstTask = item.productionTasks[0]
@@ -105,11 +117,13 @@ function serializeSalesOrder(fastify, order, includeAddress = false) {
     itemCount: items.length,
     totalQuantity: items.reduce((sum, item) => sum + item.quantity, 0),
     items,
+    actions,
     trackingNo: trackingTasks.length === tasks.length && new Set(trackingTasks.map(task => task.trackingNo)).size === 1 ? trackingTasks[0]?.trackingNo : null,
     trackingCompany: trackingTasks.length === tasks.length && new Set(trackingTasks.map(task => task.trackingCompany)).size === 1 ? trackingTasks[0]?.trackingCompany : null,
     shippedAt: tasks.length && tasks.every(task => ['shipped', 'received'].includes(task.status))
       ? tasks.reduce((latest, task) => !latest || task.shippedAt > latest ? task.shippedAt : latest, null)
       : null,
+    receivedAt: order.receivedAt || null,
     receiverName: order.receiverName || null,
     receiverCity: order.receiverCity || null,
     ...(includeAddress ? {
@@ -159,9 +173,11 @@ async function orderRoutes(fastify, opts) {
         modelName: order.modelName, size: order.size, material: order.material,
         frameCount: order.frameCount, colorName: order.colorName, totalAmount: 0,
         itemCount: 1, totalQuantity: 1, coverUrl,
+        actions: orderActions([order]),
         receiverName: order.receiverName, receiverCity: order.receiverCity,
         trackingNo: order.trackingNo, trackingCompany: order.trackingCompany,
-        shippedAt: order.shippedAt, createdAt: order.createdAt, updatedAt: order.updatedAt,
+        shippedAt: order.shippedAt, receivedAt: order.receivedAt,
+        createdAt: order.createdAt, updatedAt: order.updatedAt,
         legacy: true
       }
     })
@@ -349,9 +365,11 @@ async function orderRoutes(fastify, opts) {
         colorName:       order.colorName,
         productTitle,
         totalAmount:     Number(order.totalAmount || 0),
+        actions:         orderActions([order]),
         trackingNo:      order.trackingNo     || null,
         trackingCompany: order.trackingCompany || null,
         shippedAt:       order.shippedAt      || null,
+        receivedAt:      order.receivedAt     || null,
         receiverName:    order.receiverName   || null,
         receiverPhone:   order.receiverPhone  || null,
         receiverAddress: order.receiverAddress || null,

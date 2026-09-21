@@ -96,4 +96,24 @@ describe('apiRequest', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(localStorage.getItem(ACCESS_TOKEN_KEY)).toBe('expired-token')
   })
+
+  it('preserves structured business error details without exposing the raw envelope', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        response(400, {
+          success: false,
+          code: 'CHECKOUT_VALIDATION_FAILED',
+          message: '部分商品无法结算',
+          data: { problems: [{ id: 'item-1', reason: '价格已变动' }] }
+        })
+      )
+    )
+
+    await expect(apiRequest('/api/cart/checkout', { method: 'POST' })).rejects.toMatchObject({
+      status: 400,
+      code: 'CHECKOUT_VALIDATION_FAILED',
+      details: { problems: [{ id: 'item-1', reason: '价格已变动' }] }
+    })
+  })
 })

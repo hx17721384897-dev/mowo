@@ -298,6 +298,8 @@ try {
   const detailResponse = await request(`/api/orders/${order.id}`, token)
   const detail = (await detailResponse.json()).data
   assert(detail.items.length === 3 && detail.items.flatMap(item => item.productionTasks).length === 4, '订单详情返回完整混合商品和单件任务关系')
+  assert(detail.actions?.canCancel === true && detail.actions?.canRequestRefund === true && detail.actions?.canRequestQuality === false, '订单接口按服务端状态返回可取消和售后能力')
+  assert(detail.receivedAt === null, '未收货订单明确返回空收货时间')
   assert((await request(`/api/orders/${order.id}`, outsiderToken)).status === 404, '其他用户不能读取订单详情')
   assert((await request(`/api/orders/${order.id}/cancel`, outsiderToken, { method: 'POST' })).status === 404, '其他用户不能取消订单')
 
@@ -378,12 +380,16 @@ try {
   await context.close()
 
   await prisma.customizeOrder.updateMany({ where: { id: { in: tasks.map(task => task.id) } }, data: { status: 'shipped' } })
+  const shippedDetail = (await (await request(`/api/orders/${order.id}`, token)).json()).data
+  assert(shippedDetail.actions?.canConfirmReceipt === true, '全部发货后订单接口开放确认收货能力')
   const confirmReceipt = await request(`/api/orders/${order.id}/confirm-receipt`, token, { method: 'POST' })
   assert(confirmReceipt.ok, '全部发货的聚合订单可以由本人确认收货')
   const receivedOrder = await prisma.salesOrder.findUnique({
     where: { id: order.id }, include: { items: { include: { productionTasks: true } } }
   })
   assert(receivedOrder.status === 'received' && receivedOrder.items.flatMap(item => item.productionTasks).every(task => task.status === 'received'), '确认收货会一致更新订单头、商品项和全部生产任务')
+  const receivedDetail = (await (await request(`/api/orders/${order.id}`, token)).json()).data
+  assert(Boolean(receivedDetail.receivedAt) && receivedDetail.actions?.canRequestQuality === true, '确认收货后返回收货时间并开放质量售后能力')
   const aftersaleResponse = await request(`/api/orders/${order.id}/aftersale`, token, {
     method: 'POST', body: JSON.stringify({ type: 'quality', reason: '自动化状态机验收' })
   })

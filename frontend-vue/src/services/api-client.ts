@@ -23,7 +23,8 @@ export class ApiError extends Error {
     readonly status: number,
     readonly code: string,
     readonly requestId: string,
-    override readonly cause?: unknown
+    override readonly cause?: unknown,
+    readonly details?: unknown
   ) {
     super(message)
     this.name = 'ApiError'
@@ -131,7 +132,9 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
         envelope.message || '请求失败',
         response.status,
         envelope.code || 'REQUEST_FAILED',
-        requestId
+        requestId,
+        undefined,
+        envelope.data
       )
     }
     return envelope.data as T

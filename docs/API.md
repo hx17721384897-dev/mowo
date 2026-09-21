@@ -312,9 +312,12 @@ quantity 范围：1-10。修改数量或选中状态会取消依赖该条目的�
   "id": "pre_order_id",
   "totalAmount": 398.00,
   "expiresAt": "2026-04-16T10:10:00Z",
-  "status": "pending_payment"
+  "status": "pending_payment",
+  "createdAt": "2026-04-16T10:00:00Z"
 }
 ```
+
+若部分商品价格、归属、动画版本或 SKU 已变化，返回 `CHECKOUT_VALIDATION_FAILED`，并在 `data.problems` 中仅返回购物车条目 ID 与可展示原因；整笔事务回滚。
 
 响应不会返回内部冻结帧文件或完整结算快照。支付落单只读取服务器保存的快照，购物车后来发生变化不会改变已提交订单。
 
@@ -427,6 +430,12 @@ quantity 范围：1-10。修改数量或选中状态会取消依赖该条目的�
       "displayStatus": "运输中",
       "statusGroup": "shipped",
       "statusStep": 2,
+      "actions": {
+        "canCancel": false,
+        "canConfirmReceipt": true,
+        "canRequestRefund": true,
+        "canRequestQuality": false
+      },
       "sourceType": "custom",
       "modelName": "经典圆筒款",
       "size": "55mm",
@@ -437,6 +446,7 @@ quantity 范围：1-10。修改数量或选中状态会取消依赖该条目的�
       "totalAmount": 199.00,
       "trackingNo": "SF1234567890",
       "trackingCompany": "顺丰",
+      "receivedAt": null,
       "receiverName": "张三",
       "receiverCity": "北京市",
       "coverUrl": null,
@@ -450,6 +460,8 @@ quantity 范围：1-10。修改数量或选中状态会取消依赖该条目的�
   "hasMore": false
 }
 ```
+
+`actions` 由服务端根据该订单全部生产任务的真实状态计算，只用于前端展示操作入口；取消、确认收货和售后接口仍会重新校验登录身份、订单归属与当前状态。聚合订单通过 `items[].productionTasks` 返回商品与单件生产任务关系。
 
 **statusGroup 枚举与含义：**
 
@@ -516,7 +528,7 @@ quantity 范围：1-10。修改数量或选中状态会取消依赖该条目的�
 ---
 
 ### POST `/api/payment/mock-pay/:preOrderId`
-开发模式模拟支付成功（生产环境返回403）。需登录。
+仅隔离测试库显式模拟支付模式可用；默认模式与生产环境均按未开放能力返回 404。需登录，且只能操作本人预订单。
 
 ---
 

@@ -590,7 +590,12 @@ export default async function cartRoutes(fastify) {
         return reply.code(409).send({ success: false, message: '本次提交已结束，请返回购物车重新提交' })
       }
       if (error.code === 'CHECKOUT_VALIDATION_FAILED') {
-        return reply.code(400).send({ success: false, message: error.message, problems: error.problems })
+        return reply.code(400).send({
+          success: false,
+          code: error.code,
+          message: error.message,
+          data: { problems: error.problems }
+        })
       }
       if (['INVALID_CART_ITEMS', 'INVALID_QUANTITY', 'INSUFFICIENT_STOCK'].includes(error.code)) {
         return reply.code(400).send({ success: false, message: error.message })
