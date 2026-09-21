@@ -82,6 +82,12 @@ const router = createRouter({
           }
         },
         {
+          path: 'cart',
+          name: 'cart',
+          component: () => import('@/views/CartView.vue'),
+          meta: { title: '购物车 — 哞屋 MOWO', requiresAuth: true }
+        },
+        {
           path: 'showcase-detail',
           redirect: (to) => {
             const workId = typeof to.query.workId === 'string' ? to.query.workId : ''
