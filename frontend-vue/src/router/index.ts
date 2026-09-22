@@ -189,6 +189,24 @@ const router = createRouter({
       meta: { requiresAuth: true, staffRoles: adminRoles },
       children: [
         {
+          path: 'collab-works',
+          name: 'admin-collab-works',
+          component: () => import('@/views/AdminCollabWorksView.vue'),
+          meta: { title: '联名作品管理 — 哞屋后台', staffRoles: ['OWNER', 'COLLAB_OPS'] }
+        },
+        {
+          path: 'collab-product/:id',
+          name: 'admin-collab-product',
+          component: () => import('@/views/AdminCollabProductView.vue'),
+          meta: { title: '联名商品编辑 — 哞屋后台', staffRoles: ['OWNER', 'COLLAB_OPS'] }
+        },
+        {
+          path: 'contracts',
+          name: 'admin-contracts',
+          component: () => import('@/views/AdminContractsView.vue'),
+          meta: { title: '商务合同 — 哞屋后台', staffRoles: ['OWNER', 'COLLAB_OPS'] }
+        },
+        {
           path: 'collab-review',
           name: 'admin-collab-review',
           component: () => import('@/views/AdminCollabReviewView.vue'),

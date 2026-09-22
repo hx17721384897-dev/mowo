@@ -931,7 +931,7 @@ model PlatformConfig {
 // 人工合作合同与线下约定记录，不是线上余额、提现或自动结算系统。
 model CreatorContract {
   id          String @id @default(uuid())
-  creatorId   String @map("creator_id") // 关联平台账号（可选，有些IP方可能没有创作者账号）
+  creatorId   String? @map("creator_id") // 关联平台账号（可选，有些IP方可能没有创作者账号）
   creatorName String @map("creator_name") @db.VarChar(100) // 合作方名称（冗余，防止账号不存在）
 
   contractType String @map("contract_type") @db.VarChar(20)

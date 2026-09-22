@@ -1,0 +1,257 @@
+.admin-contracts-page .review-btn.yellow {
+  background: #f5e642;
+  color: #111110;
+}
+.admin-contracts-page .review-btn.black {
+  background: #111110;
+  color: #fff;
+}
+.admin-contracts-page .contracts-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.admin-contracts-page .contracts-toolbar input,
+.admin-contracts-page .contracts-toolbar select {
+  height: 38px;
+  border: 1.5px solid var(--review-gray1);
+  border-radius: 10px;
+  padding: 0 12px;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--review-black);
+  background: #fff;
+  outline: none;
+}
+.admin-contracts-page .contracts-toolbar input {
+  width: 200px;
+}
+.admin-contracts-page .contracts-toolbar select:first-of-type {
+  width: 120px;
+}
+.admin-contracts-page .contracts-toolbar select:last-of-type {
+  width: 140px;
+}
+.admin-contracts-page .contracts-card {
+  background: #fff;
+  border-radius: 16px;
+  border: 1.5px solid var(--review-gray1);
+  padding: 20px 24px;
+  margin-bottom: 12px;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+.admin-contracts-page .contracts-card:hover {
+  border-color: var(--review-gray2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+.admin-contracts-page .contracts-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.admin-contracts-page .contracts-name {
+  font-weight: 900;
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+.admin-contracts-page .contracts-id {
+  font-weight: 700;
+  font-size: 11px;
+  color: var(--review-gray3);
+  font-family: monospace;
+}
+.admin-contracts-page .contracts-badges {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.admin-contracts-page .contracts-type,
+.admin-contracts-page .contracts-status {
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 12px;
+  background: var(--review-gray1);
+  color: var(--review-gray3);
+}
+.admin-contracts-page .contracts-type.revenue_share {
+  background: rgba(143, 214, 148, 0.15);
+  color: #1a5c2e;
+}
+.admin-contracts-page .contracts-type.guarantee_plus {
+  background: rgba(127, 200, 227, 0.15);
+  color: #1565a0;
+}
+.admin-contracts-page .contracts-type.buyout {
+  background: rgba(245, 230, 66, 0.2);
+  color: #6a5200;
+}
+.admin-contracts-page .contracts-status {
+  padding: 4px 10px;
+  font-size: 11px;
+}
+.admin-contracts-page .contracts-status.active {
+  background: #d4edda;
+  color: #1a5c2e;
+}
+.admin-contracts-page .contracts-status.terminated {
+  background: #ffe0dc;
+  color: #993c1d;
+}
+.admin-contracts-page .contracts-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.admin-contracts-page .contracts-grid span {
+  display: block;
+  font-weight: 800;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--review-gray3);
+  margin-bottom: 3px;
+}
+.admin-contracts-page .contracts-grid strong {
+  font-weight: 900;
+  font-size: 15px;
+}
+.admin-contracts-page .contracts-green {
+  color: #1a7a3c;
+}
+.admin-contracts-page .contracts-orange {
+  color: #ff6b35;
+}
+.admin-contracts-page .contracts-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.admin-contracts-page .contracts-pagination {
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--review-gray3);
+}
+.admin-contracts-page .contracts-pagination > div {
+  display: flex;
+  gap: 4px;
+}
+.admin-contracts-page .contracts-drawer {
+  width: 580px;
+  right: -580px;
+}
+.admin-contracts-page .contracts-form-section {
+  margin-bottom: 20px;
+}
+.admin-contracts-page .contracts-form-section h2 {
+  font-weight: 900;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--review-gray3);
+  margin: 0 0 12px;
+}
+.admin-contracts-page .contracts-form-grid {
+  display: grid;
+  gap: 12px;
+}
+.admin-contracts-page .contracts-form-grid.two {
+  grid-template-columns: 1fr 1fr;
+}
+.admin-contracts-page .contracts-form-grid.three {
+  grid-template-columns: repeat(3, 1fr);
+}
+.admin-contracts-page .contracts-field {
+  display: block;
+  margin-bottom: 12px;
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--review-gray3);
+}
+.admin-contracts-page .contracts-field input,
+.admin-contracts-page .contracts-field select,
+.admin-contracts-page .contracts-field textarea {
+  display: block;
+  width: 100%;
+  height: 40px;
+  border: 1.5px solid var(--review-gray1);
+  border-radius: 10px;
+  padding: 0 12px;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--review-black);
+  background: #fff;
+  outline: none;
+  margin-top: 5px;
+}
+.admin-contracts-page .contracts-field textarea {
+  height: auto;
+  min-height: 80px;
+  padding: 10px 12px;
+  resize: vertical;
+}
+.admin-contracts-page .contracts-log {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--review-gray1);
+}
+.admin-contracts-page .contracts-log > span {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #ebf9f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.admin-contracts-page .contracts-log > div {
+  flex: 1;
+}
+.admin-contracts-page .contracts-log strong {
+  display: block;
+  font-weight: 900;
+  font-size: 15px;
+  color: #1a7a3c;
+}
+.admin-contracts-page .contracts-log small {
+  display: block;
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--review-gray3);
+  margin-top: 2px;
+}
+.admin-contracts-page .contracts-log time {
+  font-weight: 700;
+  font-size: 11px;
+  color: var(--review-gray3);
+}
+.admin-contracts-page .contracts-no-logs {
+  text-align: center;
+  padding: 16px 0;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--review-gray3);
+}
+@media (max-width: 720px) {
+  .admin-contracts-page .contracts-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .admin-collab-review-page.admin-contracts-page .review-content {
+    padding: 28px 32px;
+  }
+}

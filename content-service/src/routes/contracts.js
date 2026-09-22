@@ -269,42 +269,46 @@ export default async function contractsRoutes(fastify) {
         properties: {
           amount:    { type: 'number', minimum: 0 },
           note:      { type: 'string', maxLength: 200 },
-          settledAt: { type: 'string' }
+          settledAt: { type: 'string' },
+          clientRequestId: { type: 'string', minLength: 1, maxLength: 80 }
         }
       }
     }
   }, async (request, reply) => {
     const { id }              = request.params
-    const { amount, note, settledAt } = request.body
+    const { amount, note, settledAt, clientRequestId } = request.body
     const { userId: adminId } = request.user
 
-    const contract = await fastify.prisma.creatorContract.findUnique({ where: { id } })
-    if (!contract) return reply.code(404).send({ success: false, message: '合同不存在' })
-
-    // 读取现有打款记录，追加新记录
-    let logs = []
-    try { logs = JSON.parse(contract.settlementLogs || '[]') } catch(e) { logs = [] }
-
-    logs.push({
-      id:        Date.now().toString(),
-      amount,
-      note:      note || '',
-      settledAt: settledAt || new Date().toISOString(),
-      recordedBy: adminId,
-      recordedAt: new Date().toISOString()
-    })
-
-    await fastify.prisma.creatorContract.update({
-      where: { id },
-      data:  { settlementLogs: JSON.stringify(logs) }
-    })
-
-    const totalPaid = logs.reduce((s, l) => s + (l.amount || 0), 0)
-    return reply.send({
-      success: true,
-      message: '打款记录已录入',
-      data: { logCount: logs.length, totalPaid: +totalPaid.toFixed(2) }
-    })
+    if (!Number.isFinite(amount) || amount <= 0) return reply.code(400).send({ success: false, message: '打款金额必须大于零' })
+    // 合同记录用同一提交键重试；CAS 避免两个并发请求覆盖或重复追加 JSON 日志。
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const contract = await fastify.prisma.creatorContract.findUnique({ where: { id }, select: { settlementLogs: true } })
+      if (!contract) return reply.code(404).send({ success: false, message: '合同不存在' })
+      let logs
+      try { logs = JSON.parse(contract.settlementLogs || '[]') } catch { return reply.code(409).send({ success: false, message: '历史打款记录格式异常，请联系管理员' }) }
+      if (!Array.isArray(logs)) return reply.code(409).send({ success: false, message: '历史打款记录格式异常，请联系管理员' })
+      const existing = clientRequestId && logs.find(row => row.clientRequestId === clientRequestId)
+      if (existing) {
+        if (Number(existing.amount) !== amount || String(existing.note || '') !== String(note || '')) {
+          return reply.code(409).send({ success: false, message: '提交键已用于其他打款记录' })
+        }
+        const totalPaid = logs.reduce((sum, row) => sum + Number(row.amount || 0), 0)
+        return reply.send({ success: true, message: '打款记录已录入', data: { logCount: logs.length, totalPaid: +totalPaid.toFixed(2) } })
+      }
+      const next = [...logs, {
+        id: crypto.randomUUID(), amount, note: note || '', settledAt: settledAt || new Date().toISOString(),
+        recordedBy: adminId, recordedAt: new Date().toISOString(), ...(clientRequestId ? { clientRequestId } : {}),
+      }]
+      const result = await fastify.prisma.creatorContract.updateMany({
+        where: { id, settlementLogs: contract.settlementLogs },
+        data: { settlementLogs: JSON.stringify(next) },
+      })
+      if (result.count === 1) {
+        const totalPaid = next.reduce((sum, row) => sum + Number(row.amount || 0), 0)
+        return reply.send({ success: true, message: '打款记录已录入', data: { logCount: next.length, totalPaid: +totalPaid.toFixed(2) } })
+      }
+    }
+    return reply.code(409).send({ success: false, message: '打款记录正在更新，请使用原提交键重试' })
   })
 
   // ─────────────────────────────────────────

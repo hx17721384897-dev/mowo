@@ -207,7 +207,7 @@ function closeSidebar() {
 <script src="../js/auth.js"></script>
 <script>
 const API = window.MOWO_API_BASE || ''
-let currentPage = 1, searchTimer = null, currentContractId = null
+let currentPage = 1, searchTimer = null, currentContractId = null, settlementRequestId = null, settlementBusy = false
 
 const TYPE_LABELS  = {revenue_share:'纯分红',guarantee_plus:'保底+分红',buyout:'买断',custom:'自定义'}
 const TYPE_CLS     = {revenue_share:'type-revenue',guarantee_plus:'type-guarantee',buyout:'type-buyout',custom:'type-custom'}
@@ -216,7 +216,8 @@ const STATUS_CLS   = {active:'st-active',expired:'st-expired',terminated:'st-ter
 
 function showToast(msg,dur){dur=dur||2500;const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show')},dur)}
 function getToken(){return localStorage.getItem('mowo_token')}
-function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function escHtml(s){return String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}
+function jsArg(s){return escHtml(JSON.stringify(String(s)))}
 function fmtDate(d){if(!d)return'—';return new Date(d).toLocaleDateString('zh-CN',{year:'numeric',month:'numeric',day:'numeric'})}
 
 async function apiFetch(path,opts){
@@ -256,11 +257,11 @@ async function loadContracts(page){
       '<div class="contract-header">'+
         '<div>'+
           '<div class="contract-name">'+escHtml(c.creatorName)+'</div>'+
-          '<div class="contract-id">'+c.id.slice(-8)+'</div>'+
+          '<div class="contract-id">'+escHtml(c.id.slice(-8))+'</div>'+
         '</div>'+
         '<div class="contract-badges">'+
-          '<span class="type-badge '+(TYPE_CLS[c.contractType]||'type-custom')+'">'+(TYPE_LABELS[c.contractType]||c.contractType)+'</span>'+
-          '<span class="status-badge '+(STATUS_CLS[c.status]||'st-active')+'">'+(STATUS_LABELS[c.status]||c.status)+'</span>'+
+          '<span class="type-badge '+(TYPE_CLS[c.contractType]||'type-custom')+'">'+escHtml(TYPE_LABELS[c.contractType]||c.contractType)+'</span>'+
+          '<span class="status-badge '+(STATUS_CLS[c.status]||'st-active')+'">'+escHtml(STATUS_LABELS[c.status]||c.status)+'</span>'+
         '</div>'+
       '</div>'+
       '<div class="contract-grid">'+
@@ -276,9 +277,9 @@ async function loadContracts(page){
         '<div><div class="contract-item-label">录入人</div><div class="contract-item-val">'+escHtml(c.createdBy||'—')+'</div></div>'+
       '</div>'+
       '<div class="contract-actions">'+
-        '<button class="btn btn-ghost btn-sm" onclick="openDetailDrawer(\''+c.id+'\')">详情 / 编辑</button>'+
-        '<button class="btn btn-black btn-sm" onclick="openSettleDrawer(\''+c.id+'\',\''+escHtml(c.creatorName)+'\')">录入打款</button>'+
-        (c.status==='active'?'<button class="btn btn-sm" style="background:#FFE0DC;color:#993C1D;" onclick="updateStatus(\''+c.id+'\',\'terminated\')">终止</button>':'')+
+        '<button class="btn btn-ghost btn-sm" onclick="openDetailDrawer('+jsArg(c.id)+')">详情 / 编辑</button>'+
+        '<button class="btn btn-black btn-sm" onclick="openSettleDrawer('+jsArg(c.id)+','+jsArg(c.creatorName)+')">录入打款</button>'+
+        (c.status==='active'?'<button class="btn btn-sm" style="background:#FFE0DC;color:#993C1D;" onclick="updateStatus('+jsArg(c.id)+',\'terminated\')">终止</button>':'')+
       '</div>'+
     '</div>'
   }).join('')
@@ -325,7 +326,7 @@ async function openDetailDrawer(id){
     ? c.settlementLogs.map(function(l){
         return '<div class="settle-log"><div class="settle-icon">💰</div>'+
           '<div class="settle-info"><div class="settle-amount">¥'+l.amount.toLocaleString()+'</div>'+
-          '<div class="settle-note">'+(l.note||'—')+'</div></div>'+
+          '<div class="settle-note">'+escHtml(l.note||'—')+'</div></div>'+
           '<div class="settle-date">'+fmtDate(l.settledAt)+'</div></div>'
       }).join('')
     : '<div style="padding:16px 0;text-align:center;font-weight:700;font-size:13px;color:var(--gray3);">暂无打款记录</div>'
@@ -423,6 +424,7 @@ async function saveContract(){
 // ── 录入打款抽屉 ──
 function openSettleDrawer(id,name){
   currentContractId=id
+  settlementRequestId=crypto.randomUUID()
   document.getElementById('drawerTitle').textContent='录入打款 — '+name
   document.getElementById('drawerBody').innerHTML=
     '<div class="form-row"><label class="form-label">打款金额（元）</label>'+
@@ -438,23 +440,26 @@ function openSettleDrawer(id,name){
 }
 
 async function submitSettle(){
+  if(settlementBusy)return
   const amount=parseFloat(document.getElementById('sAmount').value)
   const note=document.getElementById('sNote').value.trim()
   const settledAt=document.getElementById('sDate').value
 
   if(!amount||amount<=0){showToast('请填写打款金额');return}
 
-  const data=await apiFetch('/api/admin/contracts/'+currentContractId+'/settle',{
-    method:'POST',
-    body:JSON.stringify({amount,note:note||undefined,settledAt})
-  })
-  if(data.success){
-    showToast('✅ 打款记录已录入，累计 ¥'+data.data.totalPaid.toLocaleString())
-    closeDrawer()
-    loadContracts(currentPage)
-  } else {
-    showToast('❌ '+data.message)
-  }
+  settlementBusy=true
+  try{
+    const data=await apiFetch('/api/admin/contracts/'+currentContractId+'/settle',{
+      method:'POST',
+      body:JSON.stringify({amount,note:note||undefined,settledAt,clientRequestId:settlementRequestId})
+    })
+    if(data.success){
+      showToast('✅ 打款记录已录入，累计 ¥'+data.data.totalPaid.toLocaleString())
+      closeDrawer()
+      loadContracts(currentPage)
+    } else showToast('❌ '+data.message)
+  }catch(e){showToast('❌ '+e.message)}
+  finally{settlementBusy=false}
 }
 
 // 更新状态

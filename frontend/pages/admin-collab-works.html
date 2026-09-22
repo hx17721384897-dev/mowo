@@ -363,14 +363,14 @@ function suspendDaysHtml(w) {
 }
 
 function workCard(w) {
-  const cover = w.coverUrl
-    ? `<img src="${w.coverUrl}" alt="封面" onerror="this.style.display='none'">`
+  const cover = safeImageUrl(w.coverUrl)
+    ? `<img src="${esc(safeImageUrl(w.coverUrl))}" alt="封面" onerror="this.style.display='none'">`
     : `<div class="work-cover-empty">🎨</div>`
   const sizes = safeJson(w.sizes)
 
   let noticeHtml = ''
   if (w.shelfStatus === 'off_shelf' && w.offShelfNotice) {
-    noticeHtml = `<div class="work-notice">📢 通知创作者：${w.offShelfNotice}</div>`
+    noticeHtml = `<div class="work-notice">📢 通知创作者：${esc(w.offShelfNotice)}</div>`
   }
 
   const actions = buildActions(w)
@@ -383,20 +383,20 @@ function workCard(w) {
     <div class="work-body">
       <div class="work-header">
         <div style="flex:1;min-width:0;">
-          <div class="work-title">${w.title}</div>
-          <div class="work-creator">👤 ${w.creator?.nickname || '未知创作者'}</div>
-          <div class="work-id">#${w.id.slice(-6).toUpperCase()}</div>
+          <div class="work-title">${esc(w.title)}</div>
+          <div class="work-creator">👤 ${esc(w.creator?.nickname || '未知创作者')}</div>
+          <div class="work-id">#${esc(w.id.slice(-6).toUpperCase())}</div>
         </div>
       </div>
       <div class="work-meta">
         ${suspendDaysHtml(w)}
-        ${sizes.map(s => `<span class="work-tag">${s}</span>`).join('')}
+        ${sizes.map(s => `<span class="work-tag">${esc(s)}</span>`).join('')}
         <span class="work-tag">${w.saleConfigCount || 0} 个可售 SKU</span>
       </div>
       ${noticeHtml}
       <div class="work-actions">
-        <button class="btn btn-ghost btn-sm" onclick="openDrawer('${w.id}')">详情</button>
-        <button class="btn btn-yellow btn-sm" onclick="openProductWorkspace('${w.id}')">编辑商品</button>
+        <button class="btn btn-ghost btn-sm" onclick="openDrawer(${jsArg(w.id)})">详情</button>
+        <button class="btn btn-yellow btn-sm" onclick="openProductWorkspace(${jsArg(w.id)})">编辑商品</button>
         ${actions}
       </div>
     </div>
@@ -407,13 +407,13 @@ function buildActions(w) {
   const id = w.id
   switch (w.shelfStatus) {
     case 'on_sale':
-      return `<button class="btn btn-orange btn-sm" onclick="doSuspend('${id}')">暂停销售</button>
-              <button class="btn btn-red btn-sm" onclick="openDelistModal('${id}')">强制下架</button>`
+      return `<button class="btn btn-orange btn-sm" onclick="doSuspend(${jsArg(id)})">暂停销售</button>
+              <button class="btn btn-red btn-sm" onclick="openDelistModal(${jsArg(id)})">强制下架</button>`
     case 'suspended':
-      return `<button class="btn btn-green btn-sm" onclick="doResume('${id}')">恢复上架</button>
-              <button class="btn btn-red btn-sm" onclick="openDelistModal('${id}')">强制下架</button>`
+      return `<button class="btn btn-green btn-sm" onclick="doResume(${jsArg(id)})">恢复上架</button>
+              <button class="btn btn-red btn-sm" onclick="openDelistModal(${jsArg(id)})">强制下架</button>`
     case 'off_shelf':
-      return `<button class="btn btn-green btn-sm" onclick="openRelistModal('${id}')">重新上架</button>`
+      return `<button class="btn btn-green btn-sm" onclick="openRelistModal(${jsArg(id)})">重新上架</button>`
     default:
       return ''
   }
@@ -521,13 +521,13 @@ function renderDrawer(w, packs) {
     <div class="detail-section">
       <div class="detail-section-title">基本信息</div>
       <div class="detail-grid">
-        <div><div class="detail-item-label">创作者</div><div class="detail-item-val">${w.creator?.nickname || '—'}</div></div>
+        <div><div class="detail-item-label">创作者</div><div class="detail-item-val">${esc(w.creator?.nickname || '—')}</div></div>
         <div><div class="detail-item-label">货架状态</div><div class="detail-item-val">${statusLabel}</div></div>
         <div><div class="detail-item-label">审核时间</div><div class="detail-item-val" style="font-size:11px;">${w.approvedAt ? new Date(w.approvedAt).toLocaleDateString('zh-CN') : '—'}</div></div>
         ${w.shelfStatus === 'suspended' ? `<div><div class="detail-item-label">暂停时间</div><div class="detail-item-val" style="font-size:11px;">${w.suspendedAt ? new Date(w.suspendedAt).toLocaleDateString('zh-CN') : '—'}</div></div>` : ''}
         ${w.shelfStatus === 'off_shelf' ? `<div><div class="detail-item-label">下架方式</div><div class="detail-item-val">${offShelfTypeLabel}</div></div>` : ''}
-        ${w.offShelfReason ? `<div style="grid-column:1/-1;"><div class="detail-item-label">内部备注</div><div class="detail-item-val" style="font-size:12px;">${w.offShelfReason}</div></div>` : ''}
-        ${w.offShelfNotice ? `<div style="grid-column:1/-1;"><div class="detail-item-label">创作者通知</div><div class="detail-item-val" style="font-size:12px;color:#7A5F00;">${w.offShelfNotice}</div></div>` : ''}
+        ${w.offShelfReason ? `<div style="grid-column:1/-1;"><div class="detail-item-label">内部备注</div><div class="detail-item-val" style="font-size:12px;">${esc(w.offShelfReason)}</div></div>` : ''}
+        ${w.offShelfNotice ? `<div style="grid-column:1/-1;"><div class="detail-item-label">创作者通知</div><div class="detail-item-val" style="font-size:12px;color:#7A5F00;">${esc(w.offShelfNotice)}</div></div>` : ''}
       </div>
     </div>
     <div class="detail-section">
@@ -537,13 +537,13 @@ function renderDrawer(w, packs) {
           ? `已满足上架条件 · ${w.saleSkus?.length || 0} 个可售 SKU`
           : `尚未满足上架条件${w.saleReadiness?.blockers?.length ? `<ul>${w.saleReadiness.blockers.map(item => `<li>${esc(item)}</li>`).join('')}</ul>` : ''}`}
       </div>
-      <button class="btn btn-yellow btn-sm" onclick="openProductWorkspace('${w.id}')">进入商品工作区</button>
+      <button class="btn btn-yellow btn-sm" onclick="openProductWorkspace(${jsArg(w.id)})">进入商品工作区</button>
     </div>
     <div class="detail-section">
       <div class="detail-section-title">帧图预览（前10帧）</div>
       ${frames.length
         ? `<div class="frames-grid">${frames.slice(0,10).map(url =>
-            `<div class="frame-thumb"><img src="${url}" loading="lazy" onerror="this.style.display='none'"></div>`
+            `<div class="frame-thumb">${safeImageUrl(url) ? `<img src="${esc(safeImageUrl(url))}" loading="lazy" onerror="this.style.display='none'">` : ''}</div>`
           ).join('')}</div>`
         : '<div style="font-size:12px;color:var(--gray3);">暂无帧图</div>'}
     </div>
@@ -553,16 +553,16 @@ function renderDrawer(w, packs) {
         ? `<table class="pack-table">
             <thead><tr><th>尺寸</th><th>库存类型</th><th>当前库存</th><th>锁定</th><th>操作</th></tr></thead>
             <tbody>${packs.map(p => `<tr>
-              <td><strong>${p.size}</strong></td>
+              <td><strong>${esc(p.size)}</strong></td>
               <td><span class="${p.stockType === 'stocked' ? 'stock-stocked' : 'stock-on-demand'}">${p.stockType === 'stocked' ? '有备货' : '按需'}</span></td>
-              <td>${p.currentStock}</td>
-              <td>${p.reservedStock}</td>
-              <td><button class="btn btn-ghost btn-sm" onclick="openStockModal('${w.id}','${p.size}','${p.stockType}')">调整</button></td>
+              <td>${Number(p.currentStock) || 0}</td>
+              <td>${Number(p.reservedStock) || 0}</td>
+              <td><button class="btn btn-ghost btn-sm" onclick="openStockModal(${jsArg(w.id)},${jsArg(p.size)},${jsArg(p.stockType)})">调整</button></td>
             </tr>`).join('')}</tbody>
           </table>`
         : '<div style="font-size:12px;color:var(--gray3);">暂无帧素材包记录</div>'}
       ${missing.length ? `<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;">${missing.map(s =>
-        `<button class="btn btn-ghost btn-sm" onclick="openStockModal('${w.id}','${s}','on_demand')">+ 添加 ${s}</button>`).join('')}</div>` : ''}
+        `<button class="btn btn-ghost btn-sm" onclick="openStockModal(${jsArg(w.id)},${jsArg(s)},'on_demand')">+ 添加 ${esc(s)}</button>`).join('')}</div>` : ''}
     </div>`
 
   // 抽屉底部操作按钮（和卡片一致）
@@ -616,6 +616,12 @@ async function submitStock() {
 function closeModal(id) { document.getElementById(id).classList.remove('show') }
 function safeJson(s) { try { return Array.isArray(s) ? s : JSON.parse(s || '[]') } catch { return [] } }
 function esc(value) { return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])) }
+function jsArg(value) { return esc(JSON.stringify(String(value))) }
+function safeImageUrl(value) {
+  if (typeof value !== 'string') return ''
+  if (/^data:image\/(?:png|jpeg|gif|webp);base64,[A-Za-z0-9+/=]+$/i.test(value)) return value
+  try { const url = new URL(value); return ['http:', 'https:'].includes(url.protocol) ? url.href : '' } catch { return '' }
+}
 
 let _toastTimer
 function showToast(msg) {
