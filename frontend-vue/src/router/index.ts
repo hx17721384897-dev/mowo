@@ -189,6 +189,12 @@ const router = createRouter({
       meta: { requiresAuth: true, staffRoles: adminRoles },
       children: [
         {
+          path: 'collab-review',
+          name: 'admin-collab-review',
+          component: () => import('@/views/AdminCollabReviewView.vue'),
+          meta: { title: '联名审核 — 哞屋后台', staffRoles: ['OWNER', 'COLLAB_OPS'] }
+        },
+        {
           path: 'contact',
           name: 'admin-contact',
           component: () => import('@/views/AdminContactView.vue'),

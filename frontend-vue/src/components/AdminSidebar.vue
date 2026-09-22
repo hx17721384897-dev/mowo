@@ -208,6 +208,7 @@ const groups: MenuGroup[] = [
 const session = useSessionStore()
 const route = useRoute()
 const activeGroup = computed(() => {
+  if (route.path === '/admin/collab-review') return 'collab'
   if (route.path === '/admin/contact') return 'ops'
   if (route.path === '/admin/logs') return 'system'
   if (route.path === '/admin/users' || route.path === '/admin/account-deletions') return 'users'
@@ -245,6 +246,7 @@ const roleLabel = computed(
 const legacyUrl = (file: string): string => `${runtimeConfig.legacyWebBase}/${file}`
 function isActiveLegacy(file: string): boolean {
   const routes: Record<string, string> = {
+    'admin-collab.html': '/admin/collab-review',
     'admin-users.html': '/admin/users',
     'admin-account-deletions.html': '/admin/account-deletions',
     'admin-logs.html': '/admin/logs'
