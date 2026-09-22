@@ -189,6 +189,12 @@ const router = createRouter({
       meta: { requiresAuth: true, staffRoles: adminRoles },
       children: [
         {
+          path: 'contact',
+          name: 'admin-contact',
+          component: () => import('@/views/AdminContactView.vue'),
+          meta: { title: '联络留言 — 哞屋管理后台', staffRoles: ['OWNER', 'CUSTOMER_SERVICE'] }
+        },
+        {
           path: '',
           name: 'admin-shell',
           component: AreaPlaceholderView,

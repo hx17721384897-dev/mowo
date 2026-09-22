@@ -1,0 +1,619 @@
+<script setup lang="ts">
+/* eslint-disable vue/html-closing-bracket-newline, vue/html-indent, vue/multiline-html-element-content-newline */
+import { computed, ref } from 'vue'
+import { runtimeConfig } from '@/config/runtime'
+import { useSessionStore } from '@/stores/session'
+import type { StaffRole } from '@/services/auth-session'
+
+type MenuItem = {
+  label: string
+  icon: string
+  file?: string
+  key?: string
+  children?: MenuItem[]
+  roles: StaffRole[]
+}
+type MenuGroup = { key: string; label: string; icon: string; items: MenuItem[] }
+const ownerProduction: StaffRole[] = ['OWNER', 'PRODUCTION']
+const ownerService: StaffRole[] = ['OWNER', 'CUSTOMER_SERVICE']
+const ownerCollab: StaffRole[] = ['OWNER', 'COLLAB_OPS']
+const groups: MenuGroup[] = [
+  {
+    key: 'production',
+    label: '生产',
+    icon: '📦',
+    items: [
+      {
+        label: '全部订单',
+        icon: '📋',
+        key: 'orders',
+        roles: ownerProduction,
+        children: [
+          {
+            label: '订单总览',
+            icon: '▦',
+            file: 'admin-orders.html?view=all',
+            roles: ownerProduction
+          },
+          {
+            label: '已付款',
+            icon: '○',
+            file: 'admin-orders.html?view=paid',
+            roles: ownerProduction
+          },
+          {
+            label: '待处理',
+            icon: '↓',
+            file: 'admin-orders.html?view=pending',
+            roles: ownerProduction
+          },
+          {
+            label: '处理中',
+            icon: '⌁',
+            file: 'admin-orders.html?view=locked',
+            roles: ownerProduction
+          },
+          {
+            label: '待生产',
+            icon: '□',
+            file: 'admin-orders.html?view=processing',
+            roles: ownerProduction
+          },
+          {
+            label: '生产中',
+            icon: '↻',
+            file: 'admin-orders.html?view=producing',
+            roles: ownerProduction
+          },
+          {
+            label: '待发货',
+            icon: '✓',
+            file: 'admin-orders.html?view=ready',
+            roles: ownerProduction
+          },
+          {
+            label: '已发货',
+            icon: '→',
+            file: 'admin-orders.html?view=shipped',
+            roles: ownerProduction
+          }
+        ]
+      },
+      {
+        label: '生产批次',
+        icon: '▦',
+        file: 'admin-production-batches.html',
+        roles: ownerProduction
+      },
+      {
+        label: '扫码作业',
+        icon: '⌁',
+        key: 'scan',
+        roles: ownerProduction,
+        children: [
+          {
+            label: '作业总览',
+            icon: '▦',
+            file: 'production-scan.html?v=20260904-1#overview',
+            roles: ownerProduction
+          },
+          {
+            label: '帧包完成',
+            icon: '1',
+            file: 'production-scan.html?v=20260904-1#frame',
+            roles: ownerProduction
+          },
+          {
+            label: '材料领用',
+            icon: '2',
+            file: 'production-scan.html?v=20260904-1#material',
+            roles: ownerProduction
+          },
+          {
+            label: '单件配对',
+            icon: '3',
+            file: 'production-scan.html?v=20260904-1#pairing',
+            roles: ownerProduction
+          },
+          {
+            label: '装箱发货',
+            icon: '4',
+            file: 'production-scan.html?v=20260904-1#packing',
+            roles: ownerProduction
+          }
+        ]
+      },
+      { label: '打印与裁切设置', icon: '↕', file: 'admin-print-production.html', roles: ['OWNER'] },
+      { label: '定制导入', icon: '📥', file: 'admin-import.html', roles: ownerProduction }
+    ]
+  },
+  {
+    key: 'assets',
+    label: '素材',
+    icon: '🖼',
+    items: [
+      {
+        label: '帧图资产库',
+        icon: '▦',
+        file: 'admin-frame-library.html',
+        roles: ['OWNER', 'PRODUCTION', 'COLLAB_OPS']
+      },
+      { label: '帧图制作', icon: '✂', file: 'admin-frame-making.html', roles: ownerProduction },
+      {
+        label: '批量导入',
+        icon: '⇧',
+        file: 'admin-frame-imports.html',
+        roles: ['OWNER', 'PRODUCTION', 'COLLAB_OPS']
+      }
+    ]
+  },
+  {
+    key: 'product',
+    label: '商品',
+    icon: '🎯',
+    items: [
+      { label: '款式管理', icon: '🧩', file: 'admin-models.html', roles: ownerService },
+      { label: '库存管理', icon: '📊', file: 'admin-inventory.html', roles: ownerProduction }
+    ]
+  },
+  {
+    key: 'customization',
+    label: '定制',
+    icon: '✂',
+    items: [
+      {
+        label: '定制处理',
+        icon: '☷',
+        file: 'admin-customization-requests.html',
+        roles: ['OWNER', 'CUSTOMER_SERVICE', 'PRODUCTION']
+      }
+    ]
+  },
+  {
+    key: 'collab',
+    label: '联名',
+    icon: '🤝',
+    items: [
+      { label: '联名作品', icon: '🎨', file: 'admin-collab-works.html', roles: ownerCollab },
+      { label: '联名审核', icon: '✅', file: 'admin-collab.html', roles: ownerCollab },
+      { label: '商务合同', icon: '📑', file: 'admin-contract.html', roles: ownerCollab },
+      { label: '违约政策', icon: '📜', file: 'admin-collab-policy.html', roles: ownerCollab }
+    ]
+  },
+  {
+    key: 'ops',
+    label: '运营',
+    icon: '💌',
+    items: [{ label: '联络留言', icon: '📨', file: 'admin-contact.html', roles: ownerService }]
+  },
+  {
+    key: 'users',
+    label: '用户',
+    icon: '👥',
+    items: [
+      { label: '用户列表', icon: '👤', file: 'admin-users.html', roles: ownerService },
+      { label: '注销任务', icon: '⚠', file: 'admin-account-deletions.html', roles: ownerService }
+    ]
+  },
+  {
+    key: 'system',
+    label: '系统',
+    icon: '⚙️',
+    items: [{ label: '审计日志', icon: '📋', file: 'admin-logs.html', roles: ['OWNER'] }]
+  }
+]
+
+const session = useSessionStore()
+const visibleGroups = computed(() =>
+  groups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter(
+        (item) => session.staffRole && item.roles.includes(session.staffRole)
+      )
+    }))
+    .filter((group) => group.items.length)
+)
+const openGroups = ref<string[]>(['ops'])
+const openNested = ref<string[]>([])
+const collapsed = defineModel<boolean>('collapsed', { default: false })
+const mobileOpen = defineModel<boolean>('mobileOpen', { default: false })
+const displayName = computed(
+  () => session.user?.profile?.nickname || session.user?.maskedPhone || '员工'
+)
+const roleLabel = computed(
+  () =>
+    ({
+      OWNER: '负责人',
+      CUSTOMER_SERVICE: '运营客服',
+      PRODUCTION: '生产人员',
+      COLLAB_OPS: '合作运营'
+    })[session.staffRole ?? 'OWNER']
+)
+const legacyUrl = (file: string): string => `${runtimeConfig.legacyWebBase}/${file}`
+
+function toggleGroup(key: string): void {
+  openGroups.value = openGroups.value.includes(key)
+    ? openGroups.value.filter((item) => item !== key)
+    : [...openGroups.value, key]
+}
+function toggleNested(key: string): void {
+  openNested.value = openNested.value.includes(key)
+    ? openNested.value.filter((item) => item !== key)
+    : [...openNested.value, key]
+}
+</script>
+
+<template>
+  <div v-if="mobileOpen" class="admin-sidebar-backdrop" @click="mobileOpen = false"></div>
+  <aside class="admin-sidebar" :class="{ collapsed, open: mobileOpen }" aria-label="管理后台导航">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon">🐄</div>
+      <div>
+        <div class="sidebar-logo-text">哞屋后台</div>
+        <span class="sidebar-logo-sub">MOWO ADMIN</span>
+      </div>
+    </div>
+    <button
+      class="sidebar-toggle"
+      type="button"
+      :aria-label="collapsed ? '展开侧栏' : '收起侧栏'"
+      @click="collapsed = !collapsed"
+    >
+      ‹
+    </button>
+    <nav class="sidebar-nav" aria-label="后台菜单">
+      <div v-for="group in visibleGroups" :key="group.key" class="nav-group">
+        <button
+          class="nav-group-header"
+          :class="{ open: openGroups.includes(group.key), 'active-group': group.key === 'ops' }"
+          type="button"
+          @click="toggleGroup(group.key)"
+        >
+          <span class="nav-icon">{{ group.icon }}</span
+          ><span class="nav-label">{{ group.label }}</span
+          ><span class="nav-group-arrow">▾</span>
+        </button>
+        <div class="nav-sub" :class="{ open: openGroups.includes(group.key) }">
+          <template v-for="item in group.items" :key="item.file || item.key">
+            <div v-if="item.children && item.key" class="nav-nested">
+              <button
+                class="nav-sub-parent"
+                :class="{ open: openNested.includes(item.key) }"
+                type="button"
+                @click="toggleNested(item.key)"
+              >
+                <span class="nav-icon">{{ item.icon }}</span
+                ><span class="nav-label">{{ item.label }}</span
+                ><span class="nav-third-arrow">▾</span>
+              </button>
+              <div class="nav-third" :class="{ open: openNested.includes(item.key) }">
+                <a
+                  v-for="child in item.children"
+                  :key="child.file"
+                  class="nav-third-item"
+                  :href="legacyUrl(child.file!)"
+                  ><span class="nav-icon">{{ child.icon }}</span
+                  ><span class="nav-label">{{ child.label }}</span></a
+                >
+              </div>
+            </div>
+            <RouterLink
+              v-if="item.file === 'admin-contact.html'"
+              class="nav-sub-item active"
+              to="/admin/contact"
+              @click="mobileOpen = false"
+              ><span class="nav-icon">{{ item.icon }}</span
+              ><span class="nav-label">{{ item.label }}</span></RouterLink
+            >
+            <a v-else-if="item.file" class="nav-sub-item" :href="legacyUrl(item.file)"
+              ><span class="nav-icon">{{ item.icon }}</span
+              ><span class="nav-label">{{ item.label }}</span></a
+            >
+          </template>
+        </div>
+      </div>
+    </nav>
+    <RouterLink class="sidebar-back" to="/"
+      ><span class="nav-icon">🌐</span><span class="nav-label">返回前台</span></RouterLink
+    >
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-user-avatar">{{ displayName.slice(0, 1) }}</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name">{{ displayName }}</div>
+          <div class="sidebar-user-role">{{ roleLabel }}</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+</template>
+
+<style scoped>
+.admin-sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 190;
+}
+.admin-sidebar {
+  width: 220px;
+  min-height: 100vh;
+  background: #111110;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 100;
+  transition: width 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  overflow: hidden;
+  color: #787874;
+  font-family: 'Nunito', 'Noto Sans SC', sans-serif;
+}
+.admin-sidebar.collapsed {
+  width: 60px;
+}
+.sidebar-logo {
+  padding: 24px 20px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.sidebar-logo-icon {
+  width: 32px;
+  height: 32px;
+  background: #f5e642;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.sidebar-logo-text {
+  font-weight: 900;
+  font-size: 15px;
+  color: #fff;
+  letter-spacing: 0.04em;
+}
+.sidebar-logo-sub {
+  font-weight: 700;
+  font-size: 10px;
+  color: #787874;
+  letter-spacing: 0.1em;
+  display: block;
+  margin-top: 1px;
+}
+.sidebar-toggle {
+  position: absolute;
+  top: 26px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 0;
+  border-radius: 6px;
+  color: #787874;
+  cursor: pointer;
+}
+.sidebar-nav {
+  flex: 1;
+  padding: 12px 0;
+  overflow-y: auto;
+  min-height: 0;
+}
+.nav-group-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  border: 0;
+  background: none;
+  color: #787874;
+  font:
+    800 13px 'Nunito',
+    'Noto Sans SC',
+    sans-serif;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.nav-group-header:hover,
+.nav-group-header.open {
+  color: #fff;
+}
+.nav-group-header.active-group {
+  color: #f5e642;
+}
+.nav-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+  width: 20px;
+  text-align: center;
+}
+.nav-label {
+  white-space: nowrap;
+}
+.nav-group-arrow {
+  margin-left: auto;
+  font-size: 10px;
+  transition: transform 0.2s;
+}
+.nav-group-header.open .nav-group-arrow {
+  transform: rotate(180deg);
+}
+.nav-sub {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s;
+}
+.nav-sub.open {
+  max-height: 720px;
+}
+.nav-sub-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 20px 8px 44px;
+  color: #787874;
+  font-weight: 700;
+  font-size: 12.5px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.nav-sub-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+.nav-sub-item.active {
+  color: #f5e642;
+  background: rgba(245, 230, 66, 0.12);
+  font-weight: 800;
+  border-left: 3px solid #f5e642;
+  padding-left: 41px;
+}
+.nav-sub-item .nav-icon {
+  font-size: 13px;
+  width: 16px;
+}
+.nav-sub-parent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 20px 8px 44px;
+  border: 0;
+  background: transparent;
+  color: #787874;
+  font:
+    700 12.5px 'Nunito',
+    'Noto Sans SC',
+    sans-serif;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.nav-sub-parent:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+.nav-sub-parent .nav-icon {
+  font-size: 13px;
+  width: 16px;
+}
+.nav-third-arrow {
+  margin-left: auto;
+  font-size: 9px;
+  opacity: 0.6;
+  transition: transform 0.2s;
+}
+.nav-sub-parent.open .nav-third-arrow {
+  transform: rotate(180deg);
+}
+.nav-third {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.25s;
+  background: rgba(255, 255, 255, 0.018);
+}
+.nav-third.open {
+  max-height: 420px;
+}
+.nav-third-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 18px 7px 64px;
+  color: #787874;
+  font-weight: 700;
+  font-size: 11.5px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.nav-third-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+.nav-third-item .nav-icon {
+  width: 14px;
+  font-size: 11px;
+}
+.sidebar-back {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: #787874;
+  font-weight: 800;
+  font-size: 13px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.sidebar-footer {
+  padding: 16px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sidebar-user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #f5e642;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 13px;
+  color: #111110;
+  flex-shrink: 0;
+}
+.sidebar-user-name {
+  font-weight: 800;
+  font-size: 12px;
+  color: #fff;
+}
+.sidebar-user-role {
+  font-weight: 700;
+  font-size: 10px;
+}
+.collapsed .nav-label,
+.collapsed .nav-group-arrow,
+.collapsed .sidebar-user-info {
+  display: none;
+}
+.collapsed .nav-sub {
+  max-height: 0;
+}
+@media (max-width: 1023px) {
+  .admin-sidebar,
+  .admin-sidebar.collapsed {
+    width: min(220px, calc(100vw - 48px));
+    height: 100dvh;
+    min-height: 0;
+    z-index: 200;
+    transform: translateX(-100%);
+  }
+  .admin-sidebar.open {
+    transform: none;
+  }
+  .collapsed .nav-label,
+  .collapsed .nav-group-arrow,
+  .collapsed .sidebar-user-info {
+    display: block;
+  }
+  .collapsed .nav-sub.open {
+    max-height: 720px;
+  }
+}
+</style>
