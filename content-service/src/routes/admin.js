@@ -10,7 +10,6 @@ import { Document, Packer, Paragraph, Table, TableRow, TableCell,
          ImageRun, AlignmentType, WidthType, BorderStyle,
          VerticalAlign, TextRun, ShadingType } from 'docx'
 import { startWipFrame, makeIdempotencyKey } from '../lib/inventory.js'
-import { revokeAllSessions } from '../lib/security.js'
 import { effectiveStaffRole, roleNumberForStaffRole, PERMISSION, STAFF_ROLE, staffRoleLabel } from '../lib/permissions.js'
 
 export default async function adminRoutes(fastify) {
@@ -468,22 +467,25 @@ export default async function adminRoutes(fastify) {
     if (!['FAILED', 'MANUAL_REVIEW'].includes(task.status)) {
       return reply.code(409).send({ success: false, message: '只有失败或待人工关注的任务可以重试' })
     }
-    const updated = await fastify.prisma.accountDeletionRequest.updateMany({
-      where: { id: task.id, status: task.status },
-      data: {
-        status: 'FAILED', nextRetryAt: now,
-        lastManualActionAt: now, lastManualActionBy: request.user.userId
-      }
+    const updated = await fastify.prisma.$transaction(async tx => {
+      const changed = await tx.accountDeletionRequest.updateMany({
+        where: { id: task.id, status: task.status },
+        data: {
+          status: 'FAILED', nextRetryAt: now,
+          lastManualActionAt: now, lastManualActionBy: request.user.userId
+        }
+      })
+      if (changed.count === 1) await tx.auditLog.create({
+        data: {
+          userId: task.userId,
+          action: 'ACCOUNT_DELETION_MANUAL_RETRY',
+          detail: { requestId: task.id, operatorUserId: request.user.userId },
+          ip: request.ip
+        }
+      })
+      return changed
     })
     if (updated.count !== 1) return reply.code(409).send({ success: false, message: '任务状态刚刚发生变化，请刷新后再试' })
-    await fastify.prisma.auditLog.create({
-      data: {
-        userId: task.userId,
-        action: 'ACCOUNT_DELETION_MANUAL_RETRY',
-        detail: { requestId: task.id, operatorUserId: request.user.userId },
-        ip: request.ip
-      }
-    })
     return reply.send({ success: true, message: '已安排立即重试，通常会在1分钟内开始' })
   })
 
@@ -508,23 +510,26 @@ export default async function adminRoutes(fastify) {
     if (!['REQUESTED', 'FAILED', 'MANUAL_REVIEW'].includes(task.status)) {
       return reply.code(409).send({ success: false, message: '当前任务状态不能暂停' })
     }
-    const updated = await fastify.prisma.accountDeletionRequest.updateMany({
-      where: { id: task.id, status: task.status },
-      data: {
-        status: 'PAUSED', pausedAt: now, pausedBy: request.user.userId, pauseReason: reason,
-        pauseUserMessage: userMessage,
-        nextRetryAt: null, lastManualActionAt: now, lastManualActionBy: request.user.userId
-      }
+    const updated = await fastify.prisma.$transaction(async tx => {
+      const changed = await tx.accountDeletionRequest.updateMany({
+        where: { id: task.id, status: task.status },
+        data: {
+          status: 'PAUSED', pausedAt: now, pausedBy: request.user.userId, pauseReason: reason,
+          pauseUserMessage: userMessage,
+          nextRetryAt: null, lastManualActionAt: now, lastManualActionBy: request.user.userId
+        }
+      })
+      if (changed.count === 1) await tx.auditLog.create({
+        data: {
+          userId: task.userId,
+          action: 'ACCOUNT_DELETION_PAUSED',
+          detail: { requestId: task.id, operatorUserId: request.user.userId, reason, userMessage },
+          ip: request.ip
+        }
+      })
+      return changed
     })
     if (updated.count !== 1) return reply.code(409).send({ success: false, message: '任务状态刚刚发生变化，请刷新后再试' })
-    await fastify.prisma.auditLog.create({
-      data: {
-        userId: task.userId,
-        action: 'ACCOUNT_DELETION_PAUSED',
-        detail: { requestId: task.id, operatorUserId: request.user.userId, reason, userMessage },
-        ip: request.ip
-      }
-    })
     return reply.send({ success: true, message: '注销任务已暂停' })
   })
 
@@ -539,22 +544,25 @@ export default async function adminRoutes(fastify) {
       return reply.code(409).send({ success: false, message: '只有已暂停的任务可以恢复' })
     }
     const scheduledAt = task.scheduledAt > now ? task.scheduledAt : now
-    const updated = await fastify.prisma.accountDeletionRequest.updateMany({
-      where: { id: task.id, status: 'PAUSED' },
-      data: {
-        status: 'REQUESTED', scheduledAt, nextRetryAt: null, resumedAt: now,
-        lastManualActionAt: now, lastManualActionBy: request.user.userId
-      }
+    const updated = await fastify.prisma.$transaction(async tx => {
+      const changed = await tx.accountDeletionRequest.updateMany({
+        where: { id: task.id, status: 'PAUSED' },
+        data: {
+          status: 'REQUESTED', scheduledAt, nextRetryAt: null, resumedAt: now,
+          lastManualActionAt: now, lastManualActionBy: request.user.userId
+        }
+      })
+      if (changed.count === 1) await tx.auditLog.create({
+        data: {
+          userId: task.userId,
+          action: 'ACCOUNT_DELETION_RESUMED',
+          detail: { requestId: task.id, operatorUserId: request.user.userId },
+          ip: request.ip
+        }
+      })
+      return changed
     })
     if (updated.count !== 1) return reply.code(409).send({ success: false, message: '任务状态刚刚发生变化，请刷新后再试' })
-    await fastify.prisma.auditLog.create({
-      data: {
-        userId: task.userId,
-        action: 'ACCOUNT_DELETION_RESUMED',
-        detail: { requestId: task.id, operatorUserId: request.user.userId },
-        ip: request.ip
-      }
-    })
     return reply.send({ success: true, message: '注销任务已恢复，通常会在1分钟内开始' })
   })
 
@@ -635,22 +643,19 @@ export default async function adminRoutes(fastify) {
         where: { userId: id, revokedAt: null },
         data: { revokedAt: new Date() }
       })
-      return changed
-    })
-
-    try {
-      await fastify.prisma.operationLog.create({
+      await tx.operationLog.create({
         data: {
           userId: request.user.userId, userRole: request.user.role ?? 0,
           method: 'PUT', path: request.url,
           action: `员工岗位从「${staffRoleLabel(oldStaffRole)}」修改为「${staffRoleLabel(staffRole)}」`,
           targetId: id,
           before: JSON.stringify({ staffRole: oldStaffRole }),
-          after:  JSON.stringify({ staffRole }),
+          after: JSON.stringify({ staffRole }),
           ip: request.ip || null
         }
       })
-    } catch(e) {}
+      return changed
+    })
 
     return reply.send({ success: true, message: '员工岗位已更新，该账号需要重新登录', data: updated })
   })
@@ -679,17 +684,21 @@ export default async function adminRoutes(fastify) {
       return reply.code(403).send({ success: false, message: '只有负责人可以停用其他员工账号' })
     }
 
-    const updated = await fastify.prisma.user.update({
-      where: { id }, data: { isBanned: !!isBanned },
-      select: { id: true, phone: true, isBanned: true }
-    })
-
-    if (isBanned) {
-      await revokeAllSessions(id, fastify.prisma, 'account_banned')
-    }
-
-    try {
-      await fastify.prisma.operationLog.create({
+    const updated = await fastify.prisma.$transaction(async tx => {
+      const changed = await tx.user.update({
+        where: { id }, data: { isBanned: !!isBanned },
+        select: { id: true, phone: true, isBanned: true }
+      })
+      if (isBanned) {
+        await tx.refreshToken.updateMany({
+          where: { userId: id, revokedAt: null },
+          data: { revokedAt: new Date() }
+        })
+        await tx.auditLog.create({
+          data: { userId: id, action: 'ALL_SESSIONS_REVOKED', detail: { reason: 'account_banned' } }
+        })
+      }
+      await tx.operationLog.create({
         data: {
           userId: request.user.userId, userRole: request.user.role ?? 0,
           method: 'PUT', path: request.url,
@@ -697,7 +706,8 @@ export default async function adminRoutes(fastify) {
           targetId: id, ip: request.ip || null
         }
       })
-    } catch(e) {}
+      return changed
+    })
 
     return reply.send({ success: true, message: isBanned ? '用户已封禁' : '用户已解封', data: updated })
   })

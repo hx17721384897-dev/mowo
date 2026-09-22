@@ -132,6 +132,14 @@ try {
   assertStatus('owner can resume account deletion tasks', (await request(`/api/admin/account-deletions/${deletionTask.id}/resume`, owner.token, {
     method: 'POST'
   })).status, 200)
+  const deletionAudit = await prisma.auditLog.findMany({
+    where: { userId: normalUser.id, action: { in: ['ACCOUNT_DELETION_PAUSED', 'ACCOUNT_DELETION_RESUMED'] } },
+    select: { action: true }
+  })
+  if (!['ACCOUNT_DELETION_PAUSED', 'ACCOUNT_DELETION_RESUMED'].every(action => deletionAudit.some(log => log.action === action))) {
+    throw new Error('deletion task mutation omitted its transaction audit')
+  }
+  console.log('PASS deletion task pause and resume include transaction audit')
   assertStatus('support cannot read security logs', (await request('/api/admin/logs', support.token)).status, 403)
   assertStatus('collab can read collab work queue', (await request('/api/admin/collab/works', collab.token)).status, 200)
   assertStatus('support cannot read collab work queue', (await request('/api/admin/collab/works', support.token)).status, 403)
@@ -186,6 +194,11 @@ try {
   assertStatus('support can update normal user status', (await request(`/api/admin/users/${normalUser.id}/ban`, support.token, {
     method: 'PUT', body: JSON.stringify(secretBody)
   })).status, 200)
+  const banActionAudit = await prisma.operationLog.findFirst({
+    where: { userId: support.id, targetId: normalUser.id, action: '解封账号' }
+  })
+  if (!banActionAudit) throw new Error('ban mutation omitted its transaction audit')
+  console.log('PASS account ban mutation includes transaction audit')
 
   await new Promise(resolve => setTimeout(resolve, 150))
   const audit = await prisma.operationLog.findFirst({
@@ -202,6 +215,11 @@ try {
   assertStatus('owner changes production role', (await request(`/api/admin/users/${production.id}/role`, owner.token, {
     method: 'PUT', body: JSON.stringify({ staffRole: 'CUSTOMER_SERVICE' })
   })).status, 200)
+  const roleAudit = await prisma.operationLog.findFirst({
+    where: { userId: owner.id, targetId: production.id, action: { startsWith: '员工岗位从' } }
+  })
+  if (!roleAudit || !roleAudit.before || !roleAudit.after) throw new Error('role mutation omitted its transaction audit')
+  console.log('PASS staff role mutation includes transaction audit')
   assertStatus('changed staff old session revoked', (await request('/api/v1/account/me', production.token)).status, 401)
   console.log('Staff permission and audit security checks passed')
 } finally {

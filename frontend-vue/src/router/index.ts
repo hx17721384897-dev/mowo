@@ -195,6 +195,24 @@ const router = createRouter({
           meta: { title: '联络留言 — 哞屋管理后台', staffRoles: ['OWNER', 'CUSTOMER_SERVICE'] }
         },
         {
+          path: 'users',
+          name: 'admin-users',
+          component: () => import('@/views/AdminUsersView.vue'),
+          meta: { title: '用户管理 — 哞屋后台', staffRoles: ['OWNER', 'CUSTOMER_SERVICE'] }
+        },
+        {
+          path: 'account-deletions',
+          name: 'admin-account-deletions',
+          component: () => import('@/views/AdminAccountDeletionsView.vue'),
+          meta: { title: '注销任务 — 哞屋后台', staffRoles: ['OWNER', 'CUSTOMER_SERVICE'] }
+        },
+        {
+          path: 'logs',
+          name: 'admin-logs',
+          component: () => import('@/views/AdminLogsView.vue'),
+          meta: { title: '审计日志 — 哞屋后台', staffRoles: ['OWNER'] }
+        },
+        {
           path: '',
           name: 'admin-shell',
           component: AreaPlaceholderView,

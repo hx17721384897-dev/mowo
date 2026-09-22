@@ -1,6 +1,7 @@
 <script setup lang="ts">
 /* eslint-disable vue/html-closing-bracket-newline, vue/html-indent, vue/multiline-html-element-content-newline */
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { runtimeConfig } from '@/config/runtime'
 import { useSessionStore } from '@/stores/session'
 import type { StaffRole } from '@/services/auth-session'
@@ -205,6 +206,13 @@ const groups: MenuGroup[] = [
 ]
 
 const session = useSessionStore()
+const route = useRoute()
+const activeGroup = computed(() => {
+  if (route.path === '/admin/contact') return 'ops'
+  if (route.path === '/admin/logs') return 'system'
+  if (route.path === '/admin/users' || route.path === '/admin/account-deletions') return 'users'
+  return ''
+})
 const visibleGroups = computed(() =>
   groups
     .map((group) => ({
@@ -215,7 +223,10 @@ const visibleGroups = computed(() =>
     }))
     .filter((group) => group.items.length)
 )
-const openGroups = ref<string[]>(['ops'])
+const openGroups = ref<string[]>(activeGroup.value ? [activeGroup.value] : [])
+watch(activeGroup, (key) => {
+  if (key && !openGroups.value.includes(key)) openGroups.value = [...openGroups.value, key]
+})
 const openNested = ref<string[]>([])
 const collapsed = defineModel<boolean>('collapsed', { default: false })
 const mobileOpen = defineModel<boolean>('mobileOpen', { default: false })
@@ -232,6 +243,14 @@ const roleLabel = computed(
     })[session.staffRole ?? 'OWNER']
 )
 const legacyUrl = (file: string): string => `${runtimeConfig.legacyWebBase}/${file}`
+function isActiveLegacy(file: string): boolean {
+  const routes: Record<string, string> = {
+    'admin-users.html': '/admin/users',
+    'admin-account-deletions.html': '/admin/account-deletions',
+    'admin-logs.html': '/admin/logs'
+  }
+  return routes[file] === route.path
+}
 
 function toggleGroup(key: string): void {
   openGroups.value = openGroups.value.includes(key)
@@ -267,7 +286,10 @@ function toggleNested(key: string): void {
       <div v-for="group in visibleGroups" :key="group.key" class="nav-group">
         <button
           class="nav-group-header"
-          :class="{ open: openGroups.includes(group.key), 'active-group': group.key === 'ops' }"
+          :class="{
+            open: openGroups.includes(group.key),
+            'active-group': group.key === activeGroup
+          }"
           type="button"
           @click="toggleGroup(group.key)"
         >
@@ -301,13 +323,18 @@ function toggleNested(key: string): void {
             </div>
             <RouterLink
               v-if="item.to"
-              class="nav-sub-item active"
+              class="nav-sub-item"
+              :class="{ active: route.path === item.to }"
               :to="item.to"
               @click="mobileOpen = false"
               ><span class="nav-icon">{{ item.icon }}</span
               ><span class="nav-label">{{ item.label }}</span></RouterLink
             >
-            <a v-else-if="item.file" class="nav-sub-item" :href="legacyUrl(item.file)"
+            <a
+              v-else-if="item.file"
+              class="nav-sub-item"
+              :class="{ active: isActiveLegacy(item.file) }"
+              :href="legacyUrl(item.file)"
               ><span class="nav-icon">{{ item.icon }}</span
               ><span class="nav-label">{{ item.label }}</span></a
             >
