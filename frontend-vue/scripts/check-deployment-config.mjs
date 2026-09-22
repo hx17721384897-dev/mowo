@@ -49,7 +49,8 @@ const requiredRedirects = [
   ['cart.html', '/app/cart'],
   ['checkout.html', '/app/checkout'],
   ['orders.html', '/app/orders'],
-  ['order-detail.html', '/app/order-detail']
+  ['order-detail.html', '/app/order-detail'],
+  ['admin-contact.html', '/app/admin/contact']
 ]
 for (const [legacy, target] of requiredRedirects) {
   if (!redirects.includes(legacy) || !redirects.includes(`302 ${target}`)) {
@@ -82,7 +83,8 @@ for (const retired of [
   'cart.html',
   'checkout.html',
   'orders.html',
-  'order-detail.html'
+  'order-detail.html',
+  'admin-contact.html'
 ]) {
   if (fs.existsSync(path.join(root, '..', 'frontend', 'pages', retired))) {
     throw new Error(`已由 Vue 接管的旧页面不得继续存在：frontend/pages/${retired}`)

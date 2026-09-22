@@ -64,7 +64,7 @@
 | `admin-logs.html` | 安全记录 | 仅负责人 | ✅ 已更新 |
 | `admin-models.html` | 款式管理 | 运营客服/负责人 | ✅ |
 | `admin-inventory.html` | 库存管理 | 生产人员/负责人 | ✅ |
-| `admin-contact.html` | 联络留言管理 | 运营客服/负责人 | ✅ |
+| `/app/admin/contact`（Vue） | 联络留言管理 | 运营客服/负责人 | ✅ 正式入口；旧 HTML 已删除 |
 | `admin-settlement.html` | 分红结算（待打款/历史记录/确认打款） | 合作运营/负责人 | ✅ 保留 |
 | `admin-bull.html` | 牛量管理（创作者列表/参数配置） | 合作运营/负责人 | ✅ 保留 |
 | `admin-links.html` | 引流链接审核（外部视频审核/声量系数） | 合作运营/负责人 | ✅ 保留 |
@@ -214,7 +214,7 @@ Tab2 参数配置：13项阈值全部展示为可编辑输入框，保存后次�
   → pending 状态可删除，已审核不可修改（删除后重新提交）
 ```
 
-## admin-contact.html 功能说明 ✅ 新增
+## 联络留言功能说明（现入口 `/app/admin/contact`）
 
 ```
 两行筛选卡片（点击筛选，再点取消，可叠加）：
@@ -257,7 +257,7 @@ admin-users.html 支持：
   └── 活动管理 → admin-collab-activities.html
 
 运营
-  ├── 联络留言 → admin-contact.html
+  ├── 联络留言 → /app/admin/contact
   ├── 分红结算 → admin-settlement.html    ✅ 新增
   ├── 牛量管理 → admin-bull.html          ✅ 新增
   ├── 引流审核 → admin-links.html         ✅ 新增

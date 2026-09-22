@@ -19,7 +19,8 @@ const legacyVueRedirects = new Map([
   ['pages/cart.html', { pathname: `${appBase}/cart`, hash: '' }],
   ['pages/checkout.html', { pathname: `${appBase}/checkout`, hash: '' }],
   ['pages/orders.html', { pathname: `${appBase}/orders`, hash: '' }],
-  ['pages/order-detail.html', { pathname: `${appBase}/order-detail`, hash: '' }]
+  ['pages/order-detail.html', { pathname: `${appBase}/order-detail`, hash: '' }],
+  ['pages/admin-contact.html', { pathname: `${appBase}/admin/contact`, hash: '' }]
 ])
 
 const mime = {

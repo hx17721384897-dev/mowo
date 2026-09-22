@@ -70,7 +70,7 @@
     {
       key: 'ops', label: '运营', icon: '💌',
       items: [
-        { href: 'admin-contact.html', icon: '📨', label: '联络留言' }
+        { href: `${window.MOWO_APP_BASE || '/app'}/admin/contact`, icon: '📨', label: '联络留言' }
       ]
     },
     {

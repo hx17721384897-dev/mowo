@@ -9,6 +9,7 @@ type MenuItem = {
   label: string
   icon: string
   file?: string
+  to?: string
   key?: string
   children?: MenuItem[]
   roles: StaffRole[]
@@ -184,7 +185,7 @@ const groups: MenuGroup[] = [
     key: 'ops',
     label: '运营',
     icon: '💌',
-    items: [{ label: '联络留言', icon: '📨', file: 'admin-contact.html', roles: ownerService }]
+    items: [{ label: '联络留言', icon: '📨', to: '/admin/contact', roles: ownerService }]
   },
   {
     key: 'users',
@@ -275,7 +276,7 @@ function toggleNested(key: string): void {
           ><span class="nav-group-arrow">▾</span>
         </button>
         <div class="nav-sub" :class="{ open: openGroups.includes(group.key) }">
-          <template v-for="item in group.items" :key="item.file || item.key">
+          <template v-for="item in group.items" :key="item.file || item.key || item.to">
             <div v-if="item.children && item.key" class="nav-nested">
               <button
                 class="nav-sub-parent"
@@ -299,9 +300,9 @@ function toggleNested(key: string): void {
               </div>
             </div>
             <RouterLink
-              v-if="item.file === 'admin-contact.html'"
+              v-if="item.to"
               class="nav-sub-item active"
-              to="/admin/contact"
+              :to="item.to"
               @click="mobileOpen = false"
               ><span class="nav-icon">{{ item.icon }}</span
               ><span class="nav-label">{{ item.label }}</span></RouterLink
