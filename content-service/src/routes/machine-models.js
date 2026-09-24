@@ -1,5 +1,13 @@
 // src/routes/machine-models.js
 // 注意：精确路由必须在动态路由 /:id 之前注册
+import { detectMimeType } from '../lib/private-files.js'
+
+const CATALOG_IMAGE_EXTENSIONS = Object.freeze({
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif'
+})
 
 export default async function machineModelRoutes(fastify) {
 
@@ -79,9 +87,6 @@ export default async function machineModelRoutes(fastify) {
     const data = await req.file()
     if (!data) return reply.code(400).send({ success: false, message: '未收到文件' })
 
-    const ext       = (data.filename || 'jpg').split('.').pop().toLowerCase() || 'jpg'
-    const objectKey = `sku-images/${skuId}/${Date.now()}.${ext}`
-
     // 读取文件内容为 Buffer
     const chunks = []
     for await (const chunk of data.file) chunks.push(chunk)
@@ -90,10 +95,15 @@ export default async function machineModelRoutes(fastify) {
     if (buffer.length > 5 * 1024 * 1024) {
       return reply.code(400).send({ success: false, message: '图片不能超过 5MB' })
     }
+    const imageType = catalogImageType(buffer)
+    if (!imageType) {
+      return reply.code(400).send({ success: false, message: '文件内容不是支持的图片格式' })
+    }
+    const objectKey = `sku-images/${skuId}/${Date.now()}.${CATALOG_IMAGE_EXTENSIONS[imageType]}`
 
     // 上传到 OSS
     await fastify.oss.put(objectKey, buffer, {
-      headers: { 'Content-Type': data.mimetype || 'image/jpeg' }
+      headers: { 'Content-Type': imageType }
     })
 
     // 保存到数据库
@@ -407,9 +417,6 @@ export default async function machineModelRoutes(fastify) {
     const data = await req.file()
     if (!data) return reply.code(400).send({ success: false, message: '未收到文件' })
 
-    const ext = (data.filename || 'jpg').split('.').pop().toLowerCase() || 'jpg'
-    const objectKey = `sku-example/${skuId}/${Date.now()}.${ext}`
-
     const chunks = []
     for await (const chunk of data.file) chunks.push(chunk)
     const buffer = Buffer.concat(chunks)
@@ -417,9 +424,14 @@ export default async function machineModelRoutes(fastify) {
     if (buffer.length > 5 * 1024 * 1024) {
       return reply.code(400).send({ success: false, message: '图片不能超过 5MB' })
     }
+    const imageType = catalogImageType(buffer)
+    if (!imageType) {
+      return reply.code(400).send({ success: false, message: '文件内容不是支持的图片格式' })
+    }
+    const objectKey = `sku-example/${skuId}/${Date.now()}.${CATALOG_IMAGE_EXTENSIONS[imageType]}`
 
     await fastify.oss.put(objectKey, buffer, {
-      headers: { 'Content-Type': data.mimetype || 'image/jpeg' }
+      headers: { 'Content-Type': imageType }
     })
 
     const updated = await fastify.prisma.machineModelSku.update({
@@ -445,6 +457,9 @@ export default async function machineModelRoutes(fastify) {
     if (!sku) return reply.code(404).send({ success: false, message: 'SKU不存在' })
 
     const existing = safeJson(sku.exampleMedia, [])
+    if (!existing.includes(objectKey)) {
+      return reply.code(403).send({ success: false, message: '该图片不属于当前SKU' })
+    }
     const filtered = existing.filter(k => k !== objectKey)
 
     await fastify.prisma.machineModelSku.update({
@@ -548,4 +563,9 @@ function publicMediaUrl(fastify, value, expiresIn) {
 
 function safeJson(str, fallback = []) {
   try { return JSON.parse(str) } catch { return fallback }
+}
+
+function catalogImageType(buffer) {
+  const detected = detectMimeType(buffer.subarray(0, 16))
+  return Object.hasOwn(CATALOG_IMAGE_EXTENSIONS, detected) ? detected : null
 }

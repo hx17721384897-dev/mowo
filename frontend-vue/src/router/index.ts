@@ -189,6 +189,12 @@ const router = createRouter({
       meta: { requiresAuth: true, staffRoles: adminRoles },
       children: [
         {
+          path: 'models',
+          name: 'admin-models',
+          component: () => import('@/views/AdminModelsView.vue'),
+          meta: { title: '款式管理 — 哞屋后台', staffRoles: ['OWNER', 'CUSTOMER_SERVICE'] }
+        },
+        {
           path: 'collab-works',
           name: 'admin-collab-works',
           component: () => import('@/views/AdminCollabWorksView.vue'),

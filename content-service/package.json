@@ -29,6 +29,7 @@
     "check:sales-order-structure": "node scripts/check-sales-order-structure.mjs",
     "check:mixed-checkout-ui": "node scripts/check-mixed-checkout-ui.mjs",
     "check:standard-kit-inventory": "node scripts/check-standard-kit-inventory.mjs",
+    "check:catalog-upload-safety": "node scripts/check-catalog-upload-safety.mjs",
     "check:inventory-traceability": "node scripts/check-inventory-traceability.mjs",
     "check:production-batches": "node scripts/check-production-batches.mjs",
     "check:print-production": "node scripts/check-print-production.mjs",

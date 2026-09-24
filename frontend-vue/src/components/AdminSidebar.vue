@@ -208,6 +208,7 @@ const groups: MenuGroup[] = [
 const session = useSessionStore()
 const route = useRoute()
 const activeGroup = computed(() => {
+  if (route.path === '/admin/models') return 'product'
   if (route.path.startsWith('/admin/collab-') || route.path === '/admin/contracts') return 'collab'
   if (route.path === '/admin/contact') return 'ops'
   if (route.path === '/admin/logs') return 'system'
@@ -251,7 +252,8 @@ function isActiveLegacy(file: string): boolean {
     'admin-collab.html': '/admin/collab-review',
     'admin-users.html': '/admin/users',
     'admin-account-deletions.html': '/admin/account-deletions',
-    'admin-logs.html': '/admin/logs'
+    'admin-logs.html': '/admin/logs',
+    'admin-models.html': '/admin/models'
   }
   return routes[file] === route.path
 }
