@@ -207,7 +207,7 @@ export default async function machineModelRoutes(fastify) {
   // ─────────────────────────────────────────────
 
   fastify.post('/', { preHandler: requireAdmin }, async (req, reply) => {
-    const { name, description, previewImage, modelType = 'single' } = req.body
+    const { name, description, previewImage, videoUrl, modelType = 'single' } = req.body
     if (!name) return reply.code(400).send({ success: false, message: '款式名称必填' })
     const maxSort = await fastify.prisma.machineModel.findFirst({
       orderBy: { sortOrder: 'desc' }, select: { sortOrder: true }
@@ -217,6 +217,7 @@ export default async function machineModelRoutes(fastify) {
         name,
         description:  description  ?? null,
         previewImage: previewImage ?? null,
+        videoUrl:     videoUrl ?? null,
         modelType:    modelType,
         ratios:       JSON.stringify(['1:1']),
         frameOptions: JSON.stringify([]),
@@ -293,28 +294,31 @@ export default async function machineModelRoutes(fastify) {
 
     const skuBarcode = `MOWO-SKU-${modelId.slice(0,4).toUpperCase()}-${Math.random().toString(36).slice(2,6).toUpperCase()}`
 
-    const sku = await fastify.prisma.machineModelSku.create({
-      data: {
-        modelId, size, material,
-        frameCount:  Number(frameCount),
-        colorName,
-        colorHex,
-        price:     Number(price),
-        skuBarcode,
-        skuCode:   skuBarcode,
-        isActive:  true,
-        sortOrder: maxSort ? maxSort.sortOrder + 1 : 0,
-      }
-    })
-
-    await fastify.prisma.skuInventory.create({
-      data: {
-        skuId:         sku.id,
-        currentStock:  0,
-        reservedStock: 0,
-        safetyStock:   10,
-        maxOrderLimit: 100,
-      }
+    // SKU 和其初始库存必须同时存在；库存创建失败时不能留下不可结算的孤立 SKU。
+    const sku = await fastify.prisma.$transaction(async tx => {
+      const created = await tx.machineModelSku.create({
+        data: {
+          modelId, size, material,
+          frameCount:  Number(frameCount),
+          colorName,
+          colorHex,
+          price:     Number(price),
+          skuBarcode,
+          skuCode:   skuBarcode,
+          isActive:  true,
+          sortOrder: maxSort ? maxSort.sortOrder + 1 : 0,
+        }
+      })
+      await tx.skuInventory.create({
+        data: {
+          skuId:         created.id,
+          currentStock:  0,
+          reservedStock: 0,
+          safetyStock:   10,
+          maxOrderLimit: 100,
+        }
+      })
+      return created
     })
 
     return reply.code(201).send({ success: true, data: sku })
