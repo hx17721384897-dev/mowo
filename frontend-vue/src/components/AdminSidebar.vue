@@ -208,6 +208,7 @@ const groups: MenuGroup[] = [
 const session = useSessionStore()
 const route = useRoute()
 const activeGroup = computed(() => {
+  if (route.path === '/admin/frame-library') return 'assets'
   if (route.path === '/admin/models') return 'product'
   if (route.path.startsWith('/admin/collab-') || route.path === '/admin/contracts') return 'collab'
   if (route.path === '/admin/contact') return 'ops'

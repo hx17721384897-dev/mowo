@@ -189,6 +189,15 @@ const router = createRouter({
       meta: { requiresAuth: true, staffRoles: adminRoles },
       children: [
         {
+          path: 'frame-library',
+          name: 'admin-frame-library',
+          component: () => import('@/views/AdminFrameLibraryView.vue'),
+          meta: {
+            title: '帧图资产库 — 哞屋后台',
+            staffRoles: ['OWNER', 'PRODUCTION', 'COLLAB_OPS']
+          }
+        },
+        {
           path: 'models',
           name: 'admin-models',
           component: () => import('@/views/AdminModelsView.vue'),

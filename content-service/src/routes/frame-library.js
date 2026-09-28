@@ -12,7 +12,6 @@ function clean(value, max = 200) {
   const result = String(value || '').trim()
   return result ? result.slice(0, max) : null
 }
-
 function list(value, limit = 30) {
   return [...new Set((Array.isArray(value) ? value : [])
     .map(item => clean(item, 40)).filter(Boolean))].slice(0, limit)
@@ -443,8 +442,10 @@ export default async function frameLibraryRoutes(fastify) {
     const asset = await prisma.animationAsset.findUnique({ where: { id: request.params.id } })
     if (!asset) return reply.code(404).send({ success: false, message: '帧图资产不存在' })
     if (asset.status === 'USER_DELETED') return reply.code(409).send({ success: false, message: '用户已删除的私人资产已经受控隐藏，无需再次归档' })
-    await prisma.animationAsset.update({ where: { id: asset.id }, data: { status: 'ARCHIVED', archivedAt: new Date() } })
-    await prisma.auditLog.create({ data: { userId: request.user.userId, action: 'FRAME_LIBRARY_ASSET_ARCHIVED', targetId: asset.id, detail: { assetNo: asset.assetNo }, ip: request.ip } })
+    await prisma.$transaction(async tx => {
+      await tx.animationAsset.update({ where: { id: asset.id }, data: { status: 'ARCHIVED', archivedAt: new Date() } })
+      await tx.auditLog.create({ data: { userId: request.user.userId, action: 'FRAME_LIBRARY_ASSET_ARCHIVED', targetId: asset.id, detail: { assetNo: asset.assetNo }, ip: request.ip } })
+    })
     return reply.send({ success: true })
   })
 
@@ -453,8 +454,10 @@ export default async function frameLibraryRoutes(fastify) {
     const asset = await prisma.animationAsset.findUnique({ where: { id: request.params.id } })
     if (!asset) return reply.code(404).send({ success: false, message: '帧图资产不存在' })
     if (asset.status !== 'ARCHIVED') return reply.code(409).send({ success: false, message: '只有已归档资料可以恢复' })
-    await prisma.animationAsset.update({ where: { id: asset.id }, data: { status: 'ACTIVE', archivedAt: null } })
-    await prisma.auditLog.create({ data: { userId: request.user.userId, action: 'FRAME_LIBRARY_ASSET_RESTORED', targetId: asset.id, detail: { assetNo: asset.assetNo }, ip: request.ip } })
+    await prisma.$transaction(async tx => {
+      await tx.animationAsset.update({ where: { id: asset.id }, data: { status: 'ACTIVE', archivedAt: null } })
+      await tx.auditLog.create({ data: { userId: request.user.userId, action: 'FRAME_LIBRARY_ASSET_RESTORED', targetId: asset.id, detail: { assetNo: asset.assetNo }, ip: request.ip } })
+    })
     return reply.send({ success: true })
   })
 

@@ -5,7 +5,7 @@ import { chromium } from 'file:///C:/Users/25839/.cache/codex-runtimes/codex-pri
 requireIsolatedTestDatabase()
 const prisma = new PrismaClient()
 const apiBase = process.env.TEST_API_BASE || 'http://127.0.0.1:3001'
-const webBase = process.env.TEST_WEB_BASE || 'http://127.0.0.1:5500/mowo/frontend/pages'
+const vueBase = process.env.TEST_VUE_BASE || 'http://127.0.0.1:4173/app'
 const runId = String(Date.now()).slice(-7)
 const users = []
 const assetIds = []
@@ -144,9 +144,9 @@ try {
     window.MOWO_RUNTIME_API_BASE = apiBase
     localStorage.setItem('mowo_token', token)
   }, { token: owner.token, apiBase })
-  await page.goto(`${webBase}/admin-frame-library.html?keyword=${encodeURIComponent(offline.payload.data.assetNo)}`, { waitUntil: 'networkidle' })
+  await page.goto(`${vueBase}/admin/frame-library?keyword=${encodeURIComponent(offline.payload.data.assetNo)}`, { waitUntil: 'networkidle' })
   await page.getByText(`资产库测试-${runId}`, { exact: true }).waitFor()
-  assert(await page.getByRole('button', { name: '制作新帧图' }).count() === 1, '负责人页面显示后台制作入口')
+  assert(await page.getByRole('link', { name: '制作新帧图' }).count() === 1, '负责人页面显示后台制作入口')
   await page.getByText(`资产库测试-${runId}`, { exact: true }).first().click()
   await page.getByText('不可覆盖版本').waitFor()
   assert(await page.getByText(`线下客户-${runId}`).count() >= 1, '详情页展示客户、版本和业务关系')
