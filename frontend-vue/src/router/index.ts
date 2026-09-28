@@ -198,6 +198,24 @@ const router = createRouter({
           }
         },
         {
+          path: 'frame-making',
+          name: 'admin-frame-making',
+          component: () => import('@/views/AdminFrameMakingView.vue'),
+          meta: {
+            title: '帧图制作 — 哞屋后台',
+            staffRoles: ['OWNER', 'PRODUCTION']
+          }
+        },
+        {
+          path: 'frame-making/:id',
+          name: 'admin-frame-making-editor',
+          component: () => import('@/views/AdminFrameMakingView.vue'),
+          meta: {
+            title: '帧图制作 — 哞屋后台',
+            staffRoles: ['OWNER', 'PRODUCTION']
+          }
+        },
+        {
           path: 'models',
           name: 'admin-models',
           component: () => import('@/views/AdminModelsView.vue'),

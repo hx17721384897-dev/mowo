@@ -7,7 +7,7 @@ import path from 'path'
 requireIsolatedTestDatabase()
 const prisma = new PrismaClient()
 const apiBase = process.env.TEST_API_BASE || 'http://127.0.0.1:3001'
-const webBase = process.env.TEST_WEB_BASE || 'http://127.0.0.1:5500/mowo/frontend/pages'
+const vueBase = process.env.TEST_VUE_BASE || 'http://127.0.0.1:4173/app'
 const runId = String(Date.now()).slice(-7)
 const users = []
 const fileIds = []
@@ -109,8 +109,10 @@ try {
   assert((await request('/api/admin/frame-making/drafts', support.token)).status === 403, '客服不能进入制作工作台')
 
   const source = await readyFile(production.id, 'LIBRARY_SOURCE', 'source')
+  const createRequestId = `frame-making-check-${runId}`
   const create = await request('/api/admin/frame-making/drafts', production.token, {
     method: 'POST', body: JSON.stringify({
+      clientRequestId: createRequestId,
       sourceKeys: [source.objectKey], sourceType: 'IMAGES', targetRatio: '1:1',
       title: `制作验收-${runId}`, sourceMetadata: { width: 100, height: 100 }
     })
@@ -118,6 +120,16 @@ try {
   const created = await create.json()
   assert(create.status === 201 && /^FD-/.test(created.data.draftNo), '导入原素材会生成独立 FD 制作草稿')
   draftIds.push(created.data.id)
+  const repeatedCreate = await request('/api/admin/frame-making/drafts', production.token, {
+    method: 'POST', body: JSON.stringify({
+      clientRequestId: createRequestId,
+      sourceKeys: [source.objectKey], sourceType: 'IMAGES', targetRatio: '1:1',
+      title: `制作验收-${runId}`, sourceMetadata: { width: 100, height: 100 }
+    })
+  })
+  const repeatedCreated = await repeatedCreate.json()
+  assert(repeatedCreate.status === 200 && repeatedCreated.data.id === created.data.id,
+    '网络重试同一创建请求不会生成重复草稿')
   const linkedSource = await prisma.privateFile.findUnique({ where: { id: source.id } })
   assert(linkedSource.linkedResourceType === 'FRAME_ASSET_DRAFT', '原素材只绑定制作草稿，不会伪装成正式帧图')
 
@@ -193,30 +205,37 @@ try {
     window.MOWO_RUNTIME_API_BASE = apiBase
     localStorage.setItem('mowo_token', token)
   }, { token: owner.token, apiBase })
-  await page.goto(`${webBase}/admin-frame-making.html`, { waitUntil: 'networkidle' })
+  await page.goto(`${vueBase}/admin/frame-making`, { waitUntil: 'networkidle' })
   await page.getByRole('heading', { name: '制作草稿' }).waitFor()
-  assert(await page.getByText('帧图制作', { exact: true }).count() >= 1, '后台导航和独立制作页面正常显示')
+  assert(await page.getByText('帧图制作', { exact: true }).count() >= 1, 'Vue 后台导航和独立制作页面正常显示')
   assert(await page.getByRole('button', { name: '开始制作' }).count() === 1, '负责人可以从后台开始新的制作流程')
   await page.setViewportSize({ width: 390, height: 844 })
-  assert(await page.locator('.mobile-menu').isVisible(), '窄屏下保留可操作的后台菜单')
+  assert(await page.locator('.menu-btn').isVisible(), '窄屏下保留可操作的后台菜单')
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.getByRole('button', { name: '开始制作' }).click()
-  await page.locator('#importTitle').fill(`浏览器制作验收-${runId}`)
-  await page.locator('#sourceInput').setInputFiles({
+  await page.getByLabel('草稿名称').fill(`浏览器制作验收-${runId}`)
+  await page.locator('input[type="file"]').setInputFiles({
     name: 'browser-frame.png', mimeType: 'image/png',
-    buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2nKsAAAAASUVORK5CYII=', 'base64')
+    buffer: fs.readFileSync(path.resolve(process.cwd(), '../frontend-vue/node_modules/cropperjs/src/images/bg.png'))
   })
-  await Promise.all([
-    page.waitForURL(/customize-editor\.html\?frameDraftId=/),
-    page.locator('#startBtn').click()
-  ])
-  await page.locator('#stateEditor.active .thumb-item').first().waitFor()
-  assert(await page.locator('#ebarSel').textContent() === '1 帧', '浏览器真实上传图片后会进入完整筛帧器并选中候选帧')
-  assert(await page.locator('#btnFirst, #btnDedup, #btnSample, #btnUndo, #btnFilterSel').count() === 5, '后台复用完整的播放、去重、抽帧、撤销和筛选功能')
-  assert(await page.locator('#mowo-nav').isHidden(), '后台筛帧期间不会跳回用户前台导航')
+  await page.getByRole('button', { name: '上传并开始筛选' }).click()
+  await page.waitForURL(/\/app\/admin\/frame-making\/[^/?]+\/?(?:\?.*)?$/, { timeout: 30_000 }).catch(async error => {
+    const diagnostic = {
+      url: page.url(),
+      buttonDisabled: await page.getByRole('button', { name: '上传并开始筛选' }).isDisabled().catch(() => null),
+      error: await page.locator('.error-box').textContent().catch(() => null),
+      toast: await page.locator('.toast').textContent().catch(() => null)
+    }
+    throw new Error(`Vue 制作草稿未进入编辑器：${JSON.stringify(diagnostic)}`, { cause: error })
+  })
+  await page.locator('.candidate.selected').first().waitFor()
+  assert(await page.getByText('1 帧', { exact: true }).count() >= 1, '浏览器真实上传图片后会进入 Vue 完整筛帧器并选中候选帧')
+  assert(await page.getByRole('button', { name: /相似帧去重|每 2 帧抽取|撤销/ }).count() === 3,
+    'Vue 后台保留去重、抽帧和撤销功能')
+  assert(await page.locator('.making-topbar').isVisible(), '后台筛帧期间不会跳回用户前台导航')
   await page.getByRole('button', { name: '填写入库资料' }).click()
-  await page.locator('#frameMetadataDialog').waitFor({ state: 'visible' })
-  await page.locator('#frameMetaPublish').click()
+  await page.getByRole('heading', { name: '确认入库资料' }).waitFor()
+  await page.getByRole('button', { name: '确认并加入资产库' }).click()
   await page.waitForURL(/\/app\/admin\/frame-library\?keyword=ANM-/)
   await page.locator('.asset-card').first().waitFor()
   assert(await page.getByText(`浏览器制作验收-${runId}`).count() >= 1, '负责人可以从浏览器完整发布并在总库定位新动画')

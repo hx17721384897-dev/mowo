@@ -89,6 +89,7 @@ export default async function frameMakingRoutes(fastify) {
 
   fastify.post('/drafts', async (request, reply) => {
     const body = request.body || {}
+    const clientRequestId = clean(body.clientRequestId, 80)
     const sourceKeys = stringList(body.sourceKeys, 50, 500).filter(key => key.startsWith('private/'))
     const sourceType = clean(body.sourceType, 20)
     const targetRatio = clean(body.targetRatio, 20) || '1:1'
@@ -100,33 +101,66 @@ export default async function frameMakingRoutes(fastify) {
     if (sourceType !== 'IMAGES' && sourceKeys.length !== 1) {
       return reply.code(400).send({ success: false, message: '视频或 GIF 每个草稿只能上传一个文件' })
     }
+    if (clientRequestId) {
+      const existing = await prisma.frameAssetDraft.findUnique({ where: { clientRequestId } })
+      if (existing) {
+        const sameRequest = existing.createdByStaffId === request.user.userId &&
+          existing.sourceType === sourceType && existing.targetRatio === targetRatio &&
+          JSON.stringify(existing.sourceKeys) === JSON.stringify(sourceKeys)
+        if (!sameRequest) {
+          return reply.code(409).send({ success: false, message: '创建标识已被其他草稿使用，请重新选择素材' })
+        }
+        return reply.send({ success: true, data: {
+          id: existing.id, draftNo: existing.draftNo, revision: existing.revision
+        } })
+      }
+    }
     const files = await prisma.privateFile.findMany({ where: {
       objectKey: { in: sourceKeys }, ownerUserId: request.user.userId,
       purpose: FILE_PURPOSE.LIBRARY_SOURCE, status: 'READY', deletedAt: null, linkedResourceId: null
     } })
     if (files.length !== sourceKeys.length) return reply.code(400).send({ success: false, message: '原素材不存在、未上传完成或已经被使用' })
-    const draft = await prisma.$transaction(async tx => {
-      let created = null
-      for (let attempt = 0; attempt < 5 && !created; attempt += 1) {
-        try {
-          created = await tx.frameAssetDraft.create({ data: {
-            draftNo: draftNo(), createdByStaffId: request.user.userId, lastEditedByStaffId: request.user.userId,
-            sourceKeys, sourceType, sourceMetadata: jsonObject(body.sourceMetadata), targetRatio,
-            title: clean(body.title, 200) || '未命名动画', rightsHolderName: '哞屋'
-          } })
-        } catch (error) {
-          if (error.code !== 'P2002' || attempt === 4) throw error
+    let draft
+    try {
+      draft = await prisma.$transaction(async tx => {
+        let created = null
+        for (let attempt = 0; attempt < 5 && !created; attempt += 1) {
+          try {
+            created = await tx.frameAssetDraft.create({ data: {
+              draftNo: draftNo(), clientRequestId,
+              createdByStaffId: request.user.userId, lastEditedByStaffId: request.user.userId,
+              sourceKeys, sourceType, sourceMetadata: jsonObject(body.sourceMetadata), targetRatio,
+              title: clean(body.title, 200) || '未命名动画', rightsHolderName: '哞屋'
+            } })
+          } catch (error) {
+            if (error.code !== 'P2002' || attempt === 4 || clientRequestId) throw error
+          }
         }
-      }
-      await tx.privateFile.updateMany({ where: { id: { in: files.map(file => file.id) } }, data: {
-        linkedResourceType: 'FRAME_ASSET_DRAFT', linkedResourceId: created.id
+        const linked = await tx.privateFile.updateMany({ where: {
+          id: { in: files.map(file => file.id) }, linkedResourceId: null
+        }, data: {
+          linkedResourceType: 'FRAME_ASSET_DRAFT', linkedResourceId: created.id
+        } })
+        if (linked.count !== files.length) {
+          throw Object.assign(new Error('原素材已经被其他制作草稿使用'), { statusCode: 409 })
+        }
+        await tx.auditLog.create({ data: {
+          userId: request.user.userId, action: 'FRAME_MAKING_DRAFT_CREATED', targetId: created.id,
+          detail: { draftNo: created.draftNo, sourceType, sourceCount: sourceKeys.length }, ip: request.ip
+        } })
+        return created
+      })
+    } catch (error) {
+      if (error.code !== 'P2002' || !clientRequestId) throw error
+      const existing = await prisma.frameAssetDraft.findUnique({ where: { clientRequestId } })
+      const sameRequest = existing && existing.createdByStaffId === request.user.userId &&
+        existing.sourceType === sourceType && existing.targetRatio === targetRatio &&
+        JSON.stringify(existing.sourceKeys) === JSON.stringify(sourceKeys)
+      if (!sameRequest) throw error
+      return reply.send({ success: true, data: {
+        id: existing.id, draftNo: existing.draftNo, revision: existing.revision
       } })
-      await tx.auditLog.create({ data: {
-        userId: request.user.userId, action: 'FRAME_MAKING_DRAFT_CREATED', targetId: created.id,
-        detail: { draftNo: created.draftNo, sourceType, sourceCount: sourceKeys.length }, ip: request.ip
-      } })
-      return created
-    })
+    }
     return reply.code(201).send({ success: true, data: { id: draft.id, draftNo: draft.draftNo, revision: draft.revision } })
   })
 
@@ -161,7 +195,7 @@ export default async function frameMakingRoutes(fastify) {
     const canEdit = draft.status === 'DRAFT' || (draft.status === 'READY_FOR_REVIEW' && isOwner(request))
     if (!canEdit) return reply.code(409).send({ success: false, message: '当前草稿状态不能修改' })
     const expectedRevision = Number(body.revision)
-    if (Number.isInteger(expectedRevision) && expectedRevision !== draft.revision) {
+    if (!Number.isInteger(expectedRevision) || expectedRevision !== draft.revision) {
       return reply.code(409).send({ success: false, message: '草稿已被其他工作人员更新，请刷新后继续', code: 'DRAFT_REVISION_CONFLICT' })
     }
     const data = {
@@ -183,13 +217,23 @@ export default async function frameMakingRoutes(fastify) {
       if (!owner) return reply.code(400).send({ success: false, message: '绑定手机号还没有网站账号' })
       ownerUserId = owner.id
     }
-    const updated = await prisma.frameAssetDraft.update({ where: { id: draft.id }, data: {
-      ...data, ownerUserId, editorData: body.editorData === undefined ? draft.editorData : jsonObject(body.editorData),
-      sourceMetadata: body.sourceMetadata === undefined ? draft.sourceMetadata : jsonObject(body.sourceMetadata),
-      tags: body.tags === undefined ? draft.tags : stringList(body.tags, 30, 40),
-      internalNotes: body.internalNotes === undefined ? draft.internalNotes : clean(body.internalNotes, 4000),
-      lastEditedByStaffId: request.user.userId, revision: { increment: 1 }
-    } })
+    const updated = await prisma.$transaction(async tx => {
+      const result = await tx.frameAssetDraft.updateMany({ where: {
+        id: draft.id, revision: expectedRevision, status: draft.status
+      }, data: {
+        ...data, ownerUserId, editorData: body.editorData === undefined ? draft.editorData : jsonObject(body.editorData),
+        sourceMetadata: body.sourceMetadata === undefined ? draft.sourceMetadata : jsonObject(body.sourceMetadata),
+        tags: body.tags === undefined ? draft.tags : stringList(body.tags, 30, 40),
+        internalNotes: body.internalNotes === undefined ? draft.internalNotes : clean(body.internalNotes, 4000),
+        lastEditedByStaffId: request.user.userId, revision: { increment: 1 }
+      } })
+      if (result.count !== 1) {
+        throw Object.assign(new Error('草稿已被其他工作人员更新，请刷新后继续'), {
+          statusCode: 409, code: 'DRAFT_REVISION_CONFLICT'
+        })
+      }
+      return tx.frameAssetDraft.findUniqueOrThrow({ where: { id: draft.id } })
+    })
     return reply.send({ success: true, data: { id: updated.id, revision: updated.revision, updatedAt: updated.updatedAt } })
   })
 
@@ -200,9 +244,20 @@ export default async function frameMakingRoutes(fastify) {
       return reply.code(403).send({ success: false, message: '只能放弃自己建立的草稿' })
     }
     if (!['DRAFT', 'READY_FOR_REVIEW'].includes(draft.status)) return reply.code(409).send({ success: false, message: '该草稿不能放弃' })
-    await prisma.frameAssetDraft.update({ where: { id: draft.id }, data: {
-      status: 'ABANDONED', abandonedAt: new Date(), lastEditedByStaffId: request.user.userId, revision: { increment: 1 }
-    } })
+    await prisma.$transaction(async tx => {
+      const result = await tx.frameAssetDraft.updateMany({ where: {
+        id: draft.id, revision: draft.revision, status: draft.status
+      }, data: {
+        status: 'ABANDONED', abandonedAt: new Date(), lastEditedByStaffId: request.user.userId, revision: { increment: 1 }
+      } })
+      if (result.count !== 1) {
+        throw Object.assign(new Error('草稿已被其他工作人员更新，请刷新后继续'), { statusCode: 409 })
+      }
+      await tx.auditLog.create({ data: {
+        userId: request.user.userId, action: 'FRAME_MAKING_DRAFT_ABANDONED', targetId: draft.id,
+        detail: { draftNo: draft.draftNo }, ip: request.ip
+      } })
+    })
     return reply.send({ success: true })
   })
 
@@ -213,18 +268,25 @@ export default async function frameMakingRoutes(fastify) {
     if (draft.status === 'READY_FOR_REVIEW') return reply.send({ success: true, data: { status: draft.status } })
     if (draft.status !== 'DRAFT') return reply.code(409).send({ success: false, message: '当前草稿不能提交确认' })
     const expectedRevision = Number(body.revision)
-    if (Number.isInteger(expectedRevision) && expectedRevision !== draft.revision) {
+    if (!Number.isInteger(expectedRevision) || expectedRevision !== draft.revision) {
       return reply.code(409).send({ success: false, message: '草稿已被其他工作人员更新，请刷新后继续', code: 'DRAFT_REVISION_CONFLICT' })
     }
     const updated = await prisma.$transaction(async tx => {
-      const row = await tx.frameAssetDraft.update({ where: { id: draft.id }, data: {
+      const changed = await tx.frameAssetDraft.updateMany({ where: {
+        id: draft.id, revision: expectedRevision, status: 'DRAFT'
+      }, data: {
         status: 'READY_FOR_REVIEW', lastEditedByStaffId: request.user.userId, revision: { increment: 1 }
       } })
+      if (changed.count !== 1) {
+        throw Object.assign(new Error('草稿已被其他工作人员更新，请刷新后继续'), {
+          statusCode: 409, code: 'DRAFT_REVISION_CONFLICT'
+        })
+      }
       await tx.auditLog.create({ data: {
         userId: request.user.userId, action: 'FRAME_MAKING_DRAFT_SUBMITTED', targetId: draft.id,
         detail: { draftNo: draft.draftNo }, ip: request.ip
       } })
-      return row
+      return tx.frameAssetDraft.findUniqueOrThrow({ where: { id: draft.id } })
     })
     return reply.send({ success: true, data: { status: updated.status, revision: updated.revision, updatedAt: updated.updatedAt } })
   })

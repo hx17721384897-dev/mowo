@@ -1333,6 +1333,7 @@ model AnimationAssetTag {
 model FrameAssetDraft {
   id                  String    @id @default(uuid())
   draftNo             String    @unique @map("draft_no") @db.VarChar(32)
+  clientRequestId     String?   @unique @map("client_request_id") @db.VarChar(80)
   status              String    @default("DRAFT") @db.VarChar(20) // DRAFT | READY_FOR_REVIEW | PUBLISHED | ABANDONED
   createdByStaffId    String    @map("created_by_staff_id")
   lastEditedByStaffId String    @map("last_edited_by_staff_id")
