@@ -12,7 +12,7 @@
 
 - 后台页面：`frontend/pages/admin-frame-library.html`
 - 后台制作页面：Vue `/app/admin/frame-making` 与 `/app/admin/frame-making/:id`
-- 后台批量导入候选：Vue `/app/admin/frame-imports`；旧 `frontend/pages/admin-frame-imports.html` 和 `frontend/js/admin-frame-imports.js` 在候选验收前继续承载正式入口
+- 后台批量导入：Vue `/app/admin/frame-imports`；旧 HTML/JS 已在 2026-09-28 验收后物理删除，旧 URL 仅作临时 302 兼容
 - 后台导航：`frontend/js/admin-sidebar.js` 的“素材 -> 帧图资产库 / 帧图制作 / 批量导入”
 - 后台接口：`content-service/src/routes/frame-library.js`，前缀 `/api/admin/frame-library`
 - 后台制作接口：`content-service/src/routes/frame-making.js`，前缀 `/api/admin/frame-making`
@@ -89,6 +89,8 @@
 ## 已编辑序列帧批量导入
 
 “批量导入”面向已经完成编辑的 PNG/JPG 序列帧，不进入视频筛选器，也不建立 `FD` 草稿。负责人在浏览器选择一个总文件夹；总文件夹下第一层的每个子文件夹代表一套动画，子文件夹内只允许数字命名的 PNG/JPG。系统按数字自然顺序排列，允许 2、4、12、16 等不同帧数。
+
+浏览器文件夹入口不读取 Word 文档。若总文件夹内直接放置 `.docx`，即使文档中嵌有图片，也不会被识别为动画；应先把每套动画导出为独立子文件夹，并以 `1.png`、`2.png`（或 JPG）等数字文件名存放。2026-09-28 人工复核已确认符合该目录协议的素材可以成功读取。
 
 1. 一次导入建立一个 `FI-YYYYMMDD-XXXXXXXX` 批次；`FI` 只追踪上传和入库工作，不替代每套动画自己的 `ANM`。
 2. 当前上限是每批 100 套、2000 张、500MB；每套 2 至 50 张，单张不超过 20MB。浏览器同时上传 4 张，避免瞬时占满连接和本地服务；瞬时网络或服务器错误会自动再尝试一次。

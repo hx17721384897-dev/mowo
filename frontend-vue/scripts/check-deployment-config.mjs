@@ -53,7 +53,8 @@ const requiredRedirects = [
   ['admin-contact.html', '/app/admin/contact'],
   ['admin-models.html', '/app/admin/models'],
   ['admin-frame-library.html', '/app/admin/frame-library'],
-  ['admin-frame-making.html', '/app/admin/frame-making']
+  ['admin-frame-making.html', '/app/admin/frame-making'],
+  ['admin-frame-imports.html', '/app/admin/frame-imports']
 ]
 for (const [legacy, target] of requiredRedirects) {
   if (!redirects.includes(legacy) || !redirects.includes(`302 ${target}`)) {
@@ -90,10 +91,16 @@ for (const retired of [
   'admin-contact.html',
   'admin-models.html',
   'admin-frame-library.html',
-  'admin-frame-making.html'
+  'admin-frame-making.html',
+  'admin-frame-imports.html'
 ]) {
   if (fs.existsSync(path.join(root, '..', 'frontend', 'pages', retired))) {
     throw new Error(`已由 Vue 接管的旧页面不得继续存在：frontend/pages/${retired}`)
+  }
+}
+for (const retired of ['admin-frame-imports.js']) {
+  if (fs.existsSync(path.join(root, '..', 'frontend', 'js', retired))) {
+    throw new Error(`已由 Vue 接管的旧脚本不得继续存在：frontend/js/${retired}`)
   }
 }
 if (

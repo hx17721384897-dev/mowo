@@ -42,7 +42,7 @@
       items: [
         { href: `${window.MOWO_APP_BASE || '/app'}/admin/frame-library`, icon: '▦', label: '帧图资产库' },
         { href: `${window.MOWO_APP_BASE || '/app'}/admin/frame-making`, icon: '✂', label: '帧图制作' },
-        { href: 'admin-frame-imports.html', icon: '⇧', label: '批量导入' }
+        { href: `${window.MOWO_APP_BASE || '/app'}/admin/frame-imports`, icon: '⇧', label: '批量导入' }
       ]
     },
     {
@@ -97,8 +97,8 @@
 
   const STAFF_HIDDEN_ITEMS = {
     CUSTOMER_SERVICE: new Set(['admin-import.html', 'admin-inventory.html', 'admin-print-production.html']),
-    PRODUCTION: new Set([`${window.MOWO_APP_BASE || '/app'}/admin/models`, 'admin-print-production.html']),
-    COLLAB_OPS: new Set([`${window.MOWO_APP_BASE || '/app'}/admin/frame-making`])
+    PRODUCTION: new Set([`${window.MOWO_APP_BASE || '/app'}/admin/models`, `${window.MOWO_APP_BASE || '/app'}/admin/frame-imports`, 'admin-print-production.html']),
+    COLLAB_OPS: new Set([`${window.MOWO_APP_BASE || '/app'}/admin/frame-making`, `${window.MOWO_APP_BASE || '/app'}/admin/frame-imports`])
   };
 
   const CSS = `

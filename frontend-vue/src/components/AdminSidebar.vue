@@ -144,8 +144,8 @@ const groups: MenuGroup[] = [
       {
         label: '批量导入',
         icon: '⇧',
-        file: 'admin-frame-imports.html',
-        roles: ['OWNER', 'PRODUCTION', 'COLLAB_OPS']
+        to: '/admin/frame-imports',
+        roles: ['OWNER']
       }
     ]
   },
@@ -208,7 +208,11 @@ const groups: MenuGroup[] = [
 const session = useSessionStore()
 const route = useRoute()
 const activeGroup = computed(() => {
-  if (route.path === '/admin/frame-library' || route.path.startsWith('/admin/frame-making'))
+  if (
+    route.path === '/admin/frame-library' ||
+    route.path.startsWith('/admin/frame-making') ||
+    route.path === '/admin/frame-imports'
+  )
     return 'assets'
   if (route.path === '/admin/models') return 'product'
   if (route.path.startsWith('/admin/collab-') || route.path === '/admin/contracts') return 'collab'

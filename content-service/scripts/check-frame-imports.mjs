@@ -149,28 +149,10 @@ try {
   await page.goto(`http://127.0.0.1:4173/app/admin/frame-imports?batchId=${encodeURIComponent(batchId)}`, { waitUntil: 'networkidle' })
   await page.getByText(detail.data.items[0].assetNo, { exact: true }).waitFor()
   assert(await page.locator('#itemRows .status-imported').count() === 2, '已完成批次重新打开后展示逐套入库结果和 ANM')
-  const vueBoxes = await page.evaluate(() => {
-    const box = selector => {
-      const rect = document.querySelector(selector)?.getBoundingClientRect()
-      return rect ? { x: rect.x, y: rect.y, width: rect.width, height: rect.height } : null
-    }
-    return { topbar: box('.imports-topbar'), content: box('.imports-content'), setup: box('.setup'), work: box('.work-layout') }
-  })
   await page.goto(`http://127.0.0.1:5500/mowo/frontend/pages/admin-frame-imports.html?batchId=${encodeURIComponent(batchId)}`, { waitUntil: 'networkidle' })
+  assert(new URL(page.url()).pathname === '/app/admin/frame-imports' && new URL(page.url()).searchParams.get('batchId') === batchId, '旧批量导入地址保留查询参数并交给 Vue')
   await page.getByText(detail.data.items[0].assetNo, { exact: true }).waitFor()
-  const legacyBoxes = await page.evaluate(() => {
-    const box = selector => {
-      const rect = document.querySelector(selector)?.getBoundingClientRect()
-      return rect ? { x: rect.x, y: rect.y, width: rect.width, height: rect.height } : null
-    }
-    return { topbar: box('.topbar'), content: box('.content'), setup: box('.setup'), work: box('.work-layout') }
-  })
-  for (const key of Object.keys(vueBoxes)) {
-    assert(vueBoxes[key] && legacyBoxes[key], `${key} 新旧布局区域均存在`)
-    for (const field of ['x', 'y', 'width', 'height']) {
-      assert(Math.abs(vueBoxes[key][field] - legacyBoxes[key][field]) <= 6, `${key}.${field} 新旧布局误差不超过 6px`)
-    }
-  }
+  assert(await page.locator('#itemRows .status-imported').count() === 2, '旧地址跳转后仍可查看已完成批次')
   if (process.env.SCREENSHOT_DIR) await page.screenshot({ path: path.join(process.env.SCREENSHOT_DIR, 'frame-imports-completed.png'), fullPage: true })
   await context.close()
   await browser.close()
