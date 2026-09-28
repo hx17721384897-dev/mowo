@@ -445,7 +445,7 @@
         method: 'POST', body: JSON.stringify({ frameKeys })
       })
       clearInterval(saveTimer)
-      location.href = `admin-frame-library.html?keyword=${encodeURIComponent(result.assetNo)}`
+      location.href = `${window.MOWO_APP_BASE || '/app'}/admin/frame-library?keyword=${encodeURIComponent(result.assetNo)}`
     } catch (error) {
       alert(`入库失败：${error.message}`)
       button.disabled = false

@@ -40,7 +40,7 @@
     {
       key: 'assets', label: '素材', icon: '🖼',
       items: [
-        { href: 'admin-frame-library.html', icon: '▦', label: '帧图资产库' },
+        { href: `${window.MOWO_APP_BASE || '/app'}/admin/frame-library`, icon: '▦', label: '帧图资产库' },
         { href: 'admin-frame-making.html', icon: '✂', label: '帧图制作' },
         { href: 'admin-frame-imports.html', icon: '⇧', label: '批量导入' }
       ]

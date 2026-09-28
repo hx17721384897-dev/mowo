@@ -137,7 +137,7 @@ const groups: MenuGroup[] = [
       {
         label: '帧图资产库',
         icon: '▦',
-        file: 'admin-frame-library.html',
+        to: '/admin/frame-library',
         roles: ['OWNER', 'PRODUCTION', 'COLLAB_OPS']
       },
       { label: '帧图制作', icon: '✂', file: 'admin-frame-making.html', roles: ownerProduction },

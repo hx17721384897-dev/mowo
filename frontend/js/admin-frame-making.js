@@ -242,7 +242,7 @@ async function openDraft(id, keepLocal = false) {
   try {
     const draft = await api(`/api/admin/frame-making/drafts/${encodeURIComponent(id)}`)
     if (draft.status === 'PUBLISHED' && draft.animationAsset) {
-      location.href = `admin-frame-library.html?keyword=${encodeURIComponent(draft.animationAsset.assetNo)}`
+      location.href = `${window.MOWO_APP_BASE || '/app'}/admin/frame-library?keyword=${encodeURIComponent(draft.animationAsset.assetNo)}`
       return
     }
     if (!['DRAFT', 'READY_FOR_REVIEW'].includes(draft.status)) return toast('该草稿已经放弃，不能继续编辑')
@@ -693,7 +693,7 @@ async function publishAsset() {
       method: 'POST', body: JSON.stringify({ frameKeys: selectedIds.map(id => keyById.get(id)) })
     })
     toast(`已生成 ${result.assetNo}`)
-    setTimeout(() => { location.href = `admin-frame-library.html?keyword=${encodeURIComponent(result.assetNo)}` }, 700)
+    setTimeout(() => { location.href = `${window.MOWO_APP_BASE || '/app'}/admin/frame-library?keyword=${encodeURIComponent(result.assetNo)}` }, 700)
   } catch (error) {
     toast(error.message)
     button.disabled = false

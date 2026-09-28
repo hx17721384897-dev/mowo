@@ -217,7 +217,7 @@ try {
   await page.getByRole('button', { name: '填写入库资料' }).click()
   await page.locator('#frameMetadataDialog').waitFor({ state: 'visible' })
   await page.locator('#frameMetaPublish').click()
-  await page.waitForURL(/admin-frame-library\.html\?keyword=ANM-/)
+  await page.waitForURL(/\/app\/admin\/frame-library\?keyword=ANM-/)
   await page.locator('.asset-card').first().waitFor()
   assert(await page.getByText(`浏览器制作验收-${runId}`).count() >= 1, '负责人可以从浏览器完整发布并在总库定位新动画')
   await context.close()

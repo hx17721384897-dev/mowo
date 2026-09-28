@@ -257,7 +257,7 @@ try {
   await page.getByText(group.name).waitFor()
   assert((await page.getByText(/测试打印纸.*50×50mm.*单页12帧.*300DPI/).count()) === 1, '打印设置页清楚展示纸张、成品尺寸、单页帧数和 DPI')
   assert((await page.getByText(/当前模板：A4-5x5-12\.docx · V1/).count()) === 1, '打印设置页展示当前 Word 模板版本')
-  await page.goto(`${webBase}/admin-frame-library.html?keyword=${encodeURIComponent(asset.assetNo)}`, { waitUntil: 'networkidle' })
+  await page.goto(`${process.env.TEST_VUE_BASE || 'http://127.0.0.1:4173/app'}/admin/frame-library?keyword=${encodeURIComponent(asset.assetNo)}`, { waitUntil: 'networkidle' })
   await page.getByText(generated.data.displayName).first().waitFor()
   assert((await page.getByText(generated.data.displayName).count()) >= 1, '资产卡片直接展示可下载的规格文件名')
   await page.locator('.asset-card').filter({ hasText: generated.data.displayName }).first().click()
