@@ -154,7 +154,7 @@ const groups: MenuGroup[] = [
     label: '商品',
     icon: '🎯',
     items: [
-      { label: '款式管理', icon: '🧩', file: 'admin-models.html', roles: ownerService },
+      { label: '款式管理', icon: '🧩', to: '/admin/models', roles: ownerService },
       { label: '库存管理', icon: '📊', file: 'admin-inventory.html', roles: ownerProduction }
     ]
   },
@@ -252,8 +252,7 @@ function isActiveLegacy(file: string): boolean {
     'admin-collab.html': '/admin/collab-review',
     'admin-users.html': '/admin/users',
     'admin-account-deletions.html': '/admin/account-deletions',
-    'admin-logs.html': '/admin/logs',
-    'admin-models.html': '/admin/models'
+    'admin-logs.html': '/admin/logs'
   }
   return routes[file] === route.path
 }

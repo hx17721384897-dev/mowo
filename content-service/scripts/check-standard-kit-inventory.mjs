@@ -8,6 +8,7 @@ requireIsolatedTestDatabase()
 const prisma = new PrismaClient()
 const apiBase = process.env.TEST_API_BASE || 'http://127.0.0.1:3001'
 const webBase = process.env.TEST_WEB_BASE || 'http://127.0.0.1:5500/mowo/frontend/pages'
+const vueBase = process.env.TEST_VUE_BASE || 'http://127.0.0.1:4173/app'
 const runId = String(Date.now()).slice(-8)
 let userId
 let modelId
@@ -63,12 +64,12 @@ async function cleanup() {
 }
 
 try {
-  for (const file of ['../../frontend/pages/admin-models.html', '../../frontend/pages/admin-inventory.html']) {
+  for (const file of ['../../frontend/pages/admin-inventory.html']) {
     const html = readFileSync(new URL(file, import.meta.url), 'utf8')
     const scripts = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)]
     for (const [, source] of scripts) parse(source, { ecmaVersion:'latest', sourceType:'script' })
   }
-  assert(true, '款式管理和库存管理页面脚本语法正确')
+  assert(true, '库存管理页面脚本语法正确')
 
   const phone = `195${runId}`
   const user = await prisma.user.create({ data: {
@@ -175,13 +176,13 @@ try {
   await page.locator('#tabBtnStock').click()
   await page.getByRole('button', {name:'材料包入库'}).first().click()
   assert(await page.locator('#kitAssemblySku').isVisible(), '库存页可以打开材料包入库操作')
-  await page.goto(`${webBase}/admin-models.html`, { waitUntil:'networkidle' })
-  const modelCard = page.locator('.model-card').filter({hasText:`材料包测试款-${runId}`})
-  await modelCard.locator('.model-card-header').click()
+  await page.goto(`${vueBase}/admin/models`, { waitUntil:'networkidle' })
+  const modelCard = page.locator('.catalog-card').filter({hasText:`材料包测试款-${runId}`})
+  await modelCard.getByRole('button', {name:'展开规格'}).click()
   await modelCard.getByRole('button', {name:'材料清单'}).click()
-  assert(await page.locator('#bomOverlay').isVisible(), '款式页可以打开 SKU 材料清单')
-  await page.waitForFunction(() => !document.querySelector('#bomMaterialList')?.textContent?.includes('正在加载'))
-  const bomText = await page.locator('#bomMaterialList').textContent()
+  assert(await page.locator('.bom-modal').isVisible(), '款式页可以打开 SKU 材料清单')
+  await page.waitForFunction(() => !document.querySelector('.catalog-material-list')?.textContent?.includes('正在加载'))
+  const bomText = await page.locator('.catalog-material-list').textContent()
   assert(bomText.includes('12根铁丝包'), `款式页只能选择库存页已有零件（当前内容：${bomText.trim()}）`)
   await context.close()
 

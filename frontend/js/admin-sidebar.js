@@ -48,7 +48,7 @@
     {
       key: 'product', label: '商品', icon: '🎯',
       items: [
-        { href: 'admin-models.html',    icon: '🧩', label: '款式管理' },
+        { href: `${window.MOWO_APP_BASE || '/app'}/admin/models`, icon: '🧩', label: '款式管理' },
         { href: 'admin-inventory.html', icon: '📊', label: '库存管理' }
       ]
     },
@@ -97,7 +97,7 @@
 
   const STAFF_HIDDEN_ITEMS = {
     CUSTOMER_SERVICE: new Set(['admin-import.html', 'admin-inventory.html', 'admin-print-production.html']),
-    PRODUCTION: new Set(['admin-models.html', 'admin-print-production.html']),
+    PRODUCTION: new Set([`${window.MOWO_APP_BASE || '/app'}/admin/models`, 'admin-print-production.html']),
     COLLAB_OPS: new Set(['admin-frame-making.html'])
   };
 
