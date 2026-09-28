@@ -140,7 +140,7 @@ const groups: MenuGroup[] = [
         to: '/admin/frame-library',
         roles: ['OWNER', 'PRODUCTION', 'COLLAB_OPS']
       },
-      { label: '帧图制作', icon: '✂', file: 'admin-frame-making.html', roles: ownerProduction },
+      { label: '帧图制作', icon: '✂', to: '/admin/frame-making', roles: ownerProduction },
       {
         label: '批量导入',
         icon: '⇧',
@@ -440,7 +440,12 @@ function toggleNested(key: string): void {
   flex: 1;
   padding: 12px 0;
   overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   min-height: 0;
+}
+.sidebar-nav::-webkit-scrollbar {
+  display: none;
 }
 .nav-group-header {
   width: 100%;

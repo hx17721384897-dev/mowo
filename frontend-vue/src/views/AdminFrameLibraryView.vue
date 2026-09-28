@@ -3,7 +3,6 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import AdminSidebar from '@/components/AdminSidebar.vue'
-import { runtimeConfig } from '@/config/runtime'
 import { safeReviewImage } from '@/features/admin-collab-review/api'
 import {
   archiveFrameAsset,
@@ -130,7 +129,6 @@ const isOwner = computed(() => session.staffRole === 'OWNER')
 const canGenerate = computed(() => ['OWNER', 'PRODUCTION'].includes(session.staffRole || ''))
 const pageCount = computed(() => Math.max(1, Math.ceil(total.value / 24)))
 const currentFrame = computed(() => safeReviewImage(version.value?.frames[frameIndex.value]?.url))
-const makingUrl = computed(() => `${runtimeConfig.legacyWebBase}/admin-frame-making.html`)
 const compatibleTemplates = computed(() => {
   const selected = productionOptions.value?.versions.find(
     (item) => item.id === productionForm.value.animationVersionId
@@ -508,7 +506,9 @@ onBeforeUnmount(() => {
         </div>
         <div class="top-actions">
           <button class="frame-btn" :disabled="loading" @click="loadAll">刷新</button
-          ><a v-if="isOwner" class="frame-btn btn-black" :href="makingUrl">制作新帧图</a>
+          ><RouterLink v-if="isOwner" class="frame-btn btn-black" to="/admin/frame-making"
+            >制作新帧图</RouterLink
+          >
         </div>
       </header>
       <div class="frame-content">

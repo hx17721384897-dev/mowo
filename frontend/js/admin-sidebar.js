@@ -41,7 +41,7 @@
       key: 'assets', label: '素材', icon: '🖼',
       items: [
         { href: `${window.MOWO_APP_BASE || '/app'}/admin/frame-library`, icon: '▦', label: '帧图资产库' },
-        { href: 'admin-frame-making.html', icon: '✂', label: '帧图制作' },
+        { href: `${window.MOWO_APP_BASE || '/app'}/admin/frame-making`, icon: '✂', label: '帧图制作' },
         { href: 'admin-frame-imports.html', icon: '⇧', label: '批量导入' }
       ]
     },
@@ -98,7 +98,7 @@
   const STAFF_HIDDEN_ITEMS = {
     CUSTOMER_SERVICE: new Set(['admin-import.html', 'admin-inventory.html', 'admin-print-production.html']),
     PRODUCTION: new Set([`${window.MOWO_APP_BASE || '/app'}/admin/models`, 'admin-print-production.html']),
-    COLLAB_OPS: new Set(['admin-frame-making.html'])
+    COLLAB_OPS: new Set([`${window.MOWO_APP_BASE || '/app'}/admin/frame-making`])
   };
 
   const CSS = `
@@ -110,9 +110,8 @@
 .sidebar-logo-sub{font-weight:700;font-size:10px;color:var(--gray3,#787874);letter-spacing:.1em;text-transform:uppercase;display:block;margin-top:1px;}
 .sidebar-toggle{position:absolute;top:26px;right:12px;width:28px;height:28px;background:rgba(255,255,255,.08);border:none;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--gray3,#787874);font-size:12px;transition:background .2s;}
 .sidebar-toggle:hover{background:rgba(255,255,255,.15);color:var(--white,#fff);}
-.sidebar-nav{flex:1;padding:12px 0;overflow-y:auto;overflow-x:hidden;}
-.sidebar-nav::-webkit-scrollbar{width:4px;}
-.sidebar-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px;}
+.sidebar-nav{flex:1;padding:12px 0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none;-ms-overflow-style:none;}
+.sidebar-nav::-webkit-scrollbar{display:none;}
 .nav-group-header{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;transition:background .15s;white-space:nowrap;overflow:hidden;color:var(--gray3,#787874);font-weight:800;font-size:13px;position:relative;user-select:none;}
 .nav-group-header:hover{background:rgba(255,255,255,.06);color:var(--white,#fff);}
 .nav-group-header.open{color:var(--white,#fff);}

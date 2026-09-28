@@ -44,7 +44,7 @@
 |--------|------|------|
 | Vue `/app/customize` | 选款式 | ✅ 已等价迁移；旧 HTML 已删除 |
 | Vue `/app/customize/editor` | 新建定制、草稿重编、动画改版、人工结果只读确认 | ✅ 已接管全部用户编辑模式 |
-| `customize-editor.html` | 后台筛帧与后台帧图制作 | ⚠️ 仅保留 `adminRequestId` / `frameDraftId`，由 V4/V5 删除 |
+| `customize-editor.html` | 后台筛帧 | ⚠️ 仅保留 `adminRequestId`，由后续后台筛帧迁移删除 |
 | Vue `/app/customize/confirm` | 选配、确认定制、幂等加购并进入结算 | ✅ 已接管三类正式入口；旧 HTML 已删除，旧 URL 临时 302 |
 | Vue `/app/account/customizations` | 我的定制、状态筛选和时间线 | ✅ V2-C1 已接管，旧页已删除 |
 

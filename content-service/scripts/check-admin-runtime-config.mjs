@@ -25,7 +25,7 @@ for (const name of names) {
 }
 
 for (const name of [
-  'admin-sidebar.js', 'admin-frame-imports.js', 'admin-frame-making.js',
+  'admin-sidebar.js', 'admin-frame-imports.js',
   'admin-customization-workbench.js', 'customization-review-editor.js',
   'private-upload.js', 'production-scan-common.js'
 ]) {

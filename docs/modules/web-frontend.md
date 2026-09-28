@@ -82,7 +82,7 @@
 |---|---|---|---|
 | Vue `/app/customize` | 选择款式/SKU、配额检查、动画复用 | 已接 machine-models/custom-products/animation-assets | V2-D1 已关闭；旧 HTML 已物理删除 |
 | Vue `/app/customize/editor` | 用户新建、草稿重编、动画改版和人工结果只读确认 | 已接 custom-products/customization-requests/animation-assets | D2-C/D2-D 已接管全部用户编辑模式；共享安全上传、能力矩阵与幂等草稿 |
-| `customize-editor.html` | 后台筛帧和后台帧图制作 | 已接后台 customization/frame-making API | 仅保留 `adminRequestId` / `frameDraftId`；待 V4/V5 接管后删除 |
+| `customize-editor.html` | 后台筛帧 | 已接后台 customization API | 仅保留 `adminRequestId`；待后台筛帧迁移后删除 |
 | Vue `/app/customize/confirm` | 选配、确认定制、幂等加购并进入结算 | 已接确认上下文/customization-requests/animation-assets/cart | 已接管三类正式入口；旧 HTML 已删除，旧 URL 临时 302 |
 | `cart.html` | 服务端购物车 | 已接 cart | 只加载登录购物车；未登录购买由详情页保留短期操作意图，登录后重新校验并写入服务端 |
 | `checkout.html` | 地址、创建预订单、轮询支付 | 已接 cart/addresses/payment | 真实支付发起未闭环；localhost 显示 Mock 支付 |

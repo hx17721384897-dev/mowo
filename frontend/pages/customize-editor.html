@@ -8,7 +8,12 @@
 <script>
 ;(function handoffNewCustomizationToVue() {
   var params = new URLSearchParams(location.search)
-  var internalModeKeys = ['adminRequestId', 'frameDraftId']
+  var frameDraftId = params.get('frameDraftId')
+  if (frameDraftId) {
+    location.replace(window.MOWO_APP_BASE + '/admin/frame-making/' + encodeURIComponent(frameDraftId))
+    return
+  }
+  var internalModeKeys = ['adminRequestId']
   if (internalModeKeys.some(function (key) { return params.has(key) })) return
   var modelId = params.get('modelId')
   var destination = modelId
@@ -600,17 +605,6 @@ a { text-decoration:none; color:inherit; }
   100%   { opacity:0; transform:translateX(-50%) translateY(8px); }
 }
 
-</style>
-<script>
-if (new URLSearchParams(location.search).has('frameDraftId')) {
-  document.documentElement.classList.add('admin-frame-mode');
-}
-</script>
-<style>
-html.admin-frame-mode { --nav-h: 0px; }
-html.admin-frame-mode #mowo-nav,
-html.admin-frame-mode #mowo-mobile-menu,
-html.admin-frame-mode #mowo-mobile-overlay { display: none !important; }
 </style>
 </head>
 <body>
@@ -1296,7 +1290,7 @@ async function submitHumanRequest() {
 async function checkQuotaBeforeUpload() {
   /* 重新编辑已有动画时不受配额限制 */
   const params = new URLSearchParams(location.search);
-  if (params.get('adminRequestId') || params.get('frameDraftId')) return true;
+  if (params.get('adminRequestId')) return true;
 
   const token = localStorage.getItem('mowo_token');
   if (!token) return true; /* 未登录，让后续步骤兜底 */
@@ -1319,7 +1313,7 @@ async function checkQuotaBeforeUpload() {
 function handleFiles(files) {
   if (!files.length) return;
   const modeParams = new URLSearchParams(location.search);
-  if (!modeParams.get('adminRequestId') && !modeParams.get('frameDraftId')) {
+  if (!modeParams.get('adminRequestId')) {
     sessionStorage.removeItem('mowo_customize_request_draft_key');
     sessionStorage.removeItem('mowo_customize_request_draft_owner');
     localStorage.removeItem('mowo_customize_request_draft_id');
@@ -1883,15 +1877,12 @@ function updatePreview() {
 /* ── 状态栏 ── */
 function updateStatus() {
   const cnt = checkedIdx().length;
-  const isAssetEdit = Boolean(new URLSearchParams(location.search).get('frameDraftId'));
   document.getElementById('selCount').textContent  = cnt;
   document.getElementById('totCount').textContent  = frames.length;
   document.getElementById('ebarSel').textContent   = cnt + ' 帧';
 
   /* 计算可用规格：选中帧数必须能整除目标帧数，且不超过目标帧数 */
-  const validTargets = isAssetEdit
-    ? (cnt > 0 && cnt <= 50 ? [cnt] : [])
-    : allowedFrames.filter(f => f >= cnt && cnt > 0 && f % cnt === 0);
+  const validTargets = allowedFrames.filter(f => f >= cnt && cnt > 0 && f % cnt === 0);
 
   /* 徽章颜色 */
   const badge = document.getElementById('frameBadge');
@@ -2273,12 +2264,8 @@ document.getElementById('btnSample').addEventListener('click', ()=>{
 document.getElementById('btnNextStep').addEventListener('click', async ()=>{
   const cl = checkedIdx();
   const cnt = cl.length;
-  const pageParams = new URLSearchParams(location.search);
-  const isAssetEdit = Boolean(pageParams.get('frameDraftId'));
   /* 整除验证 */
-  const validTargets = isAssetEdit
-    ? (cnt > 0 ? [cnt] : [])
-    : allowedFrames.filter(f => f >= cnt && cnt > 0 && f % cnt === 0);
+  const validTargets = allowedFrames.filter(f => f >= cnt && cnt > 0 && f % cnt === 0);
   if (!validTargets.length) return;
 
   if (window.MowoCustomizationReview?.active) {

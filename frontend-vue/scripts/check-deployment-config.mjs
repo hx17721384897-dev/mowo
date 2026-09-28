@@ -52,7 +52,8 @@ const requiredRedirects = [
   ['order-detail.html', '/app/order-detail'],
   ['admin-contact.html', '/app/admin/contact'],
   ['admin-models.html', '/app/admin/models'],
-  ['admin-frame-library.html', '/app/admin/frame-library']
+  ['admin-frame-library.html', '/app/admin/frame-library'],
+  ['admin-frame-making.html', '/app/admin/frame-making']
 ]
 for (const [legacy, target] of requiredRedirects) {
   if (!redirects.includes(legacy) || !redirects.includes(`302 ${target}`)) {
@@ -88,7 +89,8 @@ for (const retired of [
   'order-detail.html',
   'admin-contact.html',
   'admin-models.html',
-  'admin-frame-library.html'
+  'admin-frame-library.html',
+  'admin-frame-making.html'
 ]) {
   if (fs.existsSync(path.join(root, '..', 'frontend', 'pages', retired))) {
     throw new Error(`已由 Vue 接管的旧页面不得继续存在：frontend/pages/${retired}`)
@@ -96,9 +98,11 @@ for (const retired of [
 }
 if (
   !legacyEditor.includes('handoffNewCustomizationToVue') ||
-  !legacyEditor.includes("var internalModeKeys = ['adminRequestId', 'frameDraftId']")
+  !legacyEditor.includes("params.get('frameDraftId')") ||
+  !legacyEditor.includes("'/admin/frame-making/'") ||
+  !legacyEditor.includes("var internalModeKeys = ['adminRequestId']")
 ) {
-  throw new Error('旧共享编辑器必须把全部用户模式交给 Vue，仅保留明确的后台模式边界')
+  throw new Error('旧共享编辑器必须把全部用户与帧图制作模式交给 Vue，仅保留后台人工筛帧边界')
 }
 
 console.log('Vue deployment and public redirect boundaries passed')

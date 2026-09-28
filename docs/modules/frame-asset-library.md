@@ -11,7 +11,7 @@
 ## 页面与代码入口
 
 - 后台页面：`frontend/pages/admin-frame-library.html`
-- 后台制作页面：`frontend/pages/admin-frame-making.html` 和 `frontend/js/admin-frame-making.js`
+- 后台制作页面：Vue `/app/admin/frame-making` 与 `/app/admin/frame-making/:id`
 - 后台批量导入页面：`frontend/pages/admin-frame-imports.html` 和 `frontend/js/admin-frame-imports.js`
 - 后台导航：`frontend/js/admin-sidebar.js` 的“素材 -> 帧图资产库 / 帧图制作 / 批量导入”
 - 后台接口：`content-service/src/routes/frame-library.js`，前缀 `/api/admin/frame-library`
@@ -71,7 +71,7 @@
 
 ## 后台帧图制作流程
 
-“帧图制作”是后台内部工作台，不建立 `DZ`、购物车、`SO` 或生产任务。任务列表、导入入口和状态管理位于 `admin-frame-making.html`；实际筛帧通过 `customize-editor.html?frameDraftId=<FD ID>` 复用用户侧已经验证过的同一套核心编辑器。该网址进入后台专用模式，会隐藏用户前台导航、改为后台步骤和按钮，并由 `customization-review-editor.js` 接管草稿保存、提交确认和入库，因此不会进入选款式或购买流程。
+“帧图制作”是后台内部工作台，不建立 `DZ`、购物车、`SO` 或生产任务。任务列表、导入入口、状态管理及完整帧编辑均由 Vue `/app/admin/frame-making` 和 `/app/admin/frame-making/:id` 承载，并复用 Vue 编辑器核心能力；旧 `admin-frame-making.html` 及旧共享编辑器的 `frameDraftId` 分支已物理删除，因此不会形成第二套制作实现，也不会进入选款式或购买流程。
 
 1. 负责人或生产人员导入一个视频、一个 GIF，或最多 50 张图片；合计不超过 200MB。
 2. 上传完成后生成独立 `FD` 制作草稿。原素材使用 `LIBRARY_SOURCE` 私有用途并绑定该草稿，不会被当成正式帧图。
