@@ -585,28 +585,25 @@ function openStockModal(workId, size, currentType) {
   document.getElementById('stockModalSub').textContent = `#${workId.slice(-6).toUpperCase()} · 尺寸：${size}`
   document.getElementById('stockType').value = currentType || 'on_demand'
   document.getElementById('stockQty').value  = ''
+  _stockRequestId = crypto.randomUUID()
   document.getElementById('stockModal').classList.add('show')
 }
 
+let _stockRequestId = ''
 async function submitStock() {
   const stockType = document.getElementById('stockType').value
-  const qty = document.getElementById('stockQty').value
+  const qty = parseInt(document.getElementById('stockQty').value || '0')
+  if (!Number.isInteger(qty)) { showToast('库存调整量必须是整数'); return }
   try {
-    await fetch(`${API}/api/admin/collab/${_activeWorkId}/frame-packs/${encodeURIComponent(_curSize)}`, {
-      method: 'PUT',
+    const res = await fetch(`${API}/api/admin/collab/${_activeWorkId}/frame-packs/${encodeURIComponent(_curSize)}/update`, {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${_token}` },
-      body: JSON.stringify({ stockType }),
+      body: JSON.stringify({ stockType, quantity: qty, clientRequestId: _stockRequestId }),
     })
-    if (qty && parseInt(qty) !== 0) {
-      const res  = await fetch(`${API}/api/admin/collab/${_activeWorkId}/frame-packs/${encodeURIComponent(_curSize)}/restock`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${_token}` },
-        body: JSON.stringify({ quantity: parseInt(qty) }),
-      })
-      const json = await res.json()
-      if (!json.success) { showToast('库存调整失败：' + json.message); return }
-    }
+    const json = await res.json()
+    if (!json.success) { showToast('库存调整失败：' + json.message); return }
     showToast('✓ 已更新')
+    _stockRequestId = ''
     closeModal('stockModal')
     openDrawer(_activeWorkId)
   } catch { showToast('网络错误') }

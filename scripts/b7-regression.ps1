@@ -126,6 +126,7 @@ try {
     'check:production-scan-ui',
     'check:collab-storefront',
     'check:collab-sale-config',
+    'check:collab-frame-pack-mutation',
     'check:collab-product-ui'
   )
 } finally {

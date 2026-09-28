@@ -48,6 +48,18 @@ test('collab works candidate preserves status, search, detail, inventory and saf
       }
     })
   )
+  await page.route('**/api/admin/collab/work-1/frame-packs/S/update', (route) => {
+    mutations.push({
+      path: new URL(route.request().url()).pathname,
+      body: route.request().postDataJSON()
+    })
+    return route.fulfill({
+      json: {
+        success: true,
+        data: { stockType: 'on_demand', quantity: 2, currentStock: 6, replayed: false }
+      }
+    })
+  })
   await page.route('**/api/admin/collab/work-1/suspend', (route) => {
     mutations.push({
       path: new URL(route.request().url()).pathname,
@@ -63,9 +75,24 @@ test('collab works candidate preserves status, search, detail, inventory and saf
   await page.locator('.works-card').getByRole('button', { name: '详情', exact: true }).click()
   await expect(page.locator('.works-pack-table')).toContainText('S')
   await expect(page.locator('.review-frame img')).toHaveCount(0)
+  await page.locator('.works-pack-table').getByRole('button', { name: '调整' }).click()
+  await page
+    .locator('.works-modal')
+    .getByText('库存类型')
+    .locator('select')
+    .selectOption('on_demand')
+  await page.locator('.works-modal').getByText('调整数量').locator('input').fill('2')
+  await page.locator('.works-modal').getByRole('button', { name: '确认', exact: true }).click()
+  await expect.poll(() => mutations.length).toBe(1)
+  expect(mutations[0]?.path).toBe('/api/admin/collab/work-1/frame-packs/S/update')
+  expect(mutations[0]?.body).toMatchObject({
+    stockType: 'on_demand',
+    quantity: 2,
+    clientRequestId: expect.any(String)
+  })
   page.on('dialog', (dialog) => dialog.accept())
   await page.locator('.works-drawer').getByRole('button', { name: '暂停销售' }).click()
-  await expect.poll(() => mutations.length).toBe(1)
+  await expect.poll(() => mutations.length).toBe(2)
   await expect(page.locator('.works-card')).toHaveCount(0)
   await page.locator('.works-stat').filter({ hasText: '暂停中' }).click()
   await expect(page.locator('.works-card')).toHaveCount(1)

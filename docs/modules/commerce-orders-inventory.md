@@ -139,6 +139,8 @@
 | 零件与材料包库存 | `MaterialItem`、`MaterialReceipt`、`MaterialPreparationBatch`、`MaterialSkuBinding`、`KitAssemblyBatch`、`KitContainer` | 实收入库、分装、SKU材料清单和标准材料包组装 | 组装入库已原子扣零件并增加材料包；生产任务领料和采购批次精确分配待完成 |
 | 帧包库存 | `FramePackWork`、`FramePackVariant`、`FramePackLog` | 联名作品帧包预制备货 | 目前主要是后台独立维护，未接入购物车配额或销售消耗 |
 
+联名作品运营页上的旧 `CollabFramePack` 轻量库存于 2026-09-28 增加独立的 `CollabFramePackMutation` 幂等记录。类型与数量通过单次事务变更，同一 `clientRequestId` 重试不得重复增减；库存不能低于已占用数量。它仍不同于生产履约使用的 `FramePackWork/Variant/Log`，后续统一库存模型前不可把两套记录相互冒充或直接汇总。
+
 `ContentQuota` 还定义了联名限量配额，但在源代码中未找到实际读写消费者。
 
 ## 当前 Web 主流程

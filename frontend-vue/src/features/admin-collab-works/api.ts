@@ -47,19 +47,15 @@ export async function changeCollabShelf(
 ): Promise<void> {
   await apiRequest(`/api/admin/collab/${encodeURIComponent(id)}/${action}`, { method: 'PUT', body })
 }
-export async function setFramePackType(
+export async function updateFramePack(
   id: string,
   size: string,
-  stockType: FramePack['stockType']
+  stockType: FramePack['stockType'],
+  quantity: number,
+  clientRequestId: string
 ): Promise<void> {
   await apiRequest(
-    `/api/admin/collab/${encodeURIComponent(id)}/frame-packs/${encodeURIComponent(size)}`,
-    { method: 'PUT', body: { stockType } }
-  )
-}
-export async function restockFramePack(id: string, size: string, quantity: number): Promise<void> {
-  await apiRequest(
-    `/api/admin/collab/${encodeURIComponent(id)}/frame-packs/${encodeURIComponent(size)}/restock`,
-    { method: 'POST', body: { quantity } }
+    `/api/admin/collab/${encodeURIComponent(id)}/frame-packs/${encodeURIComponent(size)}/update`,
+    { method: 'POST', body: { stockType, quantity, clientRequestId } }
   )
 }

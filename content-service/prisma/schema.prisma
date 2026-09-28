@@ -465,11 +465,12 @@ model CollabWork {
   createdAt             DateTime  @default(now()) @map("created_at")
   updatedAt             DateTime  @updatedAt @map("updated_at")
 
-  framePacks       CollabFramePack[]
-  animationAsset   AnimationAsset?        @relation(fields: [animationAssetId], references: [id], onDelete: SetNull)
-  animationVersion AnimationAssetVersion? @relation(fields: [animationVersionId], references: [id], onDelete: SetNull)
-  saleSkus         CollabSaleSku[]
-  storefrontViews  CollabStorefrontView[]
+  framePacks         CollabFramePack[]
+  framePackMutations CollabFramePackMutation[]
+  animationAsset     AnimationAsset?           @relation(fields: [animationAssetId], references: [id], onDelete: SetNull)
+  animationVersion   AnimationAssetVersion?    @relation(fields: [animationVersionId], references: [id], onDelete: SetNull)
+  saleSkus           CollabSaleSku[]
+  storefrontViews    CollabStorefrontView[]
 
   @@index([animationAssetId])
   @@index([animationVersionId])
@@ -534,6 +535,25 @@ model CollabFramePack {
 
   @@unique([collabWorkId, size])
   @@map("collab_frame_packs")
+}
+
+model CollabFramePackMutation {
+  id                 String   @id @default(uuid())
+  clientRequestId    String   @unique @map("client_request_id") @db.VarChar(80)
+  requestFingerprint String   @map("request_fingerprint") @db.VarChar(64)
+  collabWorkId       String   @map("collab_work_id")
+  size               String   @db.VarChar(20)
+  operatorId         String   @map("operator_id")
+  stockType          String   @map("stock_type") @db.VarChar(20)
+  quantity           Int
+  resultStock        Int      @map("result_stock")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  collabWork CollabWork @relation(fields: [collabWorkId], references: [id], onDelete: Cascade)
+
+  @@index([collabWorkId, createdAt])
+  @@index([operatorId, createdAt])
+  @@map("collab_frame_pack_mutations")
 }
 
 // ================================================================
@@ -930,9 +950,9 @@ model PlatformConfig {
 
 // 人工合作合同与线下约定记录，不是线上余额、提现或自动结算系统。
 model CreatorContract {
-  id          String @id @default(uuid())
+  id          String  @id @default(uuid())
   creatorId   String? @map("creator_id") // 关联平台账号（可选，有些IP方可能没有创作者账号）
-  creatorName String @map("creator_name") @db.VarChar(100) // 合作方名称（冗余，防止账号不存在）
+  creatorName String  @map("creator_name") @db.VarChar(100) // 合作方名称（冗余，防止账号不存在）
 
   contractType String @map("contract_type") @db.VarChar(20)
   // revenue_share=纯分红 / guarantee_plus=保底+分红 / buyout=买断 / custom=自定义
@@ -1141,7 +1161,7 @@ model CartItem {
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
-  cart Cart @relation(fields: [cartId], references: [id])
+  cart      Cart           @relation(fields: [cartId], references: [id])
   mutations CartMutation[]
 
   @@index([cartId])

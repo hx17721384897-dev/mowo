@@ -42,6 +42,7 @@
     "check:production-scan-safety": "node scripts/check-production-scan-safety.mjs",
     "check:collab-storefront": "node scripts/check-collab-storefront.mjs",
     "check:collab-sale-config": "node scripts/check-collab-sale-config.mjs",
+    "check:collab-frame-pack-mutation": "node scripts/check-collab-frame-pack-mutation.mjs",
     "check:collab-product-workspace": "node scripts/check-collab-sale-config.mjs",
     "check:collab-product-ui": "node scripts/check-collab-product-ui.mjs",
     "assets:backfill": "node scripts/backfill-animation-assets.mjs",

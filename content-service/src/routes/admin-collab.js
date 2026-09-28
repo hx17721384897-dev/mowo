@@ -1,6 +1,7 @@
 // src/routes/admin-collab.js — 管理员联名审核与商品管理
 // 全部需要 role >= 2
 
+import crypto from 'node:crypto'
 import { generateAndUploadHoverGif } from '../lib/gif-generator.js'
 import { updateCollabAssetStatus } from '../lib/collab-animation-asset.js'
 import {
@@ -20,6 +21,21 @@ export default async function adminCollabRoutes(fastify) {
   // 保留局部 preHandler 作为路由自说明，但复用唯一的命名权限校验。
   const requireAdmin = fastify.requirePermission(PERMISSION.COLLAB)
   const requireCollabAdmin = fastify.requirePermission(PERMISSION.COLLAB_ADMIN)
+
+  function framePackMutationResponse(row, replayed = false) {
+    return {
+      stockType: row.stockType,
+      quantity: row.quantity,
+      currentStock: row.resultStock,
+      replayed,
+    }
+  }
+
+  function framePackMutationError(code, message) {
+    const error = new Error(message)
+    error.businessCode = code
+    return error
+  }
 
   // ─────────────────────────────────────────────
   // 联名作品审核
@@ -690,6 +706,113 @@ export default async function adminCollabRoutes(fastify) {
     })
 
     return reply.send({ success: true, data: packs })
+  })
+
+  /**
+   * POST /api/admin/collab/:id/frame-packs/:size/update
+   * 原子更新库存类型与数量。clientRequestId 是持久化幂等键，同键重试不得重复增减。
+   * Body: { stockType: 'on_demand'|'stocked', quantity: integer, clientRequestId }
+   */
+  fastify.post('/admin/collab/:id/frame-packs/:size/update', { preHandler: requireAdmin }, async (req, reply) => {
+    const collabWorkId = String(req.params.id || '').trim()
+    const size = String(req.params.size || '').trim()
+    const stockType = String(req.body?.stockType || '').trim()
+    const quantity = Number(req.body?.quantity ?? 0)
+    const clientRequestId = String(req.body?.clientRequestId || '').trim()
+    const operatorId = req.user.userId
+
+    if (!collabWorkId || !size || size.length > 20)
+      return reply.code(400).send({ success: false, code: 'INVALID_FRAME_PACK', message: '作品或尺寸无效' })
+    if (!['on_demand', 'stocked'].includes(stockType))
+      return reply.code(400).send({ success: false, code: 'INVALID_STOCK_TYPE', message: '库存类型无效' })
+    if (!Number.isInteger(quantity) || Math.abs(quantity) > 1000000)
+      return reply.code(400).send({ success: false, code: 'INVALID_STOCK_QUANTITY', message: '库存调整量必须是绝对值不超过 1000000 的整数' })
+    if (!clientRequestId || clientRequestId.length > 80)
+      return reply.code(400).send({ success: false, code: 'INVALID_REQUEST_ID', message: '缺少有效的库存调整请求标识' })
+
+    const requestFingerprint = crypto.createHash('sha256')
+      .update(JSON.stringify({ collabWorkId, size, stockType, quantity }))
+      .digest('hex')
+    const validateReplay = row => {
+      if (!row) return null
+      if (row.operatorId !== operatorId || row.collabWorkId !== collabWorkId || row.size !== size || row.requestFingerprint !== requestFingerprint)
+        throw framePackMutationError('IDEMPOTENCY_CONFLICT', '该库存调整请求标识已用于其他操作')
+      return framePackMutationResponse(row, true)
+    }
+
+    try {
+      const initialReplay = validateReplay(await prisma.collabFramePackMutation.findUnique({ where: { clientRequestId } }))
+      if (initialReplay) return reply.send({ success: true, data: initialReplay })
+
+      let mutation = null
+      for (let attempt = 0; attempt < 4; attempt += 1) {
+        try {
+          mutation = await prisma.$transaction(async tx => {
+            const replay = validateReplay(await tx.collabFramePackMutation.findUnique({ where: { clientRequestId } }))
+            if (replay) return { ...replay, replayed: true }
+
+            const work = await tx.collabWork.findUnique({ where: { id: collabWorkId }, select: { id: true } })
+            if (!work) throw framePackMutationError('COLLAB_WORK_NOT_FOUND', '作品不存在')
+
+            const current = await tx.collabFramePack.findUnique({
+              where: { collabWorkId_size: { collabWorkId, size } },
+            })
+            if (!current && quantity < 0)
+              throw framePackMutationError('INSUFFICIENT_FRAME_PACK_STOCK', '该尺寸尚无库存，不能调减')
+            const nextStock = (current?.currentStock || 0) + quantity
+            const reservedStock = current?.reservedStock || 0
+            if (nextStock < reservedStock)
+              throw framePackMutationError('INSUFFICIENT_FRAME_PACK_STOCK', `调整后库存不能低于已占用数量 ${reservedStock}`)
+
+            const pack = current
+              ? await tx.collabFramePack.update({
+                  where: { collabWorkId_size: { collabWorkId, size } },
+                  data: { stockType, currentStock: { increment: quantity } },
+                })
+              : await tx.collabFramePack.create({
+                  data: { collabWorkId, size, stockType, currentStock: quantity },
+                })
+            const saved = await tx.collabFramePackMutation.create({
+              data: {
+                clientRequestId,
+                requestFingerprint,
+                collabWorkId,
+                size,
+                operatorId,
+                stockType,
+                quantity,
+                resultStock: pack.currentStock,
+              },
+            })
+            return framePackMutationResponse(saved)
+          }, { isolationLevel: 'Serializable' })
+          break
+        } catch (error) {
+          if (!['P2002', 'P2034'].includes(error.code) || attempt === 3) throw error
+          const replay = validateReplay(await prisma.collabFramePackMutation.findUnique({ where: { clientRequestId } }))
+          if (replay) {
+            mutation = replay
+            break
+          }
+        }
+      }
+
+      req.operationAudit = {
+        action: `调整联名帧素材包库存 ${quantity >= 0 ? '+' : ''}${quantity}`,
+        target: 'COLLAB_FRAME_PACK',
+        targetId: collabWorkId,
+        after: { size, stockType, quantity, clientRequestId, currentStock: mutation.currentStock },
+      }
+      return reply.send({ success: true, data: mutation })
+    } catch (error) {
+      if (error.businessCode === 'IDEMPOTENCY_CONFLICT')
+        return reply.code(409).send({ success: false, code: error.businessCode, message: error.message })
+      if (error.businessCode === 'COLLAB_WORK_NOT_FOUND')
+        return reply.code(404).send({ success: false, code: error.businessCode, message: error.message })
+      if (error.businessCode === 'INSUFFICIENT_FRAME_PACK_STOCK')
+        return reply.code(409).send({ success: false, code: error.businessCode, message: error.message })
+      throw error
+    }
   })
 
   /**

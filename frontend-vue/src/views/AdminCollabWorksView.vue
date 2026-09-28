@@ -9,8 +9,7 @@ import {
   getManagedCollabWork,
   listFramePacks,
   listManagedCollabWorks,
-  restockFramePack,
-  setFramePackType,
+  updateFramePack,
   sizesOf,
   type FramePack,
   type ManagedCollabWork,
@@ -44,6 +43,7 @@ const notice = ref('')
 let listSequence = 0
 let detailSequence = 0
 let noticeTimer: number | undefined
+let stockRequestId = ''
 const states: Array<{ key: ShelfStatus; title: string; sub: string }> = [
   { key: 'on_sale', title: '在售', sub: '正常销售中' },
   { key: 'suspended', title: '暂停中', sub: '管理员暂停' },
@@ -192,21 +192,29 @@ function openStock(work: ManagedCollabWork, size: string, type: FramePack['stock
   stockSize.value = size
   stockType.value = type
   stockQty.value = ''
+  stockRequestId = crypto.randomUUID()
   modal.value = 'stock'
 }
 async function submitStock(): Promise<void> {
   if (busy.value || !target.value) return
-  const quantity = stockQty.value.trim() ? Number(stockQty.value) : 0
+  const rawQuantity = String(stockQty.value).trim()
+  const quantity = rawQuantity ? Number(rawQuantity) : 0
   if (!Number.isInteger(quantity)) {
     flash('调整数量必须是整数')
     return
   }
   busy.value = true
   try {
-    await setFramePackType(target.value.id, stockSize.value, stockType.value)
-    if (quantity !== 0) await restockFramePack(target.value.id, stockSize.value, quantity)
+    await updateFramePack(
+      target.value.id,
+      stockSize.value,
+      stockType.value,
+      quantity,
+      stockRequestId
+    )
     flash('✓ 已更新')
     modal.value = null
+    stockRequestId = ''
     await openDetail(target.value)
   } catch (cause) {
     flash(`库存调整失败：${cause instanceof Error ? cause.message : '网络错误'}`)
