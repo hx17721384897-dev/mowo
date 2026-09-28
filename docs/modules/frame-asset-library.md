@@ -12,7 +12,7 @@
 
 - 后台页面：`frontend/pages/admin-frame-library.html`
 - 后台制作页面：Vue `/app/admin/frame-making` 与 `/app/admin/frame-making/:id`
-- 后台批量导入页面：`frontend/pages/admin-frame-imports.html` 和 `frontend/js/admin-frame-imports.js`
+- 后台批量导入候选：Vue `/app/admin/frame-imports`；旧 `frontend/pages/admin-frame-imports.html` 和 `frontend/js/admin-frame-imports.js` 在候选验收前继续承载正式入口
 - 后台导航：`frontend/js/admin-sidebar.js` 的“素材 -> 帧图资产库 / 帧图制作 / 批量导入”
 - 后台接口：`content-service/src/routes/frame-library.js`，前缀 `/api/admin/frame-library`
 - 后台制作接口：`content-service/src/routes/frame-making.js`，前缀 `/api/admin/frame-making`
@@ -140,7 +140,7 @@
 
 `npm run check:frame-making` 验证制作岗位隔离、FD 草稿、原素材绑定、短期读取地址、生产人员保存并提交负责人、确认后禁止生产人员改写、并发覆盖保护、负责人发布、ANM/V1 追溯、重复提交幂等、无定制/订单副作用，以及浏览器真实上传后进入完整编辑器并显示播放/去重/抽帧/撤销/筛选控件；结束后自动清理测试数据。
 
-`npm run check:frame-imports` 建立临时负责人、两帧与四帧文件夹，验证专用上传登记、真实 PNG 内容校验、服务器预检、私有首帧预览、共同标签、独立 ANM/V1、实际帧数、浏览器文件夹识别和完成批次回看；结束后自动清理测试数据与物理文件。
+`npm run check:frame-imports` 建立临时负责人、两帧与四帧文件夹，验证创建提交键重放、待上传凭证重新签发、专用上传登记、真实 PNG 内容校验、服务器预检、私有首帧预览、共同标签、独立 ANM/V1、实际帧数、Vue 浏览器文件夹识别、完成批次回看和新旧主要布局几何对照；结束后自动清理测试数据与物理文件。
 
 `npm run check:production-artifacts` 不依赖业务数据，验证一页 12 格 Word 模板、24 帧自动扩页、图片关系和核心帧循环插入。数据库接口与真实页面验收需要先应用 `20260826190000_add_print_templates_and_artifacts` 迁移。
 

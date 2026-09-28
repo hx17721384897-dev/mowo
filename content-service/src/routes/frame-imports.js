@@ -138,6 +138,41 @@ async function updateBatchCounts(prisma, batchId) {
   } })
 }
 
+async function issuePendingUploads(prisma, fastify, request, batchId) {
+  const items = await prisma.frameAssetImportItem.findMany({
+    where: { batchId },
+    orderBy: { position: 'asc' }
+  })
+  const uploads = []
+  for (const item of items) {
+    const manifest = Array.isArray(item.fileManifest) ? item.fileManifest : []
+    for (const frame of manifest) {
+      const file = await prisma.privateFile.findUnique({ where: { id: frame.fileId } })
+      if (!file || file.status === 'READY' || file.deletedAt) continue
+      const token = crypto.randomBytes(32).toString('hex')
+      const uploadExpiresAt = new Date(Date.now() + UPLOAD_TTL_MS)
+      await prisma.privateFile.update({
+        where: { id: file.id },
+        data: { uploadTokenHash: sha256(token), uploadExpiresAt }
+      })
+      const uploadUrl = fastify.storageProvider === 'local'
+        ? absoluteApiUrl(request, `/api/upload/local/${file.id}?token=${token}`)
+        : fastify.storagePresignPut(file.objectKey, file.declaredMimeType, Math.floor(UPLOAD_TTL_MS / 1000))
+      uploads.push({
+        itemId: item.id,
+        folderName: item.folderName,
+        fileId: file.id,
+        name: frame.name,
+        order: frame.order,
+        objectKey: file.objectKey,
+        uploadUrl,
+        completeUrl: absoluteApiUrl(request, `/api/upload/files/${file.id}/complete`)
+      })
+    }
+  }
+  return uploads
+}
+
 export default async function frameImportRoutes(fastify) {
   const { prisma } = fastify
 
@@ -176,8 +211,19 @@ export default async function frameImportRoutes(fastify) {
   fastify.post('/', async (request, reply) => {
     if (!ownerOnly(request, reply)) return
     const body = request.body || {}
+    const clientRequestId = clean(body.clientRequestId, 80)
     const batchType = body.batchType === 'CUSTOMER' ? 'CUSTOMER' : 'COMPANY'
     const groups = Array.isArray(body.groups) ? body.groups : []
+    const requestFingerprint = sha256(JSON.stringify({ batchType, defaults: body.defaults || {}, groups }))
+    if (!clientRequestId) return reply.code(400).send({ success: false, message: '缺少批次创建标识，请重新选择文件夹' })
+    const existing = await prisma.frameAssetImportBatch.findUnique({ where: { clientRequestId } })
+    if (existing) {
+      if (existing.createdByStaffId !== request.user.userId || existing.requestFingerprint !== requestFingerprint) {
+        return reply.code(409).send({ success: false, message: '批次创建标识已被其他请求使用，请重新选择文件夹' })
+      }
+      const uploads = await issuePendingUploads(prisma, fastify, request, existing.id)
+      return reply.send({ success: true, data: { id: existing.id, batchNo: existing.batchNo, uploads } })
+    }
     if (!groups.length || groups.length > MAX_GROUPS) {
       return reply.code(400).send({ success: false, message: `一次需要选择 1 至 ${MAX_GROUPS} 个动画文件夹` })
     }
@@ -187,7 +233,6 @@ export default async function frameImportRoutes(fastify) {
     const fallback = { ...defaultsFor(batchType), ...metadata(body.defaults, defaultsFor(batchType)) }
     const itemRows = []
     const privateRows = []
-    const uploadRows = []
     const batchId = crypto.randomUUID()
     const ownerUserId = request.user.userId
     const ownerPath = ownerUserId
@@ -228,10 +273,6 @@ export default async function frameImportRoutes(fastify) {
           uploadTokenHash: sha256(token), uploadExpiresAt: expiresAt
         })
         manifest.push({ fileId, objectKey, name: fileName, order: file.order, type: fileType, size: fileSize })
-        const uploadUrl = fastify.storageProvider === 'local'
-          ? absoluteApiUrl(request, `/api/upload/local/${fileId}?token=${token}`)
-          : fastify.storagePresignPut(objectKey, fileType, Math.floor(UPLOAD_TTL_MS / 1000))
-        uploadRows.push({ itemId, fileId, objectKey, uploadUrl, completeUrl: absoluteApiUrl(request, `/api/upload/files/${fileId}/complete`) })
       }
       const itemMeta = metadata(group, fallback)
       itemRows.push({
@@ -242,19 +283,28 @@ export default async function frameImportRoutes(fastify) {
     if (totalFiles > MAX_FILES) return reply.code(400).send({ success: false, message: `一次最多上传 ${MAX_FILES} 张图片，请拆成多个批次` })
     if (totalBytes > MAX_TOTAL_BYTES) return reply.code(400).send({ success: false, message: '一次导入不能超过 500MB，请拆成多个批次' })
     const batchNo = createBatchNo()
-    await prisma.$transaction([
-      prisma.frameAssetImportBatch.create({ data: {
-        id: batchId, batchNo, batchType, status: 'UPLOADING', defaults: fallback,
-        totalItems: itemRows.length, totalFiles, totalBytes: BigInt(totalBytes), createdByStaffId: ownerUserId
-      } }),
-      prisma.frameAssetImportItem.createMany({ data: itemRows }),
-      prisma.privateFile.createMany({ data: privateRows })
-    ])
-    await prisma.auditLog.create({ data: {
-      userId: ownerUserId, action: 'FRAME_LIBRARY_BATCH_IMPORT_CREATED', targetId: batchId,
-      detail: { batchNo, batchType, totalItems: itemRows.length, totalFiles, totalBytes }, ip: request.ip
-    } })
-    return reply.code(201).send({ success: true, data: { id: batchId, batchNo, uploads: uploadRows } })
+    try {
+      await prisma.$transaction(async tx => {
+        await tx.frameAssetImportBatch.create({ data: {
+          id: batchId, batchNo, clientRequestId, requestFingerprint, batchType, status: 'UPLOADING', defaults: fallback,
+          totalItems: itemRows.length, totalFiles, totalBytes: BigInt(totalBytes), createdByStaffId: ownerUserId
+        } })
+        await tx.frameAssetImportItem.createMany({ data: itemRows })
+        await tx.privateFile.createMany({ data: privateRows })
+        await tx.auditLog.create({ data: {
+          userId: ownerUserId, action: 'FRAME_LIBRARY_BATCH_IMPORT_CREATED', targetId: batchId,
+          detail: { batchNo, batchType, totalItems: itemRows.length, totalFiles, totalBytes }, ip: request.ip
+        } })
+      })
+    } catch (error) {
+      if (error.code !== 'P2002') throw error
+      const replay = await prisma.frameAssetImportBatch.findUnique({ where: { clientRequestId } })
+      if (!replay || replay.createdByStaffId !== ownerUserId || replay.requestFingerprint !== requestFingerprint) throw error
+      const uploads = await issuePendingUploads(prisma, fastify, request, replay.id)
+      return reply.send({ success: true, data: { id: replay.id, batchNo: replay.batchNo, uploads } })
+    }
+    const uploads = await issuePendingUploads(prisma, fastify, request, batchId)
+    return reply.code(201).send({ success: true, data: { id: batchId, batchNo, uploads } })
   })
 
   fastify.patch('/:id/items/:itemId', async (request, reply) => {
@@ -362,8 +412,13 @@ export default async function frameImportRoutes(fastify) {
     }, orderBy: { position: 'asc' } })
     const results = []
     for (const item of items) {
+      const claimed = await prisma.frameAssetImportItem.updateMany({
+        where: { id: item.id, status: { in: ['READY', 'WARNING', 'FAILED'] } },
+        data: { status: 'IMPORTING' }
+      })
+      if (claimed.count !== 1) continue
       if (item.duplicateAssetId && !item.allowDuplicate) {
-        await prisma.frameAssetImportItem.update({ where: { id: item.id }, data: { status: 'SKIPPED_DUPLICATE' } })
+        await prisma.frameAssetImportItem.updateMany({ where: { id: item.id, status: 'IMPORTING' }, data: { status: 'SKIPPED_DUPLICATE' } })
         results.push({ id: item.id, status: 'SKIPPED_DUPLICATE' })
         continue
       }
@@ -402,9 +457,10 @@ export default async function frameImportRoutes(fastify) {
           }, data: { ownerUserId, linkedResourceType: 'ANIMATION_ASSET', linkedResourceId: asset.id } })
           if (linked.count !== files.length) throw new Error('帧图归属发生冲突，请重新预检')
           await replaceTags(tx, asset.id, data.tags)
-          await tx.frameAssetImportItem.update({ where: { id: item.id }, data: {
+          const imported = await tx.frameAssetImportItem.updateMany({ where: { id: item.id, status: 'IMPORTING' }, data: {
             status: 'IMPORTED', animationAssetId: asset.id, importedAt: new Date(), issues: item.issues || []
           } })
+          if (imported.count !== 1) throw new Error('导入项目状态已发生变化，请刷新后重试')
           await tx.auditLog.create({ data: {
             userId: request.user.userId, action: 'FRAME_LIBRARY_BATCH_ITEM_IMPORTED', targetId: asset.id,
             detail: { batchNo: batch.batchNo, folderName: item.folderName, assetNo: asset.assetNo, frameCount: frameKeys.length }, ip: request.ip
@@ -416,7 +472,7 @@ export default async function frameImportRoutes(fastify) {
         const issues = [...(Array.isArray(item.issues) ? item.issues : []).filter(issue => issue.code !== 'IMPORT_FAILED'), {
           level: 'ERROR', code: 'IMPORT_FAILED', message: String(error.message || '导入失败').slice(0, 300)
         }]
-        await prisma.frameAssetImportItem.update({ where: { id: item.id }, data: { status: 'FAILED', issues } })
+        await prisma.frameAssetImportItem.updateMany({ where: { id: item.id, status: 'IMPORTING' }, data: { status: 'FAILED', issues } })
         results.push({ id: item.id, status: 'FAILED', message: error.message })
       }
     }

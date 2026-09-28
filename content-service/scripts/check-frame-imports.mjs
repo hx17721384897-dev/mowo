@@ -81,16 +81,21 @@ try {
     { folderName: `两帧-${runId}`, title: `两帧动画-${runId}`, tags: ['批量测试'], files: frames.slice(0, 2).map((buffer, index) => ({ name: `${index + 1}.png`, type: 'image/png', size: buffer.length })) },
     { folderName: `四帧-${runId}`, title: `四帧动画-${runId}`, tags: ['批量测试'], files: frames.map((buffer, index) => ({ name: `${index + 1}.png`, type: 'image/png', size: buffer.length })) }
   ]
-  const createResponse = await request('/api/admin/frame-imports', token, { method: 'POST', body: JSON.stringify({
+  const createBody = {
+    clientRequestId: `frame-import-${runId}`,
     batchType: 'COMPANY', defaults: { sourceChannel: 'INTERNAL_CREATED', usageType: 'INTERNAL_TEST', rightsHolderType: 'COMPANY', rightsHolderName: '哞屋', authorizationStatus: 'PRIVATE_ONLY', tags: ['共同标签'] }, groups
-  }) })
+  }
+  const createResponse = await request('/api/admin/frame-imports', token, { method: 'POST', body: JSON.stringify(createBody) })
   const created = await createResponse.json()
   assert(createResponse.status === 201 && created.data.uploads.length === 6, '一个批次登记两套动画和六张序列帧')
   batchId = created.data.id
-  objectKeys.push(...created.data.uploads.map(upload => upload.objectKey))
+  const replayResponse = await request('/api/admin/frame-imports', token, { method: 'POST', body: JSON.stringify(createBody) })
+  const replayed = await replayResponse.json()
+  assert(replayResponse.ok && replayed.data.id === batchId && replayed.data.uploads.length === 6, '相同创建标识重试复用原批次并重新签发待上传凭证')
+  objectKeys.push(...replayed.data.uploads.map(upload => upload.objectKey))
   const buffers = [...frames.slice(0, 2), ...frames]
-  for (let index = 0; index < created.data.uploads.length; index += 1) {
-    const upload = created.data.uploads[index]
+  for (let index = 0; index < replayed.data.uploads.length; index += 1) {
+    const upload = replayed.data.uploads[index]
     const put = await fetch(upload.uploadUrl, { method: 'PUT', headers: { 'Content-Type': 'image/png' }, body: buffers[index] })
     assert(put.ok, `第 ${index + 1} 张测试帧上传成功`)
     const complete = await request(upload.completeUrl.replace(apiBase, ''), token, { method: 'POST' })
@@ -134,16 +139,38 @@ try {
     window.MOWO_RUNTIME_API_BASE = apiBase
     localStorage.setItem('mowo_token', token)
   }, { token, apiBase })
-  await page.goto('http://127.0.0.1:5500/mowo/frontend/pages/admin-frame-imports.html', { waitUntil: 'networkidle' })
+  await page.goto('http://127.0.0.1:4173/app/admin/frame-imports', { waitUntil: 'networkidle' })
   await page.locator('#folderInput').setInputFiles(uiFolder)
   await page.locator('input.row-title[value="动画甲"]').waitFor()
   assert(await page.locator('#itemRows tr').count() === 2 && await page.getByText(/2 套动画 · 4 张图片/).count() === 1, '浏览器把第一层两个子文件夹识别为两套动画')
   await page.locator('#defaultTags').fill('网页共同标签')
   await page.getByRole('button', { name: '将共同资料应用到全部' }).click()
   assert(await page.locator('input.row-tags[value="网页共同标签"]').count() === 2, '页面可以一次把共同标签应用到全部动画')
-  await page.goto(`http://127.0.0.1:5500/mowo/frontend/pages/admin-frame-imports.html?batchId=${encodeURIComponent(batchId)}`, { waitUntil: 'networkidle' })
+  await page.goto(`http://127.0.0.1:4173/app/admin/frame-imports?batchId=${encodeURIComponent(batchId)}`, { waitUntil: 'networkidle' })
   await page.getByText(detail.data.items[0].assetNo, { exact: true }).waitFor()
   assert(await page.locator('#itemRows .status-imported').count() === 2, '已完成批次重新打开后展示逐套入库结果和 ANM')
+  const vueBoxes = await page.evaluate(() => {
+    const box = selector => {
+      const rect = document.querySelector(selector)?.getBoundingClientRect()
+      return rect ? { x: rect.x, y: rect.y, width: rect.width, height: rect.height } : null
+    }
+    return { topbar: box('.imports-topbar'), content: box('.imports-content'), setup: box('.setup'), work: box('.work-layout') }
+  })
+  await page.goto(`http://127.0.0.1:5500/mowo/frontend/pages/admin-frame-imports.html?batchId=${encodeURIComponent(batchId)}`, { waitUntil: 'networkidle' })
+  await page.getByText(detail.data.items[0].assetNo, { exact: true }).waitFor()
+  const legacyBoxes = await page.evaluate(() => {
+    const box = selector => {
+      const rect = document.querySelector(selector)?.getBoundingClientRect()
+      return rect ? { x: rect.x, y: rect.y, width: rect.width, height: rect.height } : null
+    }
+    return { topbar: box('.topbar'), content: box('.content'), setup: box('.setup'), work: box('.work-layout') }
+  })
+  for (const key of Object.keys(vueBoxes)) {
+    assert(vueBoxes[key] && legacyBoxes[key], `${key} 新旧布局区域均存在`)
+    for (const field of ['x', 'y', 'width', 'height']) {
+      assert(Math.abs(vueBoxes[key][field] - legacyBoxes[key][field]) <= 6, `${key}.${field} 新旧布局误差不超过 6px`)
+    }
+  }
   if (process.env.SCREENSHOT_DIR) await page.screenshot({ path: path.join(process.env.SCREENSHOT_DIR, 'frame-imports-completed.png'), fullPage: true })
   await context.close()
   await browser.close()

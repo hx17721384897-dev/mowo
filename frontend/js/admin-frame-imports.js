@@ -7,6 +7,7 @@ let groups = []
 let selected = new Set()
 let currentBatch = null
 let historyRows = []
+let clientRequestId = ''
 
 function esc(value) { return String(value ?? '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[char]) }
 function splitTags(value) { return [...new Set(String(value || '').split(/[，,]/).map(tag => tag.trim()).filter(Boolean))].slice(0, 30) }
@@ -40,7 +41,7 @@ function applyTypeDefaults() {
 
 function revokePreviews() { groups.forEach(group => { if (group.previewUrl?.startsWith('blob:')) URL.revokeObjectURL(group.previewUrl) }) }
 function startNewBatch() {
-  revokePreviews(); groups = []; selected.clear(); currentBatch = null; folderInput.value = ''; batchType.disabled = false
+  revokePreviews(); groups = []; selected.clear(); currentBatch = null; clientRequestId = ''; folderInput.value = ''; batchType.disabled = false
   chooseFolderBtn.disabled = false
   uploadBtn.hidden = false; uploadBtn.disabled = true; preflightBtn.hidden = true; commitBtn.hidden = true; progress.hidden = true
   document.querySelectorAll('#setupPanel input,#setupPanel select').forEach(el => { if (el.id !== 'folderInput') el.disabled = false })
@@ -80,6 +81,7 @@ function parseFolder(files) {
       previewUrl: URL.createObjectURL(frames[0]), tags: [...base.tags], ...base, issues, status: issues.some(x => x.level === 'ERROR') ? 'BLOCKED' : issues.length ? 'WARNING' : 'LOCAL' }
   })
   selected = new Set(groups.map(group => group.localId))
+  clientRequestId = crypto.randomUUID()
   folderSummary.textContent = `${groups.length} 套动画 · ${files.length} 张图片 · ${formatBytes(totalBytes)}`
   applyDefaultsBtn.disabled = false; uploadBtn.disabled = groups.some(group => group.status === 'BLOCKED'); setStep(2); renderRows(); updateSummary()
 }
@@ -148,7 +150,7 @@ async function createAndUpload() {
   const blocked = groups.find(group => group.status === 'BLOCKED'); if (blocked) return toast(`${blocked.folderName} 仍有阻断问题`)
   uploadBtn.disabled = true; setStep(3)
   try {
-    const body = { batchType: batchType.value, defaults: defaults(), groups: groups.map(group => ({
+    const body = { clientRequestId: clientRequestId || (clientRequestId = crypto.randomUUID()), batchType: batchType.value, defaults: defaults(), groups: groups.map(group => ({
       folderName: group.folderName, relativePath: group.relativePath, title: group.title, tags: group.tags,
       sourceChannel: group.sourceChannel, usageType: group.usageType, rightsHolderType: group.rightsHolderType,
       rightsHolderName: group.rightsHolderName, rightsHolderContact: group.rightsHolderContact,
@@ -156,8 +158,8 @@ async function createAndUpload() {
       files: group.files.map(file => ({ name: file.name, type: file._mime || file.type, size: file.size }))
     })) }
     const created = await api('/api/admin/frame-imports', { method: 'POST', body: JSON.stringify(body) })
-    const localFiles = groups.flatMap(group => group.files); let cursor = 0; let done = 0
-    async function worker() { while (cursor < created.uploads.length) { const index = cursor++; await uploadOne(created.uploads[index], localFiles[index]); done += 1; setProgress(done, created.uploads.length, '正在上传') } }
+    const localFiles = new Map(groups.flatMap(group => group.files.map(file => [`${group.folderName}\u0000${file.name}\u0000${file._order}`, file]))); let cursor = 0; let done = 0
+    async function worker() { while (cursor < created.uploads.length) { const index = cursor++; const job = created.uploads[index]; const file = localFiles.get(`${job.folderName}\u0000${job.name}\u0000${job.order}`); if (!file) throw new Error(`无法匹配上传文件：${job.folderName}/${job.name}`); await uploadOne(job, file); done += 1; setProgress(done, created.uploads.length, '正在上传') } }
     await Promise.all(Array.from({ length: Math.min(4, created.uploads.length) }, () => worker()))
     setProgress(created.uploads.length, created.uploads.length, '正在检查')
     await api(`/api/admin/frame-imports/${created.id}/preflight`, { method: 'POST' })

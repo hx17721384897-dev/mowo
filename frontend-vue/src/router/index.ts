@@ -216,6 +216,12 @@ const router = createRouter({
           }
         },
         {
+          path: 'frame-imports',
+          name: 'admin-frame-imports',
+          component: () => import('@/views/AdminFrameImportsView.vue'),
+          meta: { title: '帧图批量导入 — 哞屋后台', staffRoles: ['OWNER'] }
+        },
+        {
           path: 'models',
           name: 'admin-models',
           component: () => import('@/views/AdminModelsView.vue'),
