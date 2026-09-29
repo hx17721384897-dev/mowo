@@ -60,7 +60,7 @@
   async function startFrameTask(id) {
     try {
       await request(`/api/admin/customization-requests/${encodeURIComponent(id)}/claim`, { method:'POST' })
-      location.href = `customize-editor.html?adminRequestId=${encodeURIComponent(id)}`
+      location.href = `customize-editor.html?adminRequestId=${encodeURIComponent(id)}&claimed=1`
     } catch (error) { alert(error.message) }
   }
 
@@ -68,7 +68,7 @@
     try {
       const next = await request('/api/admin/customization-requests/claim-next', { method:'POST' })
       if (!next?.id) return alert('当前没有等待处理的人工筛选任务')
-      location.href = `customize-editor.html?adminRequestId=${encodeURIComponent(next.id)}`
+      location.href = `customize-editor.html?adminRequestId=${encodeURIComponent(next.id)}&claimed=1`
     } catch (error) { alert(error.message) }
   }
 

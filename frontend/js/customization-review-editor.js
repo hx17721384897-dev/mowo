@@ -3,6 +3,7 @@
 
   const params = new URLSearchParams(location.search)
   const adminRequestId = params.get('adminRequestId')
+  const alreadyClaimed = params.get('claimed') === '1'
   if (!adminRequestId) return
 
   const API = window.MOWO_API_BASE || ''
@@ -107,7 +108,9 @@
 
   async function loadAdminTask() {
     if (!token) throw new Error('请先登录工作人员账号')
-    await api(`/api/admin/customization-requests/${encodeURIComponent(adminRequestId)}/claim`, { method: 'POST' })
+    if (!alreadyClaimed) {
+      await api(`/api/admin/customization-requests/${encodeURIComponent(adminRequestId)}/claim`, { method: 'POST' })
+    }
     task = await api(`/api/admin/customization-requests/${encodeURIComponent(adminRequestId)}`)
     if (!task.canEdit) throw new Error('当前岗位只能查看任务，不能进入筛帧编辑')
     if (!task.sourceFiles?.length) throw new Error('任务没有可读取的原素材')
@@ -224,7 +227,7 @@
       clearInterval(saveTimer)
       clearInterval(heartbeatTimer)
       if (payload.next && result.next?.id) {
-        location.replace(`customize-editor.html?adminRequestId=${encodeURIComponent(result.next.id)}`)
+        location.replace(`customize-editor.html?adminRequestId=${encodeURIComponent(result.next.id)}&claimed=1`)
       } else {
         location.href = `admin-customization-requests.html?submitted=${encodeURIComponent(task.requestNo)}`
       }

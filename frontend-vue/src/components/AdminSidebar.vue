@@ -166,7 +166,7 @@ const groups: MenuGroup[] = [
       {
         label: '定制处理',
         icon: '☷',
-        file: 'admin-customization-requests.html',
+        to: '/admin/customization-requests',
         roles: ['OWNER', 'CUSTOMER_SERVICE', 'PRODUCTION']
       }
     ]

@@ -240,6 +240,15 @@ const router = createRouter({
           meta: { title: '联名商品编辑 — 哞屋后台', staffRoles: ['OWNER', 'COLLAB_OPS'] }
         },
         {
+          path: 'customization-requests',
+          name: 'admin-customization-requests',
+          component: () => import('@/views/AdminCustomizationRequestsView.vue'),
+          meta: {
+            title: '定制处理 — 哞屋后台',
+            staffRoles: ['OWNER', 'CUSTOMER_SERVICE', 'PRODUCTION']
+          }
+        },
+        {
           path: 'contact',
           name: 'admin-contact',
           component: () => import('@/views/AdminContactView.vue'),

@@ -18,6 +18,27 @@ let browser
 
 const PNG = await fs.readFile(new URL('../../frontend/assets/box-diagram.png', import.meta.url))
 
+async function assertSingleClaimHandoff() {
+  const workbenchSource = await fs.readFile(new URL('../../frontend/js/admin-customization-workbench.js', import.meta.url), 'utf8')
+  const editorSource = await fs.readFile(new URL('../../frontend/js/customization-review-editor.js', import.meta.url), 'utf8')
+  const vueSource = await fs.readFile(new URL('../../frontend-vue/src/views/AdminCustomizationRequestsView.vue', import.meta.url), 'utf8')
+  if (!workbenchSource.includes('adminRequestId=${encodeURIComponent(id)}&claimed=1')) {
+    throw new Error('旧定制工作台领取后没有标记已领取，编辑器会重复领取任务')
+  }
+  if (!editorSource.includes("const alreadyClaimed = params.get('claimed') === '1'") ||
+      !editorSource.includes('if (!alreadyClaimed)')) {
+    throw new Error('后台筛帧编辑器没有识别已领取交接标记')
+  }
+  if (!editorSource.includes('adminRequestId=${encodeURIComponent(result.next.id)}&claimed=1')) {
+    throw new Error('提交并领取下一条后没有标记已领取，编辑器会重复领取任务')
+  }
+  if (!vueSource.includes('adminRequestId=${encodeURIComponent(id)}&claimed=1')) {
+    throw new Error('Vue 定制工作台领取后没有标记已领取，编辑器会重复领取任务')
+  }
+}
+
+await assertSingleClaimHandoff()
+
 async function api(path, token, options = {}) {
   return fetch(`${apiBase}${path}`, {
     ...options,
@@ -171,7 +192,7 @@ try {
   await page.locator('#materialOptions .opt-btn').first().click()
   await page.locator('#colorOptions .color-opt').first().click()
   await page.getByRole('button', { name:/提交订单/ }).click()
-  await page.waitForURL(/checkout\.html/, { timeout:20000 }).catch(() => {
+  await page.waitForURL(/(?:checkout\.html|\/app\/checkout)(?:[?#]|$)/, { timeout:20000 }).catch(() => {
     throw new Error(`提交订单后未进入结算页；停留在 ${page.url()}；页面提示：${orderDialogs.join(' | ') || '无'}`)
   })
   console.log('PASS customer previews staff frames and submits the customization directly to checkout')
@@ -212,7 +233,7 @@ try {
   await page.locator('#materialOptions .opt-btn').first().click()
   await page.locator('#colorOptions .color-opt').first().click()
   await page.getByRole('button', { name:/提交订单/ }).click()
-  await page.waitForURL(/checkout\.html/, { timeout:20000 }).catch(() => {
+  await page.waitForURL(/(?:checkout\.html|\/app\/checkout)(?:[?#]|$)/, { timeout:20000 }).catch(() => {
     throw new Error(`已有动画选择新款式后未进入结算页；停留在 ${page.url()}；页面提示：${orderDialogs.join(' | ') || '无'}`)
   })
   console.log('PASS customer renames and reuses an animation asset for a new SKU in browser')
@@ -303,7 +324,7 @@ try {
   await page.locator('#materialOptions .opt-btn').first().click()
   await page.locator('#colorOptions .color-opt').first().click()
   await page.getByRole('button', { name:/提交订单/ }).click()
-  await page.waitForURL(/checkout\.html/, { timeout:20000 }).catch(() => {
+  await page.waitForURL(/(?:checkout\.html|\/app\/checkout)(?:[?#]|$)/, { timeout:20000 }).catch(() => {
     throw new Error(`旧人工编号干扰了自己筛选提交；停留在 ${page.url()}；页面提示：${orderDialogs.join(' | ') || '无'}`)
   })
   console.log('PASS self-screened request ignores stale human-screening state and enters checkout')
