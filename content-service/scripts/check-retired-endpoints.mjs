@@ -6,7 +6,6 @@ const prisma = new PrismaClient()
 const apiBase = process.env.TEST_API_BASE || 'http://127.0.0.1:3001'
 const runId = String(Date.now()).slice(-7)
 const users = []
-const importedOrderIds = []
 
 const probes = [
   '/api/articles',
@@ -97,7 +96,6 @@ async function cleanup() {
   const ids = users.map(user => user.id)
   const phones = users.map(user => user.phone)
   if (!ids.length) return
-  if (importedOrderIds.length) await prisma.customizeOrder.deleteMany({ where: { id: { in: importedOrderIds } } })
   await prisma.operationLog.deleteMany({ where: { userId: { in: ids } } })
   await prisma.auditLog.deleteMany({ where: { userId: { in: ids } } })
   await prisma.refreshToken.deleteMany({ where: { userId: { in: ids } } })
@@ -129,27 +127,14 @@ try {
   const after = await retainedSnapshot()
   assert(JSON.stringify(after) === JSON.stringify(before), 'retired URL probes changed retained business data')
 
-  assert((await request('/api/admin/import/pending', null)).status === 401, 'external import rejects anonymous access')
-  assert((await request('/api/admin/import/pending', userToken)).status === 403, 'external import rejects ordinary users')
-  assert((await request('/api/admin/import/pending', staffToken)).status === 200, 'external import remains available to authorized staff')
-  assert((await request('/api/admin/sku-mapping', staffToken)).status === 200, 'external SKU mapping remains available to authorized staff')
-  const importResponse = await request('/api/admin/import/manual', staffToken, 'POST', {
-    platform: 'XHS',
-    externalOrderId: `R1B-${runId}`,
-    receiverName: '导入验收',
-    receiverPhone: 'invalid',
-    receiverAddress: '待补全',
-    receiverCity: '上海'
-  })
-  const importBody = await importResponse.json()
-  assert(importResponse.status === 200 && importBody.success, 'authorized staff can create an external manual import')
-  const imported = await prisma.customizeOrder.findFirst({
-    where: { platform: 'XHS', externalOrderId: `R1B-${runId}` }
-  })
-  assert(imported?.importStatus === 'pending_info', 'external import keeps its exception-completion state')
-  importedOrderIds.push(imported.id)
+  for (const token of [null, userToken, staffToken]) {
+    assert((await request('/api/admin/import/pending', token)).status === 404, 'deferred external import stays closed for every caller')
+    assert((await request('/api/admin/sku-mapping', token)).status === 404, 'deferred external SKU mapping stays closed for every caller')
+  }
+  const deferredAfter = await retainedSnapshot()
+  assert(JSON.stringify(deferredAfter) === JSON.stringify(before), 'deferred external import probes changed retained data')
 
-  console.log(`Physical retirement passed for ${checked} caller/method/path combinations; external order import remains staff-only and operational`)
+  console.log(`Physical retirement passed for ${checked} caller/method/path combinations; deferred external import remains server-closed without deleting retained data`)
 } finally {
   await cleanup()
   await prisma.$disconnect()

@@ -88,12 +88,10 @@ export function requiredPermissionForRequest(method, rawUrl) {
     path.startsWith('/api/admin/production') ||
     path.startsWith('/api/admin/batches') ||
     path.startsWith('/api/admin/scan')
-    || path.startsWith('/api/admin/import')
     || path.startsWith('/api/admin/auth-codes')
   ) return PERMISSION.PRODUCTION
 
   if (
-    path.startsWith('/api/admin/sku-mapping') ||
     path.startsWith('/api/machine-models/admin') ||
     (path.startsWith('/api/machine-models') && verb !== 'GET')
   ) return PERMISSION.CATALOG

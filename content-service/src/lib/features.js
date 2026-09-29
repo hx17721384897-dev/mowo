@@ -2,6 +2,11 @@ const GATES = [
   {
     feature: 'onlineCheckout',
     match: path => path === '/api/cart/checkout' || path.startsWith('/api/payment/')
+  },
+  {
+    feature: 'externalOrderImport',
+    match: path =>
+      path.startsWith('/api/admin/import') || path.startsWith('/api/admin/sku-mapping')
   }
 ]
 

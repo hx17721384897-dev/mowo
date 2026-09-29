@@ -34,7 +34,7 @@
           ]
         },
         { href: 'admin-print-production.html',         icon: '↕', label: '打印与裁切设置' },
-        { href: 'admin-import.html',                 icon: '📥', label: '定制导入' }
+        { href: `${window.MOWO_APP_BASE || '/app'}/admin/import`, icon: '📥', label: '外部订单导入' }
       ]
     },
     {
@@ -93,7 +93,7 @@
   };
 
   const STAFF_HIDDEN_ITEMS = {
-    CUSTOMER_SERVICE: new Set(['admin-import.html', 'admin-inventory.html', 'admin-print-production.html']),
+    CUSTOMER_SERVICE: new Set(['admin-inventory.html', 'admin-print-production.html']),
     PRODUCTION: new Set([`${window.MOWO_APP_BASE || '/app'}/admin/models`, `${window.MOWO_APP_BASE || '/app'}/admin/frame-imports`, 'admin-print-production.html']),
     COLLAB_OPS: new Set([`${window.MOWO_APP_BASE || '/app'}/admin/frame-making`, `${window.MOWO_APP_BASE || '/app'}/admin/frame-imports`])
   };

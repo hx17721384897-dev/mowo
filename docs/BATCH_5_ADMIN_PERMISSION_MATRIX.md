@@ -23,7 +23,7 @@
 | Vue `/app/admin/orders` | `/api/admin/production-workflow` | `PRODUCTION` | 生产、负责人 | V4-E2 正式接管；旧 HTML 已删除 |
 | `admin-production-batches.html` | `/api/admin/production-batches` | `PRODUCTION` | 生产、负责人 | B6 隔离专项通过 |
 | `admin-print-production.html` | `/api/admin/print-production` | `PRODUCTION_CONFIG` | 负责人 | B6 隔离专项通过 |
-| `admin-import.html` | `/api/admin/import` | `PRODUCTION` | 生产、负责人 | 页面岗位已收口；B6 导入专项通过 |
+| Vue `/app/admin/import` | `/api/admin/import`、`/api/admin/sku-mapping` 当前关闭 | 路由页仅 `OWNER`/`PRODUCTION` | 生产、负责人 | V4-E3 只保留入口；服务端对所有调用者返回功能未开放 |
 
 ## 本轮已完成与仍需完成
 

@@ -116,8 +116,7 @@ Authorization: Bearer <accessToken>   // 需要登录的接口必须携带
 | `/api/inventory` | 库存管理 | `routes/inventory.js` |
 | `/api/collab` | 公开联名货架 | `routes/collab.js` |
 | `/api/admin` | 管理员后台 | `routes/admin.js` |
-| `/api/admin/import` | 多平台订单导入 | `routes/import.js` |
-| `/api/admin/sku-mapping` | 平台SKU映射管理 | `routes/platform-sku.js` |
+| `/api/admin/import`、`/api/admin/sku-mapping` | 外部订单导入（待真实样表与正式订单映射确认） | 当前由 `EXTERNAL_ORDER_IMPORT_ENABLED=false` 统一拒绝，无业务路由 |
 | `/api/config/features` | 公开读取当前发布功能开关 | `index.js` + `lib/features.js` |
 | `/api/contact` | 六类联络提交 | `routes/contact.js` |
 
@@ -679,118 +678,9 @@ quantity 范围：1-10。修改数量或选中状态会取消依赖该条目的�
 
 ## 多平台订单导入
 
-所有接口需 role≥2（requireAdmin）。
+V4-E3 后只保留 Vue `/app/admin/import` 内部入口。旧实现曾假设淘宝中文 CSV 表头，并把手工导入直接写入旧 `CustomizeOrder`；它没有可靠处理真实文件编码、订单多商品/数量、渠道客户归属及正式 `SalesOrder -> Item -> PU` 关系，因此页面与业务路由已删除。
 
-### POST `/api/admin/import/taobao`
-上传淘宝 CSV 批量导入。Content-Type: multipart/form-data。
-
-处理流程：
-1. 解析CSV（中文表头自动映射）
-2. 幂等去重（platform+externalOrderId 联合唯一）
-3. 匹配 platform_sku_mappings
-4. 收件信息不完整 → `importStatus=pending_info`
-5. SKU未知 → `importStatus=pending_sku`
-6. 正常订单 → 调 lockInventory 预锁库存
-
-**Response data：**
-```json
-{ "created": 45, "skipped": 3, "pendingInfo": 2, "pendingSku": 1 }
-```
-
----
-
-### POST `/api/admin/import/manual`
-手动录入单条订单（抖音/小红书/淘宝人工补录）。
-
-**Body：**
-```json
-{
-  "platform": "DOUYIN",
-  "externalOrderId": "DY20260416001",
-  "skuCode": "STD-55-12F-WD-NA",
-  "receiverName": "李四",
-  "receiverPhone": "13900139000",
-  "receiverAddress": "上海市浦东新区某路某号",
-  "receiverCity": "上海市",
-  "frameUrls": [],
-  "ossPath": ""
-}
-```
-
----
-
-### GET `/api/admin/import/pending`
-查看异常订单列表（分页）。
-
-**Query：** `?type=pending_sku&page=1&limit=20`
-type 可选：`pending_info` / `pending_sku` / 不传=全部异常
-
----
-
-### PUT `/api/admin/import/:orderId/resolve`
-人工补全异常订单（补收件信息 或 指定SKU映射）。
-
-**Body（补收件信息）：**
-```json
-{
-  "receiverName": "王五",
-  "receiverPhone": "13700137000",
-  "receiverAddress": "广州市天河区某路某号",
-  "receiverCity": "广州市"
-}
-```
-
-**Body（指定SKU + 可选保存映射）：**
-```json
-{
-  "skuCode": "STD-55-12F-WD-NA",
-  "saveMapping": true
-}
-```
-`saveMapping=true` 时自动将外部描述写入 `platform_sku_mappings`。
-
----
-
-## 平台SKU映射管理
-
-所有后台接口先验证有效设备会话，再按固定员工岗位检查区域权限。旧路由中的 `role≥2` 只承担兼容作用。
-
-### GET `/api/admin/sku-mapping`
-列表（支持 platform/q 过滤，补充 skuDetails + collabWork 信息）。
-
-**Query：** `?platform=TB&q=木质`
-
----
-
-### POST `/api/admin/sku-mapping`
-新建映射。
-
-**Body：**
-```json
-{
-  "platform": "TB",
-  "externalDesc": "55mm 12帧 木质 原色",
-  "internalSkuCode": "STD-55-12F-WD-NA",
-  "collabWorkId": null
-}
-```
-
----
-
-### PUT `/api/admin/sku-mapping/:id`
-更新映射（`collabWorkId=""` 可清除联名绑定）。
-
----
-
-### DELETE `/api/admin/sku-mapping/:id`
-删除映射。
-
----
-
-### GET `/api/admin/sku-mapping/resolve`
-根据外部描述查询内部SKU（供导入流程使用）。
-
-**Query：** `?platform=TB&desc=55mm 12帧 木质 原色`
+当前 `/api/admin/import/*` 与 `/api/admin/sku-mapping/*` 由 `EXTERNAL_ORDER_IMPORT_ENABLED=false` 在服务端统一返回 `404 FEATURE_NOT_AVAILABLE`。配置校验拒绝把该开关设为 `true`，不能通过环境变量恢复旧实现。历史外部订单、SKU 映射和渠道数据没有删除；取得真实脱敏样表并确认字段、履约和库存契约后，应按新契约重新实现接口。
 
 ---
 

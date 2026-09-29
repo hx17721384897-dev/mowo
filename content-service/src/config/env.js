@@ -131,6 +131,12 @@ export function loadConfig(env = process.env) {
     'MOCK_PAYMENT_ENABLED',
     errors
   )
+  const externalOrderImportEnabled = parseBoolean(
+    env.EXTERNAL_ORDER_IMPORT_ENABLED,
+    false,
+    'EXTERNAL_ORDER_IMPORT_ENABLED',
+    errors
+  )
   if (mockPaymentEnabled && !onlineCheckoutEnabled) {
     errors.push('MOCK_PAYMENT_ENABLED requires ONLINE_CHECKOUT_ENABLED=true')
   }
@@ -141,6 +147,11 @@ export function loadConfig(env = process.env) {
   }
   if (mockPaymentEnabled && isProduction) {
     errors.push('MOCK_PAYMENT_ENABLED must be false in production')
+  }
+  if (externalOrderImportEnabled) {
+    errors.push(
+      'EXTERNAL_ORDER_IMPORT_ENABLED must remain false until a real platform sample and the SalesOrder mapping are approved'
+    )
   }
   if (mockPaymentEnabled && !/\/mowo_b1_test(?:\?|$)/.test(databaseUrl)) {
     errors.push('MOCK_PAYMENT_ENABLED requires the isolated mowo_b1_test database')
@@ -261,7 +272,8 @@ export function loadConfig(env = process.env) {
     features: Object.freeze({
       onlineCheckout: onlineCheckoutEnabled,
       mockPayment: mockPaymentEnabled,
-      passwordLogin: passwordLoginEnabled
+      passwordLogin: passwordLoginEnabled,
+      externalOrderImport: externalOrderImportEnabled
     }),
     rateLimits: Object.freeze({
       smsPhoneDaily: 10,

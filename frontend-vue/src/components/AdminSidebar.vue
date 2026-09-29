@@ -126,7 +126,7 @@ const groups: MenuGroup[] = [
         ]
       },
       { label: '打印与裁切设置', icon: '↕', file: 'admin-print-production.html', roles: ['OWNER'] },
-      { label: '定制导入', icon: '📥', file: 'admin-import.html', roles: ownerProduction }
+      { label: '外部订单导入', icon: '📥', to: '/admin/import', roles: ownerProduction }
     ]
   },
   {
@@ -203,7 +203,7 @@ const groups: MenuGroup[] = [
 const session = useSessionStore()
 const route = useRoute()
 const activeGroup = computed(() => {
-  if (route.path === '/admin/orders') return 'production'
+  if (route.path === '/admin/orders' || route.path === '/admin/import') return 'production'
   if (
     route.path === '/admin/frame-library' ||
     route.path.startsWith('/admin/frame-making') ||

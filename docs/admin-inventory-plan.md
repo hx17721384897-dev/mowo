@@ -33,7 +33,7 @@ admin-inventory.html
 │   ├── 总锁定量（reservedStock 含"待支付锁定"+"已支付待生产锁定"）
 │   └── 在制：帧图(wipFrameQty) / 材料包(wipKitQty)  ← 两行小字区分
 │
-├── 外部订单导入快捷横幅（导航至 admin-import.html）
+├── 外部订单导入快捷横幅（V4-E3 后导航至 Vue `/app/admin/import` 待配置入口）
 │
 └── 主 Tab（4个）
     ├── 📦 SKU 库存列表
@@ -152,7 +152,7 @@ SUM(taobaoQty + douyinQty + xhsQty) > available - bufferPool
 
 ### 渠道配额与订单来源
 
-- 订单导入（admin-import.html）时写入 `sourceType='taobao'`
+- 历史方案曾计划由 `admin-import.html` 写入 `sourceType='taobao'`；V4-E3 已删除该实现，未来按真实平台样表和正式订单结构重做
 - 渠道配额面板显示：配置配额 vs 来自该渠道的活跃订单数（查 customize_orders）
 - 本期：只做配额展示与编辑，不做实时同步（后期迭代）
 
@@ -284,5 +284,5 @@ fastify.register(materials, { prefix: '/api/materials' })
 
 - 渠道配额与订单来源实时同步
 - SKU 详情抽屉内关联物料看板（后期迭代，绑定数据库已建好）
-- admin-import.html 修改
+- 外部订单导入已改为 Vue 待配置入口；旧 `admin-import.html` 不再修改或恢复
 - production-inventory.html

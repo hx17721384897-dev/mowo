@@ -16,8 +16,6 @@ import adminRoutes from './routes/admin.js'
 import collabRoutes from './routes/collab.js'
 import adminCollabRoutes from './routes/admin-collab.js'
 import inventoryRoutes from './routes/inventory.js'
-import importRoutes     from './routes/import.js'
-import platformSkuRoutes from './routes/platform-sku.js'
 import multipart from '@fastify/multipart'
 import contactRoutes      from './routes/contact.js'
 import adminContactRoutes from './routes/admin-contact.js'
@@ -189,8 +187,6 @@ async function start() {
     await fastify.register(collabRoutes,         { prefix: '/api' })
     await fastify.register(adminCollabRoutes,    { prefix: '/api' })
     await fastify.register(inventoryRoutes,      { prefix: '/api/inventory' })
-    await fastify.register(importRoutes,         { prefix: '/api/admin/import' })
-    await fastify.register(platformSkuRoutes,    { prefix: '/api/admin/sku-mapping' })
 
     fastify.get('/', async () => ({
       success: true, message: '哞屋 MOWO API 服务运行中 🐄'

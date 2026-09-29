@@ -1,0 +1,195 @@
+.admin-external-import-page {
+  --white: #fff;
+  --cream: #f5f3ef;
+  --black: #111110;
+  --gray1: #ebebea;
+  --gray3: #787874;
+  --yellow: #f5e642;
+  min-height: 100vh;
+  background: var(--cream);
+  color: var(--black);
+  font-family: 'Nunito', 'Noto Sans SC', sans-serif;
+}
+.admin-external-import-page *,
+.admin-external-import-page *::before,
+.admin-external-import-page *::after {
+  box-sizing: border-box;
+}
+.admin-external-import-page .main {
+  min-height: 100vh;
+  margin-left: 220px;
+  transition: margin-left 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.admin-external-import-page .main.expanded {
+  margin-left: 60px;
+}
+.admin-external-import-page .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  height: 60px;
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(245, 243, 239, 0.92);
+  border-bottom: 1px solid var(--gray1);
+  backdrop-filter: blur(12px);
+}
+.admin-external-import-page .topbar-title {
+  font-size: 18px;
+  font-weight: 900;
+}
+.admin-external-import-page .status-chip {
+  margin-left: auto;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #fff8d7;
+  color: #7a6500;
+  font-size: 11px;
+  font-weight: 900;
+}
+.admin-external-import-page .menu-btn {
+  display: none;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--gray1);
+  font: inherit;
+  cursor: pointer;
+}
+.admin-external-import-page .content {
+  max-width: 1080px;
+  padding: 40px 32px;
+}
+.admin-external-import-page .intro-card,
+.admin-external-import-page .retained-card,
+.admin-external-import-page .boundary-card {
+  background: var(--white);
+  border: 1px solid var(--gray1);
+  border-radius: 18px;
+}
+.admin-external-import-page .intro-card {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 22px;
+  padding: 30px;
+}
+.admin-external-import-page .intro-icon {
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background: var(--yellow);
+  font-size: 32px;
+}
+.admin-external-import-page .eyebrow {
+  margin: 0 0 8px;
+  color: var(--gray3);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+.admin-external-import-page h1,
+.admin-external-import-page h2,
+.admin-external-import-page p {
+  margin: 0;
+}
+.admin-external-import-page h1 {
+  font-size: 26px;
+  line-height: 1.25;
+}
+.admin-external-import-page .intro-copy {
+  max-width: 720px;
+  margin-top: 12px;
+  color: var(--gray3);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.8;
+}
+.admin-external-import-page .boundary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+.admin-external-import-page .boundary-card {
+  padding: 22px;
+}
+.admin-external-import-page .step {
+  display: inline-flex;
+  margin-bottom: 18px;
+  color: var(--gray3);
+  font-size: 12px;
+  font-weight: 900;
+}
+.admin-external-import-page .boundary-card h2,
+.admin-external-import-page .retained-card h2 {
+  font-size: 15px;
+  font-weight: 900;
+}
+.admin-external-import-page .boundary-card p,
+.admin-external-import-page .retained-card p {
+  margin-top: 8px;
+  color: var(--gray3);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.7;
+}
+.admin-external-import-page .retained-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: 18px;
+  padding: 22px 24px;
+}
+.admin-external-import-page .retained-state {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--gray3);
+  font-size: 12px;
+  font-weight: 900;
+}
+.admin-external-import-page .state-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d9a800;
+}
+@media (max-width: 1023px) {
+  .admin-external-import-page .main,
+  .admin-external-import-page .main.expanded {
+    margin-left: 0;
+  }
+  .admin-external-import-page .menu-btn {
+    display: grid;
+    place-items: center;
+  }
+}
+@media (max-width: 720px) {
+  .admin-external-import-page .topbar {
+    padding: 0 16px;
+  }
+  .admin-external-import-page .content {
+    padding: 24px 16px;
+  }
+  .admin-external-import-page .intro-card {
+    grid-template-columns: 1fr;
+    padding: 22px;
+  }
+  .admin-external-import-page h1 {
+    font-size: 22px;
+  }
+  .admin-external-import-page .boundary-grid {
+    grid-template-columns: 1fr;
+  }
+  .admin-external-import-page .retained-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

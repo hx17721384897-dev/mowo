@@ -57,6 +57,7 @@ const requiredRedirects = [
   ['admin-frame-imports.html', '/app/admin/frame-imports'],
   ['admin-customization-requests.html', '/app/admin/customization-requests'],
   ['admin-orders.html', '/app/admin/orders'],
+  ['admin-import.html', '/app/admin/import'],
   ['admin-collab-works.html', '/app/admin/collab-works'],
   ['admin-collab-product-edit.html', '/app/admin/collab-product/$arg_id']
 ]
@@ -99,6 +100,7 @@ for (const retired of [
   'admin-frame-imports.html',
   'admin-customization-requests.html',
   'admin-orders.html',
+  'admin-import.html',
   'admin-collab-works.html',
   'admin-collab-product-edit.html',
   'admin-collab.html',

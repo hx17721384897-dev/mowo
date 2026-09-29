@@ -88,6 +88,7 @@ try {
     })
     assert(await page.locator('a[href="http://127.0.0.1:4173/app/admin/contact"]').count() === 1, '客服菜单显示 Vue 联络处理入口')
     assert(await page.locator('a[href*="/app/admin/orders"]').count() === 0, '客服菜单不显示无权访问的生产订单')
+    assert(await page.locator('a[href*="/app/admin/import"]').count() === 0, '客服菜单不显示外部订单导入入口')
     assert(await page.locator('a[href="admin-logs.html"]').count() === 0, '客服菜单不显示负责人审计日志')
     await context.close()
   }
@@ -106,6 +107,7 @@ try {
     await page.waitForURL(url => url.pathname.endsWith('/app/admin/orders'))
     await page.getByRole('heading', { name: '订单总览' }).waitFor()
     assert(await page.locator('.admin-sidebar').getByText('生产批次', { exact: true }).count() === 1, '生产岗位菜单显示生产批次')
+    assert(await page.locator('.admin-sidebar').getByText('外部订单导入', { exact: true }).count() === 1, '生产岗位菜单显示外部订单导入保留入口')
     assert(await page.getByRole('link', { name: '用户管理' }).count() === 0, '生产岗位菜单不显示用户管理')
     await context.close()
   }

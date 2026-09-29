@@ -39,7 +39,7 @@
 | 通知 | 人工筛帧处理、付款、订单、发货、售后和账号安全 | `modules/content-users-contact.md`、`modules/mini-program.md` |
 | 合作创作者 | 员工可人工标记合作/优惠资格；初期合同与分红线下处理 | `modules/collab-creator-revenue.md` |
 | 内部合作台账 | 放在现有管理后台，仅供授权员工记录线下约定、销售/应付依据和付款凭证 | `modules/collab-creator-revenue.md` |
-| 外部订单导入 | 淘宝 CSV、抖音/小红书手工录入、SKU 映射、异常补全和渠道配额仅供授权内部岗位使用 | `V0_FEATURE_MATRIX.md`、`routes/import.js`、`routes/platform-sku.js` |
+| 外部订单导入 | 首版只保留内部入口，写入关闭；取得真实样表并确认正式订单映射后重新实现 | `V0_FEATURE_MATRIX.md`、`V4_ADMIN_MIGRATION.md` |
 | 账号注销 | 10 分钟防误操作保护期、责任结清、限制新增业务、期满删除或匿名化、异常自动重试与后台关注 | `ACCOUNT_DELETION_POLICY.md` |
 
 ## 首发关闭或不作承诺

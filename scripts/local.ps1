@@ -121,6 +121,7 @@ try {
 
 $env:ONLINE_CHECKOUT_ENABLED = if ($EnableMockPayment) { 'true' } else { 'false' }
 $env:MOCK_PAYMENT_ENABLED = if ($EnableMockPayment) { 'true' } else { 'false' }
+$env:EXTERNAL_ORDER_IMPORT_ENABLED = 'false'
 $mode = if ($EnableMockPayment) { 'isolated-mock-payment' } else { 'closed-checkout' }
 Set-Content -LiteralPath $ModeFile -Value $mode -Encoding Ascii
 

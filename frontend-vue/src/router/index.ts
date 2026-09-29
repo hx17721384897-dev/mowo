@@ -246,6 +246,12 @@ const router = createRouter({
           meta: { title: '订单生产 — 哞屋后台', staffRoles: ['OWNER', 'PRODUCTION'] }
         },
         {
+          path: 'import',
+          name: 'admin-external-order-import',
+          component: () => import('@/views/AdminExternalOrderImportView.vue'),
+          meta: { title: '外部平台订单导入 — 哞屋后台', staffRoles: ['OWNER', 'PRODUCTION'] }
+        },
+        {
           path: 'customization-requests',
           name: 'admin-customization-requests',
           component: () => import('@/views/AdminCustomizationRequestsView.vue'),

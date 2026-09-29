@@ -110,7 +110,7 @@
 | 页面 | 当前职责 | 权限/状态 | 说明 |
 |---|---|---|---|
 | Vue `/app/admin/orders` | 正式订单八阶段、地址/生产资料导出、面单与返工 | `OWNER`/`PRODUCTION`，已接正式 API | V4-E2 正式接管；旧 HTML 已删除，重印具备服务端幂等键 |
-| `admin-import.html` | 淘宝/手工导入、待映射和映射管理 | role >= 2，已接 API | 失败跳转 `../index.html` 错层级 |
+| Vue `/app/admin/import` | 外部平台订单导入保留入口 | `OWNER`/`PRODUCTION`；写入由服务端关闭 | V4-E3 不假设表格模板，旧 HTML 与旧 API 已删除 |
 | `admin-models.html` | 款式/SKU/价格/图片/排序 | role >= 2，已接 API | 页面内维护选项写 localStorage，未形成后端主数据 |
 | `admin-inventory.html` | SKU、材料、帧包、渠道配额 | role >= 2，已接 API | 单页超过 2000 行；多个库存域集中在一页 |
 | `admin-collab-works.html` | 联名作品运营 | 已由 Vue 接管并物理删除 | 旧地址临时 302 到 `/app/admin/collab-works` |

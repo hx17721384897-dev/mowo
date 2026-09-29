@@ -5,7 +5,11 @@ const activeGates = [
   ['/api/cart/checkout', 'onlineCheckout'],
   ['/api/payment/callback', 'onlineCheckout'],
   ['/api/payment/status/preorder-id', 'onlineCheckout'],
-  ['/api/payment/mock-pay/preorder-id', 'onlineCheckout']
+  ['/api/payment/mock-pay/preorder-id', 'onlineCheckout'],
+  ['/api/admin/import/taobao', 'externalOrderImport'],
+  ['/api/admin/import/manual', 'externalOrderImport'],
+  ['/api/admin/import/pending', 'externalOrderImport'],
+  ['/api/admin/sku-mapping', 'externalOrderImport']
 ]
 
 for (const [path, expected] of activeGates) {
@@ -16,9 +20,7 @@ for (const [path, expected] of activeGates) {
 
 const openPaths = [
   '/api/collab/works',
-  '/api/cart',
-  '/api/admin/import/pending',
-  '/api/admin/sku-mapping'
+  '/api/cart'
 ]
 for (const path of openPaths) {
   if (requiredFeatureForRequest(path) !== null) throw new Error(`${path}: unexpectedly feature-gated`)
@@ -26,7 +28,12 @@ for (const path of openPaths) {
 }
 
 const flags = publicFeatureFlags({
-  features: { onlineCheckout: false, mockPayment: false, passwordLogin: false }
+  features: {
+    onlineCheckout: false,
+    mockPayment: false,
+    passwordLogin: false,
+    externalOrderImport: false
+  }
 })
 if (flags.mockPayment !== false) throw new Error('mockPayment: expected a closed public test flag')
 for (const retired of ['community', 'creatorFinance', 'bullSystem', 'mockCertification']) {
@@ -40,7 +47,8 @@ const baseEnv = {
   COOKIE_SECRET: 'test-cookie-secret',
   SMS_MOCK: 'true',
   ONLINE_CHECKOUT_ENABLED: 'true',
-  MOCK_PAYMENT_ENABLED: 'true'
+  MOCK_PAYMENT_ENABLED: 'true',
+  EXTERNAL_ORDER_IMPORT_ENABLED: 'false'
 }
 const mockConfig = loadConfig(baseEnv)
 if (!mockConfig.features.mockPayment) throw new Error('isolated test database should allow explicit mock payment mode')
@@ -69,5 +77,16 @@ try {
   }
 }
 console.log('PASS production cannot enable online checkout before verified payment callbacks exist')
+
+try {
+  loadConfig({ ...baseEnv, EXTERNAL_ORDER_IMPORT_ENABLED: 'true' })
+  throw new Error('external order import was enabled before its contract was approved')
+} catch (error) {
+  if (String(error?.message).includes('was enabled')) throw error
+  if (!String(error?.message).includes('EXTERNAL_ORDER_IMPORT_ENABLED must remain false')) {
+    throw new Error('external import rejection did not report the missing contract boundary')
+  }
+}
+console.log('PASS external order import cannot be enabled before its contract is approved')
 
 console.log(`Active feature mapping passed for ${activeGates.length} gated paths and ${openPaths.length} retained paths`)
