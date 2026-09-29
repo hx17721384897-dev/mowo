@@ -126,8 +126,7 @@ try {
     'check:production-scan-ui',
     'check:collab-storefront',
     'check:collab-sale-config',
-    'check:collab-frame-pack-mutation',
-    'check:collab-product-ui'
+    'check:collab-frame-pack-mutation'
   )
 } finally {
   Pop-Location -ErrorAction SilentlyContinue

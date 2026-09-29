@@ -127,11 +127,39 @@ test('retired review, contract and policy pages have no Vue or legacy entry', as
   }
 })
 
+test('legacy collab operations URLs hand off to the single Vue implementation', async ({
+  request
+}) => {
+  const works = await request.get(
+    'http://127.0.0.1:5500/mowo/frontend/pages/admin-collab-works.html?source=legacy',
+    { maxRedirects: 0 }
+  )
+  expect(works.status()).toBe(302)
+  expect(works.headers().location).toBe(
+    'http://127.0.0.1:4173/app/admin/collab-works?source=legacy'
+  )
+
+  const product = await request.get(
+    'http://127.0.0.1:5500/mowo/frontend/pages/admin-collab-product-edit.html?id=work-1&source=legacy',
+    { maxRedirects: 0 }
+  )
+  expect(product.status()).toBe(302)
+  expect(product.headers().location).toBe(
+    'http://127.0.0.1:4173/app/admin/collab-product/work-1?source=legacy'
+  )
+
+  const missingId = await request.get(
+    'http://127.0.0.1:5500/mowo/frontend/pages/admin-collab-product-edit.html',
+    { maxRedirects: 0 }
+  )
+  expect(missingId.status()).toBe(302)
+  expect(missingId.headers().location).toBe('http://127.0.0.1:4173/app/admin/collab-works')
+})
+
 test('product candidate validates, edits SKU and saves without drafts', async ({ page }) => {
   await staff(page)
   const workspace = {
     productNo: null,
-    reviewStatus: 'approved',
     shelfStatus: 'off_shelf',
     isOnShelf: false,
     sourceTitle: '原作品',

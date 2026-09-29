@@ -33,6 +33,8 @@ const probes = [
   '/api/admin/collab/retired-work/approve',
   '/api/admin/collab/retired-work/regen-gif',
   '/api/admin/collab/retired-work/shelf',
+  '/api/admin/collab/retired-work/frame-packs/S',
+  '/api/admin/collab/retired-work/frame-packs/S/restock',
   '/api/admin/collab/policy',
   '/api/admin/contracts',
   '/api/certify/status'

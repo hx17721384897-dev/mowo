@@ -61,7 +61,7 @@
     {
       key: 'collab', label: '联名', icon: '🤝',
       items: [
-        { href: 'admin-collab-works.html',      icon: '🎨', label: '联名作品' }
+        { href: `${window.MOWO_APP_BASE || '/app'}/admin/collab-works`, icon: '🎨', label: '联名作品' }
       ]
     },
     {

@@ -48,14 +48,15 @@
 | Vue `/app/customize/confirm` | 选配、确认定制、幂等加购并进入结算 | ✅ 已接管三类正式入口；旧 HTML 已删除，旧 URL 临时 302 |
 | Vue `/app/account/customizations` | 我的定制、状态筛选和时间线 | ✅ V2-C1 已接管，旧页已删除 |
 
-定制编辑器保留原有设计器，并在第一屏增加“自己筛选”和“工作人员筛选”两个入口。登录用户进入确认页前，选中帧上传为私有帧图，原视频/原图上传为私有源素材；自己筛选先保存无编号草稿，提交订单时才生成定制编号。私人定制确认页按标准 SKU 价格直接进入购物车与结算，不做人工内容审核；联名公开上架另走独立审核。完整流程见 `modules/web-customization.md`。
+定制编辑器保留原有设计器，并在第一屏增加“自己筛选”和“工作人员筛选”两个入口。登录用户进入确认页前，选中帧上传为私有帧图，原视频/原图上传为私有源素材；自己筛选先保存无编号草稿，提交订单时才生成定制编号。私人定制确认页按标准 SKU 价格直接进入购物车与结算，不做人工内容审核；联名公开上架要求先在线下完成合作与授权确认，再由员工配置商品。完整流程见 `modules/web-customization.md`。
 
 ### 管理后台（内部使用）
 
 | 文件名 | 页面 | 权限 | 状态 |
 |--------|------|------|------|
 | `admin-orders.html` | 定制订单四视图 | 运营客服/负责人 | ✅ |
-| `admin-collab-works.html` | 联名作品管理 | 合作运营/负责人 | ✅ |
+| Vue `/app/admin/collab-works` | 联名作品管理 | 合作运营/负责人 | ✅ V4-C 正式接管，旧 HTML 已删除 |
+| Vue `/app/admin/collab-product/:id` | 联名商品编辑 | 合作运营/负责人 | ✅ V4-C 正式接管，旧 HTML 已删除 |
 | `admin-collab.html` | 联名作品审核 | — | ❌ 已退役并物理删除 |
 | `admin-collab-activities.html` | 活动管理 | 合作运营/负责人 | ✅ |
 | `admin-users.html` | 用户与员工岗位管理 | 运营客服只读普通用户并可封禁；负责人管理岗位 | ✅ 已更新 |
@@ -252,7 +253,7 @@ admin-users.html 支持：
   └── 库存管理 → admin-inventory.html
 
 联名系统
-  └── 联名作品 → admin-collab-works.html（后续切换到 /app/admin/collab-works）
+  └── 联名作品 → /app/admin/collab-works
 
 运营
   └── 联络留言 → /app/admin/contact

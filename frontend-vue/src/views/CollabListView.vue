@@ -244,7 +244,7 @@ onBeforeUnmount(() => {
     <header ref="pageHeader" class="page-header">
       <div class="ph-inner">
         <h1 class="ph-title">联名作品 <span class="ph-spark">✦</span></h1>
-        <p class="ph-sub">浏览经过审核并已开放展示的联名作品</p>
+        <p class="ph-sub">浏览已完成合作确认并开放展示的联名作品</p>
       </div>
     </header>
 

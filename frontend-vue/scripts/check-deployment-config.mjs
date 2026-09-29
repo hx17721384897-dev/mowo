@@ -54,7 +54,9 @@ const requiredRedirects = [
   ['admin-models.html', '/app/admin/models'],
   ['admin-frame-library.html', '/app/admin/frame-library'],
   ['admin-frame-making.html', '/app/admin/frame-making'],
-  ['admin-frame-imports.html', '/app/admin/frame-imports']
+  ['admin-frame-imports.html', '/app/admin/frame-imports'],
+  ['admin-collab-works.html', '/app/admin/collab-works'],
+  ['admin-collab-product-edit.html', '/app/admin/collab-product/$arg_id']
 ]
 for (const [legacy, target] of requiredRedirects) {
   if (!redirects.includes(legacy) || !redirects.includes(`302 ${target}`)) {
@@ -93,6 +95,8 @@ for (const retired of [
   'admin-frame-library.html',
   'admin-frame-making.html',
   'admin-frame-imports.html',
+  'admin-collab-works.html',
+  'admin-collab-product-edit.html',
   'admin-collab.html',
   'admin-contract.html',
   'admin-collab-policy.html'

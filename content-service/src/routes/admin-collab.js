@@ -665,59 +665,6 @@ export default async function adminCollabRoutes(fastify) {
     }
   })
 
-  /**
-   * PUT /api/admin/collab/:id/frame-packs/:size
-   * 更新某个尺寸的帧素材包设置（不存在则创建）
-   * Body: { stockType: 'on_demand'|'stocked', currentStock?, ossPath? }
-   */
-  fastify.put('/admin/collab/:id/frame-packs/:size', { preHandler: requireAdmin }, async (req, reply) => {
-    const { id }  = req.params
-    const size    = decodeURIComponent(req.params.size)
-    const { stockType, currentStock, ossPath } = req.body
-
-    if (stockType && !['on_demand', 'stocked'].includes(stockType))
-      return reply.code(400).send({ success: false, message: "stockType 必须是 'on_demand' 或 'stocked'" })
-
-    const data = {}
-    if (stockType    !== undefined) data.stockType    = stockType
-    if (currentStock !== undefined) data.currentStock = parseInt(currentStock)
-    if (ossPath      !== undefined) data.ossPath      = ossPath
-
-    const pack = await prisma.collabFramePack.upsert({
-      where:  { collabWorkId_size: { collabWorkId: id, size } },
-      create: { collabWorkId: id, size, ...data },
-      update: data,
-    })
-
-    return reply.send({ success: true, data: pack })
-  })
-
-  /**
-   * POST /api/admin/collab/:id/frame-packs/:size/restock
-   * 调整帧素材包库存数量
-   * Body: { quantity, note? }
-   */
-  fastify.post('/admin/collab/:id/frame-packs/:size/restock', { preHandler: requireAdmin }, async (req, reply) => {
-    const { id } = req.params
-    const size   = decodeURIComponent(req.params.size)
-    const { quantity, note } = req.body
-
-    if (!quantity || isNaN(quantity))
-      return reply.code(400).send({ success: false, message: 'quantity 必须是数字' })
-
-    const pack = await prisma.collabFramePack.findUnique({
-      where: { collabWorkId_size: { collabWorkId: id, size } },
-    })
-    if (!pack) return reply.code(404).send({ success: false, message: '该尺寸帧素材包不存在，请先创建' })
-
-    const updated = await prisma.collabFramePack.update({
-      where: { collabWorkId_size: { collabWorkId: id, size } },
-      data:  { currentStock: { increment: parseInt(quantity) } },
-    })
-
-    return reply.send({ success: true, message: `库存已调整 ${quantity > 0 ? '+' : ''}${quantity}`, data: updated })
-  })
-
   // ─────────────────────────────────────────────
   // 辅助
   // ─────────────────────────────────────────────

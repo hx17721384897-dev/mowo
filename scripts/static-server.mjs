@@ -24,7 +24,8 @@ const legacyVueRedirects = new Map([
   ['pages/admin-models.html', { pathname: `${appBase}/admin/models`, hash: '' }],
   ['pages/admin-frame-library.html', { pathname: `${appBase}/admin/frame-library`, hash: '' }],
   ['pages/admin-frame-making.html', { pathname: `${appBase}/admin/frame-making`, hash: '' }],
-  ['pages/admin-frame-imports.html', { pathname: `${appBase}/admin/frame-imports`, hash: '' }]
+  ['pages/admin-frame-imports.html', { pathname: `${appBase}/admin/frame-imports`, hash: '' }],
+  ['pages/admin-collab-works.html', { pathname: `${appBase}/admin/collab-works`, hash: '' }]
 ])
 
 const mime = {
@@ -50,6 +51,17 @@ createServer((request, response) => {
   }
 
   const relative = pathname.slice(mount.length).replace(/^\/+/, '') || 'pages/index.html'
+  if (relative === 'pages/admin-collab-product-edit.html') {
+    const workId = requestUrl.searchParams.get('id')?.trim()
+    const target = workId
+      ? `${appBase}/admin/collab-product/${encodeURIComponent(workId)}`
+      : `${appBase}/admin/collab-works`
+    const remaining = new URLSearchParams(requestUrl.searchParams)
+    remaining.delete('id')
+    const suffix = remaining.size ? `?${remaining.toString()}` : ''
+    response.writeHead(302, { Location: `${target}${suffix}`, 'Cache-Control': 'no-store' }).end()
+    return
+  }
   const redirect = legacyVueRedirects.get(relative)
   if (redirect) {
     response

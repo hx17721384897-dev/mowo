@@ -1,6 +1,7 @@
 # 联名商品货架整改方案
 
 > 历史方案说明（2026-09-15）：本文记录 2026-09-07 旧静态页整改过程。V1b 已由 Vue `/app/showcase*` 接管并删除 `showcase*.html`、`showcase-detail.js` 及三项旧页面检查；现行实现、命令与验收证据以 `V1B_COLLAB_STOREFRONT_MIGRATION.md` 为准。
+> V4-C 更新（2026-09-29）：后台联名作品与商品编辑也已由 Vue 唯一接管，旧 `admin-collab-works.html`、`admin-collab-product-edit.html` 和 `check:collab-product-ui` 已删除。现行后台验收以 `V4_ADMIN_MIGRATION.md`、Vue 单元/E2E 与 `check:collab-product-workspace` 为准；下文旧文件名和旧命令只保留为实施历史。
 
 > 制定日期：2026-09-04。
 >
