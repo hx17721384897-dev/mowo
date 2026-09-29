@@ -1627,6 +1627,8 @@ model ProductionFramePack {
 // 单件帧素材包返工记录。每次返工都生成新 FP 尝试，旧码永久失效。
 model ProductionFrameReprint {
   id                    String   @id @default(uuid())
+  clientRequestId       String?  @unique @map("client_request_id") @db.VarChar(80)
+  requestFingerprint    String?  @map("request_fingerprint") @db.VarChar(64)
   productionUnitId      String   @map("production_unit_id")
   salesOrderId          String   @map("sales_order_id")
   batchId               String   @map("batch_id") @db.VarChar(40)

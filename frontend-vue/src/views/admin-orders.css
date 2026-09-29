@@ -1,0 +1,497 @@
+.admin-orders-page {
+  --white: #fff;
+  --cream: #f5f3ef;
+  --black: #111110;
+  --line: #e5e3de;
+  --muted: #77746e;
+  --yellow: #f5e642;
+  --blue: #e0f0f7;
+  min-height: 100vh;
+  background: var(--cream);
+  color: var(--black);
+  font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+}
+.admin-orders-page * {
+  box-sizing: border-box;
+}
+.admin-orders-page .main {
+  margin-left: 220px;
+  min-height: 100vh;
+  transition: margin-left 0.25s;
+}
+.admin-orders-page .main.expanded {
+  margin-left: 60px;
+}
+.admin-orders-page .topbar {
+  height: 60px;
+  padding: 0 30px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  background: rgba(245, 243, 239, 0.96);
+  z-index: 20;
+}
+.admin-orders-page .title {
+  font-size: 18px;
+  font-weight: 900;
+}
+.admin-orders-page .top-actions,
+.admin-orders-page .actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.admin-orders-page .content {
+  padding: 24px 30px 40px;
+  max-width: 1500px;
+  margin: auto;
+}
+.admin-orders-page .btn {
+  height: 36px;
+  padding: 0 13px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fff;
+  color: #111;
+  font-weight: 800;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+}
+.admin-orders-page .btn:hover {
+  border-color: #111;
+}
+.admin-orders-page .btn-black {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+}
+.admin-orders-page .btn-yellow {
+  background: var(--yellow);
+  border-color: var(--yellow);
+}
+.admin-orders-page .btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+.admin-orders-page .btn-sm {
+  height: 30px;
+  font-size: 12px;
+  padding: 0 10px;
+}
+.admin-orders-page .stats {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(105px, 1fr));
+  gap: 9px;
+  margin-bottom: 20px;
+}
+.admin-orders-page .stat {
+  font: inherit;
+  text-align: left;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 12px;
+  cursor: pointer;
+  min-height: 76px;
+}
+.admin-orders-page .stat.active {
+  border-color: #111;
+  box-shadow: inset 0 -3px #111;
+}
+.admin-orders-page .stat-label {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 800;
+}
+.admin-orders-page .stat-value {
+  display: block;
+  font-size: 24px;
+  font-weight: 900;
+  margin-top: 5px;
+}
+.admin-orders-page .page-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-end;
+  margin-bottom: 14px;
+}
+.admin-orders-page .page-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.admin-orders-page .page-title {
+  font-weight: 900;
+  font-size: 20px;
+  margin: 0;
+}
+.admin-orders-page .stage-help {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: #fff;
+  color: #5f5b54;
+  font-size: 12px;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: help;
+}
+.admin-orders-page .stage-help:hover,
+.admin-orders-page .stage-help:focus-visible {
+  border-color: #111;
+  color: #111;
+  outline: none;
+}
+.admin-orders-page .stage-help-card {
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 300px;
+  background: #111;
+  color: #fff;
+  border-radius: 7px;
+  padding: 12px 13px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.65;
+  text-align: left;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 40;
+}
+.admin-orders-page .stage-help-card::before {
+  content: '';
+  position: absolute;
+  left: -5px;
+  top: 50%;
+  transform: translateY(-50%) rotate(45deg);
+  width: 10px;
+  height: 10px;
+  background: #111;
+}
+.admin-orders-page .stage-help:hover .stage-help-card,
+.admin-orders-page .stage-help:focus-visible .stage-help-card {
+  visibility: visible;
+  opacity: 1;
+}
+.admin-orders-page .stage-help-title,
+.admin-orders-page .stage-help-text {
+  display: block;
+}
+.admin-orders-page .stage-help-title {
+  font-weight: 900;
+  margin-bottom: 4px;
+}
+.admin-orders-page .stage-help-text + .stage-help-text {
+  margin-top: 7px;
+  padding-top: 7px;
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+}
+.admin-orders-page .search {
+  height: 36px;
+  width: 250px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 0 12px;
+  font-weight: 700;
+  background: #fff;
+}
+.admin-orders-page .toast {
+  display: none;
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 400;
+  padding: 11px 18px;
+  background: #111;
+  color: #fff;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 800;
+}
+.admin-orders-page .toast.show {
+  display: block;
+}
+.admin-orders-page .batch {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.admin-orders-page .batch-head {
+  padding: 13px 16px;
+  background: #faf9f7;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+}
+.admin-orders-page .batch-no {
+  font-weight: 900;
+  font-size: 14px;
+}
+.admin-orders-page .batch-meta {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 700;
+  margin-top: 3px;
+}
+.admin-orders-page .order {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.admin-orders-page .order:last-child {
+  border-bottom: 0;
+}
+.admin-orders-page .order-head {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.2fr) minmax(180px, 1fr) 110px;
+  gap: 16px;
+  align-items: start;
+}
+.admin-orders-page .order-no {
+  font-size: 13px;
+  font-weight: 900;
+}
+.admin-orders-page .order-sub,
+.admin-orders-page .address {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 700;
+  margin-top: 4px;
+  line-height: 1.6;
+}
+.admin-orders-page .badge {
+  display: inline-flex;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--blue);
+  font-size: 11px;
+  font-weight: 900;
+  justify-self: end;
+}
+.admin-orders-page .units {
+  margin-top: 10px;
+  display: grid;
+  gap: 7px;
+}
+.admin-orders-page .unit {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.5fr) minmax(160px, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 9px 10px;
+  background: var(--cream);
+  border-radius: 6px;
+}
+.admin-orders-page .unit-no {
+  font-size: 12px;
+  font-weight: 900;
+}
+.admin-orders-page .unit-spec,
+.admin-orders-page .unit-state {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 700;
+  line-height: 1.5;
+}
+.admin-orders-page .fp-active {
+  color: #17547c;
+  font-weight: 900;
+}
+.admin-orders-page .fp-void {
+  color: #a33;
+  text-decoration: line-through;
+}
+.admin-orders-page .tracking-grid {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+}
+.admin-orders-page .tracking-grid input {
+  height: 35px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0 10px;
+  font-weight: 700;
+}
+.admin-orders-page .empty {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 52px 20px;
+  text-align: center;
+  color: var(--muted);
+  font-weight: 800;
+}
+.admin-orders-page .empty p {
+  margin: 0 0 14px;
+}
+.admin-orders-page .error-state {
+  color: #8b342f;
+}
+.admin-orders-page .overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 17, 16, 0.55);
+  z-index: 300;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.admin-orders-page .overlay.show {
+  display: flex;
+}
+.admin-orders-page .modal {
+  width: min(500px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow: auto;
+  background: #fff;
+  border-radius: 8px;
+  padding: 22px;
+}
+.admin-orders-page .modal h2 {
+  font-size: 18px;
+  margin: 0 0 5px;
+}
+.admin-orders-page .modal p {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 700;
+}
+.admin-orders-page .page-options {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 16px 0;
+}
+.admin-orders-page .page-option {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-weight: 800;
+}
+.admin-orders-page .field-label {
+  font-size: 12px;
+  font-weight: 900;
+}
+.admin-orders-page .reason {
+  width: 100%;
+  min-height: 90px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px;
+  resize: vertical;
+  font: inherit;
+}
+.admin-orders-page .modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+.admin-orders-page .menu-btn {
+  display: none;
+}
+.admin-orders-page .sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 190;
+  display: none;
+}
+.admin-orders-page .sidebar-backdrop.show {
+  display: block;
+}
+@media (max-width: 1100px) {
+  .admin-orders-page .stats {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  .admin-orders-page .order-head {
+    grid-template-columns: 1fr 1fr;
+  }
+  .admin-orders-page .badge {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .admin-orders-page .unit {
+    grid-template-columns: 1fr auto;
+  }
+  .admin-orders-page .unit-state {
+    grid-column: 1/-1;
+  }
+}
+@media (max-width: 800px) {
+  .admin-orders-page .main {
+    margin-left: 0 !important;
+  }
+  .admin-orders-page .content {
+    padding: 16px;
+  }
+  .admin-orders-page .topbar {
+    padding: 0 16px;
+  }
+  .admin-orders-page .menu-btn {
+    display: inline-flex;
+  }
+  .admin-orders-page .stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .admin-orders-page .page-head,
+  .admin-orders-page .order-head {
+    display: block;
+  }
+  .admin-orders-page .page-title-wrap {
+    margin-bottom: 12px;
+  }
+  .admin-orders-page .stage-help-card {
+    left: calc(100% + 10px);
+    right: auto;
+    top: 50%;
+    transform: translateY(-50%);
+    width: min(300px, calc(100vw - 96px));
+  }
+  .admin-orders-page .badge {
+    margin-top: 8px;
+  }
+  .admin-orders-page .unit {
+    display: block;
+  }
+  .admin-orders-page .unit .actions {
+    margin-top: 8px;
+  }
+  .admin-orders-page .tracking-grid {
+    grid-template-columns: 1fr;
+  }
+  .admin-orders-page .search {
+    width: 100%;
+    min-width: 0;
+  }
+  .admin-orders-page .topbar .btn:not(.menu-btn) {
+    font-size: 11px;
+    padding: 0 8px;
+  }
+}

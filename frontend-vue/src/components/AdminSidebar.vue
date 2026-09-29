@@ -34,49 +34,49 @@ const groups: MenuGroup[] = [
           {
             label: '订单总览',
             icon: '▦',
-            file: 'admin-orders.html?view=all',
+            to: '/admin/orders',
             roles: ownerProduction
           },
           {
             label: '已付款',
             icon: '○',
-            file: 'admin-orders.html?view=paid',
+            to: '/admin/orders?view=paid',
             roles: ownerProduction
           },
           {
             label: '待处理',
             icon: '↓',
-            file: 'admin-orders.html?view=pending',
+            to: '/admin/orders?view=pending',
             roles: ownerProduction
           },
           {
             label: '处理中',
             icon: '⌁',
-            file: 'admin-orders.html?view=locked',
+            to: '/admin/orders?view=locked',
             roles: ownerProduction
           },
           {
             label: '待生产',
             icon: '□',
-            file: 'admin-orders.html?view=processing',
+            to: '/admin/orders?view=processing',
             roles: ownerProduction
           },
           {
             label: '生产中',
             icon: '↻',
-            file: 'admin-orders.html?view=producing',
+            to: '/admin/orders?view=producing',
             roles: ownerProduction
           },
           {
             label: '待发货',
             icon: '✓',
-            file: 'admin-orders.html?view=ready',
+            to: '/admin/orders?view=ready',
             roles: ownerProduction
           },
           {
             label: '已发货',
             icon: '→',
-            file: 'admin-orders.html?view=shipped',
+            to: '/admin/orders?view=shipped',
             roles: ownerProduction
           }
         ]
@@ -203,6 +203,7 @@ const groups: MenuGroup[] = [
 const session = useSessionStore()
 const route = useRoute()
 const activeGroup = computed(() => {
+  if (route.path === '/admin/orders') return 'production'
   if (
     route.path === '/admin/frame-library' ||
     route.path.startsWith('/admin/frame-making') ||
@@ -230,7 +231,7 @@ const openGroups = ref<string[]>(activeGroup.value ? [activeGroup.value] : [])
 watch(activeGroup, (key) => {
   if (key && !openGroups.value.includes(key)) openGroups.value = [...openGroups.value, key]
 })
-const openNested = ref<string[]>([])
+const openNested = ref<string[]>(route.path === '/admin/orders' ? ['orders'] : [])
 const collapsed = defineModel<boolean>('collapsed', { default: false })
 const mobileOpen = defineModel<boolean>('mobileOpen', { default: false })
 const displayName = computed(
@@ -315,14 +316,21 @@ function toggleNested(key: string): void {
                 ><span class="nav-third-arrow">▾</span>
               </button>
               <div class="nav-third" :class="{ open: openNested.includes(item.key) }">
-                <a
-                  v-for="child in item.children"
-                  :key="child.file"
-                  class="nav-third-item"
-                  :href="legacyUrl(child.file!)"
-                  ><span class="nav-icon">{{ child.icon }}</span
-                  ><span class="nav-label">{{ child.label }}</span></a
-                >
+                <template v-for="child in item.children" :key="child.to || child.file">
+                  <RouterLink
+                    v-if="child.to"
+                    class="nav-third-item"
+                    :class="{ active: route.fullPath === child.to }"
+                    :to="child.to"
+                    @click="mobileOpen = false"
+                    ><span class="nav-icon">{{ child.icon }}</span
+                    ><span class="nav-label">{{ child.label }}</span></RouterLink
+                  >
+                  <a v-else class="nav-third-item" :href="legacyUrl(child.file!)"
+                    ><span class="nav-icon">{{ child.icon }}</span
+                    ><span class="nav-label">{{ child.label }}</span></a
+                  >
+                </template>
               </div>
             </div>
             <RouterLink

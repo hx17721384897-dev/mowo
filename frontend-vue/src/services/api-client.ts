@@ -156,6 +156,69 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   }
 }
 
+export async function apiBlobRequest(
+  path: string,
+  options: Omit<RequestOptions, 'body'> = {}
+): Promise<Blob> {
+  const url = endpoint(path)
+  const requestId = crypto.randomUUID()
+  const controller = new AbortController()
+  const timeout = window.setTimeout(
+    () => controller.abort(),
+    options.timeoutMs ?? DEFAULT_TIMEOUT_MS
+  )
+  const token = readAccessToken()
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      credentials: 'include',
+      signal: controller.signal,
+      headers: {
+        Accept: 'application/octet-stream, application/json',
+        'X-Request-Id': requestId,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...options.headers
+      }
+    })
+    if (response.ok) return response.blob()
+
+    const envelope = await parseEnvelope<unknown>(response, requestId)
+    if (
+      response.status === 401 &&
+      options.retryAuth !== false &&
+      REFRESHABLE_AUTH_CODES.has(envelope.code ?? '')
+    ) {
+      const refreshedToken = await refreshAccessToken()
+      if (refreshedToken) return apiBlobRequest(path, { ...options, retryAuth: false })
+      clearSession()
+    }
+    throw new ApiError(
+      envelope.message || '文件生成失败',
+      response.status,
+      envelope.code || 'REQUEST_FAILED',
+      requestId,
+      undefined,
+      envelope.data
+    )
+  } catch (cause) {
+    if (cause instanceof ApiError) throw cause
+    const code =
+      cause instanceof DOMException && cause.name === 'AbortError'
+        ? 'REQUEST_TIMEOUT'
+        : 'NETWORK_ERROR'
+    throw new ApiError(
+      code === 'REQUEST_TIMEOUT' ? '文件生成超时' : '网络连接失败',
+      0,
+      code,
+      requestId,
+      cause
+    )
+  } finally {
+    window.clearTimeout(timeout)
+  }
+}
+
 export function resetRefreshStateForTests(): void {
   refreshPromise = null
 }

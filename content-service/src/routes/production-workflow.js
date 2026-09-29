@@ -1,4 +1,5 @@
 import archiver from 'archiver'
+import crypto from 'node:crypto'
 import { generateProductionFile } from '../lib/production-artifacts.js'
 import { workbookBuffer } from '../lib/simple-xlsx.js'
 
@@ -585,8 +586,37 @@ export default async function productionWorkflowRoutes(fastify) {
   fastify.post('/units/:productionUnitId/reprint', { preHandler: requireAdmin }, async (req, reply) => {
     const productionUnitId = String(req.params.productionUnitId || '').trim()
     const reason = String(req.body?.reason || '').trim()
+    const clientRequestId = String(req.body?.clientRequestId || '').trim()
     const requestedPages = [...new Set((Array.isArray(req.body?.pages) ? req.body.pages : []).map(Number))].sort((a, b) => a - b)
     if (!reason) return reply.code(400).send({ success: false, message: '请填写返工原因' })
+    if (!clientRequestId || clientRequestId.length > 80) {
+      return reply.code(400).send({ success: false, message: '缺少有效的返工请求标识，请刷新后重试' })
+    }
+    const requestFingerprint = crypto.createHash('sha256')
+      .update(JSON.stringify({ productionUnitId, requestedPages, reason }))
+      .digest('hex')
+    const replayResponse = async row => {
+      if (!row) return null
+      if (row.productionUnitId !== productionUnitId || row.requestedBy !== req.user.userId || row.requestFingerprint !== requestFingerprint) {
+        return { conflict: true }
+      }
+      const file = await fastify.prisma.productionPrintFile.findUnique({ where: { id: row.productionPrintFileId } })
+      if (!file) return { unavailable: true }
+      return {
+        framePackCode: row.newFramePackCode, oldFramePackCode: row.oldFramePackCode,
+        pages: row.requestedPages, fileName: file.displayName,
+        downloadUrl: await fastify.storagePresignGet(file.objectKey, 900), reprintId: row.id
+      }
+    }
+    const existingReplay = await replayResponse(
+      await fastify.prisma.productionFrameReprint.findUnique({ where: { clientRequestId } })
+    )
+    if (existingReplay?.conflict) return reply.code(409).send({ success: false, message: '该返工请求标识已用于其他操作' })
+    if (existingReplay?.unavailable) return reply.code(409).send({ success: false, message: '返工记录对应的生产文件不存在' })
+    if (existingReplay) return reply.send({
+      success: true, message: `已生成 ${existingReplay.framePackCode}，旧码 ${existingReplay.oldFramePackCode} 已失效`,
+      data: existingReplay, idempotent: true
+    })
     const workflowUnit = await fastify.prisma.productionBatchUnit.findFirst({ where: { productionUnitId } })
     if (!workflowUnit) return reply.code(404).send({ success: false, message: '没有找到该生产件' })
     const totalPages = Number(workflowUnit.printPageCount || 0)
@@ -638,6 +668,7 @@ export default async function productionWorkflowRoutes(fastify) {
         requestedPages, createdBy: req.user.userId
       } })
       const reprint = await tx.productionFrameReprint.create({ data: {
+        clientRequestId, requestFingerprint,
         productionUnitId, salesOrderId: workflowUnit.salesOrderId, batchId: workflowUnit.batchId,
         oldFramePackId: activePack.id, oldFramePackCode: activePack.code,
         newFramePackId: newPack.id, newFramePackCode: newPack.code,
