@@ -1,5 +1,6 @@
 // 显式生产批次：完整总订单入批、生产前检查和批次详情。
 
+import crypto from 'node:crypto'
 import { createProductionBatchNo } from '../lib/sales-orders.js'
 import { buildPrintRuleMap, loadPrintCutConfig, snapshotPrintRule, snapshotUnconfiguredSku } from '../lib/print-production.js'
 import { generateProductionFile } from '../lib/production-artifacts.js'
@@ -12,6 +13,26 @@ const ORDER_INCLUDE = {
 }
 
 const ACTIVE_BATCH_STATUSES = ['READY', 'IN_PROGRESS', 'Open', 'Locked', 'Processing']
+
+function createRequestFingerprint(salesOrderIds, acknowledgeWarnings) {
+  return crypto.createHash('sha256').update(JSON.stringify({ salesOrderIds, acknowledgeWarnings })).digest('hex')
+}
+
+function idempotencyConflict(reply) {
+  return reply.code(409).send({
+    success: false,
+    code: 'IDEMPOTENCY_KEY_CONFLICT',
+    message: '本次请求标识已用于其他生产批次请求，请刷新后重试'
+  })
+}
+
+function sendReplayedBatch(reply, batch) {
+  return reply.send({
+    success: true,
+    message: '生产批次已创建',
+    data: { batchId: batch.id, warnings: batch.warningSnapshot || [], artifactErrors: [], reused: true }
+  })
+}
 
 function parseFrames(value) {
   try {
@@ -440,10 +461,23 @@ export default async function productionBatchRoutes(fastify) {
   })
 
   fastify.post('/', { preHandler: requireAdmin }, async (req, reply) => {
-    const salesOrderIds = [...new Set((Array.isArray(req.body?.salesOrderIds) ? req.body.salesOrderIds : []).filter(Boolean))]
+    const salesOrderIds = [...new Set((Array.isArray(req.body?.salesOrderIds) ? req.body.salesOrderIds : []).filter(Boolean))].sort()
     const acknowledgeWarnings = req.body?.acknowledgeWarnings === true
+    const clientRequestId = typeof req.body?.clientRequestId === 'string' ? req.body.clientRequestId.trim() : ''
     if (!salesOrderIds.length) return reply.code(400).send({ success: false, message: '请至少选择一个完整总订单' })
     if (salesOrderIds.length > 100) return reply.code(400).send({ success: false, message: '单批次最多选择 100 个总订单' })
+    if (!clientRequestId || clientRequestId.length > 80) {
+      return reply.code(400).send({ success: false, code: 'CLIENT_REQUEST_ID_REQUIRED', message: '缺少有效的本次请求标识，请刷新后重试' })
+    }
+
+    const requestFingerprint = createRequestFingerprint(salesOrderIds, acknowledgeWarnings)
+    const existingRequest = await fastify.prisma.productionBatch.findUnique({ where: { clientRequestId } })
+    if (existingRequest) {
+      if (existingRequest.operatorId !== req.user.userId || existingRequest.requestFingerprint !== requestFingerprint) {
+        return idempotencyConflict(reply)
+      }
+      return sendReplayedBatch(reply, existingRequest)
+    }
 
     const orders = await fastify.prisma.salesOrder.findMany({
       where: { id: { in: salesOrderIds } }, include: ORDER_INCLUDE
@@ -484,6 +518,8 @@ export default async function productionBatchRoutes(fastify) {
         await tx.productionBatch.create({ data: {
           id: batchId,
           operatorId: req.user.userId,
+          clientRequestId,
+          requestFingerprint,
           status: 'READY',
           warningSnapshot: batchWarnings,
           salesOrderCount: orders.length,
@@ -542,6 +578,13 @@ export default async function productionBatchRoutes(fastify) {
       if (['ACTIVE_BATCH_EXISTS', 'BATCH_RACE'].includes(error.code)) {
         return reply.code(409).send({ success: false, code: error.code, message: error.message })
       }
+      if (error.code === 'P2002') {
+        const existing = await fastify.prisma.productionBatch.findUnique({ where: { clientRequestId } })
+        if (existing && existing.operatorId === req.user.userId && existing.requestFingerprint === requestFingerprint) {
+          return sendReplayedBatch(reply, existing)
+        }
+        if (existing) return idempotencyConflict(reply)
+      }
       throw error
     }
 
@@ -583,7 +626,7 @@ export default async function productionBatchRoutes(fastify) {
     return reply.code(201).send({
       success: true,
       message: artifactErrors.length ? '生产批次已创建，部分打印文件生成失败，请在帧图资产库处理' : '生产批次已创建',
-      data: { batchId, warnings: batchWarnings, artifactErrors }
+      data: { batchId, warnings: batchWarnings, artifactErrors, reused: false }
     })
   })
 }

@@ -8,6 +8,7 @@ const apiBase = process.env.TEST_API_BASE || 'http://127.0.0.1:3001'
 const webBase = process.env.TEST_WEB_BASE || 'http://127.0.0.1:5500/mowo/frontend/pages'
 const appBase = process.env.TEST_APP_BASE || 'http://127.0.0.1:4173/app'
 const runId = String(Date.now()).slice(-8)
+const batchRequestId = `pb-check-${runId}`
 const testSize = `${runId.slice(-4)}x5cm`
 let adminId, customerId, modelId, skuId, salesOrderId, preOrderId, batchId, printGroupId, browser
 
@@ -145,12 +146,12 @@ try {
   assert(candidate.warnings.some(row => row.code === 'KIT_SHORTAGE'), '材料包不足只形成明确提醒')
 
   const warningResponse = await request('/api/admin/production-batches', token, {
-    method: 'POST', body: JSON.stringify({ salesOrderIds: [salesOrderId] })
+    method: 'POST', body: JSON.stringify({ salesOrderIds: [salesOrderId], clientRequestId: batchRequestId })
   })
   assert(warningResponse.status === 409 && (await warningResponse.json()).code === 'BATCH_WARNINGS_REQUIRE_ACK', '未确认材料缺口时不会直接创建批次')
 
   const createResponse = await request('/api/admin/production-batches', token, {
-    method: 'POST', body: JSON.stringify({ salesOrderIds: [salesOrderId], acknowledgeWarnings: true })
+    method: 'POST', body: JSON.stringify({ salesOrderIds: [salesOrderId], acknowledgeWarnings: true, clientRequestId: batchRequestId })
   })
   const created = await createResponse.json()
   assert(createResponse.status === 201 && /^PB-\d{8}-[A-Z2-9]{6}$/.test(created.data.batchId), '确认提醒后创建正式 PB 批次')
@@ -163,8 +164,19 @@ try {
   const claimed = await prisma.customizeOrder.findMany({ where: { id: { in: tasks.map(task => task.id) } } })
   assert(claimed.every(task => task.batchId === batchId && task.lockStatus === 'LOCKED'), '所有 PU 原子写入同一批次并锁定')
 
+  const replay = await request('/api/admin/production-batches', token, {
+    method: 'POST', body: JSON.stringify({ salesOrderIds: [salesOrderId], acknowledgeWarnings: true, clientRequestId: batchRequestId })
+  })
+  const replayed = await replay.json()
+  assert(replay.status === 200 && replayed.data.batchId === batchId && replayed.data.reused === true, '网络重试复用原生产批次而不重复创建')
+
+  const conflict = await request('/api/admin/production-batches', token, {
+    method: 'POST', body: JSON.stringify({ salesOrderIds: [salesOrderId], clientRequestId: batchRequestId })
+  })
+  assert(conflict.status === 409 && (await conflict.json()).code === 'IDEMPOTENCY_KEY_CONFLICT', '同一请求标识不能改写原始请求内容')
+
   const duplicate = await request('/api/admin/production-batches', token, {
-    method: 'POST', body: JSON.stringify({ salesOrderIds: [salesOrderId], acknowledgeWarnings: true })
+    method: 'POST', body: JSON.stringify({ salesOrderIds: [salesOrderId], acknowledgeWarnings: true, clientRequestId: `${batchRequestId}-duplicate` })
   })
   assert(duplicate.status === 409, '同一总订单不能重复进入活动批次')
   const detailResponse = await request(`/api/admin/production-batches/${batchId}`, token)

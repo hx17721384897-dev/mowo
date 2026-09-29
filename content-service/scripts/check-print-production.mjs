@@ -177,10 +177,11 @@ try {
   const dateResponse = await request(`/api/admin/production-batches/candidates?paidFrom=${date}&paidTo=${date}`, token)
   assert((await dateResponse.json()).data.some(row => row.id === salesOrderId), '候选订单按支付成功日期筛选')
 
-  const warningResponse = await request('/api/admin/production-batches', token, { method: 'POST', body: JSON.stringify({ salesOrderIds: [salesOrderId] }) })
+  const batchRequestId = `print-batch-${runId}`
+  const warningResponse = await request('/api/admin/production-batches', token, { method: 'POST', body: JSON.stringify({ salesOrderIds: [salesOrderId], clientRequestId: batchRequestId }) })
   const warningJson = await warningResponse.json()
   assert(warningResponse.status === 409 && warningJson.code === 'BATCH_WARNINGS_REQUIRE_ACK' && warningJson.data.some(row => row.code === 'PRINT_SKU_UNCONFIRMED'), '未配置 SKU 入批前必须人工确认预警')
-  const createResponse = await request('/api/admin/production-batches', token, { method: 'POST', body: JSON.stringify({ salesOrderIds: [salesOrderId], acknowledgeWarnings: true }) })
+  const createResponse = await request('/api/admin/production-batches', token, { method: 'POST', body: JSON.stringify({ salesOrderIds: [salesOrderId], acknowledgeWarnings: true, clientRequestId: batchRequestId }) })
   const created = await createResponse.json()
   assert(createResponse.status === 201, '确认风险后完整总订单可以创建生产批次')
   batchId = created.data.batchId

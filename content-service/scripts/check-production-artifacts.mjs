@@ -196,7 +196,8 @@ try {
   reprintTaskId = task.id
   reprintBatchId = `PB-20990101-${runId.slice(-6).toUpperCase()}`
   await prisma.productionBatch.create({ data: {
-    id: reprintBatchId, operatorId: userId, status: 'IN_PROGRESS', salesOrderCount: 1,
+    id: reprintBatchId, operatorId: userId, clientRequestId: `artifact-${runId}`,
+    requestFingerprint: '0'.repeat(64), status: 'IN_PROGRESS', salesOrderCount: 1,
     productionUnitCount: 1, skuCount: 1
   } })
   await prisma.productionBatchOrder.create({ data: {
@@ -215,7 +216,7 @@ try {
   } })
   const reprintResponse = await request(`/api/admin/production-workflow/units/${reprintTaskId}/reprint`, token, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pages: [2], reason: '自动测试：第2页裁切损坏' })
+    body: JSON.stringify({ pages: [2], reason: '自动测试：第2页裁切损坏', clientRequestId: `artifact-reprint-${runId}` })
   })
   const reprintPayload = await reprintResponse.json()
   assert(reprintResponse.status === 200 && reprintPayload.data.pages.length === 1, '真实返工接口接受只重印 24 帧文件第 2 页')

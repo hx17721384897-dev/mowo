@@ -88,8 +88,8 @@ try {
   fixtureIds.batchId = batchId
   fixtureIds.otherBatchId = otherBatchId
   await prisma.productionBatch.createMany({ data: [
-    { id: batchId, operatorId: userId, status: 'IN_PROGRESS', salesOrderCount: 1, productionUnitCount: 1, skuCount: 1 },
-    { id: otherBatchId, operatorId: userId, status: 'READY' }
+    { id: batchId, operatorId: userId, clientRequestId: `scan-main-${runId}`, requestFingerprint: '0'.repeat(64), status: 'IN_PROGRESS', salesOrderCount: 1, productionUnitCount: 1, skuCount: 1 },
+    { id: otherBatchId, operatorId: userId, clientRequestId: `scan-other-${runId}`, requestFingerprint: '0'.repeat(64), status: 'READY' }
   ] })
   await prisma.productionBatchOrder.create({ data: {
     batchId, salesOrderId: order.id, orderNoSnapshot: order.orderNo, status: 'PRODUCING'

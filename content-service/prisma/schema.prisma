@@ -711,6 +711,8 @@ model PlatformSkuMapping {
 model ProductionBatch {
   id                  String   @id // 例：20260414_143022
   operatorId          String   @map("operator_id")
+  clientRequestId     String   @unique @map("client_request_id") @db.VarChar(80)
+  requestFingerprint  String   @map("request_fingerprint") @db.VarChar(64)
   status              String   @default("READY") @db.VarChar(20)
   // READY / IN_PROGRESS / COMPLETED / ARCHIVED；旧值继续只读兼容
   maxCapacity         Int?     @map("max_capacity") // 迭代预留，初期 NULL 不限制
