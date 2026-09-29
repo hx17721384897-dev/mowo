@@ -113,10 +113,10 @@
 | Web | `frontend/pages/customize-editor.html` | 仅承载尚未迁移的后台筛帧和帧图制作模式；所有用户参数转交 Vue |
 | Web | Vue `/app/customize/confirm` | 选择标准 SKU、确认定制、幂等加购并进入结算；旧 HTML 已删除，旧 URL 临时 302 |
 | Web | Vue `/app/account/customizations` | 用户定制列表、状态筛选和时间线 |
-| Web | `frontend/pages/admin-customization-requests.html` | 员工接收列表、详情和素材查看 |
+| Web | Vue `/app/admin/customization-requests` | 员工接收列表、详情和素材查看；旧 HTML 已删除并临时 302 |
 | 公共脚本 | `frontend/js/private-upload.js` | 私有文件上传；支持原 File/Blob 与帧图 |
 | 公共脚本 | `frontend/js/customization-review-editor.js` | 后台筛帧、任务锁续期和后台帧图制作；用户确认分支已删除 |
-| 公共脚本 | `frontend/js/admin-customization-workbench.js` | 后台领取、岗位按钮、处理人和快速下一条 |
+| Vue 功能模块 | `frontend-vue/src/features/admin-customization-requests` | 后台列表、详情、领取与安全 DTO 边界 |
 | 公共脚本 | `frontend/js/auth.js` | 账号下拉菜单增加“我的定制” |
 | 后端 | `src/routes/customization-requests.js` | 用户草稿、提交、列表和详情 |
 | 后端 | `src/routes/admin-customization-requests.js` | 员工队列、统计、详情和临时素材地址 |

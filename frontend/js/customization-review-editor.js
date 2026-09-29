@@ -7,6 +7,7 @@
   if (!adminRequestId) return
 
   const API = window.MOWO_API_BASE || ''
+  const workbenchUrl = `${window.MOWO_APP_BASE || '/app'}/admin/customization-requests`
   const token = localStorage.getItem('mowo_token') || ''
   let task = null
   let pendingDraft = null
@@ -46,7 +47,7 @@
   function showFatal(message) {
     goState(S.UPLOAD)
     const upload = document.getElementById('stateUpload')
-    upload.innerHTML = `<div style="max-width:680px;margin:70px auto;padding:32px;background:#fff;border:1px solid #ddd;text-align:center"><h2 style="font-size:22px;margin-bottom:12px">无法打开筛帧任务</h2><p style="color:#777;font-weight:700;line-height:1.7">${escapeHtml(message)}</p><a href="admin-customization-requests.html" style="display:inline-flex;margin-top:22px;padding:12px 22px;background:#111;color:#fff;text-decoration:none;font-weight:900">返回列表</a></div>`
+    upload.innerHTML = `<div style="max-width:680px;margin:70px auto;padding:32px;background:#fff;border:1px solid #ddd;text-align:center"><h2 style="font-size:22px;margin-bottom:12px">无法打开筛帧任务</h2><p style="color:#777;font-weight:700;line-height:1.7">${escapeHtml(message)}</p><a href="${escapeHtml(workbenchUrl)}" style="display:inline-flex;margin-top:22px;padding:12px 22px;background:#111;color:#fff;text-decoration:none;font-weight:900">返回列表</a></div>`
   }
 
   function escapeHtml(value) {
@@ -229,7 +230,7 @@
       if (payload.next && result.next?.id) {
         location.replace(`customize-editor.html?adminRequestId=${encodeURIComponent(result.next.id)}&claimed=1`)
       } else {
-        location.href = `admin-customization-requests.html?submitted=${encodeURIComponent(task.requestNo)}`
+        location.href = `${workbenchUrl}?submitted=${encodeURIComponent(task.requestNo)}`
       }
     } catch (error) {
       alert(`提交失败：${error.message}`)
@@ -246,7 +247,7 @@
     if (!confirm('退回后，其他工作人员可以领取这条任务。确定退回吗？')) return
     try {
       await api(`/api/admin/customization-requests/${encodeURIComponent(adminRequestId)}/release`, { method: 'POST' })
-      location.href = 'admin-customization-requests.html'
+      location.href = workbenchUrl
     } catch (error) {
       alert(`退回失败：${error.message}`)
     }

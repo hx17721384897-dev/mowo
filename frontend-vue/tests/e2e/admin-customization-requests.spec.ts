@@ -169,28 +169,12 @@ test('collaboration staff cannot render the customization workbench', async ({ p
   expect(data.mutations).toHaveLength(0)
 })
 
-test('candidate keeps the legacy workbench geometry', async ({ page }) => {
+test('retired legacy workbench URL hands off to the single Vue implementation', async ({
+  page
+}) => {
   await mockWorkbench(page)
   const oldUrl = 'http://127.0.0.1:5500/mowo/frontend/pages/admin-customization-requests.html'
   await page.goto(oldUrl)
-  await expect(page.locator('.row').nth(1)).toBeVisible()
-  const selectors = ['.topbar', '.metrics', '.toolbar', '.table']
-  const oldBoxes = await Promise.all(
-    selectors.map((selector) => page.locator(selector).first().boundingBox())
-  )
-  await page.goto('/app/admin/customization-requests')
+  await expect(page).toHaveURL(/\/app\/admin\/customization-requests$/)
   await expect(page.locator('.request-row')).toBeVisible()
-  const newBoxes = await Promise.all(
-    selectors.map((selector) => page.locator(selector).first().boundingBox())
-  )
-  for (let index = 0; index < oldBoxes.length; index++) {
-    expect(oldBoxes[index]).not.toBeNull()
-    expect(newBoxes[index]).not.toBeNull()
-    for (const key of ['x', 'y', 'width', 'height'] as const) {
-      expect(
-        Math.abs(oldBoxes[index]![key] - newBoxes[index]![key]),
-        `${selectors[index]} ${key}: old=${oldBoxes[index]![key]} new=${newBoxes[index]![key]}`
-      ).toBeLessThanOrEqual(5)
-    }
-  }
 })

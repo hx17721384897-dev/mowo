@@ -26,7 +26,7 @@ for (const name of names) {
 
 for (const name of [
   'admin-sidebar.js',
-  'admin-customization-workbench.js', 'customization-review-editor.js',
+  'customization-review-editor.js',
   'private-upload.js', 'production-scan-common.js'
 ]) {
   const source = await fs.readFile(new URL(name, scriptsDir), 'utf8')

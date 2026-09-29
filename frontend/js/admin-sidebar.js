@@ -55,7 +55,7 @@
     {
       key: 'customization', label: '定制', icon: '✂',
       items: [
-        { href: 'admin-customization-requests.html', icon: '☷', label: '定制处理' }
+        { href: `${window.MOWO_APP_BASE || '/app'}/admin/customization-requests`, icon: '☷', label: '定制处理' }
       ]
     },
     {

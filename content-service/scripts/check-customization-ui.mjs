@@ -19,12 +19,8 @@ let browser
 const PNG = await fs.readFile(new URL('../../frontend/assets/box-diagram.png', import.meta.url))
 
 async function assertSingleClaimHandoff() {
-  const workbenchSource = await fs.readFile(new URL('../../frontend/js/admin-customization-workbench.js', import.meta.url), 'utf8')
   const editorSource = await fs.readFile(new URL('../../frontend/js/customization-review-editor.js', import.meta.url), 'utf8')
   const vueSource = await fs.readFile(new URL('../../frontend-vue/src/views/AdminCustomizationRequestsView.vue', import.meta.url), 'utf8')
-  if (!workbenchSource.includes('adminRequestId=${encodeURIComponent(id)}&claimed=1')) {
-    throw new Error('旧定制工作台领取后没有标记已领取，编辑器会重复领取任务')
-  }
   if (!editorSource.includes("const alreadyClaimed = params.get('claimed') === '1'") ||
       !editorSource.includes('if (!alreadyClaimed)')) {
     throw new Error('后台筛帧编辑器没有识别已领取交接标记')
@@ -151,8 +147,8 @@ try {
     window.MOWO_RUNTIME_API_BASE = apiBase
     localStorage.setItem('mowo_token', token)
   }, { token: owner.token, apiBase })
-  await page.goto(`${webBase}/admin-customization-requests.html`, { waitUntil:'networkidle' })
-  const taskRow = page.locator('.row').filter({ hasText:model.name })
+  await page.goto(`${vueBase}/admin/customization-requests`, { waitUntil:'networkidle' })
+  const taskRow = page.locator('.request-row').filter({ hasText:model.name })
   await taskRow.getByRole('button', { name:'开始筛帧' }).waitFor({ timeout:10000 })
   await taskRow.getByRole('button', { name:'开始筛帧' }).click()
   await page.locator('#stateEditor.active').waitFor({ timeout:15000 })
@@ -160,7 +156,7 @@ try {
   await page.locator('#staffSubmitDialog').waitFor()
   await page.locator('#staffPublicMessage').fill('浏览器验收筛帧结果')
   await page.getByRole('button', { name:'确认提交' }).click()
-  await page.waitForURL(/admin-customization-requests\.html/, { timeout:15000 })
+  await page.waitForURL(/\/app\/admin\/customization-requests(?:\?|$)/, { timeout:15000 })
   console.log('PASS admin claims, edits and submits frame result in browser')
 
   await context.close()

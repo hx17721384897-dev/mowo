@@ -55,6 +55,7 @@ const requiredRedirects = [
   ['admin-frame-library.html', '/app/admin/frame-library'],
   ['admin-frame-making.html', '/app/admin/frame-making'],
   ['admin-frame-imports.html', '/app/admin/frame-imports'],
+  ['admin-customization-requests.html', '/app/admin/customization-requests'],
   ['admin-collab-works.html', '/app/admin/collab-works'],
   ['admin-collab-product-edit.html', '/app/admin/collab-product/$arg_id']
 ]
@@ -95,6 +96,7 @@ for (const retired of [
   'admin-frame-library.html',
   'admin-frame-making.html',
   'admin-frame-imports.html',
+  'admin-customization-requests.html',
   'admin-collab-works.html',
   'admin-collab-product-edit.html',
   'admin-collab.html',
@@ -105,7 +107,7 @@ for (const retired of [
     throw new Error(`已由 Vue 接管的旧页面不得继续存在：frontend/pages/${retired}`)
   }
 }
-for (const retired of ['admin-frame-imports.js']) {
+for (const retired of ['admin-frame-imports.js', 'admin-customization-workbench.js']) {
   if (fs.existsSync(path.join(root, '..', 'frontend', 'js', retired))) {
     throw new Error(`已由 Vue 接管的旧脚本不得继续存在：frontend/js/${retired}`)
   }

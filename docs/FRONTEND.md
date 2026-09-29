@@ -61,7 +61,7 @@
 | `admin-collab-activities.html` | 活动管理 | 合作运营/负责人 | ✅ |
 | `admin-users.html` | 用户与员工岗位管理 | 运营客服只读普通用户并可封禁；负责人管理岗位 | ✅ 已更新 |
 | `admin-account-deletions.html` | 注销任务监控 | 运营客服只读脱敏状态；负责人可重试、暂停和恢复；暂停时分开填写内部原因和用户说明 | ✅ 已更新 |
-| `admin-customization-requests.html` | 定制申请接收与私有素材查看 | 运营客服/生产人员/负责人 | ✅ 首批只读接收 |
+| Vue `/app/admin/customization-requests` | 定制申请接收、私有素材查看与任务领取 | 客服只读；生产人员/负责人可领取 | ✅ V4-E1 正式接管，旧工作台已删除 |
 | `admin-logs.html` | 安全记录 | 仅负责人 | ✅ 已更新 |
 | `admin-models.html` | 款式管理 | 运营客服/负责人 | ✅ |
 | `admin-inventory.html` | 库存管理 | 生产人员/负责人 | ✅ |

@@ -14,7 +14,7 @@
 | `admin-collab-activities.html` | `/api/admin/collab/activities` | `COLLAB` | 合作运营、负责人 | 运行时配置已收口 |
 | `admin-collab-policy.html` | `/api/admin/collab/policy` | `COLLAB`、`COLLAB_ADMIN` | 合作运营读；负责人写 | 命名权限已通过；旧字段冲突已修复 |
 | `admin-contract.html` | `/api/admin/contracts` | `COLLAB`、`COLLAB_ADMIN` | 合作运营、负责人；仅负责人删除 | 路由命名权限及隔离回归已通过 |
-| `admin-customization-requests.html` | `/api/admin/customization-requests` | `CUSTOMIZATION_REVIEW` | 客服可看；生产/负责人可编辑 | B2 流程回归已通过 |
+| Vue `/app/admin/customization-requests` | `/api/admin/customization-requests` | `CUSTOMIZATION_REVIEW` | 客服可看；生产/负责人可编辑 | V4-E1 已接管；旧工作台已删除 |
 | `admin-frame-library.html` | `/api/admin/frame-library` | `FRAME_LIBRARY` | 合作运营/生产可读；负责人治理；生产可生成文件 | B6 隔离专项通过 |
 | `admin-frame-making.html` | `/api/admin/frame-making` | `FRAME_MAKING` | 生产制作；负责人发布 | B6 隔离专项通过 |
 | `admin-frame-imports.html` | `/api/admin/frame-imports` | `FRAME_LIBRARY` + 负责人校验 | 负责人 | B6 隔离专项通过 |
