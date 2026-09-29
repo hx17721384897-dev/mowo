@@ -405,7 +405,7 @@ function injectNavUser() {
       <button class="dd-item" onclick="navGoTo('myAnimations')">
         <div class="dd-item-icon" style="background:#F0F4FF;">🎬</div>我的动画
       </button>
-      <a class="dd-item admin-only" href="admin-orders.html">
+      <a class="dd-item admin-only" href="${window.MOWO_APP_BASE || '/app'}/admin/orders">
         <div class="dd-item-icon" style="background:#FFF9C4;">🛠</div>进入后台
       </a>
       <div class="dd-divider"></div>
@@ -508,7 +508,7 @@ function navGoTo(page) {
     myAnimations:  '/app/account/animations',
     settings:      '/app/account/settings',
     help:          '/app/contact',
-    admin:         'admin-orders.html',
+    admin:         `${window.MOWO_APP_BASE || '/app'}/admin/orders`,
   };
   window.location.href = map[page] || 'index.html';
 }

@@ -20,7 +20,7 @@
 | `admin-frame-imports.html` | `/api/admin/frame-imports` | `FRAME_LIBRARY` + 负责人校验 | 负责人 | B6 隔离专项通过 |
 | `admin-models.html` | `/api/machine-models`、SKU mapping | `CATALOG` | 客服/负责人；写操作按路由控制 | 页面命名岗位检查与静态回归通过 |
 | `admin-inventory.html` | `/api/inventory`、`/api/materials` | `PRODUCTION` | 生产、负责人 | 当前岗位读取已收口 |
-| Vue `/app/admin/orders`（候选）/ `admin-orders.html`（正式回退） | `/api/admin/production-workflow` | `PRODUCTION` | 生产、负责人 | V4-E2 候选完整迁移；待人工验收后切换旧页 |
+| Vue `/app/admin/orders` | `/api/admin/production-workflow` | `PRODUCTION` | 生产、负责人 | V4-E2 正式接管；旧 HTML 已删除 |
 | `admin-production-batches.html` | `/api/admin/production-batches` | `PRODUCTION` | 生产、负责人 | B6 隔离专项通过 |
 | `admin-print-production.html` | `/api/admin/print-production` | `PRODUCTION_CONFIG` | 负责人 | B6 隔离专项通过 |
 | `admin-import.html` | `/api/admin/import` | `PRODUCTION` | 生产、负责人 | 页面岗位已收口；B6 导入专项通过 |

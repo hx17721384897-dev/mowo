@@ -26,6 +26,7 @@ const legacyVueRedirects = new Map([
   ['pages/admin-frame-making.html', { pathname: `${appBase}/admin/frame-making`, hash: '' }],
   ['pages/admin-frame-imports.html', { pathname: `${appBase}/admin/frame-imports`, hash: '' }],
   ['pages/admin-customization-requests.html', { pathname: `${appBase}/admin/customization-requests`, hash: '' }],
+  ['pages/admin-orders.html', { pathname: `${appBase}/admin/orders`, hash: '' }],
   ['pages/admin-collab-works.html', { pathname: `${appBase}/admin/collab-works`, hash: '' }]
 ])
 

@@ -4,6 +4,7 @@
 > R1-B 更新（2026-09-14）：退役页面、消费者和旧功能开关脚本已删除，并已建立独立 `frontend-vue/` V0 脚手架。V1b 更新（2026-09-15）：Vue 已接管联名货架与详情，旧 `showcase*.html` 和专用 JS 已删除；下文 2026-08 页面清单仅用于历史追溯，不代表现行入口。
 > V2 更新（2026-09-21）：Vue 已接管账户设置、共享地址管理、动画、定制列表及用户定制全流程；对应旧用户页已物理删除。旧共享编辑器只保留 V4/V5 后台模式。本文“技术形态”和旧页面调查段落属于历史快照，现行入口以“定制、购物车与用户中心”表为准。
 > V4-C 更新（2026-09-29）：Vue `/app/admin/collab-works` 与 `/app/admin/collab-product/:id` 已接管联名作品和商品编辑；对应旧 HTML 已物理删除，旧地址只保留临时 302 交接。下表中的旧联名页面行仅作 2026-08 历史快照。
+> V4-E2 更新（2026-09-29）：Vue `/app/admin/orders` 已接管正式生产订单八阶段工作台；旧订单 HTML 及其已无消费者的浏览器 ZIP/XLSX 历史库已删除，旧地址仅保留临时 302。
 
 ## 2026-08-13 首发显示状态
 
@@ -26,7 +27,7 @@
 - 管理后台部分复用 `admin-sidebar.js`，但每页仍各自实现 API client、鉴权跳转、表格和弹窗。
 - 地址解析使用 ES module `address-utils.js` 和本地 `assets/regions.json`。
 - 该条为 2026-08 历史形态；现行设置业务位于 Vue `SettingsView` 与共享 `AddressBook`，旧 `settings.js` 已删除。
-- 管理订单页本地携带 `jszip.min.js` 和 `xlsx.full.min.js`；FAQ 从 CDN 加载 Fuse.js，设置页从 CDN 加载 Cropper.js；大量页面加载 Google Fonts。
+- 旧管理订单页曾携带本地 `jszip.min.js` 和 `xlsx.full.min.js`，V4-E2 切换后无消费者并已删除；FAQ 从 CDN 加载 Fuse.js，设置页从 CDN 加载 Cropper.js；大量页面加载 Google Fonts。
 - 页面体量较大：`customize-editor.html` 约 2196 行，`admin-inventory.html` 约 2049 行，`creator-collab.html` 约 1700 行；多个页面超过 1000 行并包含完整样式和业务逻辑。
 
 ## 公共文件
@@ -40,8 +41,6 @@
 | `js/settings.js`（已删除） | 旧设置页业务 | V2 真实接口回归通过后随旧页物理删除 |
 | `js/router.js` | 页面跳转和本地角色检查 | 2026-08-13 已改为 `window.Router` 供普通 script 使用；多数历史目标页仍已不存在或移入 `_legacy` |
 | `js/address-utils.js` | 行政区加载、地址解析、三级联动 | ES module；结算、独立地址页和设置页分别接入 |
-| `js/jszip.min.js` | 浏览器 ZIP | 仅 `admin-orders.html` 使用 |
-| `js/xlsx.full.min.js` | 浏览器生成 XLSX | 仅 `admin-orders.html` 使用 |
 | `css/nav.css` | 公共导航样式 | 16 个现行公共/用户页面引用 |
 | `css/design-system.css` | 设计变量和通用样式 | 当前 HTML 未发现引用，属于未接入资产 |
 
@@ -110,7 +109,7 @@
 
 | 页面 | 当前职责 | 权限/状态 | 说明 |
 |---|---|---|---|
-| `admin-orders.html` | 订单、售后、地址/帧包导出、批次 | role >= 2，已接 API | 生产一致性风险见 `admin-production.md` |
+| Vue `/app/admin/orders` | 正式订单八阶段、地址/生产资料导出、面单与返工 | `OWNER`/`PRODUCTION`，已接正式 API | V4-E2 正式接管；旧 HTML 已删除，重印具备服务端幂等键 |
 | `admin-import.html` | 淘宝/手工导入、待映射和映射管理 | role >= 2，已接 API | 失败跳转 `../index.html` 错层级 |
 | `admin-models.html` | 款式/SKU/价格/图片/排序 | role >= 2，已接 API | 页面内维护选项写 localStorage，未形成后端主数据 |
 | `admin-inventory.html` | SKU、材料、帧包、渠道配额 | role >= 2，已接 API | 单页超过 2000 行；多个库存域集中在一页 |

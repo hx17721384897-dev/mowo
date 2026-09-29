@@ -6,6 +6,7 @@ requireIsolatedTestDatabase()
 const prisma = new PrismaClient()
 const apiBase = process.env.TEST_API_BASE || 'http://127.0.0.1:3001'
 const webBase = process.env.TEST_WEB_BASE || 'http://127.0.0.1:5500/mowo/frontend/pages'
+const appBase = process.env.TEST_APP_BASE || 'http://127.0.0.1:4173/app'
 const runId = String(Date.now()).slice(-8)
 const testSize = `${runId.slice(-4)}x5cm`
 let adminId, customerId, modelId, skuId, salesOrderId, preOrderId, batchId, printGroupId, browser
@@ -189,10 +190,13 @@ try {
   await page.getByText(tasks[0].orderNo, { exact: true }).first().waitFor({ timeout: 10000 })
   assert(await page.getByText(order.orderNo).count() >= 1, '生产批次页面展示用户总订单')
   assert(await page.getByText(tasks[0].orderNo).count() >= 2 && await page.getByText(tasks[1].orderNo).count() >= 2, '生产批次页面同时在打印队列和订单进度中展示每个 PU')
-  await page.goto(`${webBase}/admin-orders.html?view=producing`, { waitUntil: 'networkidle' })
+  await page.goto(`${appBase}/admin/orders?view=producing`, { waitUntil: 'networkidle' })
   const activeOrderStage = page.locator('.nav-third-item.active')
   assert(await activeOrderStage.getByText('生产中', { exact: true }).count() === 1, '订单阶段页面自动高亮对应三级菜单')
-  assert(await page.locator('.nav-nested[data-nested="production:orders"] .nav-third.open').count() === 1, '当前订单阶段会自动展开全部订单菜单')
+  const ordersMenu = page
+    .locator('.nav-nested')
+    .filter({ has: page.locator('.nav-sub-parent').getByText('全部订单', { exact: true }) })
+  assert(await ordersMenu.locator('.nav-third.open').count() === 1, '当前订单阶段会自动展开全部订单菜单')
   await context.close()
 
   console.log('Production batch checks passed')

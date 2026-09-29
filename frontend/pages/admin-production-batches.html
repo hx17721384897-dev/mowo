@@ -71,7 +71,7 @@ function currentStageLink(orders){
   const priority=['PENDING_ADDRESS_EXPORT','WAITING_TRACKING','READY_FOR_PRODUCTION','PRODUCING','READY_TO_SHIP','SHIPPED']
   const status=priority.find(value=>orders.some(order=>order.fulfillmentStatus===value))||'PAID'
   const view={PAID:'paid',PENDING_ADDRESS_EXPORT:'pending',WAITING_TRACKING:'locked',READY_FOR_PRODUCTION:'processing',PRODUCING:'producing',READY_TO_SHIP:'ready',SHIPPED:'shipped'}[status]
-  return `admin-orders.html?view=${view}`
+  return `${window.MOWO_APP_BASE||'/app'}/admin/orders?view=${view}`
 }
 function renderLedgerCheck(data){const check=data.ledgerCheck||{currentMarker:`${data.batch.id} / 返工0次`,reprintCount:0},changed=check.reprintCount>0;return `<div class="ledger-check ${changed?'has-reprint':''}"><div><div class="ledger-label">生产清单核对标记</div><div class="ledger-marker">${esc(check.currentMarker)}</div></div><div class="ledger-result">${changed?`已有 ${check.reprintCount} 次返工；纸面数字不一致即为旧清单`:'当前没有返工记录'}</div></div>`}
 function stepClass(done,current=false){return done?'done':current?'current':''}

@@ -8,8 +8,8 @@
 | 业务能力 | 正式服务端入口 | 当前消费者 | 结论 |
 |---|---|---|---|
 | 用户订单列表与详情 | `/api/orders`、`/api/orders/:id` | `orders.html`、`order-detail.html`、订单结构检查 | 当前用户交易主链，保留。 |
-| 生产批次 | `/api/admin/production-batches*` | `admin-production-batches.html`、`admin-orders.html` 跳转、生产批次专项 | 当前后台批次主链，保留。 |
-| 生产订单与状态推进 | `/api/admin/production-workflow/orders*` | `admin-orders.html`、`admin-production-batches.html`、生产工作流专项 | 当前生产状态主链，保留。 |
+| 生产批次 | `/api/admin/production-batches*` | `admin-production-batches.html`、Vue `/app/admin/orders` 跳转、生产批次专项 | 当前后台批次主链，保留。 |
+| 生产订单与状态推进 | `/api/admin/production-workflow/orders*` | Vue `/app/admin/orders`、`admin-production-batches.html`、生产工作流专项 | 当前生产状态主链，保留。 |
 | 批次生产动作 | `/api/admin/production-workflow/batches*` | 生产批次页、生产工作流与资料专项 | 当前领料、帧包、配对、装箱等主链，保留。 |
 | 扫码工作台 | `/api/admin/production-workflow/scan*` | `production-scan-workbench.html`、扫码安全/UI 专项 | 当前扫码主链，保留。 |
 | 打印、帧图和生产资料 | `/api/admin/print-production*`、`/api/admin/frame-*`、生产资料相关入口 | 对应后台页及 5 组专项脚本 | 当前生产辅助链，保留。 |

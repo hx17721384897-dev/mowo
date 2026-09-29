@@ -12,10 +12,11 @@ function assert(condition, message) {
 }
 
 try {
-  const [schema, routes, orderPage, batchPage, scanOverview, scanFrame, scanMaterial, scanPairing, scanPacking, scanCommon, sidebar, oldAdmin] = await Promise.all([
+  const [schema, routes, orderPage, orderApi, batchPage, scanOverview, scanFrame, scanMaterial, scanPairing, scanPacking, scanCommon, sidebar, oldAdmin] = await Promise.all([
     fs.readFile(new URL('prisma/schema.prisma', root), 'utf8'),
     fs.readFile(new URL('src/routes/production-workflow.js', root), 'utf8'),
-    fs.readFile(new URL('../frontend/pages/admin-orders.html', root), 'utf8'),
+    fs.readFile(new URL('../frontend-vue/src/views/AdminOrdersView.vue', root), 'utf8'),
+    fs.readFile(new URL('../frontend-vue/src/features/admin-orders/api.ts', root), 'utf8'),
     fs.readFile(new URL('../frontend/pages/admin-production-batches.html', root), 'utf8'),
     fs.readFile(new URL('../frontend/pages/production-scan.html', root), 'utf8'),
     fs.readFile(new URL('../frontend/pages/production-scan-frame.html', root), 'utf8'),
@@ -47,7 +48,7 @@ try {
   assert(routes.includes('refreshReadyToShip') && routes.includes("fulfillmentStatus: 'SHIPPED'"), '全部单件装箱完成后才允许发货')
   assert(oldAdmin.includes('正式 PB 批次必须走总订单地址导出'), '旧地址导出不能覆盖正式生产批次')
   assert(oldAdmin.includes('旧帧图压缩包接口已停用'), '旧帧图导出不能覆盖正式生产批次')
-  assert(orderPage.includes('/api/admin/production-workflow/orders') && orderPage.includes('/reprint') && orderPage.includes('clientRequestId'), '订单环节页只读取正式订单，并以幂等请求提供返工入口')
+  assert(orderApi.includes('/api/admin/production-workflow/orders') && orderApi.includes('/reprint') && orderApi.includes('clientRequestId') && orderPage.includes('createFrameReprint'), 'Vue 订单环节页只读取正式订单，并以幂等请求提供返工入口')
   assert(batchPage.includes('进入当前订单环节') && !batchPage.includes('onclick="exportAddresses()"') && !batchPage.includes('onclick="exportProduction()"'), '生产批次页只做总览和环节跳转，不重复推进状态')
   assert(batchPage.includes('生产清单核对标记') && batchPage.includes('返工记录与当前进度') && batchPage.includes('旧码已作废'), '生产批次页直观展示清单新旧判断和返工处理步骤')
   assert(scanOverview.includes('data-view="frame"') && scanOverview.includes('data-view="material"') && scanOverview.includes('data-view="pairing"') && scanOverview.includes('data-view="packing"'), '扫码总览与四个岗位已经收拢为同一工作台')

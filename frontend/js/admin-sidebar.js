@@ -4,7 +4,7 @@
 
 (function () {
   // 菜单定义：按类别分组，每组一个可展开按钮
-  // 默认入口仍是 admin-orders.html（生产 > 全部订单 > 订单总览）
+  // 订单阶段已由 Vue 接管；尚未迁移的生产页面通过绝对应用地址进入同一订单工作台。
   const MENU = [
     {
       key: 'production', label: '生产', icon: '📦',
@@ -12,14 +12,14 @@
         {
           key: 'orders', icon: '📋', label: '全部订单',
           children: [
-            { href: 'admin-orders.html?view=all',        icon: '▦', label: '订单总览' },
-            { href: 'admin-orders.html?view=paid',       icon: '○', label: '已付款' },
-            { href: 'admin-orders.html?view=pending',    icon: '↓', label: '待处理' },
-            { href: 'admin-orders.html?view=locked',     icon: '⌁', label: '处理中' },
-            { href: 'admin-orders.html?view=processing', icon: '□', label: '待生产' },
-            { href: 'admin-orders.html?view=producing',  icon: '↻', label: '生产中' },
-            { href: 'admin-orders.html?view=ready',      icon: '✓', label: '待发货' },
-            { href: 'admin-orders.html?view=shipped',    icon: '→', label: '已发货' }
+            { href: `${window.MOWO_APP_BASE || '/app'}/admin/orders`,                 icon: '▦', label: '订单总览' },
+            { href: `${window.MOWO_APP_BASE || '/app'}/admin/orders?view=paid`,       icon: '○', label: '已付款' },
+            { href: `${window.MOWO_APP_BASE || '/app'}/admin/orders?view=pending`,    icon: '↓', label: '待处理' },
+            { href: `${window.MOWO_APP_BASE || '/app'}/admin/orders?view=locked`,     icon: '⌁', label: '处理中' },
+            { href: `${window.MOWO_APP_BASE || '/app'}/admin/orders?view=processing`, icon: '□', label: '待生产' },
+            { href: `${window.MOWO_APP_BASE || '/app'}/admin/orders?view=producing`,  icon: '↻', label: '生产中' },
+            { href: `${window.MOWO_APP_BASE || '/app'}/admin/orders?view=ready`,      icon: '✓', label: '待发货' },
+            { href: `${window.MOWO_APP_BASE || '/app'}/admin/orders?view=shipped`,    icon: '→', label: '已发货' }
           ]
         },
         { href: 'admin-production-batches.html',       icon: '▦', label: '生产批次' },
@@ -175,8 +175,6 @@
     const p = location.pathname.split('/').pop() || '';
     const q = location.search;
     let combined = (p + q).toLowerCase();
-    // 裸访问 admin-orders.html（无 view 参数）等同于 ?view=all
-    if (combined === 'admin-orders.html') combined = 'admin-orders.html?view=all';
     return combined;
   }
 

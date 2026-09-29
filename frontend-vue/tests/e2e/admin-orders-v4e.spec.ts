@@ -243,3 +243,13 @@ test('non-production staff cannot render or query production orders', async ({ p
   expect(data.listQueries).toHaveLength(0)
   expect(data.calls).toHaveLength(0)
 })
+
+test('retired legacy order URL preserves the selected stage in the Vue workbench', async ({
+  page
+}) => {
+  const data = await mockOrders(page)
+  await page.goto('http://127.0.0.1:5500/mowo/frontend/pages/admin-orders.html?view=producing')
+  await expect(page).toHaveURL(/\/app\/admin\/orders\?view=producing$/)
+  await expect(page.getByRole('heading', { name: '生产中' })).toBeVisible()
+  await expect.poll(() => data.listQueries.at(-1)?.searchParams.get('status')).toBe('PRODUCING')
+})

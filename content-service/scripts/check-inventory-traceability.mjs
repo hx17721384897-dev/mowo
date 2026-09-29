@@ -59,7 +59,7 @@ async function cleanup() {
 
 try {
   let html = ''
-  for (const file of ['../../frontend/pages/admin-inventory.html','../../frontend/pages/admin-orders.html']) {
+  for (const file of ['../../frontend/pages/admin-inventory.html']) {
     const sourceHtml = readFileSync(new URL(file, import.meta.url), 'utf8')
     if (file.includes('admin-inventory')) html = sourceHtml
     for (const [,source] of sourceHtml.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)) {

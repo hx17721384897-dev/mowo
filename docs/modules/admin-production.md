@@ -34,7 +34,7 @@
 
 | 页面 | 当前职责 |
 |---|---|
-| `admin-orders.html?view=...` | 订单各阶段唯一操作入口：导出地址、填面单、导出生产资料、返工和查看结果 |
+| Vue `/app/admin/orders?view=...` | 订单各阶段唯一操作入口：导出地址、填面单、导出生产资料、返工和查看结果 |
 | `admin-production-batches.html` | 选择完整 `SO` 创建 `PB`，查看冻结范围、材料需求、文件、进度和返工历史 |
 | `admin-print-production.html` | 维护打印裁切组、逐 SKU 顺序和 DOCX 模板版本 |
 | `production-scan.html#overview` | 扫码作业总览和当前批次选择 |

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { legacyPublicUrl } from '@/config/public-links'
 import { logoutCurrentDevice } from '@/features/account/api'
 import AuthDialog from '@/features/auth/AuthDialog.vue'
 import { safeInternalRedirect } from '@/router/safe-redirect'
@@ -199,9 +198,14 @@ async function handleAuthenticated(): Promise<void> {
           <RouterLink class="dd-item" to="/account/animations" @click="userMenuOpen = false">
             <span class="dd-item-icon" style="background: #f0f4ff">🎬</span>我的动画
           </RouterLink>
-          <a v-if="isStaff" class="dd-item admin-only" :href="legacyPublicUrl('admin-orders')">
+          <RouterLink
+            v-if="isStaff"
+            class="dd-item admin-only"
+            to="/admin/orders"
+            @click="userMenuOpen = false"
+          >
             <span class="dd-item-icon" style="background: #fff9c4">🛠</span>进入后台
-          </a>
+          </RouterLink>
           <div class="dd-divider"></div>
           <RouterLink class="dd-item" to="/account/settings" @click="userMenuOpen = false">
             <span class="dd-item-icon" style="background: #ebebea">⚙️</span>账号设置
