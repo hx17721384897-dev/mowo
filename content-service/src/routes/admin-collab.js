@@ -1,9 +1,7 @@
-// src/routes/admin-collab.js — 管理员联名审核与商品管理
+// src/routes/admin-collab.js — 管理员联名作品、商品与库存管理
 // 全部需要 role >= 2
 
 import crypto from 'node:crypto'
-import { generateAndUploadHoverGif } from '../lib/gif-generator.js'
-import { updateCollabAssetStatus } from '../lib/collab-animation-asset.js'
 import {
   COLLAB_FULFILLMENT_MODE,
   getCollabSaleReadiness,
@@ -20,7 +18,6 @@ export default async function adminCollabRoutes(fastify) {
   // token 内的历史岗位，而不是 authenticate 已从数据库确认的当前岗位。
   // 保留局部 preHandler 作为路由自说明，但复用唯一的命名权限校验。
   const requireAdmin = fastify.requirePermission(PERMISSION.COLLAB)
-  const requireCollabAdmin = fastify.requirePermission(PERMISSION.COLLAB_ADMIN)
 
   function framePackMutationResponse(row, replayed = false) {
     return {
@@ -38,20 +35,19 @@ export default async function adminCollabRoutes(fastify) {
   }
 
   // ─────────────────────────────────────────────
-  // 联名作品审核
+  // 已完成线下合作确认的联名作品运营
   // ─────────────────────────────────────────────
 
   /**
    * GET /api/admin/collab/works
-   * 联名作品列表（管理员视角，含所有状态）
-   * 查询参数：status / page / limit
+   * 联名作品列表（只返回已完成线下合作确认的作品）
+   * 查询参数：page / limit
    */
   fastify.get('/admin/collab/works', { preHandler: requireAdmin }, async (req, reply) => {
-    const { status, page = 1, limit = 20 } = req.query
+    const { page = 1, limit = 20 } = req.query
     const skip = (Number(page) - 1) * Number(limit)
 
-    const where = {}
-    if (status) where.status = status
+    const where = { status: 'approved' }
 
     const [works, total] = await Promise.all([
       prisma.collabWork.findMany({
@@ -95,11 +91,11 @@ export default async function adminCollabRoutes(fastify) {
 
   /**
    * GET /api/admin/collab/works/:id
-   * 联名作品详情（审核用，含帧图预签名URL）
+   * 联名作品运营详情（含帧图预签名 URL）
    */
   fastify.get('/admin/collab/works/:id', { preHandler: requireAdmin }, async (req, reply) => {
-    const work = await prisma.collabWork.findUnique({
-      where: { id: req.params.id },
+    const work = await prisma.collabWork.findFirst({
+      where: { id: req.params.id, status: 'approved' },
       include: {
         animationVersion: { select: { baseFrameCount: true } },
         saleSkus: { where: { isEnabled: true }, orderBy: { sortOrder: 'asc' }, include: { sku: { include: { model: true } } } },
@@ -137,151 +133,6 @@ export default async function adminCollabRoutes(fastify) {
   })
 
   /**
-   * PUT /api/admin/collab/:id/approve
-   * 审核通过或拒绝
-   *
-   * Body: { action: 'approve' | 'reject', rejectReason?: string }
-   */
-  fastify.put('/admin/collab/:id/approve', { preHandler: requireAdmin }, async (req, reply) => {
-    const { action, rejectReason } = req.body
-    const adminId = req.user.userId
-
-    if (!['approve', 'reject'].includes(action)) {
-      return reply.code(400).send({ success: false, message: "action 必须是 'approve' 或 'reject'" })
-    }
-
-    const work = await prisma.collabWork.findUnique({ where: { id: req.params.id } })
-    if (!work) return reply.code(404).send({ success: false, message: '作品不存在' })
-    if (work.status !== 'pending') {
-      return reply.code(400).send({ success: false, message: '只能审核 pending 状态的作品' })
-    }
-
-    if (action === 'reject') {
-      if (!rejectReason) return reply.code(400).send({ success: false, message: '拒绝时必须填写原因' })
-
-      const updated = await prisma.$transaction(async tx => {
-        const rejected = await tx.collabWork.update({
-          where: { id: req.params.id },
-          data: { status: 'rejected', rejectReason, approvedAt: null, approvedBy: null },
-        })
-        await updateCollabAssetStatus(tx, rejected, 'rejected')
-        return rejected
-      })
-
-      return reply.send({ success: true, data: updated })
-    }
-
-    // action === 'approve'
-    const now = new Date()
-
-    const updated = await prisma.$transaction(async tx => {
-      const approved = await tx.collabWork.update({
-        where: { id: req.params.id },
-        data: {
-        status: 'approved',
-        approvedAt: now,
-        approvedBy: adminId,
-        rejectReason: null,
-        isOnShelf: false,
-        shelfAt: null,
-        shelfStatus: 'off_shelf',
-        },
-      })
-      await updateCollabAssetStatus(tx, approved, 'approved')
-      return approved
-    })
-
-    // 异步生成 hover GIF（不阻塞审核响应）
-    const frameKeys = safeJson(work.animationFrames)
-    // data URI 无法从服务器端 fetch，跳过 GIF 生成（新申请的作品帧已上传到 OSS）
-    const ossFrameKeys = frameKeys.filter(k => k && !k.startsWith('data:') && !k.startsWith('http'))
-    if (ossFrameKeys.length > 0) {
-      setImmediate(async () => {
-        try {
-          const frameUrls = ossFrameKeys.map(k => fastify.ossPresignGet(k, 7200))
-          const gifKey = await generateAndUploadHoverGif({
-            collabWorkId: work.id,
-            frameUrls,
-            oss: fastify.oss,
-          })
-          await prisma.collabWork.update({
-            where: { id: work.id },
-            data: { hoverGifUrl: gifKey },
-          })
-          fastify.log.info(`[hover-gif] 生成完成: ${gifKey}`)
-        } catch (e) {
-          fastify.log.warn('[hover-gif] 生成失败: ' + e.message)
-        }
-      })
-    }
-
-    return reply.send({
-      success: true,
-      data: updated,
-    })
-  })
-
-
-  // ─────────────────────────────────────────────
-  // 重新生成 hover GIF（用于已审核通过但 GIF 为空/损坏的作品）
-  // ─────────────────────────────────────────────
-
-  /**
-   * POST /api/admin/collab/:id/regen-gif
-   * 立即重新生成 hover GIF 并更新 hoverGifUrl
-   */
-  fastify.post('/admin/collab/:id/regen-gif', { preHandler: requireAdmin }, async (req, reply) => {
-    const work = await prisma.collabWork.findUnique({ where: { id: req.params.id } })
-    if (!work) return reply.code(404).send({ success: false, message: '作品不存在' })
-    if (work.status !== 'approved') return reply.code(400).send({ success: false, message: '仅已审核通过的作品可重新生成 GIF' })
-
-    const frameKeys = safeJson(work.animationFrames).filter(k => k && !k.startsWith('data:') && !k.startsWith('http'))
-    if (frameKeys.length === 0)
-      return reply.code(400).send({ success: false, message: '没有可用的 OSS 帧图（帧图可能仍为 data URI 格式）' })
-
-    try {
-      const frameUrls = frameKeys.map(k => fastify.ossPresignGet(k, 7200))
-      const gifKey = await generateAndUploadHoverGif({ collabWorkId: work.id, frameUrls, oss: fastify.oss })
-      await prisma.collabWork.update({ where: { id: work.id }, data: { hoverGifUrl: gifKey } })
-      return reply.send({ success: true, data: { hoverGifUrl: gifKey } })
-    } catch (e) {
-      fastify.log.warn('[hover-gif] 重新生成失败: ' + e.message)
-      return reply.code(500).send({ success: false, message: 'GIF 生成失败: ' + e.message })
-    }
-  })
-
-  // ─────────────────────────────────────────────
-  // 联名作品货架状态管理
-  // ─────────────────────────────────────────────
-
-  /**
-   * PUT /api/admin/collab/:id/shelf
-   * 保留兼容旧接口，内部转为 shelfStatus
-   */
-  fastify.put('/admin/collab/:id/shelf', { preHandler: requireAdmin }, async (req, reply) => {
-    const { action } = req.body
-    if (!['on', 'off'].includes(action))
-      return reply.code(400).send({ success: false, message: "action 必须是 'on' 或 'off'" })
-    const work = await prisma.collabWork.findUnique({ where: { id: req.params.id } })
-    if (!work) return reply.code(404).send({ success: false, message: '作品不存在' })
-    if (work.status !== 'approved')
-      return reply.code(400).send({ success: false, message: '只有审核通过的作品才能上下架' })
-    if (action === 'on' && !(await requireSaleReady(req.params.id, reply))) return
-    const now = new Date()
-    const updated = await prisma.collabWork.update({
-      where: { id: req.params.id },
-      data: {
-        isOnShelf:   action === 'on',
-        shelfAt:     action === 'on' ? now : work.shelfAt,
-        shelfStatus: action === 'on' ? 'on_sale' : 'off_shelf',
-        offShelfAt:  action === 'on' ? null : now,
-        offShelfType: action === 'on' ? null : 'platform_force',
-      },
-    })
-    return reply.send({ success: true, message: action === 'on' ? '已上架' : '已下架', data: updated })
-  })
-
-  /**
    * PUT /api/admin/collab/:id/suspend
    * 管理员暂停销售
    */
@@ -289,7 +140,7 @@ export default async function adminCollabRoutes(fastify) {
     const work = await prisma.collabWork.findUnique({ where: { id: req.params.id } })
     if (!work) return reply.code(404).send({ success: false, message: '作品不存在' })
     if (work.status !== 'approved')
-      return reply.code(400).send({ success: false, message: '只有审核通过的作品才能暂停' })
+      return reply.code(400).send({ success: false, message: '只有完成线下合作确认的作品才能暂停' })
     if (work.shelfStatus === 'suspended')
       return reply.code(400).send({ success: false, message: '作品已处于暂停状态' })
 
@@ -341,7 +192,7 @@ export default async function adminCollabRoutes(fastify) {
     const work = await prisma.collabWork.findUnique({ where: { id: req.params.id } })
     if (!work) return reply.code(404).send({ success: false, message: '作品不存在' })
     if (work.status !== 'approved')
-      return reply.code(400).send({ success: false, message: '只有审核通过的作品才能下架' })
+      return reply.code(400).send({ success: false, message: '只有完成线下合作确认的作品才能下架' })
 
     const now = new Date()
     const updated = await prisma.collabWork.update({
@@ -363,7 +214,7 @@ export default async function adminCollabRoutes(fastify) {
 
   /**
    * PUT /api/admin/collab/:id/relist
-   * 管理员重新上架已下架作品（无需重新审核）
+   * 管理员重新上架已下架作品（无需重复线下确认）
    */
   fastify.put('/admin/collab/:id/relist', { preHandler: requireAdmin }, async (req, reply) => {
     const work = await prisma.collabWork.findUnique({ where: { id: req.params.id } })
@@ -439,7 +290,6 @@ export default async function adminCollabRoutes(fastify) {
       success: true,
       data: {
         productNo: work.productNo,
-        reviewStatus: work.status,
         shelfStatus: work.shelfStatus,
         isOnShelf: work.isOnShelf,
         sourceTitle: work.title,
@@ -514,7 +364,7 @@ export default async function adminCollabRoutes(fastify) {
     })
     if (!work) return reply.code(404).send({ success: false, message: '作品不存在' })
     if (work.status !== 'approved') {
-      return reply.code(409).send({ success: false, message: '只有审核通过的正式作品可以配置销售规格' })
+      return reply.code(409).send({ success: false, message: '只有完成线下合作确认的正式作品可以配置销售规格' })
     }
 
     const config = normalizeSaleConfigInput(req.body)
@@ -866,77 +716,6 @@ export default async function adminCollabRoutes(fastify) {
     })
 
     return reply.send({ success: true, message: `库存已调整 ${quantity > 0 ? '+' : ''}${quantity}`, data: updated })
-  })
-
-  // ─────────────────────────────────────────────
-  // 违约政策配置
-  // ─────────────────────────────────────────────
-
-  const POLICY_KEY = 'collab_breach_policy'
-  const DEFAULT_POLICY = {
-    suspendMaxDays: 90,
-    warnDay1: 60,
-    warnDay2: 85,
-    timeRates: [
-      { minDays: 0,   maxDays: 30,  rate: 0.70 },
-      { minDays: 31,  maxDays: 90,  rate: 0.50 },
-      { minDays: 91,  maxDays: 180, rate: 0.30 },
-      { minDays: 181, maxDays: null, rate: 0.15 },
-    ],
-    depositTiers: [
-      { units: 10,  deposit: 500  },
-      { units: 20,  deposit: 800  },
-      { units: 50,  deposit: 1800 },
-      { units: 100, deposit: 3200 },
-    ],
-  }
-
-  /**
-   * GET /api/admin/collab/policy
-   * 读取违约政策配置，无记录时返回默认值
-   */
-  fastify.get('/admin/collab/policy', { preHandler: requireAdmin }, async (req, reply) => {
-    const row = await prisma.platformConfig.findUnique({ where: { configKey: POLICY_KEY } })
-    const policy = row ? JSON.parse(row.configValue) : DEFAULT_POLICY
-    return reply.send({ success: true, data: policy })
-  })
-
-  /**
-   * PUT /api/admin/collab/policy
-   * 更新违约政策配置，仅负责人可操作
-   */
-  fastify.put('/admin/collab/policy', { preHandler: requireCollabAdmin }, async (req, reply) => {
-    const { suspendMaxDays, warnDay1, warnDay2, timeRates, depositTiers } = req.body
-
-    if (!Number.isInteger(suspendMaxDays) || suspendMaxDays < 1) {
-      return reply.code(400).send({ success: false, message: '最长暂停天数无效' })
-    }
-    if (warnDay1 >= suspendMaxDays || warnDay2 >= suspendMaxDays || warnDay1 >= warnDay2) {
-      return reply.code(400).send({ success: false, message: '预警天数设置有误：预警1 < 预警2 < 最长天数' })
-    }
-    if (!Array.isArray(timeRates) || timeRates.length === 0) {
-      return reply.code(400).send({ success: false, message: '时间系数不能为空' })
-    }
-    if (!Array.isArray(depositTiers) || depositTiers.length === 0) {
-      return reply.code(400).send({ success: false, message: '押金分档不能为空' })
-    }
-
-    const policy = { suspendMaxDays, warnDay1, warnDay2, timeRates, depositTiers }
-
-    await prisma.platformConfig.upsert({
-      where:  { configKey: POLICY_KEY },
-      update: { configValue: JSON.stringify(policy), updatedBy: req.user.userId },
-      create: {
-        configKey: POLICY_KEY,
-        configValue: JSON.stringify(policy),
-        valueType: 'json',
-        groupName: 'collab',
-        description: '联名违约政策',
-        updatedBy: req.user.userId
-      },
-    })
-
-    return reply.send({ success: true, data: policy })
   })
 
   // ─────────────────────────────────────────────

@@ -1,8 +1,22 @@
 import { apiRequest } from '@/services/api-client'
-import type { ReviewWork } from '@/features/admin-collab-review/api'
+
+export interface ManagedWorkBase {
+  id: string
+  title: string
+  orderNo?: string | null
+  description?: string | null
+  status: 'approved'
+  createdAt: string
+  approvedAt?: string | null
+  coverUrl?: string | null
+  animationFrames?: string[]
+  hoverGifUrl?: string | null
+  isOnShelf?: boolean
+  creator?: { nickname?: string | null } | null
+}
 
 export type ShelfStatus = 'on_sale' | 'suspended' | 'off_shelf'
-export interface ManagedCollabWork extends ReviewWork {
+export interface ManagedCollabWork extends ManagedWorkBase {
   shelfStatus: ShelfStatus | null
   offShelfType?: string | null
   offShelfReason?: string | null

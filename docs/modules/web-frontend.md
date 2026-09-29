@@ -114,13 +114,13 @@
 | `admin-models.html` | 款式/SKU/价格/图片/排序 | role >= 2，已接 API | 页面内维护选项写 localStorage，未形成后端主数据 |
 | `admin-inventory.html` | SKU、材料、帧包、渠道配额 | role >= 2，已接 API | 单页超过 2000 行；多个库存域集中在一页 |
 | `admin-collab-works.html` | 联名作品运营 | role >= 2，已接 API | 含当前未提交的业务改动，本轮只读取未覆盖 |
-| `admin-collab.html` | 联名审核 | role >= 2，已接 API | 业务契约问题见联名模块 |
+| `admin-collab.html` | 联名审核 | 已退役并物理删除 | 首发合作确认走线下，不提供在线审核 |
 | `admin-collab-activities.html` | 活动配置 | role >= 2，已接 API | 真 API |
-| `admin-collab-policy.html` | 违约政策 | role >= 2，部分可用 | 配置字段与 Schema 差异已记 D-034 |
+| `admin-collab-policy.html` | 违约政策 | 已退役并物理删除 | 没有真实结算消费者，首发不保留配置能力 |
 | `admin-settlement.html` | 分红结算 | role >= 2，已接 API | 当前“打款”是内部余额动作 |
 | `admin-bull.html` | 牛量与参数 | role >= 2，已接 API | 数据来源断层见 D-043 |
 | `admin-links.html` | 外部视频审核 | role >= 2，已接 API | URL 打开新窗口，部分位置缺少 noopener/协议限制 |
-| `admin-contract.html` | 商务合同/打款记录 | role >= 2，已接 API | 财务不可变性问题见联名模块 |
+| `admin-contract.html` | 商务合同/打款记录 | 已退役并物理删除 | 合同与付款在线下保管，不进入首发平台 |
 | `admin-revenue-config.html` | 分红配置 | 读 role >= 2、写 role >= 3 | 未加载统一 admin-sidebar，页面自有导航 |
 | `admin-contact.html` | 联络留言和附件 | role >= 2，已接 API | 固定 localhost；外链/附件授权风险见 D-055 |
 | `admin-users.html` | 用户角色/封禁 | role >= 2，改角色 role >= 3 | highlight 搜索契约差异见 D-056 |

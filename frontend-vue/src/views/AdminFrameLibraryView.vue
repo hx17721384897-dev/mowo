@@ -3,7 +3,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import AdminSidebar from '@/components/AdminSidebar.vue'
-import { safeReviewImage } from '@/features/admin-collab-review/api'
+import { safeImageUrl } from '@/shared/media/safe-image-url'
 import {
   archiveFrameAsset,
   createProductionFile,
@@ -128,7 +128,7 @@ let noticeTimer: number | undefined
 const isOwner = computed(() => session.staffRole === 'OWNER')
 const canGenerate = computed(() => ['OWNER', 'PRODUCTION'].includes(session.staffRole || ''))
 const pageCount = computed(() => Math.max(1, Math.ceil(total.value / 24)))
-const currentFrame = computed(() => safeReviewImage(version.value?.frames[frameIndex.value]?.url))
+const currentFrame = computed(() => safeImageUrl(version.value?.frames[frameIndex.value]?.url))
 const compatibleTemplates = computed(() => {
   const selected = productionOptions.value?.versions.find(
     (item) => item.id === productionForm.value.animationVersionId
@@ -578,8 +578,8 @@ onBeforeUnmount(() => {
               >
                 <div class="cover">
                   <img
-                    v-if="safeReviewImage(item.coverUrl)"
-                    :src="safeReviewImage(item.coverUrl) || undefined"
+                    v-if="safeImageUrl(item.coverUrl)"
+                    :src="safeImageUrl(item.coverUrl) || undefined"
                     loading="lazy"
                     alt=""
                   /><span v-else class="cover-empty">暂无帧图</span>
@@ -662,8 +662,8 @@ onBeforeUnmount(() => {
                     @click="showFrame(index)"
                   >
                     <img
-                      v-if="safeReviewImage(frame.url)"
-                      :src="safeReviewImage(frame.url) || undefined"
+                      v-if="safeImageUrl(frame.url)"
+                      :src="safeImageUrl(frame.url) || undefined"
                       loading="lazy"
                       alt=""
                     />
@@ -981,8 +981,8 @@ onBeforeUnmount(() => {
             <div class="render-frame-grid">
               <div v-for="item in rendered.frames" :key="item.index" class="render-frame-card">
                 <img
-                  v-if="safeReviewImage(item.url)"
-                  :src="safeReviewImage(item.url) || undefined"
+                  v-if="safeImageUrl(item.url)"
+                  :src="safeImageUrl(item.url) || undefined"
                   loading="lazy"
                   :alt="item.name"
                 />

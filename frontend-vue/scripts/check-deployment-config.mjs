@@ -92,7 +92,10 @@ for (const retired of [
   'admin-models.html',
   'admin-frame-library.html',
   'admin-frame-making.html',
-  'admin-frame-imports.html'
+  'admin-frame-imports.html',
+  'admin-collab.html',
+  'admin-contract.html',
+  'admin-collab-policy.html'
 ]) {
   if (fs.existsSync(path.join(root, '..', 'frontend', 'pages', retired))) {
     throw new Error(`已由 Vue 接管的旧页面不得继续存在：frontend/pages/${retired}`)

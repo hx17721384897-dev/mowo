@@ -112,7 +112,7 @@
 | 公开展示与社区 | `products`、`collab`、`articles`、`feed`、`certify` | `/api/products`、`/api/collab`、`/api/articles`、`/api/feed`、`/api/certify` | `showcase*`、`creator-profile`、历史社区页 | 联名展示/商品候选；社区与模拟认证关闭保留。 |
 | 定制与文件 | `customization-requests`、`custom-products`、`animation-assets`、`upload`、`animations`、`customize-orders` | `/api/customization-requests`、`/api/custom-products`、`/api/animation-assets`、`/api/upload`、`/api/animations`、`/api/customize-orders` | 定制三步页、我的定制/动画、后台审核工作台 | B1 主链路候选；文件、归属和人工审核在批次 2 深查。 |
 | 购物与订单 | `cart`、`payment`、`addresses`、`orders` | `/api/cart`、`/api/payment`、`/api/addresses`、`/api/orders` | 购物车、结算、地址、订单页；小程序购物车骨架 | Web 交易准备可测；真实支付阻断，见 P0-028。 |
-| 联名运营 | `admin-collab`、`creator`、`contracts`、`notifications` | `/api/admin/collab`、`/api/creator/collab`、`/api/admin/contracts`、`/api/creator/notifications` | 联名后台、创作者工作区、合同/通知页 | 内部联名运营候选；创作者自助联名关闭保留。 |
+| 联名运营 | `admin-collab`、`collab` | `/api/admin/collab`、`/api/collab` | 已线下确认的联名作品、商品、SKU、库存与上下架 | 首发仅保留内部销售运营；在线投稿审核、创作者工作区、合同台账和通知已物理退役。 |
 | 创作者财务与增长 | `earnings`、`settlement`、`revenue-config`、`bull`、`links` | `/api/earnings`、`/api/*settlement`、`/api/admin/revenue`、`/api/*bull`、`/api/*links` | 创作者收益/链接页、后台结算/牛量/收入配置页 | 关闭但保留；全局功能开关抽样已验证。 |
 | 通用后台运营 | `admin`、`admin-contact`、`contact`、`admin-customization-requests` | `/api/admin`、`/api/admin/contact`、`/api/contact`、`/api/admin/customization-requests` | 后台订单、用户、日志、账号删除、联络、定制审核；公开联系页 | B0/B1 内部运营候选；岗位矩阵和旧中间件冲突待逐端点收敛。 |
 | 库存、SKU 与物料 | `inventory`、`materials`、`machine-models`、`platform-sku`、`frame-packs` | `/api/inventory`、`/api/materials`、`/api/machine-models`、`/api/admin/sku-mapping`、`/api/frame-packs` | 后台库存/机型/导入、生产库存页、帧包管理 | B1 内部履约候选；需批次 6 做库存事实和并发核对。 |

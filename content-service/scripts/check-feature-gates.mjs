@@ -17,7 +17,6 @@ for (const [path, expected] of activeGates) {
 const openPaths = [
   '/api/collab/works',
   '/api/cart',
-  '/api/admin/contracts',
   '/api/admin/import/pending',
   '/api/admin/sku-mapping'
 ]

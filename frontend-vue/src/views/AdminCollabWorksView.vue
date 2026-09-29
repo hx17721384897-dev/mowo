@@ -3,7 +3,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import AdminSidebar from '@/components/AdminSidebar.vue'
-import { safeReviewImage } from '@/features/admin-collab-review/api'
+import { safeImageUrl } from '@/shared/media/safe-image-url'
 import {
   changeCollabShelf,
   getManagedCollabWork,
@@ -15,7 +15,7 @@ import {
   type ManagedCollabWork,
   type ShelfStatus
 } from '@/features/admin-collab-works/api'
-import './admin-collab-review.css'
+import './admin-collab-shell.css'
 import './admin-collab-works.css'
 
 const router = useRouter()
@@ -235,7 +235,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="admin-collab-review-page admin-collab-works-page">
+  <div class="admin-collab-shell admin-collab-works-page">
     <AdminSidebar v-model:collapsed="collapsed" v-model:mobile-open="mobileOpen" />
     <main class="review-main" :class="{ expanded: collapsed }">
       <header class="review-topbar">
@@ -286,8 +286,8 @@ onBeforeUnmount(() => {
           >
             <div class="works-cover">
               <img
-                v-if="safeReviewImage(work.coverUrl)"
-                :src="safeReviewImage(work.coverUrl)!"
+                v-if="safeImageUrl(work.coverUrl)"
+                :src="safeImageUrl(work.coverUrl)!"
                 alt="封面"
               /><span v-else>🎨</span
               ><b class="works-badge" :class="work.shelfStatus || ''">{{ shelfLabel(work) }}</b>
@@ -382,7 +382,7 @@ onBeforeUnmount(() => {
                 <span>货架状态</span><strong>{{ shelfLabel(detail) }}</strong>
               </div>
               <div>
-                <span>审核时间</span><strong>{{ date(detail.approvedAt) }}</strong>
+                <span>线下确认时间</span><strong>{{ date(detail.approvedAt) }}</strong>
               </div>
               <div v-if="detail.shelfStatus === 'suspended'">
                 <span>暂停时间</span><strong>{{ date(detail.suspendedAt) }}</strong>
@@ -427,7 +427,7 @@ onBeforeUnmount(() => {
                 :key="index"
                 class="review-frame"
               >
-                <img v-if="safeReviewImage(url)" :src="safeReviewImage(url)!" alt="帧图" />
+                <img v-if="safeImageUrl(url)" :src="safeImageUrl(url)!" alt="帧图" />
               </div>
             </div>
             <div v-else class="review-no-frames">暂无帧图</div>
@@ -543,7 +543,7 @@ onBeforeUnmount(() => {
               target?.id.slice(-6).toUpperCase()
             }}
           </p>
-          <p>无需重新审核，上架后立即在 showcase 可见。</p></template
+          <p>无需重复线下确认，上架后立即在 showcase 可见。</p></template
         ><template v-else
           ><h2>调整帧素材包库存</h2>
           <p>#{{ target?.id.slice(-6).toUpperCase() }} · 尺寸：{{ stockSize }}</p>

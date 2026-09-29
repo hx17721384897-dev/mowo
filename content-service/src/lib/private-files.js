@@ -11,7 +11,6 @@ export const FILE_PURPOSE = Object.freeze({
   CUSTOMIZATION_SOURCE: 'CUSTOMIZATION_SOURCE',
   LIBRARY_SOURCE: 'LIBRARY_SOURCE',
   LIBRARY_FRAME: 'LIBRARY_FRAME',
-  CONTRACT: 'CONTRACT',
   COLLAB_STOREFRONT_MEDIA: 'COLLAB_STOREFRONT_MEDIA',
   FRAME_PACK: 'FRAME_PACK'
 })
@@ -28,7 +27,6 @@ const POLICIES = Object.freeze({
   CUSTOMIZATION_SOURCE: { maxBytes: 200 * MiB, types: [...IMAGE_TYPES, 'video/mp4', 'video/webm', 'video/quicktime'], extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'mp4', 'webm', 'mov'] },
   LIBRARY_SOURCE: { maxBytes: 200 * MiB, types: [...IMAGE_TYPES, 'video/mp4', 'video/webm', 'video/quicktime'], extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'mp4', 'webm', 'mov'] },
   LIBRARY_FRAME: { maxBytes: 20 * MiB, types: IMAGE_TYPES, extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif'] },
-  CONTRACT: { maxBytes: 20 * MiB, types: [...IMAGE_TYPES, 'application/pdf'], extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'pdf'] },
   COLLAB_STOREFRONT_MEDIA: { maxBytes: 100 * MiB, types: [...IMAGE_TYPES, 'video/mp4', 'video/webm', 'video/quicktime'], extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'mp4', 'webm', 'mov'] },
   FRAME_PACK: { maxBytes: 200 * MiB, types: ['application/zip', 'application/x-zip-compressed'], extensions: ['zip'] }
 })
@@ -134,7 +132,6 @@ const STAFF_PURPOSES = Object.freeze({
     FILE_PURPOSE.CONTACT_PORTFOLIO,
     FILE_PURPOSE.CREATOR_FRAME,
     FILE_PURPOSE.LIBRARY_FRAME,
-    FILE_PURPOSE.CONTRACT,
     FILE_PURPOSE.COLLAB_STOREFRONT_MEDIA,
     FILE_PURPOSE.FRAME_PACK
   ])

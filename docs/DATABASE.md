@@ -75,7 +75,7 @@
 | 54 | `creator_referral_links` | 牛量系统 | 创作者专属推广链接 |
 | 55 | `referral_clicks` | 牛量系统 | 推广链接点击记录 |
 | 56 | `creator_social_links` | 引流与合同 | 创作者外部平台视频链接（声量维度） |
-| 57 | `creator_contracts` | 引流与合同 | 大IP商务合同（不走标准分红体系） |
+| 57 | `creator_contracts` | 已退役 | 2026-09-28 向前迁移删除；首发合同在线下保管 |
 | 58 | `carts` | 购物车系统 | 购物车主表（每用户唯一） |
 | 59 | `cart_items` | 购物车系统 | 购物车条目（MARKET/CUSTOM两种类型） |
 | 60 | `custom_products` | 购物车系统 | DIY定制草稿工作区（7天有效） |

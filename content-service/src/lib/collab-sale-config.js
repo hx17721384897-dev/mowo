@@ -65,7 +65,7 @@ export async function getCollabSaleReadiness(prisma, workId) {
   const fallbackFrameCount = parseJsonArray(work.animationFrames).length
   const baseFrameCount = work.animationVersion?.baseFrameCount || fallbackFrameCount
   const blockers = []
-  if (work.status !== 'approved') blockers.push('作品尚未审核通过')
+  if (work.status !== 'approved') blockers.push('作品尚未完成线下合作确认')
   if (!work.animationAssetId || !work.animationVersionId) blockers.push('尚未关联正式动画资产与版本')
   if (!baseFrameCount) blockers.push('没有可用的核心帧')
   const effectiveCover = work.storefrontCoverUrl || work.coverUrl

@@ -3,7 +3,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AdminSidebar from '@/components/AdminSidebar.vue'
-import { safeReviewImage } from '@/features/admin-collab-review/api'
+import { safeImageUrl } from '@/shared/media/safe-image-url'
 import {
   getProductHistory,
   getProductWorkspace,
@@ -185,7 +185,7 @@ function shelfText(value?: string | null): string {
 function safeMediaUrl(item: Pick<ProductMedia, 'url'>): string | null {
   return item.url.startsWith('blob:') && ownedObjectUrls.has(item.url)
     ? item.url
-    : safeReviewImage(item.url)
+    : safeImageUrl(item.url)
 }
 function revokeUnusedUrls(next: ProductMedia[]): void {
   for (const url of ownedObjectUrls)
@@ -461,7 +461,7 @@ onBeforeUnmount(() => {
               </div>
               <div class="product-section-body">
                 <div class="product-source">
-                  原审核作品：{{
+                  已线下确认作品：{{
                     workspace.sourceTitle
                   }}。商品展示资料可独立编辑，不会改变动画资产本身。
                 </div>
@@ -654,8 +654,8 @@ onBeforeUnmount(() => {
                     />
                     <div class="product-sku-img">
                       <img
-                        v-if="safeReviewImage(candidate.previewImage)"
-                        :src="safeReviewImage(candidate.previewImage)!"
+                        v-if="safeImageUrl(candidate.previewImage)"
+                        :src="safeImageUrl(candidate.previewImage)!"
                         alt=""
                       /><span v-else>暂无图</span>
                     </div>

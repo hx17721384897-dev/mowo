@@ -92,11 +92,12 @@ try {
     await context.close()
   }
   {
-    const { context, page } = await openAs(collab, 'admin-collab-policy.html')
-    await page.locator('#permBanner .banner-lock').waitFor()
-    await page.locator('a[href="admin-collab-policy.html"]').waitFor()
-    assert(await page.locator('a[href="admin-collab-policy.html"]').count() === 1, '合作运营菜单显示只读联名政策')
-    assert(await page.locator('#saveBtn').isHidden(), '合作运营不能看到联名政策保存按钮')
+    const { context, page } = await openAs(collab, 'admin-collab-works.html')
+    await page.locator('a[href="admin-collab-works.html"]').waitFor()
+    assert(await page.locator('a[href="admin-collab-works.html"]').count() === 1, '合作运营菜单显示联名作品')
+    assert(await page.locator('a[href="admin-collab.html"]').count() === 0, '合作运营菜单不显示已退役联名审核')
+    assert(await page.locator('a[href="admin-contract.html"]').count() === 0, '合作运营菜单不显示已退役商务合同')
+    assert(await page.locator('a[href="admin-collab-policy.html"]').count() === 0, '合作运营菜单不显示已退役违约政策')
     await context.close()
   }
   {

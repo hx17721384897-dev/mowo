@@ -66,7 +66,7 @@
 | `animation-assets.md` | `ANM/Vn`、复购、软删除和订单版本快照 |
 | `frame-asset-library.md` | 总库、批量导入、生产文件和删除/归档边界 |
 | `commerce-orders-inventory.md` | 2026-09-08 已删除已修复旧风险，校正混合购物车、冻结快照、库存预留、`SO/PU` 和支付边界 |
-| `collab-creator-revenue.md` | 2026-08 历史调查；顶部 R1-B 注记优先，当前只保留联名货架、人工合同和线下台账 |
+| `collab-creator-revenue.md` | 2026-08 历史调查；顶部 2026-09-28 注记优先，当前只保留联名货架、商品运营、权利来源、库存与订单履约 |
 | `content-users-contact.md` | 2026-08 历史调查；顶部 R1-B 注记优先，当前只保留用户基础能力与联络模块 |
 | `admin-production.md` | 2026-09-08 已按正式 `SO/PU/PB/FP`、统一扫码工作台、返工和发货代码重写；旧入口单独列为待删除 |
 | `web-frontend.md` | 历史前端消费者地图；R1-B 后当前扫描为 46 个 HTML 文件，Vue 正式迁移以 V0 矩阵为准 |

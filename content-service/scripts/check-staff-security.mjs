@@ -153,18 +153,6 @@ try {
   assertStatus('owner can reach contact deletion handler', (await request('/api/admin/contact/not-a-real-id', owner.token, {
     method: 'DELETE'
   })).status, 404)
-  assertStatus('collab can read contracts', (await request('/api/admin/contracts?limit=1', collab.token)).status, 200)
-  assertStatus('support cannot read contracts', (await request('/api/admin/contracts?limit=1', support.token)).status, 403)
-  assertStatus('collab cannot delete contracts', (await request('/api/admin/contracts/not-a-real-id', collab.token, {
-    method: 'DELETE'
-  })).status, 403)
-  assertStatus('owner can reach contract deletion handler', (await request('/api/admin/contracts/not-a-real-id', owner.token, {
-    method: 'DELETE'
-  })).status, 404)
-  assertStatus('collab can read collab policy', (await request('/api/admin/collab/policy', collab.token)).status, 200)
-  assertStatus('collab cannot update collab policy', (await request('/api/admin/collab/policy', collab.token, {
-    method: 'PUT', body: JSON.stringify({})
-  })).status, 403)
   assertStatus('support cannot ban staff', (await request(`/api/admin/users/${production.id}/ban`, support.token, {
     method: 'PUT', body: JSON.stringify({ isBanned: true })
   })).status, 403)

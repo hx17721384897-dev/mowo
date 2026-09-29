@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client'
 const ACTIVE_ORDER_STATUSES = ['pending', 'paid', 'locked', 'processing', 'producing', 'shipped', 'aftersale']
 const OPEN_AFTERSALE_STATUSES = ['pending', 'approved']
 const ACTIVE_CUSTOMIZATION_STATUSES = ['SUBMITTED', 'REVIEWING', 'NEEDS_SUPPLEMENT', 'OPTIONS_READY', 'FRAME_ACCEPTED', 'STYLE_SELECTED', 'CONFIRMED']
-const PROTECTED_FILE_LINKS = new Set(['AFTERSALE_REQUEST', 'CUSTOMIZE_ORDER', 'CONTRACT', 'FRAME_PACK'])
+const PROTECTED_FILE_LINKS = new Set(['AFTERSALE_REQUEST', 'CUSTOMIZE_ORDER', 'FRAME_PACK'])
 
 function blocker(code, message, count = 1) {
   return { code, message, count }
@@ -22,7 +22,6 @@ export async function getAccountDeletionBlockers(prisma, userId) {
     pendingPreOrders,
     openContacts,
     activeCollabWorks,
-    activeContracts,
     activeCustomizationRequests
   ] = await Promise.all([
     prisma.customizeOrder.count({ where: { userId, status: { in: ACTIVE_ORDER_STATUSES } } }),
@@ -31,12 +30,8 @@ export async function getAccountDeletionBlockers(prisma, userId) {
     prisma.contactSubmission.count({ where: { submitterUserId: userId, status: { in: ['pending', 'processing'] } } }),
     prisma.collabWork.count({ where: {
       creatorId: userId,
-      OR: [
-        { status: 'pending' },
-        { isOnShelf: true }
-      ]
+      isOnShelf: true
     } }),
-    prisma.creatorContract.count({ where: { creatorId: userId, status: 'active' } }),
     prisma.customizationRequest.count({ where: { userId, status: { in: ACTIVE_CUSTOMIZATION_STATUSES } } })
   ])
 
@@ -48,8 +43,7 @@ export async function getAccountDeletionBlockers(prisma, userId) {
   if (openAftersales) blockers.push(blocker('OPEN_AFTERSALES', `有 ${openAftersales} 个售后仍在处理中`, openAftersales))
   if (pendingPreOrders) blockers.push(blocker('PENDING_PREORDERS', `有 ${pendingPreOrders} 个待付款订单，请先取消或等待失效`, pendingPreOrders))
   if (openContacts) blockers.push(blocker('OPEN_CONTACTS', `有 ${openContacts} 条联络或合作申请仍在处理中`, openContacts))
-  if (activeCollabWorks) blockers.push(blocker('ACTIVE_COLLAB_WORKS', `有 ${activeCollabWorks} 个联名作品仍在审核、销售或下架处理中`, activeCollabWorks))
-  if (activeContracts) blockers.push(blocker('ACTIVE_CONTRACTS', `有 ${activeContracts} 份生效中的合作合同`, activeContracts))
+  if (activeCollabWorks) blockers.push(blocker('ACTIVE_COLLAB_WORKS', `有 ${activeCollabWorks} 个联名作品仍在销售或履约处理中`, activeCollabWorks))
   if (activeCustomizationRequests) blockers.push(blocker(
     'ACTIVE_CUSTOMIZATION_REQUESTS',
     `有 ${activeCustomizationRequests} 个定制申请仍在处理中，请先结束申请再注销`,

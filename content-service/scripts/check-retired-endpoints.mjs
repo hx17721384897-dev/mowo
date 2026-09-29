@@ -30,6 +30,11 @@ const probes = [
   '/api/creator/links',
   '/api/admin/links',
   '/api/admin/collab/activities',
+  '/api/admin/collab/retired-work/approve',
+  '/api/admin/collab/retired-work/regen-gif',
+  '/api/admin/collab/retired-work/shelf',
+  '/api/admin/collab/policy',
+  '/api/admin/contracts',
   '/api/certify/status'
 ]
 const methods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']

@@ -31,7 +31,6 @@ export interface ProductMedia {
 }
 export interface ProductWorkspace {
   productNo: string | null
-  reviewStatus: string
   shelfStatus: string | null
   isOnShelf: boolean
   sourceTitle: string

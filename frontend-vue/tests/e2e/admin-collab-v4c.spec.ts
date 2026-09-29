@@ -106,66 +106,25 @@ test('collab works rejects unauthorized staff', async ({ page }) => {
   await expect(page).toHaveURL(/\/app\/forbidden$/)
 })
 
-test('contract candidate creates and records payment once with one request key', async ({
-  page
+test('retired review, contract and policy pages have no Vue or legacy entry', async ({
+  page,
+  request
 }) => {
   await staff(page)
-  const contract = {
-    id: 'contract-1',
-    creatorName: '合作方',
-    contractType: 'buyout',
-    status: 'active',
-    revenueRate: null,
-    guaranteeAmount: null,
-    buyoutAmount: 100,
-    startAt: '2026-09-01T00:00:00Z',
-    endAt: null,
-    terms: '',
-    note: '',
-    settlementLogs: [],
-    totalPaid: 0,
-    createdBy: '员工'
+  await page.goto('/app/admin/collab-works')
+  await expect(page.getByText('联名审核', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('商务合同', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('违约政策', { exact: true })).toHaveCount(0)
+
+  for (const path of ['/app/admin/collab-review', '/app/admin/contracts']) {
+    await page.goto(path)
+    await expect(page.getByRole('heading', { name: '页面不存在' })).toBeVisible()
   }
-  const mutations: Array<{ path: string; body: Record<string, unknown> }> = []
-  await page.route('**/api/admin/contracts?*', (route) =>
-    route.fulfill({
-      json: {
-        success: true,
-        data: { contracts: [contract], pagination: { page: 1, limit: 20, total: 1, totalPages: 1 } }
-      }
-    })
-  )
-  await page.route('**/api/admin/contracts/contract-1/settle', (route) => {
-    mutations.push({
-      path: new URL(route.request().url()).pathname,
-      body: route.request().postDataJSON()
-    })
-    return route.fulfill({ json: { success: true, data: { totalPaid: 20 } } })
-  })
-  await page.route('**/api/admin/contracts', (route) => {
-    mutations.push({
-      path: new URL(route.request().url()).pathname,
-      body: route.request().postDataJSON()
-    })
-    return route.fulfill({ json: { success: true, data: contract } })
-  })
-  await page.goto('/app/admin/contracts')
-  await expect(page.locator('.contracts-card')).toHaveCount(1)
-  await page.getByRole('button', { name: '＋ 新建合同' }).click()
-  await page.locator('.contracts-drawer').getByText('合作方名称').locator('input').fill('新合作方')
-  await page
-    .locator('.contracts-drawer')
-    .getByText('合同开始日期')
-    .locator('input')
-    .fill('2026-09-01')
-  await page.getByRole('button', { name: '保存合同' }).dblclick()
-  await expect.poll(() => mutations.length).toBe(1)
-  await page.getByRole('button', { name: '录入打款' }).click()
-  await page.locator('.contracts-drawer').getByText('打款金额（元）').locator('input').fill('20')
-  await page.getByRole('button', { name: '确认录入' }).dblclick()
-  await expect.poll(() => mutations.length).toBe(2)
-  expect(mutations[1]?.body.amount).toBe(20)
-  expect(typeof mutations[1]?.body.clientRequestId).toBe('string')
+
+  for (const file of ['admin-collab.html', 'admin-contract.html', 'admin-collab-policy.html']) {
+    const response = await request.get(`http://127.0.0.1:5500/mowo/frontend/pages/${file}`)
+    expect(response.status()).toBe(404)
+  }
 })
 
 test('product candidate validates, edits SKU and saves without drafts', async ({ page }) => {

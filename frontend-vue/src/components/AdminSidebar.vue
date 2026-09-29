@@ -175,12 +175,7 @@ const groups: MenuGroup[] = [
     key: 'collab',
     label: '联名',
     icon: '🤝',
-    items: [
-      { label: '联名作品', icon: '🎨', file: 'admin-collab-works.html', roles: ownerCollab },
-      { label: '联名审核', icon: '✅', file: 'admin-collab.html', roles: ownerCollab },
-      { label: '商务合同', icon: '📑', file: 'admin-contract.html', roles: ownerCollab },
-      { label: '违约政策', icon: '📜', file: 'admin-collab-policy.html', roles: ownerCollab }
-    ]
+    items: [{ label: '联名作品', icon: '🎨', file: 'admin-collab-works.html', roles: ownerCollab }]
   },
   {
     key: 'ops',
@@ -215,7 +210,7 @@ const activeGroup = computed(() => {
   )
     return 'assets'
   if (route.path === '/admin/models') return 'product'
-  if (route.path.startsWith('/admin/collab-') || route.path === '/admin/contracts') return 'collab'
+  if (route.path.startsWith('/admin/collab-')) return 'collab'
   if (route.path === '/admin/contact') return 'ops'
   if (route.path === '/admin/logs') return 'system'
   if (route.path === '/admin/users' || route.path === '/admin/account-deletions') return 'users'
@@ -254,8 +249,6 @@ const legacyUrl = (file: string): string => `${runtimeConfig.legacyWebBase}/${fi
 function isActiveLegacy(file: string): boolean {
   const routes: Record<string, string> = {
     'admin-collab-works.html': '/admin/collab-works',
-    'admin-contract.html': '/admin/contracts',
-    'admin-collab.html': '/admin/collab-review',
     'admin-users.html': '/admin/users',
     'admin-account-deletions.html': '/admin/account-deletions',
     'admin-logs.html': '/admin/logs'

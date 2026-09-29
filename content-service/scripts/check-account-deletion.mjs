@@ -137,7 +137,6 @@ async function cleanup() {
   await prisma.preOrder.deleteMany({ where: { userId: whereUser } })
   await prisma.aftersaleRequest.deleteMany({ where: { userId: whereUser } })
   await prisma.customizeOrder.deleteMany({ where: { id: { in: orderIds } } })
-  await prisma.creatorContract.deleteMany({ where: { OR: [{ creatorId: whereUser }, { createdBy: whereUser }] } })
   const collabWorks = await prisma.collabWork.findMany({ where: { creatorId: whereUser }, select: { id: true } })
   if (collabWorks.length) await prisma.collabFramePack.deleteMany({ where: { collabWorkId: { in: collabWorks.map(item => item.id) } } })
   await prisma.collabWork.deleteMany({ where: { creatorId: whereUser } })
@@ -222,23 +221,14 @@ try {
   const collabWork = await prisma.collabWork.create({
     data: {
       creatorId: blockerMatrix.id, title: 'blocker work', animationFrames: '[]', supportedSkus: '[]',
-      agreementSignedAt: new Date(), status: 'pending'
+      agreementSignedAt: new Date(), status: 'approved', isOnShelf: true, shelfStatus: 'on_sale'
     }
   })
   await assertDeletionBlocker(blockerMatrix, 'ACTIVE_COLLAB_WORKS', 'active collaboration work blocks deletion')
   await prisma.collabWork.update({
     where: { id: collabWork.id },
-    data: { status: 'rejected', isOnShelf: false, shelfStatus: 'off_shelf' }
+    data: { isOnShelf: false, shelfStatus: 'off_shelf' }
   })
-
-  const contract = await prisma.creatorContract.create({
-    data: {
-      creatorId: blockerMatrix.id, creatorName: 'blocker creator', contractType: 'revenue_share',
-      startAt: new Date(), createdBy: staff.id
-    }
-  })
-  await assertDeletionBlocker(blockerMatrix, 'ACTIVE_CONTRACTS', 'active creator contract blocks deletion')
-  await prisma.creatorContract.update({ where: { id: contract.id }, data: { status: 'terminated' } })
 
   assert((await getAccountDeletionBlockers(prisma, blockerMatrix.id)).length === 0, 'completed retained business records no longer block deletion')
 

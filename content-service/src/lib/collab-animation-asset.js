@@ -49,21 +49,3 @@ export async function linkCollabWorkToAnimation(tx, work, options = {}) {
     animationAssetId: asset.id, animationVersionId: version.id
   } })
 }
-
-export async function updateCollabAssetStatus(tx, work, status) {
-  if (!work.animationAssetId) return
-  if (status === 'approved') {
-    await tx.animationAsset.update({ where: { id: work.animationAssetId }, data: statusFields(status) })
-    return
-  }
-  const otherActive = await tx.collabWork.count({ where: {
-    animationAssetId: work.animationAssetId, id: { not: work.id }, status: { in: ['pending', 'approved'] }
-  } })
-  if (otherActive) return
-  const asset = await tx.animationAsset.findUnique({ where: { id: work.animationAssetId } })
-  if (!asset) return
-  await tx.animationAsset.update({ where: { id: asset.id }, data: asset.sourceChannel === 'CREATOR_SUBMISSION'
-    ? { status: 'ARCHIVED', archivedAt: new Date(), collabStatus: 'STOPPED' }
-    : { collabStatus: 'NONE' }
-  })
-}

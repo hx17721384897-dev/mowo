@@ -248,7 +248,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--black);min-heig
 <div class="modal-overlay" id="relistModal">
   <div class="modal">
     <p class="modal-title">重新上架</p>
-    <p class="modal-sub" id="relistModalSub">确认将此作品重新上架？无需重新审核，上架后立即在 showcase 可见。</p>
+    <p class="modal-sub" id="relistModalSub">确认将此作品重新上架？无需重复线下确认，上架后立即在 showcase 可见。</p>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('relistModal')">取消</button>
       <button class="btn btn-green" onclick="submitRelist()">确认上架</button>
@@ -523,7 +523,7 @@ function renderDrawer(w, packs) {
       <div class="detail-grid">
         <div><div class="detail-item-label">创作者</div><div class="detail-item-val">${esc(w.creator?.nickname || '—')}</div></div>
         <div><div class="detail-item-label">货架状态</div><div class="detail-item-val">${statusLabel}</div></div>
-        <div><div class="detail-item-label">审核时间</div><div class="detail-item-val" style="font-size:11px;">${w.approvedAt ? new Date(w.approvedAt).toLocaleDateString('zh-CN') : '—'}</div></div>
+        <div><div class="detail-item-label">线下确认时间</div><div class="detail-item-val" style="font-size:11px;">${w.approvedAt ? new Date(w.approvedAt).toLocaleDateString('zh-CN') : '—'}</div></div>
         ${w.shelfStatus === 'suspended' ? `<div><div class="detail-item-label">暂停时间</div><div class="detail-item-val" style="font-size:11px;">${w.suspendedAt ? new Date(w.suspendedAt).toLocaleDateString('zh-CN') : '—'}</div></div>` : ''}
         ${w.shelfStatus === 'off_shelf' ? `<div><div class="detail-item-label">下架方式</div><div class="detail-item-val">${offShelfTypeLabel}</div></div>` : ''}
         ${w.offShelfReason ? `<div style="grid-column:1/-1;"><div class="detail-item-label">内部备注</div><div class="detail-item-val" style="font-size:12px;">${esc(w.offShelfReason)}</div></div>` : ''}

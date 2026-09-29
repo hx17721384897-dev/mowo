@@ -240,18 +240,6 @@ const router = createRouter({
           meta: { title: '联名商品编辑 — 哞屋后台', staffRoles: ['OWNER', 'COLLAB_OPS'] }
         },
         {
-          path: 'contracts',
-          name: 'admin-contracts',
-          component: () => import('@/views/AdminContractsView.vue'),
-          meta: { title: '商务合同 — 哞屋后台', staffRoles: ['OWNER', 'COLLAB_OPS'] }
-        },
-        {
-          path: 'collab-review',
-          name: 'admin-collab-review',
-          component: () => import('@/views/AdminCollabReviewView.vue'),
-          meta: { title: '联名审核 — 哞屋后台', staffRoles: ['OWNER', 'COLLAB_OPS'] }
-        },
-        {
           path: 'contact',
           name: 'admin-contact',
           component: () => import('@/views/AdminContactView.vue'),

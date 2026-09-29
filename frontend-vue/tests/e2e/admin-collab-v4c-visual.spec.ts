@@ -41,33 +41,6 @@ async function prepare(page: Page): Promise<void> {
   await page.route('**/api/admin/collab/work-1/frame-packs', (route) =>
     route.fulfill({ json: { success: true, data: [] } })
   )
-  const contract = {
-    id: 'contract-1',
-    creatorName: '测试合作方',
-    contractType: 'buyout',
-    status: 'active',
-    revenueRate: null,
-    guaranteeAmount: null,
-    buyoutAmount: 100,
-    startAt: '2026-09-01T00:00:00Z',
-    endAt: null,
-    terms: '',
-    note: '',
-    settlementLogs: [],
-    totalPaid: 0,
-    createdBy: '负责人'
-  }
-  await page.route('**/api/admin/contracts?*', (route) =>
-    route.fulfill({
-      json: {
-        success: true,
-        data: { contracts: [contract], pagination: { page: 1, limit: 20, total: 1, totalPages: 1 } }
-      }
-    })
-  )
-  await page.route('**/api/admin/contracts/contract-1', (route) =>
-    route.fulfill({ json: { success: true, data: contract } })
-  )
   const product = {
     productNo: 'P-1',
     reviewStatus: 'approved',
@@ -135,16 +108,6 @@ test('works candidate keeps legacy content geometry', async ({ page }) => {
     '/app/admin/collab-works',
     ['.topbar', '.stats-grid', '.search-bar', '.works-grid', '.work-card'],
     ['.review-topbar', '.works-stats', '.works-search', '.works-grid', '.works-card']
-  )
-})
-test('contracts candidate keeps legacy content geometry', async ({ page }) => {
-  await prepare(page)
-  await compare(
-    page,
-    'http://127.0.0.1:5500/mowo/frontend/pages/admin-contract.html',
-    '/app/admin/contracts',
-    ['.topbar', '.toolbar', '.contract-card'],
-    ['.review-topbar', '.contracts-toolbar', '.contracts-card']
   )
 })
 test('product candidate keeps legacy content geometry', async ({ page }) => {

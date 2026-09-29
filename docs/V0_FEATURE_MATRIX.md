@@ -8,7 +8,8 @@
 |---|---|---|---|---|---|---|
 | 官网与静态信息 | 旧公开页；目标 `/app/` | 正式开放 | 正式开放 | Web | V0 E2E；后续 V1a 链接扫描 | 按 Vue 正式页面迭代 |
 | 联名商品货架/详情 | Vue `/app/showcase*`；V1b 已完成 | `/api/collab/works*` 正式开放 | 正式开放 | 联名运营 + Web | `check:collab-storefront`、Vue unit/E2E | 只演进正式 DTO，不恢复旧 HTML 或旧商品系统 |
-| 人工联名审核、商品配置、合同 | 当前后台；目标 V4 | `/api/admin/collab/*`、`/api/admin/contracts*` 内部岗位权限 | 内部保留 | 联名运营 | `check:staff-security`、`check:collab-sale-config` | 保留权利人、授权、合同与线下约定 |
+| 联名作品、商品、SKU、库存与上下架 | 当前后台；目标 V4 | `/api/admin/collab/*` 内部岗位权限 | 内部保留 | 联名运营 | `check:staff-security`、`check:collab-sale-config` | 只接收已经在线下确认合作与授权的作品 |
+| 在线联名投稿审核、商务合同台账、违约政策 | 首发不提供 | 页面、API、专用模型和配置均无运行入口 | 已退役 | 线下商务流程 | R1-B 负向矩阵、部署产物检查 | 如未来需要必须重新立项，不恢复旧实现 |
 | 私人定制与动画资产 | 当前定制页；目标 V2 | `/api/custom-products*`、`/api/customization-requests*`、`/api/animation-assets*` 正式开放/对象归属 | 正式开放 | 客服 + 生产 + Web | `check:customization-*`、`check:private-files` | 不得与旧 `/api/animations` 混用 |
 | 混合购物车和订单 | 当前交易页；目标 V3 | `/api/cart*`、`/api/orders*` 正式开放/对象归属 | 正式开放 | 交易后端 + Web | `check:sales-order-structure`、`check:mixed-checkout-ui` | 服务端价格、库存与幂等为准 |
 | 在线支付与微信交接 | 当前页面不展示真实付款 | `/api/cart/checkout`、`/api/payment/*` 使用 `ONLINE_CHECKOUT_ENABLED` | 暂时关闭但保留 | 支付后端 | `check:launch-safety`；未来微信验签/对账专项 | 只能完成官方支付、验签、退款和对账后开启 |
@@ -18,7 +19,7 @@
 | 社区文章、Feed、互动、关注 | 无正式入口 | 无路由（已退役） | 已退役 | 后端 | R1-B 负向矩阵、静态扫描和 B7 | 不恢复旧实现；未来重新立项 |
 | 历史创作者商品/动画系统 | 无正式入口 | 无 `/api/products*`、`/api/animations*` 路由 | 已退役 | 后端 | R1-B 负向矩阵；正式联名/定制回归 | 不恢复旧实现 |
 | 创作者认证与自助联名 | 人工联络代替 | 无 `/api/certify*`、`/api/collab/apply*`、`my-works*` 路由 | 已退役 | 联名运营 | R1-B 负向矩阵和 B7 | 未来按新资质/授权流程开发 |
-| 线上分红、余额、提现、结算 | 人工合同/线下记录代替 | 无旧财务路由和任务 | 已退役 | 财务/法务 | R1-B 负向矩阵；合同和订单追溯回归 | 未来新建账本、税务、对账方案 |
+| 线上分红、余额、提现、结算 | 企业线下流程代替，平台不建合同或付款台账 | 无旧财务路由和任务 | 已退役 | 财务/法务 | R1-B 负向矩阵；订单追溯回归 | 未来新建账本、税务、对账方案 |
 | 牛量与推广链接 | 无正式入口 | 无旧牛量/链接路由和任务 | 已退役 | 产品负责人 | R1-B 负向矩阵、Schema 扫描和 B7 | 未来重新立项，不复用旧评分 |
 | CRMEB | 不生成页面或客户端 | 无路由、无依赖 | 已退役 | 架构负责人 | 全仓扫描；`crmeb/` 仅占位 | 不接入旧方案；未来重新评估商城边界 |
 

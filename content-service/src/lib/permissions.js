@@ -13,7 +13,6 @@ export const PERMISSION = Object.freeze({
   PRODUCTION: 'PRODUCTION',
   PRODUCTION_CONFIG: 'PRODUCTION_CONFIG',
   COLLAB: 'COLLAB',
-  COLLAB_ADMIN: 'COLLAB_ADMIN',
   USERS_READ: 'USERS_READ',
   USERS_BAN: 'USERS_BAN',
   ACCOUNT_DELETIONS_READ: 'ACCOUNT_DELETIONS_READ',
@@ -80,15 +79,7 @@ export function requiredPermissionForRequest(method, rawUrl) {
   if (path.startsWith('/api/admin/frame-imports')) return PERMISSION.FRAME_LIBRARY
   if (path.startsWith('/api/admin/print-production')) return PERMISSION.PRODUCTION_CONFIG
 
-  if (
-    (verb === 'PUT' && path === '/api/admin/collab/policy') ||
-    (verb === 'DELETE' && /^\/api\/admin\/contracts\/[^/]+$/.test(path))
-  ) return PERMISSION.COLLAB_ADMIN
-
-  if (
-    path.startsWith('/api/admin/collab') ||
-    path.startsWith('/api/admin/contracts')
-  ) return PERMISSION.COLLAB
+  if (path.startsWith('/api/admin/collab')) return PERMISSION.COLLAB
 
   if (
     path.startsWith('/api/inventory') ||

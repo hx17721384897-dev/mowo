@@ -1,6 +1,8 @@
 # B5 后台页面与权限矩阵
 
 > 最后核对：2026-09-10。前端菜单/页面仅负责体验，服务端 `requiredPermissionForRequest()` 与路由命名权限才是授权边界。
+>
+> **后续边界（2026-09-28）：** 本表保留当时的权限取证。`admin-collab.html`、`admin-collab-policy.html`、`admin-contract.html` 及其 API 已退役，`COLLAB_ADMIN` 已删除；首发 `COLLAB` 仅用于已线下确认的联名作品与商品运营。
 
 | 页面 | 主要端点域 | 命名权限 | 最小岗位/特殊动作 | 当前状态 |
 |---|---|---|---|---|

@@ -56,7 +56,7 @@
 |--------|------|------|------|
 | `admin-orders.html` | 定制订单四视图 | 运营客服/负责人 | ✅ |
 | `admin-collab-works.html` | 联名作品管理 | 合作运营/负责人 | ✅ |
-| `admin-collab.html` | 联名作品审核 | 合作运营/负责人 | ✅ |
+| `admin-collab.html` | 联名作品审核 | — | ❌ 已退役并物理删除 |
 | `admin-collab-activities.html` | 活动管理 | 合作运营/负责人 | ✅ |
 | `admin-users.html` | 用户与员工岗位管理 | 运营客服只读普通用户并可封禁；负责人管理岗位 | ✅ 已更新 |
 | `admin-account-deletions.html` | 注销任务监控 | 运营客服只读脱敏状态；负责人可重试、暂停和恢复；暂停时分开填写内部原因和用户说明 | ✅ 已更新 |
@@ -68,7 +68,7 @@
 | `admin-settlement.html` | 分红结算（待打款/历史记录/确认打款） | 合作运营/负责人 | ✅ 保留 |
 | `admin-bull.html` | 牛量管理（创作者列表/参数配置） | 合作运营/负责人 | ✅ 保留 |
 | `admin-links.html` | 引流链接审核（外部视频审核/声量系数） | 合作运营/负责人 | ✅ 保留 |
-| `admin-contract.html` | 商务合同（大IP合同管理/打款记录） | 合作运营/负责人 | ✅ 保留 |
+| `admin-contract.html` | 商务合同（大IP合同管理/打款记录） | — | ❌ 已退役并物理删除 |
 
 后台侧边栏由 `admin-sidebar.js` 根据服务器返回的最新 `staffRole` 显示入口；直接输入隐藏页面地址仍会被服务器岗位权限拒绝。完整岗位表见 `modules/staff-permissions-audit.md`。
 
@@ -169,7 +169,7 @@ Tab2 参数配置：13项阈值全部展示为可编辑输入框，保存后次�
     → 通过后自动同步到该创作者最新 bull_score.socialManualMod
 ```
 
-## admin-contract.html 功能说明 ✅ 新增
+## admin-contract.html 历史功能说明（已退役）
 
 ```
 大IP/商务合作合同管理（独立于标准分红体系）
@@ -252,16 +252,10 @@ admin-users.html 支持：
   └── 库存管理 → admin-inventory.html
 
 联名系统
-  ├── 联名作品 → admin-collab-works.html
-  ├── 联名审核 → admin-collab.html
-  └── 活动管理 → admin-collab-activities.html
+  └── 联名作品 → admin-collab-works.html（后续切换到 /app/admin/collab-works）
 
 运营
-  ├── 联络留言 → /app/admin/contact
-  ├── 分红结算 → admin-settlement.html    ✅ 新增
-  ├── 牛量管理 → admin-bull.html          ✅ 新增
-  ├── 引流审核 → admin-links.html         ✅ 新增
-  └── 商务合同 → admin-contract.html      ✅ 新增
+  └── 联络留言 → /app/admin/contact
 
 用户管理
 ├── 用户列表 → admin-users.html（含账号状态）

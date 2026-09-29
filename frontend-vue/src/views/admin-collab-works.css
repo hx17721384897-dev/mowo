@@ -16,7 +16,7 @@
 .admin-collab-works-page .works-stat {
   min-height: 104px;
 }
-.admin-collab-review-page.admin-collab-works-page .review-btn.small {
+.admin-collab-shell.admin-collab-works-page .review-btn.small {
   height: 30px;
   padding: 0 10px;
 }
@@ -301,7 +301,7 @@
   .admin-collab-works-page .works-stats {
     grid-template-columns: repeat(2, 1fr);
   }
-  .admin-collab-review-page.admin-collab-works-page .review-content {
+  .admin-collab-shell.admin-collab-works-page .review-content {
     padding-top: 28px;
   }
 }

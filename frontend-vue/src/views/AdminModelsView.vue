@@ -2,7 +2,7 @@
 /* eslint-disable vue/html-closing-bracket-newline, vue/html-indent, vue/multiline-html-element-content-newline */
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import AdminSidebar from '@/components/AdminSidebar.vue'
-import { safeReviewImage } from '@/features/admin-collab-review/api'
+import { safeImageUrl } from '@/shared/media/safe-image-url'
 import {
   createCatalogSku,
   deleteCatalogExampleImage,
@@ -633,8 +633,8 @@ onBeforeUnmount(() => {
                 <i :class="model.isActive ? 'active' : ''"></i>
                 <div class="catalog-preview">
                   <img
-                    v-if="safeReviewImage(model.previewImage)"
-                    :src="safeReviewImage(model.previewImage)!"
+                    v-if="safeImageUrl(model.previewImage)"
+                    :src="safeImageUrl(model.previewImage)!"
                     alt=""
                   /><span v-else>📦</span>
                 </div>
@@ -947,8 +947,7 @@ onBeforeUnmount(() => {
         </div>
         <div v-else class="catalog-example-grid">
           <figure v-for="item in examples" :key="item.key">
-            <img v-if="safeReviewImage(item.url)" :src="safeReviewImage(item.url)!" alt="" /><span
-              v-else
+            <img v-if="safeImageUrl(item.url)" :src="safeImageUrl(item.url)!" alt="" /><span v-else
               >预览失效</span
             ><button :disabled="busy" @click="removeExample(item)">×</button>
           </figure>

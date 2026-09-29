@@ -21,7 +21,6 @@ import platformSkuRoutes from './routes/platform-sku.js'
 import multipart from '@fastify/multipart'
 import contactRoutes      from './routes/contact.js'
 import adminContactRoutes from './routes/admin-contact.js'
-import contractsRoutes    from './routes/contracts.js'
 import cartRoutes          from './routes/cart.js'
 import customProductRoutes from './routes/custom-products.js'
 import animationAssetRoutes from './routes/animation-assets.js'
@@ -201,9 +200,6 @@ async function start() {
     await fastify.register(contactRoutes,        { prefix: '/api/contact' })
     await fastify.register(adminContactRoutes,   { prefix: '/api/admin/contact' })
     await fastify.register(adminCustomizationRequestRoutes, { prefix: '/api/admin/customization-requests' })
-
-    // ── 商务合同（创作者自助、结算和引流能力延后重建）──
-    await fastify.register(contractsRoutes,      { prefix: '/api' })
 
     // ── 购物车系统 ──
     await fastify.register(cartRoutes,           { prefix: '/api/cart' })

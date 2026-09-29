@@ -29,7 +29,7 @@
 | 内容与社交 | Article、ArticleProduct、Comment、Like、Collect、Follow |
 | 动画与旧商品 | Animation、AnimationFrame、Product、OrderExt、PlatformRule、Earning、Balance、WithdrawalRequest |
 | 机型与订单 | MachineModel、MachineModelSku、CustomizeOrder、AftersaleRequest、ShippingBatch |
-| 联名与收益 | CollabWork、CollabSaleSku、CollabOrder、CollabActivity、CreatorReserve、ReserveLog、SettlementRecord、PlatformConfig、BullScore、BullScoreLog、CreatorReferralLink、ReferralClick、CreatorSocialLink、CreatorContract、CreatorNotification |
+| 联名商品 | CollabWork、CollabSaleSku、CollabFramePack、CollabFramePackMutation、CollabStorefrontView；线上审核、合同和创作者财务专用模型均已退役 |
 | 库存与生产 | SkuInventory、InventoryLog、AuthCode、PlatformSkuMapping、ProductionBatch、BatchItem、FrameInstance、InventorySnapshot、OrderItemBinding、ChannelQuota、OperationLog |
 | 帧包与材料 | CollabFramePack、FramePackWork、FramePackVariant、FramePackLog、MaterialItem、MaterialLog、MaterialSkuBinding |
 | 联络 | ContactSubmission |
