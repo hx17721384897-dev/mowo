@@ -224,22 +224,7 @@ async function mockPage(page: Page, role = 'PRODUCTION') {
   return { writes, draftWrites }
 }
 
-async function geometry(page: Page) {
-  return page.evaluate(() => {
-    const box = (selector: string) => {
-      const rect = document.querySelector(selector)?.getBoundingClientRect()
-      return rect ? { x: rect.x, y: rect.y, width: rect.width, height: rect.height } : null
-    }
-    return {
-      topbar: box('.topbar'),
-      content: box('.content'),
-      stats: box('.stats'),
-      layout: box('.layout')
-    }
-  })
-}
-
-test('production batch candidate preserves summary, detail, files, materials and safe text', async ({
+test('production batch page preserves summary, detail, files, materials and safe text', async ({
   page
 }, info) => {
   const tracked = await mockPage(page)
@@ -263,20 +248,13 @@ test('production batch candidate preserves summary, detail, files, materials and
     await page.getByRole('button', { name: '菜单' }).click()
     await expect(page.getByRole('navigation', { name: '后台菜单' })).toBeVisible()
   } else {
-    const vueGeometry = await geometry(page)
     await page.goto(
       `http://127.0.0.1:5500/mowo/frontend/pages/admin-production-batches.html?batchId=${summary.id}`
     )
+    await expect(page).toHaveURL(
+      `/app/admin/production-batches?batchId=${encodeURIComponent(summary.id)}`
+    )
     await expect(page.getByText(`${summary.id} / 返工1次`)).toBeVisible()
-    const legacyGeometry = await geometry(page)
-    for (const key of ['topbar', 'content', 'stats', 'layout'] as const) {
-      const current = vueGeometry[key]
-      const legacy = legacyGeometry[key]
-      expect(current).not.toBeNull()
-      expect(legacy).not.toBeNull()
-      for (const field of ['x', 'y', 'width'] as const)
-        expect(Math.abs(current![field] - legacy![field])).toBeLessThanOrEqual(6)
-    }
   }
 })
 

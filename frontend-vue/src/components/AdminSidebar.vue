@@ -84,7 +84,7 @@ const groups: MenuGroup[] = [
       {
         label: '生产批次',
         icon: '▦',
-        file: 'admin-production-batches.html',
+        to: '/admin/production-batches',
         roles: ownerProduction
       },
       {

@@ -17,7 +17,7 @@ try {
     fs.readFile(new URL('src/routes/production-workflow.js', root), 'utf8'),
     fs.readFile(new URL('../frontend-vue/src/views/AdminOrdersView.vue', root), 'utf8'),
     fs.readFile(new URL('../frontend-vue/src/features/admin-orders/api.ts', root), 'utf8'),
-    fs.readFile(new URL('../frontend/pages/admin-production-batches.html', root), 'utf8'),
+    fs.readFile(new URL('../frontend-vue/src/views/AdminProductionBatchesView.vue', root), 'utf8'),
     fs.readFile(new URL('../frontend/pages/production-scan.html', root), 'utf8'),
     fs.readFile(new URL('../frontend/pages/production-scan-frame.html', root), 'utf8'),
     fs.readFile(new URL('../frontend/pages/production-scan-material.html', root), 'utf8'),

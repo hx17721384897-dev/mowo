@@ -60,7 +60,7 @@
     el('pairedTotal').textContent = batch?.paired || 0
     el('packedTotal').textContent = batch?.packaged || 0
     el('overviewBatch').innerHTML = batch
-      ? `<div class="progress-line"><span>帧包 ${batch.frameCompleted}/${batch.total}</span><span>领料 ${batch.materialPicked}/${batch.total}</span><span>配对 ${batch.paired}/${batch.total}</span><span>装箱 ${batch.packaged}/${batch.total}</span></div><div class="actions"><a class="btn" href="admin-production-batches.html?batchId=${encodeURIComponent(batch.id)}">查看批次详情</a><button class="btn" id="downloadLedger">下载最新生产总表</button></div>`
+      ? `<div class="progress-line"><span>帧包 ${batch.frameCompleted}/${batch.total}</span><span>领料 ${batch.materialPicked}/${batch.total}</span><span>配对 ${batch.paired}/${batch.total}</span><span>装箱 ${batch.packaged}/${batch.total}</span></div><div class="actions"><a class="btn" href="${window.MOWO_APP_BASE || '/app'}/admin/production-batches?batchId=${encodeURIComponent(batch.id)}">查看批次详情</a><button class="btn" id="downloadLedger">下载最新生产总表</button></div>`
       : '<div class="empty">请先选择生产批次</div>'
     if (el('downloadLedger')) el('downloadLedger').onclick = downloadLedger
     el('serverRecent').innerHTML = state.overview.recent.length

@@ -926,6 +926,7 @@ onBeforeUnmount(() => {
               <label>目标商品帧数</label
               ><input
                 v-model.number="productionForm.targetFrameCount"
+                aria-label="目标商品帧数"
                 type="number"
                 min="1"
                 placeholder="12"
@@ -934,7 +935,7 @@ onBeforeUnmount(() => {
             </div>
             <div class="field wide">
               <label>打印模板</label
-              ><select v-model="productionForm.templateVersionId">
+              ><select v-model="productionForm.templateVersionId" aria-label="打印模板">
                 <option v-for="item in compatibleTemplates" :key="item.id" :value="item.id">
                   {{ item.groupName }} · {{ item.paperSize }} · {{ item.size }} · 单页{{
                     item.framesPerSheet

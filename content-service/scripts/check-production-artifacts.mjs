@@ -73,6 +73,7 @@ requireIsolatedTestDatabase()
 const prisma = new PrismaClient()
 const apiBase = process.env.TEST_API_BASE || 'http://127.0.0.1:3001'
 const webBase = process.env.TEST_WEB_BASE || 'http://127.0.0.1:5500/mowo/frontend/pages'
+const appBase = process.env.TEST_APP_BASE || 'http://127.0.0.1:4173/app'
 const storageRoot = path.resolve(process.cwd(), process.env.LOCAL_STORAGE_DIR || 'storage/private')
 const runId = String(Date.now()).slice(-9)
 const physicalKeys = []
@@ -248,7 +249,7 @@ try {
     window.MOWO_RUNTIME_API_BASE = apiBase
     localStorage.setItem('mowo_token', token)
   }, { token, apiBase })
-  await page.goto(`${webBase}/admin-production-batches.html?batchId=${encodeURIComponent(reprintBatchId)}`, { waitUntil: 'networkidle' })
+  await page.goto(`${appBase}/admin/production-batches?batchId=${encodeURIComponent(reprintBatchId)}`, { waitUntil: 'networkidle' })
   await page.getByText(`${reprintBatchId} / 返工1次`, { exact: true }).waitFor()
   assert((await page.getByText('纸面数字不一致即为旧清单').count()) === 1 && (await page.getByText('返工记录与当前进度', { exact: true }).count()) === 1, '批次页面醒目标出旧清单判断和返工步骤')
   if (process.env.SCREENSHOT_DIR) {
@@ -266,12 +267,12 @@ try {
   assert((await page.getByText('生产文件', { exact: true }).count()) >= 1, '资产详情包含独立生产文件模块')
   assert((await page.getByRole('button', { name: '查看加工帧' }).count()) >= 1 && (await page.getByRole('button', { name: '删除' }).count()) >= 1, '未入批生产文件提供加工帧预览和负责人删除入口')
   await page.getByRole('button', { name: '查看加工帧' }).first().click()
-  await page.locator('#renderFramesGrid img').first().waitFor()
-  assert((await page.locator('#renderFramesGrid img').count()) === 4 && (await page.getByText('frame-001.png').count()) === 1, '加工帧弹窗按序号展示全部编辑图片')
+  await page.locator('.render-frame-grid img').first().waitFor()
+  assert((await page.locator('.render-frame-grid img').count()) === 4 && (await page.getByText('frame-001.png').count()) === 1, '加工帧弹窗按序号展示全部编辑图片')
   await page.getByRole('button', { name: '关闭' }).last().click()
   await page.getByRole('button', { name: '新增文件版本' }).click()
-  await page.locator('#productionTargetFrames').fill('24')
-  assert((await page.locator(`#productionTemplate option[value="${uploadPayload.data.id}"]`).count()) === 1, '新增文件时会列出本次验证通过的兼容模板')
+  await page.getByLabel('目标商品帧数').fill('24')
+  assert((await page.getByLabel('打印模板').locator(`option[value="${uploadPayload.data.id}"]`).count()) === 1, '新增文件时会列出本次验证通过的兼容模板')
   await context.close()
 
   const deleteResponse = await request(`/api/admin/frame-library/${assetId}/production-files/${generated.data.id}`, token, { method: 'DELETE' })

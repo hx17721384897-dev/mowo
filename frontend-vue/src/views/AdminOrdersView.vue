@@ -306,7 +306,7 @@ onBeforeUnmount(() => {
           <div class="title">订单生产</div>
         </div>
         <div class="top-actions">
-          <a class="btn" :href="legacyUrl('admin-production-batches.html')">生产批次总览</a>
+          <RouterLink class="btn" to="/admin/production-batches">生产批次总览</RouterLink>
           <button class="btn" type="button" :disabled="loading" @click="loadOrders">刷新</button>
         </div>
       </header>
@@ -368,12 +368,13 @@ onBeforeUnmount(() => {
                 </div>
               </div>
               <div class="actions">
-                <a
+                <RouterLink
                   v-if="batchId === 'NO_BATCH'"
                   class="btn btn-black"
-                  :href="legacyUrl('admin-production-batches.html')"
-                  >前往创建批次</a
+                  to="/admin/production-batches"
                 >
+                  前往创建批次
+                </RouterLink>
                 <button
                   v-else-if="stage === 'pending'"
                   class="btn btn-black"
@@ -413,16 +414,13 @@ onBeforeUnmount(() => {
                   :href="legacyUrl('production-scan.html?v=20260904-1#packing')"
                   >进入装箱发货</a
                 >
-                <a
+                <RouterLink
                   v-else
                   class="btn"
-                  :href="
-                    legacyUrl(
-                      `admin-production-batches.html?batchId=${encodeURIComponent(batchId)}`
-                    )
-                  "
-                  >查看批次</a
+                  :to="{ path: '/admin/production-batches', query: { batchId } }"
                 >
+                  查看批次
+                </RouterLink>
               </div>
             </div>
 

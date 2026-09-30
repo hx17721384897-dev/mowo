@@ -128,7 +128,7 @@ P0（越权、隐私、数据破坏、资金或重复生产）立即暂停；P1�
 3. 打开审计日志：`http://127.0.0.1:5500/mowo/frontend/pages/admin-logs.html`，确认页面能加载且敏感请求正文不应直接展示。
 4. 退出后登录生产账号 `13800138004`、验证码 `123456`。
 5. 打开生产订单：`http://127.0.0.1:4173/app/admin/orders`。
-6. 打开生产批次：`http://127.0.0.1:5500/mowo/frontend/pages/admin-production-batches.html`。
+6. 打开生产批次：`http://127.0.0.1:4173/app/admin/production-batches`；旧静态 URL 只用于验证临时 302，不再承载页面实现。
 7. 打开扫码工作台：`http://127.0.0.1:5500/mowo/frontend/pages/production-scan.html`，确认五个环节和移动窗口布局。
 8. 直接打开 `http://127.0.0.1:5500/mowo/frontend/pages/admin-users.html`，生产岗位应被拒绝并返回首页。
 

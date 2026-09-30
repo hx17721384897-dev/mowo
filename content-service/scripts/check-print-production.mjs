@@ -7,6 +7,7 @@ requireIsolatedTestDatabase()
 const prisma = new PrismaClient()
 const apiBase = process.env.TEST_API_BASE || 'http://127.0.0.1:3001'
 const webBase = process.env.TEST_WEB_BASE || 'http://127.0.0.1:5500/mowo/frontend/pages'
+const appBase = process.env.TEST_APP_BASE || 'http://127.0.0.1:4173/app'
 const runId = String(Date.now()).slice(-8)
 const sizeA = `${runId.slice(-4)}x5cm`, sizeB = `${runId.slice(-4)}x8cm`
 let adminId, customerId, preOrderId, salesOrderId, batchId, browser
@@ -218,7 +219,7 @@ try {
   }, { skuId: skus[6].id, groupId: group12.id })
   await page.waitForFunction(id => document.querySelector(`[data-group-id="${id}"]`)?.textContent.includes('拖拽12'), group12.id)
   assert(!!(await prisma.printCutRule.findUnique({ where: { skuId: skus[6].id } })), '尚未配置 SKU 可以拖入匹配尺寸的打印组')
-  await page.goto(`${webBase}/admin-production-batches.html`, { waitUntil: 'networkidle' })
+  await page.goto(`${appBase}/admin/production-batches?batchId=${encodeURIComponent(batchId)}`, { waitUntil: 'networkidle' })
   await page.getByText(batchId).first().click()
   await page.getByText('帧素材打印顺序').waitFor()
   assert(await page.getByText('未配置 SKU，待现场确认').count() >= 1, '批次详情展示未配置 SKU 的现场确认标记')

@@ -22,7 +22,7 @@
             { href: `${window.MOWO_APP_BASE || '/app'}/admin/orders?view=shipped`,    icon: '→', label: '已发货' }
           ]
         },
-        { href: 'admin-production-batches.html',       icon: '▦', label: '生产批次' },
+        { href: `${window.MOWO_APP_BASE || '/app'}/admin/production-batches`, icon: '▦', label: '生产批次' },
         {
           key: 'scan', icon: '⌁', label: '扫码作业',
           children: [
