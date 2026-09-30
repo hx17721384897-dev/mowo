@@ -89,11 +89,22 @@ try {
   }
 
   async function createGroup(name, size, framesPerSheet) {
+    const clientRequestId = `print-group-${runId}-${groupIds.length + 1}`
+    const body = { name, size, framesPerSheet, paperSize: 'A4', cuttingTool: `${size}-${framesPerSheet}格模具`, clientRequestId }
     const response = await request('/api/admin/print-production/groups', token, {
-      method: 'POST', body: JSON.stringify({ name, size, framesPerSheet, paperSize: 'A4', cuttingTool: `${size}-${framesPerSheet}格模具` })
+      method: 'POST', body: JSON.stringify(body)
     })
     const json = await response.json()
     assert(response.status === 201, `可以新增打印裁切组：${name}`)
+    if (!groupIds.length) {
+      const replayResponse = await request('/api/admin/print-production/groups', token, { method: 'POST', body: JSON.stringify(body) })
+      const replay = await replayResponse.json()
+      assert(replayResponse.status === 200 && replay.data.id === json.data.id && replay.data.reused === true, '打印组创建响应丢失后复用原记录')
+      const conflictResponse = await request('/api/admin/print-production/groups', token, {
+        method: 'POST', body: JSON.stringify({ ...body, name: `${name}-改写` })
+      })
+      assert(conflictResponse.status === 409 && (await conflictResponse.json()).code === 'IDEMPOTENCY_KEY_CONFLICT', '同一打印组请求标识不能改写创建内容')
+    }
     groupIds.push(json.data.id)
     return json.data
   }

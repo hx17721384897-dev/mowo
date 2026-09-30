@@ -130,12 +130,23 @@ try {
   } })
   groupId = group.id
 
-  const form = new FormData()
-  form.append('file', new Blob([template], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }), 'A4-5x5-12.docx')
-  const uploadResponse = await request(`/api/admin/print-production/groups/${groupId}/templates`, token, { method: 'POST', body: form })
+  const templateRequestId = `print-template-${runId}`
+  const templateForm = () => {
+    const form = new FormData()
+    form.append('file', new Blob([template], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }), 'A4-5x5-12.docx')
+    return form
+  }
+  const uploadResponse = await request(`/api/admin/print-production/groups/${groupId}/templates`, token, {
+    method: 'POST', headers: { 'Idempotency-Key': templateRequestId }, body: templateForm()
+  })
   const uploadPayload = await uploadResponse.json()
   assert(uploadResponse.status === 201 && uploadPayload.data.versionNo === 1, '真实接口可以上传并登记 Word 模板 V1')
   physicalKeys.push(uploadPayload.data.objectKey)
+  const uploadReplayResponse = await request(`/api/admin/print-production/groups/${groupId}/templates`, token, {
+    method: 'POST', headers: { 'Idempotency-Key': templateRequestId }, body: templateForm()
+  })
+  const uploadReplay = await uploadReplayResponse.json()
+  assert(uploadReplayResponse.status === 200 && uploadReplay.data.id === uploadPayload.data.id && uploadReplay.data.reused === true, '模板上传响应丢失后复用同一版本和文件')
 
   const generateResponse = await request(`/api/admin/frame-library/${assetId}/production-files`, token, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },

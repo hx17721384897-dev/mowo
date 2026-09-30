@@ -34,6 +34,23 @@ function createGroupCode() {
   return `PCG-${stamp}-${random}`
 }
 
+function requestId(value) {
+  const id = String(value || '').trim()
+  return id && id.length <= 80 ? id : null
+}
+
+function fingerprint(value) {
+  return crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex')
+}
+
+function idempotencyConflict(reply) {
+  return reply.code(409).send({
+    success: false,
+    code: 'IDEMPOTENCY_KEY_CONFLICT',
+    message: '该请求标识已用于不同的打印配置，请刷新后重试'
+  })
+}
+
 function previewUrl(fastify, sku) {
   const key = sku.previewImage || sku.model?.previewImage
   if (!key) return null
@@ -68,16 +85,31 @@ export default async function printProductionRoutes(fastify) {
   fastify.post('/groups', { preHandler: requireAdmin }, async (req, reply) => {
     const name = text(req.body?.name, 80)
     const fields = groupFields(req.body)
+    const clientRequestId = requestId(req.body?.clientRequestId)
     if (!name || !fields.size || !fields.framesPerSheet || !fields.frameWidthMm || !fields.frameHeightMm) {
       return reply.code(400).send({ success: false, message: '请填写组名、尺寸和每页帧数' })
     }
+    if (!clientRequestId) return reply.code(400).send({ success: false, message: '缺少打印组创建标识，请重新打开表单' })
+    const requestFingerprint = fingerprint({ name, ...fields })
+    const existing = await fastify.prisma.printCutGroup.findUnique({ where: { clientRequestId } })
+    if (existing) {
+      if (existing.createdBy !== req.user.userId || existing.requestFingerprint !== requestFingerprint) return idempotencyConflict(reply)
+      return reply.send({ success: true, data: { ...existing, reused: true } })
+    }
     const last = await fastify.prisma.printCutGroup.findFirst({ orderBy: { sortOrder: 'desc' }, select: { sortOrder: true } })
-    const group = await fastify.prisma.printCutGroup.create({ data: {
-      code: createGroupCode(), name, ...fields,
-      templateKey: null,
-      sortOrder: (last?.sortOrder ?? -1) + 1, createdBy: req.user.userId
-    } })
-    return reply.code(201).send({ success: true, data: group })
+    try {
+      const group = await fastify.prisma.printCutGroup.create({ data: {
+        code: createGroupCode(), name, ...fields,
+        templateKey: null, clientRequestId, requestFingerprint,
+        sortOrder: (last?.sortOrder ?? -1) + 1, createdBy: req.user.userId
+      } })
+      return reply.code(201).send({ success: true, data: { ...group, reused: false } })
+    } catch (error) {
+      if (error?.code !== 'P2002') throw error
+      const replay = await fastify.prisma.printCutGroup.findUnique({ where: { clientRequestId } })
+      if (!replay || replay.createdBy !== req.user.userId || replay.requestFingerprint !== requestFingerprint) return idempotencyConflict(reply)
+      return reply.send({ success: true, data: { ...replay, reused: true } })
+    }
   })
 
   fastify.put('/groups/reorder', { preHandler: requireAdmin }, async (req, reply) => {
@@ -182,20 +214,42 @@ export default async function printProductionRoutes(fastify) {
     if (inspection.cellCount !== group.framesPerSheet) {
       return reply.code(409).send({ success: false, message: `模板共有 ${inspection.cellCount} 个单元格，但该组要求单页 ${group.framesPerSheet} 帧` })
     }
-    const latest = await fastify.prisma.printTemplateVersion.findFirst({ where: { groupId: group.id }, orderBy: { versionNo: 'desc' } })
-    const versionNo = (latest?.versionNo || 0) + 1
-    const objectKey = `private/print-templates/${group.id}/${crypto.randomUUID()}.docx`
+    const clientRequestId = requestId(req.headers['idempotency-key'])
+    if (!clientRequestId) return reply.code(400).send({ success: false, message: '缺少模板上传标识，请重新选择文件' })
+    const sha256 = crypto.createHash('sha256').update(buffer).digest('hex')
+    const requestFingerprint = fingerprint({ groupId: group.id, originalName: text(part.filename, 255), sha256 })
+    const existing = await fastify.prisma.printTemplateVersion.findUnique({ where: { clientRequestId } })
+    if (existing) {
+      if (existing.groupId !== group.id || existing.createdBy !== req.user.userId || existing.requestFingerprint !== requestFingerprint) return idempotencyConflict(reply)
+      return reply.send({ success: true, data: { ...existing, reused: true }, message: `模板 V${existing.versionNo} 已恢复` })
+    }
+    const objectSuffix = crypto.createHash('sha256').update(`${clientRequestId}:${requestFingerprint}`).digest('hex').slice(0, 40)
+    const objectKey = `private/print-templates/${group.id}/${objectSuffix}.docx`
     await fastify.storagePut(objectKey, buffer, { headers: { 'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' } })
-    const saved = await fastify.prisma.$transaction(async tx => {
-      await tx.printTemplateVersion.updateMany({ where: { groupId: group.id, status: 'ACTIVE' }, data: { status: 'RETIRED' } })
-      const template = await tx.printTemplateVersion.create({ data: {
-        groupId: group.id, versionNo, originalName: text(part.filename, 255), objectKey,
-        sha256: crypto.createHash('sha256').update(buffer).digest('hex'), sizeBytes: buffer.length,
-        cellCount: inspection.cellCount, createdBy: req.user.userId
-      } })
-      await tx.printCutGroup.update({ where: { id: group.id }, data: { templateKey: objectKey } })
-      return template
-    })
-    return reply.code(201).send({ success: true, data: saved, message: `模板 V${versionNo} 已启用` })
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const saved = await fastify.prisma.$transaction(async tx => {
+          const latest = await tx.printTemplateVersion.findFirst({ where: { groupId: group.id }, orderBy: { versionNo: 'desc' } })
+          const versionNo = (latest?.versionNo || 0) + 1
+          await tx.printTemplateVersion.updateMany({ where: { groupId: group.id, status: 'ACTIVE' }, data: { status: 'RETIRED' } })
+          const template = await tx.printTemplateVersion.create({ data: {
+            groupId: group.id, versionNo, originalName: text(part.filename, 255), objectKey,
+            sha256, sizeBytes: buffer.length, clientRequestId, requestFingerprint,
+            cellCount: inspection.cellCount, createdBy: req.user.userId
+          } })
+          await tx.printCutGroup.update({ where: { id: group.id }, data: { templateKey: objectKey } })
+          return template
+        })
+        return reply.code(201).send({ success: true, data: { ...saved, reused: false }, message: `模板 V${saved.versionNo} 已启用` })
+      } catch (error) {
+        if (error?.code !== 'P2002') throw error
+        const replay = await fastify.prisma.printTemplateVersion.findUnique({ where: { clientRequestId } })
+        if (replay) {
+          if (replay.groupId !== group.id || replay.createdBy !== req.user.userId || replay.requestFingerprint !== requestFingerprint) return idempotencyConflict(reply)
+          return reply.send({ success: true, data: { ...replay, reused: true }, message: `模板 V${replay.versionNo} 已恢复` })
+        }
+        if (attempt === 2) throw error
+      }
+    }
   })
 }

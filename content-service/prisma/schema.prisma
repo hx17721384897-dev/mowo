@@ -273,6 +273,8 @@ model PrintCutGroup {
   sortOrder        Int      @default(0) @map("sort_order")
   isActive         Boolean  @default(true) @map("is_active")
   createdBy        String   @map("created_by")
+  clientRequestId  String?  @unique @map("client_request_id") @db.VarChar(80)
+  requestFingerprint String? @map("request_fingerprint") @db.VarChar(64)
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
@@ -295,6 +297,8 @@ model PrintTemplateVersion {
   cellCount    Int      @map("cell_count")
   status       String   @default("ACTIVE") @db.VarChar(20)
   createdBy    String   @map("created_by")
+  clientRequestId String? @unique @map("client_request_id") @db.VarChar(80)
+  requestFingerprint String? @map("request_fingerprint") @db.VarChar(64)
   createdAt    DateTime @default(now()) @map("created_at")
 
   group PrintCutGroup         @relation(fields: [groupId], references: [id], onDelete: Restrict)
