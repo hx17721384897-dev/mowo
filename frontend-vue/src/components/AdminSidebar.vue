@@ -203,7 +203,12 @@ const groups: MenuGroup[] = [
 const session = useSessionStore()
 const route = useRoute()
 const activeGroup = computed(() => {
-  if (route.path === '/admin/orders' || route.path === '/admin/import') return 'production'
+  if (
+    route.path === '/admin/orders' ||
+    route.path === '/admin/production-batches' ||
+    route.path === '/admin/import'
+  )
+    return 'production'
   if (
     route.path === '/admin/frame-library' ||
     route.path.startsWith('/admin/frame-making') ||

@@ -13,6 +13,7 @@ let refreshPromise: Promise<string | null> | null = null
 export interface ApiEnvelope<T> {
   success: boolean
   data?: T
+  meta?: unknown
   code?: string
   message?: string
 }
@@ -31,10 +32,79 @@ export class ApiError extends Error {
   }
 }
 
-interface RequestOptions extends Omit<RequestInit, 'body'> {
+export interface RequestOptions extends Omit<RequestInit, 'body'> {
   body?: BodyInit | Record<string, unknown> | null
   timeoutMs?: number
   retryAuth?: boolean
+}
+
+export async function apiEnvelopeRequest<T, M = unknown>(
+  path: string,
+  options: RequestOptions = {}
+): Promise<{ data: T; meta: M }> {
+  const url = endpoint(path)
+  const requestId = crypto.randomUUID()
+  const controller = new AbortController()
+  const timeout = window.setTimeout(
+    () => controller.abort(),
+    options.timeoutMs ?? DEFAULT_TIMEOUT_MS
+  )
+  const token = readAccessToken()
+  const isJsonBody =
+    options.body != null && !(options.body instanceof FormData) && typeof options.body !== 'string'
+  const body = isJsonBody
+    ? JSON.stringify(options.body)
+    : (options.body as BodyInit | null | undefined)
+  try {
+    const response = await fetch(url, {
+      ...options,
+      body,
+      credentials: 'include',
+      signal: controller.signal,
+      headers: {
+        Accept: 'application/json',
+        'X-Request-Id': requestId,
+        ...(isJsonBody ? { 'Content-Type': 'application/json' } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...options.headers
+      }
+    })
+    const envelope = await parseEnvelope<T>(response, requestId)
+    if (
+      response.status === 401 &&
+      options.retryAuth !== false &&
+      REFRESHABLE_AUTH_CODES.has(envelope.code ?? '')
+    ) {
+      const refreshedToken = await refreshAccessToken()
+      if (refreshedToken) return apiEnvelopeRequest<T, M>(path, { ...options, retryAuth: false })
+      clearSession()
+    }
+    if (!response.ok || !envelope.success)
+      throw new ApiError(
+        envelope.message || '请求失败',
+        response.status,
+        envelope.code || 'REQUEST_FAILED',
+        requestId,
+        undefined,
+        envelope.data
+      )
+    return { data: envelope.data as T, meta: envelope.meta as M }
+  } catch (cause) {
+    if (cause instanceof ApiError) throw cause
+    const code =
+      cause instanceof DOMException && cause.name === 'AbortError'
+        ? 'REQUEST_TIMEOUT'
+        : 'NETWORK_ERROR'
+    throw new ApiError(
+      code === 'REQUEST_TIMEOUT' ? '请求超时' : '网络连接失败',
+      0,
+      code,
+      requestId,
+      cause
+    )
+  } finally {
+    window.clearTimeout(timeout)
+  }
 }
 
 function endpoint(path: string): string {
