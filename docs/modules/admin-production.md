@@ -37,13 +37,13 @@
 | Vue `/app/admin/orders?view=...` | 订单各阶段唯一操作入口：导出地址、填面单、导出生产资料、返工和查看结果 |
 | Vue `/app/admin/production-batches` | 选择完整 `SO` 创建 `PB`，查看冻结范围、材料需求、文件、进度和返工历史；旧 URL 临时 302 转交查询参数 |
 | Vue `/app/admin/print-production` | 维护打印裁切组、逐 SKU 顺序和 DOCX 模板版本；旧 URL 临时 302 交接 |
-| `production-scan.html#overview` | 扫码作业总览和当前批次选择 |
-| `production-scan.html#frame` | 帧包完成，扫描 `FP` |
-| `production-scan.html#material` | 按 `PB` 扫描 `KB/BX` 并确认领用数量 |
-| `production-scan.html#pairing` | 先激活材料来源，再连续扫描匹配 `FP` |
-| `production-scan.html#packing` | 先扫面单，再扫全部 `FP`，齐套后确认发货 |
+| Vue `/app/admin/production-scan#overview` | 扫码作业总览和当前批次选择 |
+| Vue `/app/admin/production-scan#frame` | 帧包完成，扫描 `FP` |
+| Vue `/app/admin/production-scan#material` | 按 `PB` 扫描 `KB/BX` 并确认领用数量 |
+| Vue `/app/admin/production-scan#pairing` | 先激活材料来源，再连续扫描匹配 `FP` |
+| Vue `/app/admin/production-scan#packing` | 先扫面单，再扫全部 `FP`，齐套后确认发货 |
 
-四个岗位共用一个无刷新工作台和本次浏览器会话中的当前 `PB`。旧岗位 HTML 和旧 `?station=` 地址只能跳转到统一页面，不能保留第二套界面或状态逻辑。
+四个岗位共用一个无刷新 Vue 工作台和本次浏览器会话中的当前 `PB`。旧统一页和岗位 HTML 已物理删除，旧 URL 仅以临时 302 转交查询参数和岗位锚点。
 
 ## 后端入口
 

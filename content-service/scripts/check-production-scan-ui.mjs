@@ -60,20 +60,17 @@ try {
   }, { token: login.data.accessToken, apiBase })
 
   const pages = [
-    ['production-scan.html?v=20260904-1#overview', '扫码作业总览', 'overview'],
-    ['production-scan.html?v=20260904-1#frame', '帧包完成', 'frame'],
-    ['production-scan.html?v=20260904-1#material', '材料领用', 'material'],
-    ['production-scan.html?v=20260904-1#pairing', '单件配对', 'pairing'],
-    ['production-scan.html?v=20260904-1#packing', '装箱发货', 'packing']
+    ['扫码作业总览', 'overview'],
+    ['帧包完成', 'frame'],
+    ['材料领用', 'material'],
+    ['单件配对', 'pairing'],
+    ['装箱发货', 'packing']
   ]
-  for (const [file, heading, station] of pages) {
-    await page.goto(`${webBase}/${file}`, { waitUntil: 'networkidle' })
+  for (const [heading, station] of pages) {
+    await page.goto(`${appBase}/admin/production-scan#${station}`, { waitUntil: 'networkidle' })
     await page.locator('#stationTitle').filter({ hasText: heading }).waitFor({ timeout: 10000 })
-    const scanMenu = page.locator('[data-nested="production:scan"]')
-    if (!await scanMenu.count()) throw new Error(`${heading} 缺少扫码作业三级菜单`)
-    await scanMenu.locator('.nav-third').waitFor({ state: 'visible', timeout: 10000 })
-    if (await scanMenu.locator('.nav-third-item').count() !== 5) throw new Error(`${heading} 的扫码作业三级入口不完整`)
-    if (await page.evaluate(() => document.body.dataset.station) !== station) throw new Error(`${heading} 没有应用正确岗位颜色`)
+    if (await page.locator('.nav-third-item').count() < 5) throw new Error(`${heading} 的扫码作业三级入口不完整`)
+    if (await page.locator('.production-scan-page').getAttribute('data-station') !== station) throw new Error(`${heading} 没有应用正确岗位颜色`)
     if (await page.locator('.work-tabs button').count() !== 5) throw new Error(`${heading} 缺少统一工作台环节切换入口`)
   }
   console.log('PASS unified production workbench shows five color-coded station entries')
@@ -84,7 +81,7 @@ try {
   }
   console.log('PASS production workbench only shows staff-facing operational copy')
 
-  await page.goto(`${webBase}/production-scan.html?v=20260904-1#frame`, { waitUntil: 'networkidle' })
+  await page.goto(`${appBase}/admin/production-scan#frame`, { waitUntil: 'networkidle' })
   await page.getByRole('heading', { name: '打印队列', exact: true }).waitFor()
   if (!await page.locator('#globalBatch').count() || !await page.locator('#queueCurrent').count()) {
     throw new Error('帧包完成页缺少批次选择或当前打印任务')
@@ -108,7 +105,7 @@ try {
       for (const station of ['overview', 'frame', 'material', 'pairing', 'packing']) {
         await page.locator(`.work-tabs button[data-station="${station}"]`).click()
         await page.waitForTimeout(180)
-        const activeSidebarStations = page.locator('[data-nested="production:scan"] .nav-third-item.active')
+        const activeSidebarStations = page.locator('.nav-third-item.active')
         if (await activeSidebarStations.count() !== 1 || !await activeSidebarStations.first().getAttribute('href').then(href => href?.endsWith(`#${station}`))) {
           throw new Error(`${station} 切换后左侧菜单高亮不唯一`)
         }
@@ -118,13 +115,10 @@ try {
     }
     console.log('PASS station switching preserves the page and selected production batch')
   }
-  if (await page.evaluate(() => MowoScan.classify('LEGACY-KIT-TEST')) !== 'KIT_BATCH') {
-    throw new Error('旧材料批次码没有按材料来源识别')
-  }
   await page.locator('body').click({ position: { x: 1000, y: 400 } })
   await page.keyboard.type('FP-NOT-EXIST', { delay: 2 })
   await page.keyboard.press('Enter')
-  await page.locator('#toast.error').waitFor({ timeout: 10000 })
+  await page.locator('.toast.error').waitFor({ timeout: 10000 })
   if (!await page.locator('#frameManual').evaluate(element => element.value === '')) {
     throw new Error('全局扫码测试错误地依赖了手工输入框')
   }
@@ -139,38 +133,23 @@ try {
   for (const [legacyFile, station] of legacyPages) {
     await page.goto(`${webBase}/${legacyFile}`, { waitUntil: 'networkidle' })
     const locationState = await page.evaluate(() => ({ path: location.pathname, search: location.search, hash: location.hash }))
-    if (!locationState.path.endsWith('/production-scan.html') || locationState.search !== '?v=20260904-1' || locationState.hash !== `#${station}`) {
-      throw new Error(`${legacyFile} 没有收口到统一扫码工作台`)
+    if (!locationState.path.endsWith('/app/admin/production-scan') || locationState.search !== '?v=20260904-1' || locationState.hash !== `#${station}`) {
+      throw new Error(`${legacyFile} 没有 302 收口到统一 Vue 扫码工作台`)
     }
   }
   await page.goto(`${webBase}/production-scan.html?station=pairing`, { waitUntil: 'networkidle' })
-  if (await page.evaluate(() => location.search !== '?v=20260904-1' || location.hash !== '#pairing')) {
+  await page.locator('#stationTitle').filter({ hasText: '单件配对' }).waitFor()
+  if (await page.evaluate(() => !location.pathname.endsWith('/app/admin/production-scan') || location.search !== '?station=pairing')) {
     throw new Error('旧 station 参数没有自动收口到统一网址')
   }
-  console.log('PASS legacy scan URLs redirect to one versioned workbench')
-
-  for (const [, heading, station] of pages) {
-    await page.goto(`${appBase}/admin/production-scan#${station}`, { waitUntil: 'networkidle' })
-    await page.locator('#stationTitle').filter({ hasText: heading }).waitFor({ timeout: 10000 })
-    if (await page.locator('.work-tabs button').count() !== 5) throw new Error(`${heading} Vue 候选缺少统一工作台入口`)
-    if (await page.locator('.production-scan-page').getAttribute('data-station') !== station) throw new Error(`${heading} Vue 候选没有应用正确岗位颜色`)
-  }
-  const vueBatchOptions = await page.locator('#globalBatch option').count()
-  if (vueBatchOptions > 1) {
-    await page.locator('#globalBatch').selectOption({ index: 1 })
-    const selectedBatch = await page.locator('#globalBatch').inputValue()
-    await page.locator('.work-tabs button[data-station="material"]').click()
-    await page.locator('.work-tabs button[data-station="pairing"]').click()
-    if (await page.locator('#globalBatch').inputValue() !== selectedBatch) throw new Error('Vue 候选切换扫码环节时丢失当前生产批次')
-  }
-  console.log('PASS Vue scan candidate preserves five stations and current batch')
+  console.log('PASS legacy scan URLs redirect to the formal Vue workbench')
 
   const signedOutContext = await browser.newContext({ viewport: { width: 1280, height: 800 } })
   const signedOutPage = await signedOutContext.newPage()
   await signedOutPage.goto(`${webBase}/production-scan.html?v=20260904-1#packing`, { waitUntil: 'domcontentloaded' })
-  await signedOutPage.waitForURL(url => url.pathname.endsWith('/index.html') && url.searchParams.get('auth') === '1')
+  await signedOutPage.waitForURL(url => url.pathname.endsWith('/app/') && url.searchParams.get('auth') === '1')
   const loginRedirect = new URL(signedOutPage.url()).searchParams.get('redirect')
-  if (!loginRedirect?.endsWith('/production-scan.html?v=20260904-1#packing')) {
+  if (!loginRedirect?.includes('/admin/production-scan') || !loginRedirect.endsWith('#packing')) {
     throw new Error('未登录员工进入扫码页时没有保留原工位返回地址')
   }
   await signedOutContext.close()
@@ -179,7 +158,7 @@ try {
   if (process.env.SCREENSHOT_PATH) await page.screenshot({ path: process.env.SCREENSHOT_PATH, fullPage: true })
 
   await page.setViewportSize({ width: 390, height: 844 })
-  await page.goto(`${webBase}/production-scan.html?v=20260904-1#pairing`, { waitUntil: 'networkidle' })
+  await page.goto(`${appBase}/admin/production-scan#pairing`, { waitUntil: 'networkidle' })
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1)
   if (overflow) throw new Error('单件配对页面在手机宽度出现横向溢出')
   console.log('PASS production scan station fits a mobile viewport')

@@ -12,19 +12,17 @@ function assert(condition, message) {
 }
 
 try {
-  const [schema, routes, orderPage, orderApi, batchPage, scanOverview, scanFrame, scanMaterial, scanPairing, scanPacking, scanCommon, sidebar, oldAdmin] = await Promise.all([
+  const [schema, routes, orderPage, orderApi, batchPage, scanPage, scanApi, scanKeyboard, sidebar, redirects, oldAdmin] = await Promise.all([
     fs.readFile(new URL('prisma/schema.prisma', root), 'utf8'),
     fs.readFile(new URL('src/routes/production-workflow.js', root), 'utf8'),
     fs.readFile(new URL('../frontend-vue/src/views/AdminOrdersView.vue', root), 'utf8'),
     fs.readFile(new URL('../frontend-vue/src/features/admin-orders/api.ts', root), 'utf8'),
     fs.readFile(new URL('../frontend-vue/src/views/AdminProductionBatchesView.vue', root), 'utf8'),
-    fs.readFile(new URL('../frontend/pages/production-scan.html', root), 'utf8'),
-    fs.readFile(new URL('../frontend/pages/production-scan-frame.html', root), 'utf8'),
-    fs.readFile(new URL('../frontend/pages/production-scan-material.html', root), 'utf8'),
-    fs.readFile(new URL('../frontend/pages/production-scan-pairing.html', root), 'utf8'),
-    fs.readFile(new URL('../frontend/pages/production-scan-packing.html', root), 'utf8'),
-    fs.readFile(new URL('../frontend/js/production-scan-common.js', root), 'utf8'),
-    fs.readFile(new URL('../frontend/js/admin-sidebar.js', root), 'utf8'),
+    fs.readFile(new URL('../frontend-vue/src/views/ProductionScanView.vue', root), 'utf8'),
+    fs.readFile(new URL('../frontend-vue/src/features/production-scan/api.ts', root), 'utf8'),
+    fs.readFile(new URL('../frontend-vue/src/features/production-scan/use-barcode-scanner.ts', root), 'utf8'),
+    fs.readFile(new URL('../frontend-vue/src/components/AdminSidebar.vue', root), 'utf8'),
+    fs.readFile(new URL('../scripts/static-server.mjs', root), 'utf8'),
     fs.readFile(new URL('src/routes/admin.js', root), 'utf8')
   ])
   assert(schema.includes('fulfillmentStatus') && schema.includes('model ProductionFramePack'), '数据库区分付款事实、履约阶段和唯一帧素材包')
@@ -51,12 +49,12 @@ try {
   assert(orderApi.includes('/api/admin/production-workflow/orders') && orderApi.includes('/reprint') && orderApi.includes('clientRequestId') && orderPage.includes('createFrameReprint'), 'Vue 订单环节页只读取正式订单，并以幂等请求提供返工入口')
   assert(batchPage.includes('进入当前订单环节') && !batchPage.includes('onclick="exportAddresses()"') && !batchPage.includes('onclick="exportProduction()"'), '生产批次页只做总览和环节跳转，不重复推进状态')
   assert(batchPage.includes('生产清单核对标记') && batchPage.includes('返工记录与当前进度') && batchPage.includes('旧码已作废'), '生产批次页直观展示清单新旧判断和返工处理步骤')
-  assert(scanOverview.includes('data-view="frame"') && scanOverview.includes('data-view="material"') && scanOverview.includes('data-view="pairing"') && scanOverview.includes('data-view="packing"'), '扫码总览与四个岗位已经收拢为同一工作台')
-assert(scanFrame.includes('#frame') && scanMaterial.includes('#material') && scanPairing.includes('#pairing') && scanPacking.includes('#packing'), '旧岗位地址只跳转到统一工作台，不保留重复业务系统')
-  assert(scanCommon.includes('installScanner') && scanCommon.includes("target?.matches?.('input,textarea,select"), '扫码枪无需点击输入框并保留手工输入备用')
-assert(scanOverview.includes('打印队列') && scanOverview.includes('globalBatch') && scanOverview.includes('production-scan-workbench.js'), '统一工作台展示批次打印队列并只选择一次工作批次')
-assert(sidebar.includes("key: 'scan'") && sidebar.includes('production-scan.html?v=20260904-1#packing') && !sidebar.includes('production-scan-packing.html'), '后台菜单只通过统一工作台打开五个扫码环节')
-assert(scanCommon.includes("index.html?auth=1&redirect=") && scanCommon.includes('location.hash'), '扫码工作台未登录时使用真实登录弹窗并保留原工位')
+  assert(scanPage.includes("type Station = 'overview' | 'frame' | 'material' | 'pairing' | 'packing'") && scanPage.includes('data-view="frame"') && scanPage.includes('data-view="material"') && scanPage.includes('data-view="pairing"') && scanPage.includes('data-view="packing"'), '扫码总览与四个岗位已经收拢为同一 Vue 工作台')
+  assert(redirects.includes("'pages/production-scan-frame.html'") && redirects.includes("hash: '#frame'") && redirects.includes("hash: '#packing'"), '旧岗位地址只 302 到统一 Vue 工作台，不保留重复业务系统')
+  assert(scanKeyboard.includes("target?.matches('input,textarea,select,[contenteditable=\"true\"]')") && scanPage.includes('frameManual'), '扫码枪无需点击输入框并保留手工输入备用')
+  assert(scanPage.includes('打印队列') && scanPage.includes('id="globalBatch"') && scanPage.includes('sessionStorage.setItem(batchKey'), '统一工作台展示批次打印队列并只选择一次工作批次')
+  assert(sidebar.includes("key: 'scan'") && sidebar.includes("to: '/admin/production-scan#packing'") && !sidebar.includes('production-scan-packing.html'), '后台菜单只通过统一 Vue 工作台打开五个扫码环节')
+  assert(scanApi.includes("const base = '/api/admin/production-workflow'") && scanPage.includes('useRoute()') && scanPage.includes('route.hash'), '扫码工作台使用正式生产接口并保留工位深链接')
   assert(routes.includes("if (frame.batchId !== batchId)") && routes.includes("if (!result.reused) await audit"), '帧包与配对强制校验当前批次且重复扫码不重复写成功日志')
   await Promise.all([
     prisma.productionFramePack.count(), prisma.productionUnitPairing.count(),

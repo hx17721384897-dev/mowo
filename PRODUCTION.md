@@ -35,7 +35,7 @@
 本地运行 mowo_process.py 处理帧图片 → 排版到Word模板 → 打印
   ↓
 扫码配对（快递面单条码 → 检测配齐状态 → 确认发货）
-  ↓（production-scan.html，待开发）
+  ↓（Vue `/app/admin/production-scan`，已接正式生产工作流）
 组装完成 → 确认发货 → 状态改为 shipped（已发货）
 ```
 
@@ -122,9 +122,9 @@
 - 抽屉详情：帧图预览 + 帧素材包库存管理
 - 帧素材包可设置 on_demand（按需）/ stocked（有备货）
 
-### 3.2 待开发 ⬜
+### 3.2 生产扫码（当前实现）
 
-**生产端扫码发货（production-scan.html）**
+**生产端扫码发货（Vue `/app/admin/production-scan`）**
 - 扫快递面单条形码 → 显示该面单下所有订单
 - 每个订单显示SKU规格 + 生产状态
 - 检测配齐状态：未配齐→等待区，配齐→提示可发货
@@ -549,7 +549,7 @@ mowo-uploads/（私有Bucket，所有访问通过预签名URL）
 - RBAC角色系统（role字段 + JWT + requireRole中间件）
 - 审计日志系统（自动hook + 语义化记录 + IP记录）
 - mowo_process.py 帧图片处理脚本（分割/拼接/折痕/角标）
-- **production-scan.html 生产端扫码页面** ✅ 新增
+- **Vue `/app/admin/production-scan` 生产端扫码页面** ✅ 正式入口
   - 查询模式：扫材料包码/订单码/快递单号，自动识别类型
   - 发货模式：扫快递面单→逐件扫订单码确认→配齐后确认发货→shipped
   - 等候区：未配齐跳过→红点提示，等候区订单被扫到时自动弹出确认

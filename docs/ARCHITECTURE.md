@@ -128,7 +128,7 @@ showcase.html → 点「前往小程序定制此款」
   待生产视图：勾选订单 → 导出帧素材包ZIP → producing
     ZIP结构：对照清单/ + 条形码清单/ + 按SKU分文件夹（序号_订单号/帧图）
   本地运行 mowo_process.py 处理帧图片
-  生产端扫码发货（production-scan.html）✅
+  生产端扫码发货（Vue `/app/admin/production-scan`）✅
     查询模式：扫材料包/订单码/快递单号
     发货模式：扫面单→逐件扫订单码→配齐确认→shipped
     等候区：未配齐跳过，被扫到时弹出确认归属

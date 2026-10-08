@@ -3,7 +3,6 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AdminSidebar from '@/components/AdminSidebar.vue'
-import { runtimeConfig } from '@/config/runtime'
 import { ApiError } from '@/services/api-client'
 import {
   createProductionBatch,
@@ -106,9 +105,6 @@ const fulfillmentText: Record<string, string> = {
   PRODUCING: '生产中',
   READY_TO_SHIP: '待发货',
   SHIPPED: '已发货'
-}
-function legacyUrl(file: string) {
-  return `${runtimeConfig.legacyWebBase}/${file}`
 }
 function formatTime(value: string | null | undefined) {
   if (!value) return '—'
@@ -440,8 +436,8 @@ onBeforeUnmount(() => {
               <div class="workflow-actions">
                 <RouterLink class="btn btn-black" :to="currentStageRoute(detail.orders)"
                   >进入当前订单环节</RouterLink
-                ><a class="btn" :href="legacyUrl('production-scan.html?v=20260904-1#overview')"
-                  >进入扫码生产</a
+                ><RouterLink class="btn" to="/admin/production-scan#overview"
+                  >进入扫码生产</RouterLink
                 >
               </div>
               <div class="issue">

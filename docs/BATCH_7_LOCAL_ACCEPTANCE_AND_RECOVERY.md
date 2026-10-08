@@ -129,7 +129,7 @@ P0（越权、隐私、数据破坏、资金或重复生产）立即暂停；P1�
 4. 退出后登录生产账号 `13800138004`、验证码 `123456`。
 5. 打开生产订单：`http://127.0.0.1:4173/app/admin/orders`。
 6. 打开生产批次：`http://127.0.0.1:4173/app/admin/production-batches`；旧静态 URL 只用于验证临时 302，不再承载页面实现。
-7. 打开扫码工作台：`http://127.0.0.1:5500/mowo/frontend/pages/production-scan.html`，确认五个环节和移动窗口布局。
+7. 打开扫码工作台：`http://127.0.0.1:4173/app/admin/production-scan#overview`，确认五个环节和移动窗口布局；旧链接只用于验证 302 交接。
 8. 直接打开 `http://127.0.0.1:5500/mowo/frontend/pages/admin-users.html`，生产岗位应被拒绝并返回首页。
 
 ### 6.3 关闭边界和收尾

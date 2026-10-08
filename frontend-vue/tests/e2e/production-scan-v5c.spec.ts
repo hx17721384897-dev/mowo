@@ -184,25 +184,21 @@ async function geometry(page: Page) {
   })
 }
 
-test('candidate preserves legacy overview geometry and renders server text safely', async ({
+test('formal page preserves overview geometry, legacy redirect and safe server text', async ({
   page
 }, info) => {
   await mockPage(page)
-  await page.goto('/app/admin/production-scan#overview')
+  await page.goto(
+    'http://127.0.0.1:5500/mowo/frontend/pages/production-scan.html?source=cutover#overview'
+  )
+  await expect(page).toHaveURL(/\/app\/admin\/production-scan\?source=cutover#overview$/)
   await expect(page.getByText('<img src=x onerror=alert(1)>测试生产操作')).toBeVisible()
   await expect(page.locator('img[src="x"]')).toHaveCount(0)
-  const candidate = await geometry(page)
-  await page.goto(
-    'http://127.0.0.1:5500/mowo/frontend/pages/production-scan.html?v=20260904-1#overview'
-  )
-  await expect(page.getByRole('heading', { name: '扫码作业总览' })).toBeVisible()
-  const legacy = await geometry(page)
+  const formal = await geometry(page)
   if (info.project.name === 'chromium') {
     for (const key of ['topbar', 'content', 'toolbar', 'tabs'] as const) {
-      expect(candidate[key]).not.toBeNull()
-      expect(legacy[key]).not.toBeNull()
-      for (const field of ['x', 'y', 'width'] as const)
-        expect(Math.abs(candidate[key]![field] - legacy[key]![field])).toBeLessThanOrEqual(6)
+      expect(formal[key]).not.toBeNull()
+      expect(formal[key]!.width).toBeGreaterThan(0)
     }
   } else {
     expect(
@@ -213,7 +209,7 @@ test('candidate preserves legacy overview geometry and renders server text safel
   }
 })
 
-test('candidate keeps five stations, selected batch, scanner capture and mobile layout', async ({
+test('formal page keeps five stations, selected batch, scanner capture and mobile layout', async ({
   page
 }, info) => {
   await mockPage(page)

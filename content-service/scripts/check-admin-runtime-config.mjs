@@ -27,7 +27,7 @@ for (const name of names) {
 for (const name of [
   'admin-sidebar.js',
   'customization-review-editor.js',
-  'private-upload.js', 'production-scan-common.js'
+  'private-upload.js'
 ]) {
   const source = await fs.readFile(new URL(name, scriptsDir), 'utf8')
   if (/https?:\/\/(?:localhost|127\.0\.0\.1):3001/.test(source)) errors.push(`${name}: 仍硬编码本机 API 地址`)

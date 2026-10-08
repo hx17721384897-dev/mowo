@@ -96,31 +96,31 @@ const groups: MenuGroup[] = [
           {
             label: '作业总览',
             icon: '▦',
-            file: 'production-scan.html?v=20260904-1#overview',
+            to: '/admin/production-scan#overview',
             roles: ownerProduction
           },
           {
             label: '帧包完成',
             icon: '1',
-            file: 'production-scan.html?v=20260904-1#frame',
+            to: '/admin/production-scan#frame',
             roles: ownerProduction
           },
           {
             label: '材料领用',
             icon: '2',
-            file: 'production-scan.html?v=20260904-1#material',
+            to: '/admin/production-scan#material',
             roles: ownerProduction
           },
           {
             label: '单件配对',
             icon: '3',
-            file: 'production-scan.html?v=20260904-1#pairing',
+            to: '/admin/production-scan#pairing',
             roles: ownerProduction
           },
           {
             label: '装箱发货',
             icon: '4',
-            file: 'production-scan.html?v=20260904-1#packing',
+            to: '/admin/production-scan#packing',
             roles: ownerProduction
           }
         ]
@@ -338,7 +338,12 @@ function toggleNested(key: string): void {
                   <RouterLink
                     v-if="child.to"
                     class="nav-third-item"
-                    :class="{ active: route.fullPath === child.to }"
+                    :class="{
+                      active:
+                        route.fullPath === child.to ||
+                        (route.path === '/admin/production-scan' &&
+                          route.hash === child.to.split('/admin/production-scan')[1])
+                    }"
                     :to="child.to"
                     @click="mobileOpen = false"
                     ><span class="nav-icon">{{ child.icon }}</span

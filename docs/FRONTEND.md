@@ -95,7 +95,7 @@
 
 | 文件名 | 页面 | 状态 |
 |--------|------|------|
-| `production-scan.html` | 唯一扫码作业工作台；五个环节使用同一 HTML，通过 `#overview/#frame/#material/#pairing/#packing` 切换；旧岗位文件仅兼容跳转 | ✅ |
+| Vue `/app/admin/production-scan` | 唯一扫码作业工作台；五个环节通过 `#overview/#frame/#material/#pairing/#packing` 切换；旧 HTML 已物理删除并临时 302 交接 | ✅ |
 
 ---
 
@@ -295,13 +295,13 @@ mowo_sku_colors         — 款式管理自定义颜色选项
 
 ---
 
-## production-scan.html 功能说明
+## Vue 生产扫码工作台功能说明
 
 ```
-统一入口：production-scan.html?v=当前版本#环节
+统一入口：/app/admin/production-scan#环节
 帧包完成：扫描 FP，重复扫码只提醒，不重复登记
 材料领用：扫描 KB/BX，按生产批次领取数量
 单件配对：先扫描已领 KB/BX，再连续扫描同规格 FP
 装箱发货：先扫描面单，再逐件扫描已配对 FP，整单齐套后发货
-兼容规则：旧岗位 HTML 和旧 ?station= 地址只能跳转，不保留业务页面
+兼容规则：旧统一页和岗位 HTML 已物理删除，旧 URL 只能 302 跳转，不保留业务页面
 ```

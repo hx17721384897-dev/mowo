@@ -29,6 +29,11 @@ const legacyVueRedirects = new Map([
   ['pages/admin-orders.html', { pathname: `${appBase}/admin/orders`, hash: '' }],
   ['pages/admin-production-batches.html', { pathname: `${appBase}/admin/production-batches`, hash: '' }],
   ['pages/admin-print-production.html', { pathname: `${appBase}/admin/print-production`, hash: '' }],
+  ['pages/production-scan.html', { pathname: `${appBase}/admin/production-scan`, hash: '' }],
+  ['pages/production-scan-frame.html', { pathname: `${appBase}/admin/production-scan`, hash: '#frame' }],
+  ['pages/production-scan-material.html', { pathname: `${appBase}/admin/production-scan`, hash: '#material' }],
+  ['pages/production-scan-pairing.html', { pathname: `${appBase}/admin/production-scan`, hash: '#pairing' }],
+  ['pages/production-scan-packing.html', { pathname: `${appBase}/admin/production-scan`, hash: '#packing' }],
   ['pages/admin-import.html', { pathname: `${appBase}/admin/import`, hash: '' }],
   ['pages/admin-collab-works.html', { pathname: `${appBase}/admin/collab-works`, hash: '' }]
 ])

@@ -59,6 +59,11 @@ const requiredRedirects = [
   ['admin-orders.html', '/app/admin/orders'],
   ['admin-production-batches.html', '/app/admin/production-batches'],
   ['admin-print-production.html', '/app/admin/print-production'],
+  ['production-scan.html', '/app/admin/production-scan'],
+  ['production-scan-frame.html', '/app/admin/production-scan'],
+  ['production-scan-material.html', '/app/admin/production-scan'],
+  ['production-scan-pairing.html', '/app/admin/production-scan'],
+  ['production-scan-packing.html', '/app/admin/production-scan'],
   ['admin-import.html', '/app/admin/import'],
   ['admin-collab-works.html', '/app/admin/collab-works'],
   ['admin-collab-product-edit.html', '/app/admin/collab-product/$arg_id']
@@ -104,6 +109,11 @@ for (const retired of [
   'admin-orders.html',
   'admin-production-batches.html',
   'admin-print-production.html',
+  'production-scan.html',
+  'production-scan-frame.html',
+  'production-scan-material.html',
+  'production-scan-pairing.html',
+  'production-scan-packing.html',
   'admin-import.html',
   'admin-collab-works.html',
   'admin-collab-product-edit.html',
@@ -115,10 +125,18 @@ for (const retired of [
     throw new Error(`已由 Vue 接管的旧页面不得继续存在：frontend/pages/${retired}`)
   }
 }
-for (const retired of ['admin-frame-imports.js', 'admin-customization-workbench.js']) {
+for (const retired of [
+  'admin-frame-imports.js',
+  'admin-customization-workbench.js',
+  'production-scan-common.js',
+  'production-scan-workbench.js'
+]) {
   if (fs.existsSync(path.join(root, '..', 'frontend', 'js', retired))) {
     throw new Error(`已由 Vue 接管的旧脚本不得继续存在：frontend/js/${retired}`)
   }
+}
+if (fs.existsSync(path.join(root, '..', 'frontend', 'css', 'production-scan.css'))) {
+  throw new Error('已由 Vue 接管的旧样式不得继续存在：frontend/css/production-scan.css')
 }
 if (
   !legacyEditor.includes('handoffNewCustomizationToVue') ||

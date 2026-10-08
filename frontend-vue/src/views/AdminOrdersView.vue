@@ -3,7 +3,6 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AdminSidebar from '@/components/AdminSidebar.vue'
-import { runtimeConfig } from '@/config/runtime'
 import { ApiError } from '@/services/api-client'
 import {
   bindBatchTracking,
@@ -58,10 +57,6 @@ const groupedOrders = computed(() => {
   }
   return [...groups.entries()]
 })
-
-function legacyUrl(file: string): string {
-  return `${runtimeConfig.legacyWebBase}/${file}`
-}
 
 function stageNotice(value: OrderStage): string {
   if (value === 'paid')
@@ -402,18 +397,20 @@ onBeforeUnmount(() => {
                 >
                   导出生产资料并开工
                 </button>
-                <a
+                <RouterLink
                   v-else-if="stage === 'producing'"
                   class="btn btn-black"
-                  :href="legacyUrl('production-scan.html?v=20260904-1#overview')"
-                  >进入扫码作业</a
+                  to="/admin/production-scan#overview"
                 >
-                <a
+                  进入扫码作业
+                </RouterLink>
+                <RouterLink
                   v-else-if="stage === 'ready'"
                   class="btn btn-black"
-                  :href="legacyUrl('production-scan.html?v=20260904-1#packing')"
-                  >进入装箱发货</a
+                  to="/admin/production-scan#packing"
                 >
+                  进入装箱发货
+                </RouterLink>
                 <RouterLink
                   v-else
                   class="btn"
