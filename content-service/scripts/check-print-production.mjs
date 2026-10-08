@@ -6,7 +6,6 @@ import { hasPermission, PERMISSION, requiredPermissionForRequest } from '../src/
 requireIsolatedTestDatabase()
 const prisma = new PrismaClient()
 const apiBase = process.env.TEST_API_BASE || 'http://127.0.0.1:3001'
-const webBase = process.env.TEST_WEB_BASE || 'http://127.0.0.1:5500/mowo/frontend/pages'
 const appBase = process.env.TEST_APP_BASE || 'http://127.0.0.1:4173/app'
 const runId = String(Date.now()).slice(-8)
 const sizeA = `${runId.slice(-4)}x5cm`, sizeB = `${runId.slice(-4)}x8cm`
@@ -213,12 +212,12 @@ try {
     window.MOWO_RUNTIME_API_BASE = apiBase
     localStorage.setItem('mowo_token', token)
   }, { token, apiBase })
-  await page.goto(`${webBase}/admin-print-production.html`, { waitUntil: 'networkidle' })
+  await page.goto(`${appBase}/admin/print-production`, { waitUntil: 'networkidle' })
   await page.getByText(group12.name).waitFor()
   assert(await page.locator(`[data-sku-id="${skus[0].id}"] img`).count() === 1, '页面逐个展示 SKU 图片和基础信息')
   await page.locator(`[data-group-id="${group12.id}"]`).getByRole('button', { name: '添加 SKU' }).click()
-  assert((await page.locator('#skuModalHint').textContent())?.includes(`尺寸为 ${sizeA}`), '添加 SKU 时自动检索相同尺寸的现有 SKU')
-  await page.getByRole('button', { name: '关闭' }).last().click()
+  assert((await page.getByRole('dialog', { name: '添加 SKU' }).textContent())?.includes(`尺寸为 ${sizeA}`), '添加 SKU 时自动检索相同尺寸的现有 SKU')
+  await page.getByRole('dialog', { name: '添加 SKU' }).getByRole('button', { name: '关闭' }).click()
   await page.evaluate(({ skuId, groupId }) => {
     const source = document.querySelector(`[data-sku-id="${skuId}"]`)
     const target = document.querySelector(`[data-group-id="${groupId}"] .sku-list`)
@@ -230,13 +229,7 @@ try {
   }, { skuId: skus[6].id, groupId: group12.id })
   await page.waitForFunction(id => document.querySelector(`[data-group-id="${id}"]`)?.textContent.includes('拖拽12'), group12.id)
   assert(!!(await prisma.printCutRule.findUnique({ where: { skuId: skus[6].id } })), '尚未配置 SKU 可以拖入匹配尺寸的打印组')
-  await page.goto(`${appBase}/admin/print-production`, { waitUntil: 'networkidle' })
-  await page.getByText(group12.name).waitFor()
-  assert(await page.locator(`[data-sku-id="${skus[0].id}"] img`).count() === 1, 'Vue 候选逐个展示真实 SKU 图片和基础信息')
-  assert(await page.getByText('修改只影响之后新建的生产批次。').count() === 1, 'Vue 候选保留新旧批次冻结边界提示')
-  await page.locator(`[data-group-id="${group12.id}"]`).getByRole('button', { name: '添加 SKU' }).click()
-  assert((await page.getByRole('dialog', { name: '添加 SKU' }).textContent())?.includes(`尺寸为 ${sizeA}`), 'Vue 候选按打印组尺寸推荐尚未分配 SKU')
-  await page.getByRole('dialog', { name: '添加 SKU' }).getByRole('button', { name: '关闭' }).click()
+  assert(await page.getByText('修改只影响之后新建的生产批次。').count() === 1, '正式 Vue 页保留新旧批次冻结边界提示')
   await page.goto(`${appBase}/admin/production-batches?batchId=${encodeURIComponent(batchId)}`, { waitUntil: 'networkidle' })
   await page.getByText(batchId).first().click()
   await page.getByText('帧素材打印顺序').waitFor()

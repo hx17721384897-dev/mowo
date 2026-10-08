@@ -125,7 +125,7 @@ const groups: MenuGroup[] = [
           }
         ]
       },
-      { label: '打印与裁切设置', icon: '↕', file: 'admin-print-production.html', roles: ['OWNER'] },
+      { label: '打印与裁切设置', icon: '↕', to: '/admin/print-production', roles: ['OWNER'] },
       { label: '外部订单导入', icon: '📥', to: '/admin/import', roles: ownerProduction }
     ]
   },

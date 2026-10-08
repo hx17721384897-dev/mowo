@@ -176,7 +176,7 @@ async function drag(page: Page, sourceSelector: string, targetSelector: string) 
   )
 }
 
-test('print candidate preserves layout, summary, template and safe SKU rendering', async ({
+test('formal print page preserves layout, summary, template and safe SKU rendering', async ({
   page
 }, info) => {
   const tracked = await mockPage(page)
@@ -192,14 +192,17 @@ test('print candidate preserves layout, summary, template and safe SKU rendering
     await expect(page.getByRole('navigation', { name: '后台菜单' })).toBeVisible()
   } else {
     const candidate = await geometry(page)
-    await page.goto('http://127.0.0.1:5500/mowo/frontend/pages/admin-print-production.html')
+    await page.goto(
+      'http://127.0.0.1:5500/mowo/frontend/pages/admin-print-production.html?cutover=1'
+    )
+    await expect(page).toHaveURL(/\/app\/admin\/print-production\?cutover=1$/)
     await expect(page.getByText('A4-5x5-12.docx · V1')).toBeVisible()
-    const legacy = await geometry(page)
+    const redirected = await geometry(page)
     for (const key of ['topbar', 'content', 'summary', 'group'] as const) {
       expect(candidate[key]).not.toBeNull()
-      expect(legacy[key]).not.toBeNull()
+      expect(redirected[key]).not.toBeNull()
       for (const field of ['x', 'y', 'width'] as const)
-        expect(Math.abs(candidate[key]![field] - legacy[key]![field])).toBeLessThanOrEqual(6)
+        expect(Math.abs(candidate[key]![field] - redirected[key]![field])).toBeLessThanOrEqual(6)
     }
   }
 })

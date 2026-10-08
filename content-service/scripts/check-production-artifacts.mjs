@@ -72,7 +72,6 @@ console.log('Production artifact checks passed')
 requireIsolatedTestDatabase()
 const prisma = new PrismaClient()
 const apiBase = process.env.TEST_API_BASE || 'http://127.0.0.1:3001'
-const webBase = process.env.TEST_WEB_BASE || 'http://127.0.0.1:5500/mowo/frontend/pages'
 const appBase = process.env.TEST_APP_BASE || 'http://127.0.0.1:4173/app'
 const storageRoot = path.resolve(process.cwd(), process.env.LOCAL_STORAGE_DIR || 'storage/private')
 const runId = String(Date.now()).slice(-9)
@@ -266,7 +265,7 @@ try {
   if (process.env.SCREENSHOT_DIR) {
     await page.screenshot({ path: path.join(process.env.SCREENSHOT_DIR, 'production-batch-reprint-check.png'), fullPage: true })
   }
-  await page.goto(`${webBase}/admin-print-production.html`, { waitUntil: 'networkidle' })
+  await page.goto(`${appBase}/admin/print-production`, { waitUntil: 'networkidle' })
   await page.getByText(group.name).waitFor()
   assert((await page.getByText(/测试打印纸.*50×50mm.*单页12帧.*300DPI/).count()) === 1, '打印设置页清楚展示纸张、成品尺寸、单页帧数和 DPI')
   assert((await page.getByText(/当前模板：A4-5x5-12\.docx · V1/).count()) === 1, '打印设置页展示当前 Word 模板版本')

@@ -22,7 +22,7 @@
 | `admin-inventory.html` | `/api/inventory`、`/api/materials` | `PRODUCTION` | 生产、负责人 | 当前岗位读取已收口 |
 | Vue `/app/admin/orders` | `/api/admin/production-workflow` | `PRODUCTION` | 生产、负责人 | V4-E2 正式接管；旧 HTML 已删除 |
 | Vue `/app/admin/production-batches` | `/api/admin/production-batches` | `PRODUCTION` | 生产、负责人 | V5-A 正式接管；旧 HTML 已删除 |
-| `admin-print-production.html` | `/api/admin/print-production` | `PRODUCTION_CONFIG` | 负责人 | B6 隔离专项通过 |
+| Vue `/app/admin/print-production` | `/api/admin/print-production` | `PRODUCTION_CONFIG` | 负责人 | V5-B 正式接管；旧 HTML 已删除 |
 | Vue `/app/admin/import` | `/api/admin/import`、`/api/admin/sku-mapping` 当前关闭 | 路由页仅 `OWNER`/`PRODUCTION` | 生产、负责人 | V4-E3 只保留入口；服务端对所有调用者返回功能未开放 |
 
 ## 本轮已完成与仍需完成
