@@ -206,6 +206,7 @@ const activeGroup = computed(() => {
   if (
     route.path === '/admin/orders' ||
     route.path === '/admin/production-batches' ||
+    route.path === '/admin/print-production' ||
     route.path === '/admin/import'
   )
     return 'production'
