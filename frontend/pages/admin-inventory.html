@@ -1291,13 +1291,26 @@ async function submitRestock() {
 
   if (!raw || raw <= 0) { showToast('请输入有效数量（正整数）'); return }
 
+  const pendingKey = 'mowo.inventory.pendingAdjustment'
+  const fingerprint = JSON.stringify({ skuId:_curSkuId, quantity:qty, note:note || '' })
+  let pending = null
+  try { pending = JSON.parse(sessionStorage.getItem(pendingKey) || 'null') } catch {}
+  if (!pending || pending.fingerprint !== fingerprint) {
+    pending = {
+      fingerprint,
+      clientRequestId:`inventory-${crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`}`
+    }
+    sessionStorage.setItem(pendingKey, JSON.stringify(pending))
+  }
+
   try {
     const res  = await fetch(`${API}/api/inventory/${_curSkuId}/restock`, {
       method: 'POST', headers: { ...authHeader(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ quantity: qty, note: note || undefined })
+      body: JSON.stringify({ quantity: qty, note: note || undefined, clientRequestId:pending.clientRequestId })
     })
     const json = await res.json()
     if (json.success) {
+      sessionStorage.removeItem(pendingKey)
       showToast(json.message || `✓ 已操作 ${qty} 个`)
       const r2 = await fetch(`${API}/api/inventory/${_curSkuId}`, { headers: authHeader() })
       const j2 = await r2.json()
@@ -1306,7 +1319,7 @@ async function submitRestock() {
       if (idx >= 0) { _allSku[idx] = normalizeInv({ ..._allSku[idx], ...json.data }) }
       applySkuFilter()
       await loadInventory()
-    } else { showToast('操作失败：' + json.message) }
+    } else { sessionStorage.removeItem(pendingKey); showToast('操作失败：' + json.message) }
   } catch { showToast('网络错误') }
 }
 

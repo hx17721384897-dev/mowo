@@ -1,11 +1,12 @@
 // src/routes/inventory.js
 // 库存管理接口（v2：4态库存 + 三级预警 + 渠道配额 + 快照查询）
 
+import crypto from 'node:crypto'
+
 import {
   manualAdjust,
   calcAvailable,
   getInventoryWithAlert,
-  makeIdempotencyKey
 } from '../lib/inventory.js'
 import {
   consumeMaterialAllocations,
@@ -419,10 +420,13 @@ export default async function inventoryRoutes(fastify) {
   fastify.post('/:skuId/restock', { preHandler: requireProduction }, async (req, reply) => {
     const { skuId }          = req.params
     const { quantity, note, reason } = req.body
+    const clientRequestId = String(req.body?.clientRequestId || '').trim()
     const operatorId         = req.user.userId
     const userRole           = req.user.role ?? 0
 
-    if (!quantity || quantity === 0)
+    if (!clientRequestId || clientRequestId.length > 80)
+      return reply.code(400).send({ success: false, message: '缺少库存调整请求标识，请重新打开操作面板' })
+    if (!Number.isInteger(quantity) || quantity === 0)
       return reply.code(400).send({ success: false, message: '数量不能为0' })
     if (userRole < 2 && quantity < 0)
       return reply.code(403).send({ success: false, message: '生产端只能录入正数' })
@@ -432,12 +436,52 @@ export default async function inventoryRoutes(fastify) {
     if (quantity < 0 && inv.currentStock + quantity < 0)
       return reply.code(400).send({ success: false, message: `调减数量超出当前库存（当前：${inv.currentStock}）` })
 
-    const idempotencyKey = makeIdempotencyKey('restock', skuId, operatorId)
     const adjustReason   = reason || note || (quantity > 0 ? '手动入库' : '手动调减')
+    const idempotencyKey = `inventory-adjust:${clientRequestId}`
+    const requestFingerprint = crypto.createHash('sha256')
+      .update(JSON.stringify({ skuId, quantity, reason: adjustReason }))
+      .digest('hex')
+
+    const validateReplay = row => {
+      if (!row) return null
+      if (row.skuId !== skuId || row.operatorId !== operatorId || row.requestFingerprint !== requestFingerprint) {
+        return reply.code(409).send({
+          success: false,
+          code: 'IDEMPOTENCY_KEY_CONFLICT',
+          message: '本次请求标识已用于其他库存调整，请刷新后重试'
+        })
+      }
+      return true
+    }
+    const replay = await fastify.prisma.inventoryLog.findUnique({ where: { idempotencyKey } })
+    if (replay) {
+      const valid = validateReplay(replay)
+      if (valid !== true) return valid
+      const current = await fastify.prisma.skuInventory.findUnique({ where: { skuId } })
+      return reply.send({
+        success: true,
+        message: '库存调整已保存',
+        data: { ...current, availableQty: calcAvailable(current), reused: true }
+      })
+    }
 
     try {
-      await manualAdjust(fastify.prisma, skuId, quantity, adjustReason, operatorId, idempotencyKey)
+      await manualAdjust(
+        fastify.prisma, skuId, quantity, adjustReason, operatorId,
+        idempotencyKey, requestFingerprint
+      )
     } catch (err) {
+      if (err.code === 'P2002') {
+        const concurrentReplay = await fastify.prisma.inventoryLog.findUnique({ where: { idempotencyKey } })
+        const valid = validateReplay(concurrentReplay)
+        if (valid !== true) return valid
+        const current = await fastify.prisma.skuInventory.findUnique({ where: { skuId } })
+        return reply.send({
+          success: true,
+          message: '库存调整已保存',
+          data: { ...current, availableQty: calcAvailable(current), reused: true }
+        })
+      }
       return reply.code(400).send({ success: false, message: err.message })
     }
 
@@ -446,7 +490,7 @@ export default async function inventoryRoutes(fastify) {
     return reply.send({
       success: true,
       message: `✓ 已${actionWord}，当前库存 ${updated.currentStock}`,
-      data:    { ...updated, availableQty: calcAvailable(updated) }
+      data:    { ...updated, availableQty: calcAvailable(updated), reused: false }
     })
   })
 

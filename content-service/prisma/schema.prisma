@@ -653,6 +653,7 @@ model InventoryLog {
 
   // v2 新增
   idempotencyKey String? @unique @map("idempotency_key") @db.VarChar(100)
+  requestFingerprint String? @map("request_fingerprint") @db.VarChar(64)
   beforeQty      Int?    @map("before_qty") // 操作前 available_qty
   afterQty       Int?    @map("after_qty") // 操作后 available_qty
   reason         String? @db.VarChar(200) // manual_adjustment 时必填

@@ -32,7 +32,7 @@ export function makeIdempotencyKey(prefix, ...parts) {
 // ---------------------------------------------------------------
 // 工具：写库存日志
 // ---------------------------------------------------------------
-async function writeLog(tx, { skuId, type, quantity, orderId, operatorId, note, idempotencyKey, beforeQty, afterQty, reason }) {
+async function writeLog(tx, { skuId, type, quantity, orderId, operatorId, note, idempotencyKey, requestFingerprint, beforeQty, afterQty, reason }) {
   return tx.inventoryLog.create({
     data: {
       skuId,
@@ -42,6 +42,7 @@ async function writeLog(tx, { skuId, type, quantity, orderId, operatorId, note, 
       operatorId: operatorId || 'system',
       note: note || null,
       idempotencyKey: idempotencyKey || null,
+      requestFingerprint: requestFingerprint || null,
       beforeQty: beforeQty ?? null,
       afterQty: afterQty ?? null,
       reason: reason || null
@@ -224,7 +225,7 @@ export async function defectFrame(prisma, skuId, qty, orderId, reason, idempoten
 // ---------------------------------------------------------------
 // manualAdjust — 手动盘点调整：current_stock += delta（reason 必填）
 // ---------------------------------------------------------------
-export async function manualAdjust(prisma, skuId, delta, reason, operatorId, idempotencyKey) {
+export async function manualAdjust(prisma, skuId, delta, reason, operatorId, idempotencyKey, requestFingerprint) {
   if (!reason) throw new Error('REASON_REQUIRED')
   if (await isIdempotentDuplicate(prisma, idempotencyKey)) return { success: true, duplicate: true }
 
@@ -239,7 +240,8 @@ export async function manualAdjust(prisma, skuId, delta, reason, operatorId, ide
     const invAfter = await tx.skuInventory.findUnique({ where: { skuId } })
     await writeLog(tx, {
       skuId, type: 'manual_adjustment', quantity: Math.abs(delta), operatorId,
-      idempotencyKey, beforeQty: calcAvailable(invBefore), afterQty: calcAvailable(invAfter), reason
+      idempotencyKey, requestFingerprint,
+      beforeQty: calcAvailable(invBefore), afterQty: calcAvailable(invAfter), reason
     })
     return { success: true }
   }, { timeout: 5000 })
