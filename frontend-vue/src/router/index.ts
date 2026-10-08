@@ -264,6 +264,12 @@ const router = createRouter({
           meta: { title: '打印与裁切设置 — 哞屋后台', staffRoles: ['OWNER'] }
         },
         {
+          path: 'inventory',
+          name: 'admin-inventory-candidate',
+          component: () => import('@/views/AdminInventoryView.vue'),
+          meta: { title: '库存管理 — 哞屋后台', staffRoles: ['OWNER', 'PRODUCTION'] }
+        },
+        {
           path: 'import',
           name: 'admin-external-order-import',
           component: () => import('@/views/AdminExternalOrderImportView.vue'),
