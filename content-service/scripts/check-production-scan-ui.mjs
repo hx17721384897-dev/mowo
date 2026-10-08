@@ -7,6 +7,7 @@ requireIsolatedTestDatabase()
 const prisma = new PrismaClient()
 const apiBase = process.env.TEST_API_BASE || 'http://127.0.0.1:3001'
 const webBase = process.env.TEST_WEB_BASE || 'http://127.0.0.1:5500/mowo/frontend/pages'
+const appBase = process.env.TEST_APP_BASE || 'http://127.0.0.1:4173/app'
 const runId = String(Date.now()).slice(-8)
 const phone = `195${runId}`
 let userId = null
@@ -147,6 +148,22 @@ try {
     throw new Error('旧 station 参数没有自动收口到统一网址')
   }
   console.log('PASS legacy scan URLs redirect to one versioned workbench')
+
+  for (const [, heading, station] of pages) {
+    await page.goto(`${appBase}/admin/production-scan#${station}`, { waitUntil: 'networkidle' })
+    await page.locator('#stationTitle').filter({ hasText: heading }).waitFor({ timeout: 10000 })
+    if (await page.locator('.work-tabs button').count() !== 5) throw new Error(`${heading} Vue 候选缺少统一工作台入口`)
+    if (await page.locator('.production-scan-page').getAttribute('data-station') !== station) throw new Error(`${heading} Vue 候选没有应用正确岗位颜色`)
+  }
+  const vueBatchOptions = await page.locator('#globalBatch option').count()
+  if (vueBatchOptions > 1) {
+    await page.locator('#globalBatch').selectOption({ index: 1 })
+    const selectedBatch = await page.locator('#globalBatch').inputValue()
+    await page.locator('.work-tabs button[data-station="material"]').click()
+    await page.locator('.work-tabs button[data-station="pairing"]').click()
+    if (await page.locator('#globalBatch').inputValue() !== selectedBatch) throw new Error('Vue 候选切换扫码环节时丢失当前生产批次')
+  }
+  console.log('PASS Vue scan candidate preserves five stations and current batch')
 
   const signedOutContext = await browser.newContext({ viewport: { width: 1280, height: 800 } })
   const signedOutPage = await signedOutContext.newPage()

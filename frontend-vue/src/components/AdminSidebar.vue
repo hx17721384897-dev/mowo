@@ -206,6 +206,7 @@ const activeGroup = computed(() => {
   if (
     route.path === '/admin/orders' ||
     route.path === '/admin/production-batches' ||
+    route.path === '/admin/production-scan' ||
     route.path === '/admin/print-production' ||
     route.path === '/admin/import'
   )
@@ -237,7 +238,13 @@ const openGroups = ref<string[]>(activeGroup.value ? [activeGroup.value] : [])
 watch(activeGroup, (key) => {
   if (key && !openGroups.value.includes(key)) openGroups.value = [...openGroups.value, key]
 })
-const openNested = ref<string[]>(route.path === '/admin/orders' ? ['orders'] : [])
+const openNested = ref<string[]>(
+  route.path === '/admin/orders'
+    ? ['orders']
+    : route.path === '/admin/production-scan'
+      ? ['scan']
+      : []
+)
 const collapsed = defineModel<boolean>('collapsed', { default: false })
 const mobileOpen = defineModel<boolean>('mobileOpen', { default: false })
 const displayName = computed(
@@ -261,6 +268,11 @@ function isActiveLegacy(file: string): boolean {
     'admin-logs.html': '/admin/logs'
   }
   return routes[file] === route.path
+}
+function isActiveScanChild(file: string): boolean {
+  if (route.path !== '/admin/production-scan') return false
+  const station = file.split('#')[1] || 'overview'
+  return (route.hash.slice(1) || 'overview') === station
 }
 
 function toggleGroup(key: string): void {
@@ -332,7 +344,11 @@ function toggleNested(key: string): void {
                     ><span class="nav-icon">{{ child.icon }}</span
                     ><span class="nav-label">{{ child.label }}</span></RouterLink
                   >
-                  <a v-else class="nav-third-item" :href="legacyUrl(child.file!)"
+                  <a
+                    v-else
+                    class="nav-third-item"
+                    :class="{ active: isActiveScanChild(child.file!) }"
+                    :href="legacyUrl(child.file!)"
                     ><span class="nav-icon">{{ child.icon }}</span
                     ><span class="nav-label">{{ child.label }}</span></a
                   >

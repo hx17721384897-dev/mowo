@@ -252,6 +252,12 @@ const router = createRouter({
           meta: { title: '生产批次 — 哞屋后台', staffRoles: ['OWNER', 'PRODUCTION'] }
         },
         {
+          path: 'production-scan',
+          name: 'admin-production-scan',
+          component: () => import('@/views/ProductionScanView.vue'),
+          meta: { title: '扫码作业 — 哞屋后台', staffRoles: ['OWNER', 'PRODUCTION'] }
+        },
+        {
           path: 'print-production',
           name: 'admin-print-production',
           component: () => import('@/views/AdminPrintProductionView.vue'),
