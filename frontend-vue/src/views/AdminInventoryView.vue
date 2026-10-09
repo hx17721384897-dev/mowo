@@ -2,6 +2,7 @@
 /* eslint-disable vue/html-closing-bracket-newline, vue/html-indent */
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import AdminSidebar from '@/components/AdminSidebar.vue'
+import MaterialInventoryPanel from '@/features/admin-inventory/MaterialInventoryPanel.vue'
 import { ApiError } from '@/services/api-client'
 import {
   adjustInventory,
@@ -26,6 +27,9 @@ const rows = ref<InventoryRow[]>([]),
   search = ref(''),
   alertFilter = ref<AlertLevel | ''>(''),
   page = ref(1)
+const activeTab = ref(0)
+const packedPanel = ref<InstanceType<typeof MaterialInventoryPanel> | null>(null)
+const rawPanel = ref<InstanceType<typeof MaterialInventoryPanel> | null>(null)
 const detail = ref<InventoryDetail | null>(null),
   quota = ref<ChannelQuota | null>(null),
   drawerOpen = ref(false)
@@ -113,6 +117,7 @@ async function refresh() {
   loading.value = true
   try {
     rows.value = await loadInventory()
+    await Promise.all([packedPanel.value?.refresh(), rawPanel.value?.refresh()])
     if (page.value > pageCount.value) page.value = pageCount.value
   } catch (error) {
     flash(errorMessage(error), true)
@@ -270,15 +275,16 @@ onBeforeUnmount(() => window.clearTimeout(noticeTimer))
             v-for="(tab, index) in tabs"
             :key="tab"
             class="main-tab"
-            :class="{ active: index === 0 }"
+            :class="{ active: index === activeTab }"
             type="button"
-            :disabled="index !== 0"
-            :title="index ? '后续库存切片迁移' : ''"
+            :disabled="index > 2"
+            :title="index > 2 ? '后续库存切片迁移' : ''"
+            @click="activeTab = index"
           >
             {{ tab }}
           </button>
         </div>
-        <section class="stock-panel">
+        <section v-if="activeTab === 0" class="stock-panel">
           <div class="toolbar">
             <div class="filter-tabs">
               <button
@@ -356,6 +362,22 @@ onBeforeUnmount(() => window.clearTimeout(noticeTimer))
             </button>
           </div>
         </section>
+        <MaterialInventoryPanel
+          v-show="activeTab === 1"
+          ref="packedPanel"
+          mode="PACKED"
+          :inventory="rows"
+          @flash="flash"
+          @inventory-changed="refresh"
+        />
+        <MaterialInventoryPanel
+          v-show="activeTab === 2"
+          ref="rawPanel"
+          mode="RAW"
+          :inventory="rows"
+          @flash="flash"
+          @inventory-changed="refresh"
+        />
       </div>
     </main>
     <div class="drawer-overlay" :class="{ show: drawerOpen }" @click="closeDrawer"></div>

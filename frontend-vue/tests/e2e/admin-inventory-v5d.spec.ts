@@ -23,6 +23,48 @@ const inventory = {
   dailySales: 0.5,
   alertLevel: 'OK'
 }
+const materials = [
+  {
+    id: 'mat-raw',
+    name: '<img src=x onerror=alert(2)>散装铁丝',
+    itemCode: 'MAT-RAW-01',
+    itemType: 'RAW',
+    specification: '长度5.5cm',
+    unit: '根',
+    currentStock: 120,
+    safetyStock: 20,
+    leadTime: 7,
+    note: null,
+    sourceMaterialId: null,
+    sourceQtyPerUnit: null,
+    sourceMaterialName: null,
+    consumed30d: 24,
+    dailyConsumption: 0.8,
+    availableDays: 150,
+    alertLevel: 'OK',
+    boundSkuCount: 1
+  },
+  {
+    id: 'mat-packed',
+    name: '12根铁丝包',
+    itemCode: 'MAT-PACK-01',
+    itemType: 'PACKED',
+    specification: null,
+    unit: '包',
+    currentStock: 8,
+    safetyStock: 10,
+    leadTime: 7,
+    note: null,
+    sourceMaterialId: 'mat-raw',
+    sourceQtyPerUnit: 12,
+    sourceMaterialName: '<img src=x onerror=alert(2)>散装铁丝',
+    consumed30d: 12,
+    dailyConsumption: 0.4,
+    availableDays: 20,
+    alertLevel: 'WARNING',
+    boundSkuCount: 1
+  }
+]
 
 async function fulfill(route: Route, data: unknown, status = 200) {
   await route.fulfill({
@@ -33,6 +75,7 @@ async function fulfill(route: Route, data: unknown, status = 200) {
 
 async function mockPage(page: Page, role = 'PRODUCTION', failAdjustmentOnce = false) {
   const adjustments: Record<string, unknown>[] = []
+  const materialWrites: Array<{ path: string; body: Record<string, unknown> }> = []
   const writes: string[] = []
   let failed = false
   await page.addInitScript(() => localStorage.setItem('mowo_token', 'inventory-test-token'))
@@ -48,6 +91,72 @@ async function mockPage(page: Page, role = 'PRODUCTION', failAdjustmentOnce = fa
         profile: { nickname: '库存测试' }
       })
     if (path === '/api/config/features') return fulfill(route, {})
+    if (path === '/api/materials' && request.method() === 'GET') return fulfill(route, materials)
+    if (path === '/api/materials/mat-packed/logs')
+      return fulfill(route, { logs: [], total: 0, page: 1 })
+    if (path === '/api/materials/mat-packed/bindings') return fulfill(route, [])
+    if (path === '/api/materials/mat-raw/logs')
+      return fulfill(route, { logs: [], total: 0, page: 1 })
+    if (path === '/api/materials/mat-raw/bindings') return fulfill(route, [])
+    if (path === '/api/materials/mat-packed/prepare-preview')
+      return fulfill(route, {
+        materialId: 'mat-raw',
+        materialName: '<img src=x onerror=alert(2)>散装铁丝',
+        itemType: 'RAW',
+        unit: '根',
+        requiredQty: 24,
+        outputQty: 2,
+        lossQty: 0,
+        allocations: [
+          {
+            sourceBatchId: 'receipt-1',
+            sourceType: 'RECEIPT',
+            batchNo: 'RCV-001',
+            quantity: 24,
+            availableQty: 120,
+            location: 'A-01'
+          }
+        ]
+      })
+    if (path === '/api/materials/mat-packed/prepare') {
+      const body = request.postDataJSON() as Record<string, unknown>
+      materialWrites.push({ path, body })
+      return fulfill(route, { batchNo: 'PREP-001', outputQty: 2, reused: false })
+    }
+    if (path === '/api/materials/mat-raw/restock') {
+      const body = request.postDataJSON() as Record<string, unknown>
+      materialWrites.push({ path, body })
+      return fulfill(route, { currentStock: 130, receiptNo: 'RCV-002', reused: false })
+    }
+    if (path === '/api/inventory/kits/assemble-preview')
+      return fulfill(route, {
+        skuId: 'sku-1',
+        quantity: 1,
+        plan: [
+          {
+            materialId: 'mat-packed',
+            materialName: '12根铁丝包',
+            itemType: 'PACKED',
+            unit: '包',
+            requiredQty: 1,
+            allocations: [
+              {
+                sourceBatchId: 'prep-1',
+                sourceType: 'PREPARATION',
+                batchNo: 'PREP-OLD-001',
+                quantity: 1,
+                availableQty: 8,
+                location: 'B-01'
+              }
+            ]
+          }
+        ]
+      })
+    if (path === '/api/inventory/kits/assemble') {
+      const body = request.postDataJSON() as Record<string, unknown>
+      materialWrites.push({ path, body })
+      return fulfill(route, { batchNo: 'KB-001', quantity: 1, reused: false })
+    }
     if (path === '/api/inventory' && request.method() === 'GET') return fulfill(route, [inventory])
     if (path === '/api/inventory/channel-quotas')
       return fulfill(route, [
@@ -93,7 +202,7 @@ async function mockPage(page: Page, role = 'PRODUCTION', failAdjustmentOnce = fa
     }
     return fulfill(route, null, 404)
   })
-  return { adjustments, writes }
+  return { adjustments, materialWrites, writes }
 }
 
 test('candidate renders SKU stock safely and keeps the seven-domain geometry', async ({ page }) => {
@@ -144,4 +253,48 @@ test('candidate enforces production roles and fits mobile', async ({ page }, inf
   ).toBe(true)
   await page.getByRole('button', { name: '☰' }).click()
   await expect(page.getByRole('navigation', { name: '后台菜单' })).toBeVisible()
+})
+
+test('material domains keep FIFO preparation and receipt writes inside Vue', async ({ page }) => {
+  const state = await mockPage(page)
+  await page.goto('/app/admin/inventory')
+  await page.getByRole('button', { name: '已分装小包' }).click()
+  await expect(page.getByText('12根铁丝包')).toBeVisible()
+  await page.getByRole('button', { name: '分装', exact: true }).click()
+  await page.getByLabel('分装成品数量 *').fill('2')
+  await expect(page.getByText('RCV-001：24根')).toBeVisible()
+  await page.getByRole('button', { name: '确认分装' }).click()
+  await expect(page.getByText(/分装完成，批次 PREP-001/)).toBeVisible()
+
+  await page.getByRole('button', { name: '材料包入库' }).click()
+  await page.getByLabel('材料包 SKU *').selectOption('sku-1')
+  await page.getByLabel('入库套数 *').fill('1')
+  await expect(page.getByText('PREP-OLD-001：1包')).toBeVisible()
+  page.once('dialog', (dialog) => dialog.accept())
+  await page.getByRole('button', { name: '确认材料包入库' }).click()
+  await expect(page.getByText(/材料包入库完成，批次 KB-001/)).toBeVisible()
+
+  await page.getByRole('button', { name: '基础零件' }).click()
+  await expect(page.getByText('<img src=x onerror=alert(2)>散装铁丝')).toBeVisible()
+  await expect(page.locator('img[src="x"]')).toHaveCount(0)
+  await page.getByRole('button', { name: '采购入库' }).click()
+  await page.getByLabel('实际合格数量 *').fill('10')
+  await page.getByLabel('到货次品数量').fill('1')
+  await page.getByRole('button', { name: '确认入库' }).click()
+  await expect(page.getByText(/入库完成，批次 RCV-002/)).toBeVisible()
+
+  expect(state.materialWrites).toHaveLength(3)
+  expect(state.materialWrites[0].body.clientRequestId).toMatch(/^material-/)
+  expect(state.materialWrites[0].body.allocations).toEqual([
+    { sourceBatchId: 'receipt-1', quantity: 24 }
+  ])
+  expect(state.materialWrites[1].body.clientRequestId).toMatch(/^material-/)
+  expect(state.materialWrites[1].body.allocations).toEqual([
+    {
+      materialId: 'mat-packed',
+      allocations: [{ sourceBatchId: 'prep-1', quantity: 1 }]
+    }
+  ])
+  expect(state.materialWrites[2].body.clientRequestId).toMatch(/^material-/)
+  expect(state.materialWrites[2].body.actualQty).toBe(11)
 })
