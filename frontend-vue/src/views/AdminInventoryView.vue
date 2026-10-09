@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import AdminSidebar from '@/components/AdminSidebar.vue'
 import MaterialInventoryPanel from '@/features/admin-inventory/MaterialInventoryPanel.vue'
 import ReturnInventoryPanel from '@/features/admin-inventory/ReturnInventoryPanel.vue'
+import InventoryLogsPanel from '@/features/admin-inventory/InventoryLogsPanel.vue'
 import { ApiError } from '@/services/api-client'
 import {
   adjustInventory,
@@ -31,6 +32,7 @@ const activeTab = ref(0)
 const packedPanel = ref<InstanceType<typeof MaterialInventoryPanel> | null>(null)
 const rawPanel = ref<InstanceType<typeof MaterialInventoryPanel> | null>(null)
 const returnPanel = ref<InstanceType<typeof ReturnInventoryPanel> | null>(null)
+const logsPanel = ref<InstanceType<typeof InventoryLogsPanel> | null>(null)
 const detail = ref<InventoryDetail | null>(null),
   quota = ref<ChannelQuota | null>(null),
   drawerOpen = ref(false)
@@ -121,7 +123,8 @@ async function refresh() {
     await Promise.all([
       packedPanel.value?.refresh(),
       rawPanel.value?.refresh(),
-      returnPanel.value?.refresh()
+      returnPanel.value?.refresh(),
+      logsPanel.value?.refresh()
     ])
     if (page.value > pageCount.value) page.value = pageCount.value
   } catch (error) {
@@ -282,8 +285,8 @@ onBeforeUnmount(() => window.clearTimeout(noticeTimer))
             class="main-tab"
             :class="{ active: index === activeTab }"
             type="button"
-            :disabled="index > 3"
-            :title="index > 3 ? '后续库存切片迁移' : ''"
+            :disabled="index > 4"
+            :title="index > 4 ? '后续库存切片迁移' : ''"
             @click="activeTab = index"
           >
             {{ tab }}
@@ -381,6 +384,7 @@ onBeforeUnmount(() => window.clearTimeout(noticeTimer))
           @flash="flash"
           @inventory-changed="refresh"
         />
+        <InventoryLogsPanel v-show="activeTab === 4" ref="logsPanel" @flash="flash" />
         <MaterialInventoryPanel
           v-show="activeTab === 2"
           ref="rawPanel"

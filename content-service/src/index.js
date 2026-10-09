@@ -45,6 +45,22 @@ import { isClosedLegacyProductionEndpoint } from './lib/legacy-production-endpoi
 const config = loadConfig()
 const fastify = Fastify({ logger: true, bodyLimit: 10 * 1024 * 1024 })
 fastify.decorate('config', config)
+fastify.setErrorHandler((error, request, reply) => {
+  const statusCode = Number(error.statusCode || 500)
+  if (statusCode >= 500) {
+    request.log.error({ err: error }, 'Unhandled request error')
+    return reply.code(500).send({
+      success: false,
+      code: 'INTERNAL_SERVER_ERROR',
+      message: '服务器暂时无法处理请求，请稍后重试'
+    })
+  }
+  return reply.code(statusCode).send({
+    success: false,
+    code: error.code || 'REQUEST_ERROR',
+    message: error.message || '请求处理失败'
+  })
+})
 
 async function start() {
   try {

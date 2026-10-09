@@ -193,6 +193,9 @@ try {
     orderId,userId,type:'quality',reason:'自动化退回检查',status:'approved'
   } })
   aftersaleId = aftersale.id
+  const emptyReturns = await request('/api/inventory/returns?status=NOT_PRESENT',token)
+  const emptyReturnsJson = await emptyReturns.json()
+  assert(emptyReturns.status === 200 && Array.isArray(emptyReturnsJson.data) && emptyReturnsJson.data.length === 0,'退回列表空结果不会触发关联资料查询错误')
   const receivePayload = {
     aftersaleRequestId:aftersaleId,trackingCompany:'测试快递',trackingNo:`RT-${runId}`,
     note:'自动化退回',clientRequestId:`return-receive-${runId}`
@@ -206,6 +209,9 @@ try {
     `退回收货重放恢复原记录（首次 ${receive.status}，重放 ${receiveReplay.status}：${receiveReplayJson.message || ''}）`
   )
   assert(await prisma.inventoryReturnReceipt.count({where:{aftersaleRequestId:aftersaleId}}) === 1,'一个售后只建立一条退回收货记录')
+  const returnList = await request('/api/inventory/returns',token)
+  const returnListJson = await returnList.json()
+  assert(returnList.status === 200 && returnListJson.data[0]?.aftersale?.user?.nickname?.startsWith('kit-inventory-test-'),'退回列表从用户资料返回昵称且不查询不存在字段')
   const beforeReturnStock = (await prisma.skuInventory.findUnique({where:{skuId}})).currentStock
   const inspectPayload = {
     packageCondition:'UNOPENED_INTACT',receivedQty:1,items:[],note:'未拆封检查合格',

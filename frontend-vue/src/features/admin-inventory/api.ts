@@ -11,6 +11,12 @@ export type InventoryLog = {
   note: string | null
   createdAt: string
 }
+export type GlobalInventoryLog = InventoryLog & {
+  skuId: string
+  operatorId: string
+  modelName: string
+  skuSpec: string
+}
 export type InventoryRow = {
   skuId: string
   skuName: string
@@ -153,6 +159,16 @@ export type InventoryReturnReceipt = {
 export const loadInventory = () => apiRequest<InventoryRow[]>('/api/inventory')
 export const loadInventoryDetail = (skuId: string) =>
   apiRequest<InventoryDetail>(`/api/inventory/${encodeURIComponent(skuId)}`)
+export const loadGlobalInventoryLogs = (input: { page: number; limit?: number; type?: string }) => {
+  const params = new URLSearchParams({
+    page: String(input.page),
+    limit: String(input.limit || 30)
+  })
+  if (input.type) params.set('type', input.type)
+  return apiRequest<{ logs: GlobalInventoryLog[]; total: number; page: number; limit: number }>(
+    `/api/inventory/logs?${params}`
+  )
+}
 export const loadChannelQuotas = () => apiRequest<ChannelQuota[]>('/api/inventory/channel-quotas')
 export const adjustInventory = (
   skuId: string,

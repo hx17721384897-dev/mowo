@@ -285,10 +285,15 @@ export default async function inventoryRoutes(fastify) {
     const receipts = await fastify.prisma.inventoryReturnReceipt.findMany({
       where, include: { items: true }, orderBy: { receivedAt: 'desc' }, take: 100
     })
+    if (!receipts.length) return reply.send({ success: true, data: [] })
     const aftersales = await fastify.prisma.aftersaleRequest.findMany({
-      where: { id: { in: receipts.map(row => row.aftersaleRequestId) } }, include: { order: true, user: { select: { phone: true, nickname: true } } }
+      where: { id: { in: receipts.map(row => row.aftersaleRequestId) } },
+      include: { order: true, user: { select: { phone: true, profile: { select: { nickname: true } } } } }
     })
-    const requestMap = Object.fromEntries(aftersales.map(row => [row.id, row]))
+    const requestMap = Object.fromEntries(aftersales.map(row => [row.id, {
+      ...row,
+      user: row.user ? { phone: row.user.phone, nickname: row.user.profile?.nickname || null } : null
+    }]))
     return reply.send({ success: true, data: receipts.map(row => ({ ...row, aftersale: requestMap[row.aftersaleRequestId] || null })) })
   })
 
@@ -605,20 +610,26 @@ export default async function inventoryRoutes(fastify) {
   // GET /api/inventory/logs — 全局变动记录（管理员）
   fastify.get('/logs', { preHandler: requireAdmin }, async (req, reply) => {
     const { page = 1, limit = 50, skuId, type } = req.query
-    const skip  = (parseInt(page) - 1) * parseInt(limit)
+    const pageNumber = Math.max(1, Number.parseInt(page, 10) || 1)
+    const limitNumber = Math.min(100, Math.max(1, Number.parseInt(limit, 10) || 50))
+    const skip  = (pageNumber - 1) * limitNumber
     const where = {}
     if (skuId) where.skuId = skuId
     if (type)  where.type  = type
 
     const [logs, total] = await Promise.all([
-      fastify.prisma.inventoryLog.findMany({ where, orderBy: { createdAt: 'desc' }, skip, take: parseInt(limit) }),
+      fastify.prisma.inventoryLog.findMany({ where, orderBy: { createdAt: 'desc' }, skip, take: limitNumber }),
       fastify.prisma.inventoryLog.count({ where })
     ])
 
     const skuIds   = [...new Set(logs.map(l => l.skuId))]
-    const skus     = await fastify.prisma.machineModelSku.findMany({ where: { id: { in: skuIds } } })
+    const skus     = skuIds.length
+      ? await fastify.prisma.machineModelSku.findMany({ where: { id: { in: skuIds } } })
+      : []
     const modelIds = [...new Set(skus.map(s => s.modelId))]
-    const models   = await fastify.prisma.machineModel.findMany({ where: { id: { in: modelIds } }, select: { id: true, name: true } })
+    const models   = modelIds.length
+      ? await fastify.prisma.machineModel.findMany({ where: { id: { in: modelIds } }, select: { id: true, name: true } })
+      : []
     const skuMap   = Object.fromEntries(skus.map(s => [s.id, s]))
     const modelMap = Object.fromEntries(models.map(m => [m.id, m.name]))
 
@@ -630,7 +641,7 @@ export default async function inventoryRoutes(fastify) {
       return { ...l, skuSpec: spec, modelName: modelMap[sku.modelId] ?? '—' }
     })
 
-    return reply.send({ success: true, data: { logs: result, total, page: parseInt(page), limit: parseInt(limit) } })
+    return reply.send({ success: true, data: { logs: result, total, page: pageNumber, limit: limitNumber } })
   })
 
   // GET /api/inventory/snapshots — 历史快照（管理员）

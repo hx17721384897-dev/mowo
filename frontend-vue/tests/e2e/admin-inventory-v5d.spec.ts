@@ -96,6 +96,7 @@ async function mockPage(
   const adjustments: Record<string, unknown>[] = []
   const materialWrites: Array<{ path: string; body: Record<string, unknown> }> = []
   const returnWrites: Array<{ path: string; body: Record<string, unknown> }> = []
+  const logQueries: string[] = []
   const writes: string[] = []
   let failed = false
   let returnInspectionFailed = false
@@ -112,6 +113,30 @@ async function mockPage(
         profile: { nickname: '库存测试' }
       })
     if (path === '/api/config/features') return fulfill(route, {})
+    if (path === '/api/inventory/logs') {
+      logQueries.push(new URL(request.url()).search)
+      return fulfill(route, {
+        logs: [
+          {
+            id: 'global-log-1',
+            skuId: 'sku-1',
+            type: 'manual_adjustment',
+            quantity: -2,
+            operatorId: 'operator-12345678',
+            note: '<img src=x onerror=alert(4)>盘点差异',
+            reason: null,
+            beforeQty: 22,
+            afterQty: 20,
+            createdAt: '2026-10-09T09:00:00Z',
+            modelName: '测试款',
+            skuSpec: '5×5cm · 椴木板 · 12帧 · 原色'
+          }
+        ],
+        total: 31,
+        page: Number(new URL(request.url()).searchParams.get('page') || 1),
+        limit: 30
+      })
+    }
     if (path === '/api/inventory/returns' && request.method() === 'GET')
       return fulfill(route, [returnReceipt])
     if (path === '/api/inventory/returns/receive') {
@@ -278,7 +303,7 @@ async function mockPage(
     }
     return fulfill(route, null, 404)
   })
-  return { adjustments, materialWrites, returnWrites, writes }
+  return { adjustments, logQueries, materialWrites, returnWrites, writes }
 }
 
 test('candidate renders SKU stock safely and keeps the seven-domain geometry', async ({ page }) => {
@@ -468,4 +493,24 @@ test('return inspection keeps receipt, disposition and replacement writes inside
       disposition: 'SERVICE_ONLY'
     }
   ])
+})
+
+test('global inventory logs preserve filters, pagination and safe text rendering', async ({
+  page
+}) => {
+  const state = await mockPage(page)
+  await page.goto('/app/admin/inventory')
+  await page.getByRole('button', { name: '变动记录' }).click()
+  await expect(page.getByText('<img src=x onerror=alert(4)>盘点差异')).toBeVisible()
+  await expect(page.locator('img[src="x"]')).toHaveCount(0)
+  await expect(page.getByText('5×5cm · 椴木板 · 12帧 · 原色')).toBeVisible()
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1
+    )
+  ).toBe(true)
+  await page.getByLabel('变动类型').selectOption('manual_adjustment')
+  await expect.poll(() => state.logQueries.at(-1)).toContain('type=manual_adjustment')
+  await page.getByRole('button', { name: '2', exact: true }).click()
+  await expect.poll(() => state.logQueries.at(-1)).toContain('page=2')
 })
