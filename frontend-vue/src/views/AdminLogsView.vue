@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* eslint-disable vue/html-closing-bracket-newline, vue/html-indent, vue/multiline-html-element-content-newline */
 import { computed, onMounted, ref } from 'vue'
 import AdminSidebar from '@/components/AdminSidebar.vue'
 import { listOperationLogs, type OperationLog } from '@/features/admin-logs/api'

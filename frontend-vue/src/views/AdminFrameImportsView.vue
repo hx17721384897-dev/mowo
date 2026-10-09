@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* eslint-disable vue/html-closing-bracket-newline, vue/html-indent, vue/multiline-html-element-content-newline */
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AdminSidebar from '@/components/AdminSidebar.vue'

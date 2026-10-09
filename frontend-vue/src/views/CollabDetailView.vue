@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* eslint-disable vue/html-closing-bracket-newline, vue/multiline-html-element-content-newline, vue/html-indent */
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getCollabWork, getCollabWorks, recordCollabView } from '@/features/collab/api'

@@ -29,6 +29,11 @@ export default tseslint.config(
     rules: {
       'no-useless-assignment': 'off',
       'vue/max-attributes-per-line': 'off',
+      // Prettier owns template whitespace. Keeping these Vue formatting rules
+      // enabled creates an endless ESLint --fix / Prettier rewrite cycle.
+      'vue/html-closing-bracket-newline': 'off',
+      'vue/html-indent': 'off',
+      'vue/multiline-html-element-content-newline': 'off',
       'vue/html-self-closing': 'off',
       'vue/multi-word-component-names': 'off',
       'vue/require-default-prop': 'off',

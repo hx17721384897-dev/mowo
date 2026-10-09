@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* eslint-disable vue/html-closing-bracket-newline, vue/html-indent, vue/multiline-html-element-content-newline */
 import { computed, reactive, ref, watch } from 'vue'
 import { ApiError } from '@/services/api-client'
 import {

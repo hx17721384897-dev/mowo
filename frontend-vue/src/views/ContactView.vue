@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* eslint-disable vue/html-closing-bracket-newline, vue/html-indent */
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useDecorativeCursor } from '@/composables/useDecorativeCursor'
 import ContactModal from '@/features/contact/ContactModal.vue'

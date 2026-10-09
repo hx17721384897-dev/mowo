@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* eslint-disable vue/html-closing-bracket-newline, vue/html-indent, vue/multiline-html-element-content-newline */
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AdminSidebar from '@/components/AdminSidebar.vue'
@@ -771,8 +770,8 @@ onBeforeUnmount(() => {
                 商品资料、动画资产和销售规格均已通过检查
               </div>
               <div
-                v-else
                 v-for="(group, key) in issueGroups"
+                v-else
                 :key="key"
                 class="product-check-group"
               >

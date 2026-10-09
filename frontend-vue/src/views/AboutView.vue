@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* eslint-disable vue/html-closing-bracket-newline */
 import { onBeforeUnmount, onMounted } from 'vue'
 import { useDecorativeCursor } from '@/composables/useDecorativeCursor'
 

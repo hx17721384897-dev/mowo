@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* eslint-disable vue/html-closing-bracket-newline */
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 
 const cursorDot = ref<HTMLElement | null>(null)

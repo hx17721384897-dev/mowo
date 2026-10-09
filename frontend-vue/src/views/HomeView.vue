@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* eslint-disable vue/html-closing-bracket-newline, vue/html-indent */
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import heroImageUrl from '../../../frontend/assets/hero-main.png'
 import boxDiagramUrl from '../../../frontend/assets/box-diagram.png'

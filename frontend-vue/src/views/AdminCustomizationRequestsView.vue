@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* eslint-disable vue/html-closing-bracket-newline, vue/html-indent */
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import AdminSidebar from '@/components/AdminSidebar.vue'
 import { runtimeConfig } from '@/config/runtime'

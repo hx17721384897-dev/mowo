@@ -1,5 +1,4 @@
 <script setup lang="ts">
-/* eslint-disable vue/html-closing-bracket-newline, vue/html-indent */
 import { computed, ref } from 'vue'
 import faqHeroUrl from '../../../frontend/assets/images/faq-hero.png'
 import { faqCategories, faqItems } from '@/content/public-content'

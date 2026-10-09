@@ -199,7 +199,7 @@ onMounted(async () => {
     </div>
     <div v-else class="confirm-layout">
       <div class="left-col">
-        <div class="product-preview reveal on" id="productPreview">
+        <div id="productPreview" class="product-preview reveal on">
           <div class="product-preview-mock">
             <div class="product-mock-shape" :class="mockClass"><div class="mock-ring"></div></div>
             <div class="preview-badge-row">

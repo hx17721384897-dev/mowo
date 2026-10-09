@@ -275,7 +275,7 @@ onBeforeUnmount(() => {
       </section>
       <section class="order-section">
         <div class="sec-head"><h2>📍 收货地址</h2></div>
-        <div class="address-block" v-if="order.receiverName">
+        <div v-if="order.receiverName" class="address-block">
           <div class="addr-name">{{ order.receiverName }}</div>
           <div class="addr-phone">{{ order.receiverPhoneMasked }}</div>
           <div class="addr-full">{{ order.receiverAddressText || '—' }}</div>
