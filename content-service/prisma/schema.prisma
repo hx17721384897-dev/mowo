@@ -1859,6 +1859,21 @@ model MaterialItem {
   @@map("material_items")
 }
 
+model InventoryMaterialMutation {
+  id                 String   @id @default(uuid())
+  clientRequestId    String   @unique @map("client_request_id") @db.VarChar(80)
+  requestFingerprint String   @map("request_fingerprint") @db.VarChar(64)
+  action             String   @db.VarChar(40)
+  targetId           String   @map("target_id") @db.VarChar(100)
+  operatorId         String   @map("operator_id")
+  resultJson         String   @map("result_json") @db.Text
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  @@index([action, targetId])
+  @@index([operatorId])
+  @@map("inventory_material_mutations")
+}
+
 // 材料操作日志
 model MaterialLog {
   id          String   @id @default(uuid())

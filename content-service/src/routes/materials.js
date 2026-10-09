@@ -7,6 +7,10 @@ import {
   previewMaterialAllocation,
   presentAllocation
 } from '../lib/inventory-lots.js'
+import {
+  inventoryMutationRequest,
+  runInventoryMutation
+} from '../lib/inventory-material-mutations.js'
 
 export default async function materialsRoutes(fastify) {
 
@@ -283,41 +287,42 @@ export default async function materialsRoutes(fastify) {
     if (!['purchase_in', 'opening_stock'].includes(type))
       return reply.code(400).send({ success: false, message: '入库类型无效' })
 
-    const item = await fastify.prisma.materialItem.findUnique({ where: { id } })
-    if (!item || !item.isActive) return reply.code(404).send({ success: false, message: '物品不存在' })
-    if (item.itemType === 'PACKED') {
-      return reply.code(400).send({ success: false, message: '自制分装小包不能直接入库，请使用“分装”并由系统扣除来源零件' })
-    }
-
-    const beforeQty = item.currentStock
-    const afterQty  = beforeQty + accepted
-    const receiptNo = makeNo(type === 'opening_stock' ? 'OPEN' : 'RCV')
-
-    await fastify.prisma.$transaction([
-      fastify.prisma.materialItem.update({
-        where: { id },
-        data:  { currentStock: afterQty }
-      }),
-      fastify.prisma.materialLog.create({
-        data: { materialId: id, type, quantity: accepted, beforeQty, afterQty, operatorId, referenceNo: receiptNo, note: note || null }
-      }),
-      fastify.prisma.materialReceipt.create({
-        data: {
+    let request
+    try { request = inventoryMutationRequest(req.body, 'MATERIAL_RESTOCK', id, operatorId) }
+    catch (error) { return reply.code(400).send({ success: false, code: error.code, message: error.message }) }
+    try {
+      const mutation = await runInventoryMutation(fastify.prisma, request, async tx => {
+        const item = await tx.materialItem.findUnique({ where: { id } })
+        if (!item || !item.isActive) {
+          const error = new Error('物品不存在')
+          error.statusCode = 404
+          throw error
+        }
+        if (item.itemType === 'PACKED') throw new Error('自制分装小包不能直接入库，请使用“分装”并由系统扣除来源零件')
+        const beforeQty = item.currentStock
+        const afterQty = beforeQty + accepted
+        const receiptNo = makeNo(type === 'opening_stock' ? 'OPEN' : 'RCV')
+        await tx.materialItem.update({ where: { id }, data: { currentStock: afterQty } })
+        await tx.materialLog.create({ data: {
+          materialId: id, type, quantity: accepted, beforeQty, afterQty,
+          operatorId, referenceNo: receiptNo, note: note || null
+        } })
+        await tx.materialReceipt.create({ data: {
           receiptNo, materialId: id, orderedSpec: orderedSpec?.trim() || null,
           actualQty: actual, acceptedQty: accepted, availableQty: accepted, rejectedQty: rejected,
-          supplierName: supplierName?.trim() || null,
-          supplierLotNo: supplierLotNo?.trim() || null,
-          location: location?.trim() || null,
-          operatorId, note: note?.trim() || null
+          supplierName: supplierName?.trim() || null, supplierLotNo: supplierLotNo?.trim() || null,
+          location: location?.trim() || null, operatorId, note: note?.trim() || null
+        } })
+        return {
+          message: `✓ 合格入库 ${accepted} ${item.unit}${rejected ? `，另记录次品 ${rejected} ${item.unit}` : ''}，当前库存 ${afterQty}`,
+          data: { currentStock: afterQty, receiptNo }
         }
       })
-    ])
-
-    return reply.send({
-      success: true,
-      message: `✓ 合格入库 ${accepted} ${item.unit}${rejected ? `，另记录次品 ${rejected} ${item.unit}` : ''}，当前库存 ${afterQty}`,
-      data: { currentStock: afterQty, receiptNo }
-    })
+      return reply.send({ success: true, message: mutation.result.message, data: { ...mutation.result.data, reused: mutation.reused } })
+    } catch (error) {
+      const status = error.code === 'IDEMPOTENCY_KEY_CONFLICT' ? 409 : (error.statusCode || 400)
+      return reply.code(status).send({ success: false, code: error.code, message: error.message })
+    }
   })
 
   fastify.post('/:id/prepare-preview', { preHandler: requireAdmin }, async (req, reply) => {
@@ -354,65 +359,69 @@ export default async function materialsRoutes(fastify) {
     if (!Number.isInteger(loss) || loss < 0)
       return reply.code(400).send({ success: false, message: '分装损耗不能为负数' })
 
-    const packed = await fastify.prisma.materialItem.findUnique({ where: { id } })
-    if (!packed || !packed.isActive) return reply.code(404).send({ success: false, message: '已分装零件不存在' })
-    if (packed.itemType !== 'PACKED' || !packed.sourceMaterialId || !packed.sourceQtyPerUnit)
-      return reply.code(400).send({ success: false, message: '该零件没有配置分装来源和每包用量' })
-
-    const source = await fastify.prisma.materialItem.findUnique({ where: { id: packed.sourceMaterialId } })
-    if (!source || !source.isActive) return reply.code(400).send({ success: false, message: '分装来源零件不存在或已停用' })
-
-    const usedQty = output * packed.sourceQtyPerUnit
-    const totalDeduct = usedQty + loss
-    let selectedLots
+    let request
+    try { request = inventoryMutationRequest(req.body, 'MATERIAL_PREPARE', id, operatorId) }
+    catch (error) { return reply.code(400).send({ success: false, code: error.code, message: error.message }) }
     try {
-      selectedLots = await previewMaterialAllocation(fastify.prisma, source, totalDeduct, allocations)
-    } catch (error) {
-      return reply.code(400).send({ success: false, message: `${source.name}：${error.message}` })
-    }
-
-    const batchNo = makeNo('PREP')
-    await fastify.prisma.$transaction(async tx => {
-      await consumeMaterialAllocations(tx, source, selectedLots)
-      const deducted = await tx.materialItem.updateMany({
-        where: { id: source.id, currentStock: { gte: totalDeduct } },
-        data: { currentStock: { decrement: totalDeduct } }
-      })
-      if (deducted.count !== 1) throw new Error('来源库存刚刚发生变化，请刷新后重试')
-      const sourceAfter = await tx.materialItem.findUnique({ where: { id: source.id } })
-      const packedAfter = await tx.materialItem.update({ where: { id }, data: { currentStock: { increment: output } } })
-      const batch = await tx.materialPreparationBatch.create({
-        data: { batchNo, outputMaterialId: id, outputQty: output, availableQty: output, location: location?.trim() || null, operatorId, note: note?.trim() || null }
-      })
-      let remainingUsed = usedQty
-      await tx.materialPreparationInput.createMany({ data: selectedLots.map(lot => {
-        const normalQty = Math.min(lot.quantity, remainingUsed)
-        remainingUsed -= normalQty
+      const mutation = await runInventoryMutation(fastify.prisma, request, async tx => {
+        const packed = await tx.materialItem.findUnique({ where: { id } })
+        if (!packed || !packed.isActive) {
+          const error = new Error('已分装零件不存在')
+          error.statusCode = 404
+          throw error
+        }
+        if (packed.itemType !== 'PACKED' || !packed.sourceMaterialId || !packed.sourceQtyPerUnit)
+          throw new Error('该零件没有配置分装来源和每包用量')
+        const source = await tx.materialItem.findUnique({ where: { id: packed.sourceMaterialId } })
+        if (!source || !source.isActive) throw new Error('分装来源零件不存在或已停用')
+        const usedQty = output * packed.sourceQtyPerUnit
+        const totalDeduct = usedQty + loss
+        const selectedLots = await previewMaterialAllocation(tx, source, totalDeduct, allocations)
+        const batchNo = makeNo('PREP')
+        await consumeMaterialAllocations(tx, source, selectedLots)
+        const deducted = await tx.materialItem.updateMany({
+          where: { id: source.id, currentStock: { gte: totalDeduct } },
+          data: { currentStock: { decrement: totalDeduct } }
+        })
+        if (deducted.count !== 1) throw new Error('来源库存刚刚发生变化，请刷新后重试')
+        const sourceAfter = await tx.materialItem.findUnique({ where: { id: source.id } })
+        const packedAfter = await tx.materialItem.update({ where: { id }, data: { currentStock: { increment: output } } })
+        const batch = await tx.materialPreparationBatch.create({ data: {
+          batchNo, outputMaterialId: id, outputQty: output, availableQty: output,
+          location: location?.trim() || null, operatorId, note: note?.trim() || null
+        } })
+        let remainingUsed = usedQty
+        await tx.materialPreparationInput.createMany({ data: selectedLots.map(lot => {
+          const normalQty = Math.min(lot.quantity, remainingUsed)
+          remainingUsed -= normalQty
+          return {
+            prepBatchId: batch.id, materialId: source.id, sourceReceiptId: lot.id,
+            usedQty: normalQty, lossQty: lot.quantity - normalQty
+          }
+        }) })
+        await tx.materialLog.createMany({ data: [
+          {
+            materialId: source.id, type: 'preparation_consumed', quantity: totalDeduct,
+            beforeQty: sourceAfter.currentStock + totalDeduct, afterQty: sourceAfter.currentStock,
+            operatorId, referenceNo: batchNo,
+            note: `分装为${packed.name} ${output}${packed.unit}；正常使用${usedQty}${source.unit}，损耗${loss}${source.unit}`
+          },
+          {
+            materialId: id, type: 'preparation_produced', quantity: output,
+            beforeQty: packedAfter.currentStock - output, afterQty: packedAfter.currentStock,
+            operatorId, referenceNo: batchNo, note: note?.trim() || null
+          }
+        ] })
         return {
-          prepBatchId: batch.id, materialId: source.id, sourceReceiptId: lot.id,
-          usedQty: normalQty, lossQty: lot.quantity - normalQty
+          message: `✓ 已分装 ${output} ${packed.unit}，使用 ${usedQty} ${source.unit}${loss ? `，另记录损耗 ${loss} ${source.unit}` : ''}`,
+          data: { batchNo, outputQty: output, usedQty, lossQty: loss, allocations: presentAllocation(source, selectedLots).allocations }
         }
-      }) })
-      await tx.materialLog.createMany({ data: [
-        {
-          materialId: source.id, type: 'preparation_consumed', quantity: totalDeduct,
-          beforeQty: sourceAfter.currentStock + totalDeduct, afterQty: sourceAfter.currentStock,
-          operatorId, referenceNo: batchNo,
-          note: `分装为${packed.name} ${output}${packed.unit}；正常使用${usedQty}${source.unit}，损耗${loss}${source.unit}`
-        },
-        {
-          materialId: id, type: 'preparation_produced', quantity: output,
-          beforeQty: packedAfter.currentStock - output, afterQty: packedAfter.currentStock,
-          operatorId, referenceNo: batchNo, note: note?.trim() || null
-        }
-      ] })
-    })
-
-    return reply.send({
-      success: true,
-      message: `✓ 已分装 ${output} ${packed.unit}，使用 ${usedQty} ${source.unit}${loss ? `，另记录损耗 ${loss} ${source.unit}` : ''}`,
-      data: { batchNo, outputQty: output, usedQty, lossQty: loss, allocations: presentAllocation(source, selectedLots).allocations }
-    })
+      })
+      return reply.send({ success: true, message: mutation.result.message, data: { ...mutation.result.data, reused: mutation.reused } })
+    } catch (error) {
+      const status = error.code === 'IDEMPOTENCY_KEY_CONFLICT' ? 409 : (error.statusCode || 400)
+      return reply.code(status).send({ success: false, code: error.code, message: error.message })
+    }
   })
 
   // ─────────────────────────────────────────────

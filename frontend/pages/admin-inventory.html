@@ -855,6 +855,22 @@ let _curSkuId  = null
 let _curMatId  = null
 let _searchTmr = null
 let _curTab    = 'stock'
+const MATERIAL_MUTATION_KEY = 'mowo.inventory.pendingMaterialMutation'
+function materialMutationStorageKey(action, targetId) {
+  return `${MATERIAL_MUTATION_KEY}.${encodeURIComponent(action)}.${encodeURIComponent(targetId)}`
+}
+function withMaterialMutation(action, targetId, payload) {
+  const fingerprint = JSON.stringify({action,targetId,payload})
+  const storageKey = materialMutationStorageKey(action, targetId)
+  let pending = null
+  try { pending = JSON.parse(sessionStorage.getItem(storageKey) || 'null') } catch {}
+  if (!pending || pending.fingerprint !== fingerprint) {
+    pending = {fingerprint,clientRequestId:`material-${crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`}`}
+    sessionStorage.setItem(storageKey, JSON.stringify(pending))
+  }
+  return {...payload,clientRequestId:pending.clientRequestId}
+}
+function clearMaterialMutation(action, targetId){ sessionStorage.removeItem(materialMutationStorageKey(action, targetId)) }
 
 // ── 初始化 ──
 window.addEventListener('DOMContentLoaded', async () => {
@@ -1477,12 +1493,14 @@ async function submitMatReceipt() {
     location:document.getElementById('matReceiptLocation').value.trim()||undefined,
     note:document.getElementById('matReceiptNote').value.trim()||undefined
   }
+  const requestPayload = withMaterialMutation('MATERIAL_RESTOCK', _matRestockTarget, payload)
   try {
     const res  = await fetch(`${API}/api/materials/${_matRestockTarget}/restock`, {
       method: 'POST', headers: { ...authHeader(), 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(requestPayload)
     })
     const json = await res.json()
+    if (res.status < 500) clearMaterialMutation('MATERIAL_RESTOCK', _matRestockTarget)
     if (json.success) { showToast(json.message); closeMatReceiptModal(); await loadMaterials() }
     else showToast('入库失败：' + json.message)
   } catch { showToast('网络错误') }
@@ -1745,16 +1763,19 @@ async function submitMatPrepare() {
   if (!Number.isInteger(outputQty) || outputQty <= 0) return showToast('请填写分装成品数量')
   if (!Number.isInteger(lossQty) || lossQty < 0) return showToast('损耗数量不能为负数')
   if (!_preparePlan) return showToast('请等待系统完成批次推荐')
+  const payload = {
+    outputQty,lossQty,location:document.getElementById('matPrepareLocation').value.trim()||undefined,
+    note:document.getElementById('matPrepareNote').value.trim()||undefined,
+    allocations:_preparePlan.allocations.map(row => ({sourceBatchId:row.sourceBatchId,quantity:row.quantity}))
+  }
+  const requestPayload = withMaterialMutation('MATERIAL_PREPARE', _prepareMaterialId, payload)
   try {
     const res = await fetch(`${API}/api/materials/${_prepareMaterialId}/prepare`, {
       method:'POST', headers:{...authHeader(),'Content-Type':'application/json'},
-      body:JSON.stringify({
-        outputQty,lossQty,location:document.getElementById('matPrepareLocation').value.trim()||undefined,
-        note:document.getElementById('matPrepareNote').value.trim()||undefined,
-        allocations:_preparePlan.allocations.map(row => ({sourceBatchId:row.sourceBatchId,quantity:row.quantity}))
-      })
+      body:JSON.stringify(requestPayload)
     })
     const json = await res.json()
+    if (res.status < 500) clearMaterialMutation('MATERIAL_PREPARE', _prepareMaterialId)
     if (!json.success) return showToast('分装失败：'+json.message)
     showToast(json.message); closeMatPrepareModal(); await loadMaterials()
   } catch { showToast('网络错误') }
@@ -1808,18 +1829,21 @@ async function submitKitAssembly() {
   const sku = _allSku.find(row => row.skuId === skuId)
   const label = sku ? `${sku.modelName} · ${sku.skuName}` : '所选 SKU'
   if (!confirm(`确认入库 ${quantity} 套「${label}」？\n系统会按照材料清单同步扣除零件。`)) return
+  const payload = {
+    skuId,quantity,
+    boxCode:document.getElementById('kitAssemblyBox').value.trim()||undefined,
+    location:document.getElementById('kitAssemblyLocation').value.trim()||undefined,
+    note:document.getElementById('kitAssemblyNote').value.trim()||undefined,
+    allocations:_kitAssemblyPlan.plan.map(row => ({materialId:row.materialId,allocations:row.allocations.map(lot => ({sourceBatchId:lot.sourceBatchId,quantity:lot.quantity}))}))
+  }
+  const requestPayload = withMaterialMutation('KIT_ASSEMBLE', skuId, payload)
   try {
     const res = await fetch(`${API}/api/inventory/kits/assemble`, {
       method:'POST', headers:{...authHeader(),'Content-Type':'application/json'},
-      body:JSON.stringify({
-        skuId,quantity,
-        boxCode:document.getElementById('kitAssemblyBox').value.trim()||undefined,
-        location:document.getElementById('kitAssemblyLocation').value.trim()||undefined,
-        note:document.getElementById('kitAssemblyNote').value.trim()||undefined,
-        allocations:_kitAssemblyPlan.plan.map(row => ({materialId:row.materialId,allocations:row.allocations.map(lot => ({sourceBatchId:lot.sourceBatchId,quantity:lot.quantity}))}))
-      })
+      body:JSON.stringify(requestPayload)
     })
     const json = await res.json()
+    if (res.status < 500) clearMaterialMutation('KIT_ASSEMBLE', skuId)
     if (!json.success) return showToast('入库失败：'+json.message)
     showToast(json.message); closeKitAssemblyModal(); await Promise.all([loadMaterials(),loadInventory()])
   } catch { showToast('网络错误') }

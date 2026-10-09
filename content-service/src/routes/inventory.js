@@ -13,6 +13,11 @@ import {
   previewMaterialAllocation,
   presentAllocation
 } from '../lib/inventory-lots.js'
+import {
+  inventoryMutationRequest,
+  replayInventoryMutation,
+  runInventoryMutation
+} from '../lib/inventory-material-mutations.js'
 
 export default async function inventoryRoutes(fastify) {
 
@@ -148,6 +153,18 @@ export default async function inventoryRoutes(fastify) {
     if (!skuId) return reply.code(400).send({ success: false, message: '请选择材料包 SKU' })
     if (!Number.isInteger(qty) || qty <= 0)
       return reply.code(400).send({ success: false, message: '入库数量必须为正整数' })
+    let mutationRequest
+    try { mutationRequest = inventoryMutationRequest(req.body, 'KIT_ASSEMBLE', skuId, operatorId) }
+    catch (error) { return reply.code(400).send({ success: false, code: error.code, message: error.message }) }
+    try {
+      const replay = await replayInventoryMutation(fastify.prisma, mutationRequest)
+      if (replay) return reply.send({
+        success: true, message: replay.result.message,
+        data: { ...replay.result.data, reused: true }
+      })
+    } catch (error) {
+      return reply.code(409).send({ success: false, code: error.code, message: error.message })
+    }
 
     const sku = await fastify.prisma.machineModelSku.findUnique({ where: { id: skuId } })
     if (!sku) return reply.code(404).send({ success: false, message: 'SKU不存在' })
@@ -197,7 +214,7 @@ export default async function inventoryRoutes(fastify) {
     })))
 
     try {
-      await fastify.prisma.$transaction(async tx => {
+      const mutation = await runInventoryMutation(fastify.prisma, mutationRequest, async tx => {
         for (const row of allocationPlan) {
           await consumeMaterialAllocations(tx, row.material, row.allocations)
           const changed = await tx.materialItem.updateMany({
@@ -245,19 +262,21 @@ export default async function inventoryRoutes(fastify) {
           kitAssemblyBatchId: assembly.id, materialId: row.material.id,
           sourceType: lot.sourceType, sourceBatchId: lot.id, quantity: lot.quantity
         }))) })
+        return {
+          message: `✓ 已入库 ${qty} 套材料包，零件已同步扣除`,
+          data: {
+            batchNo, skuId, quantity: qty, boxCode: normalizedBoxCode,
+            requirements: allocationPlan.map(row => ({ requiredQty: row.requiredQty, ...presentAllocation(row.material, row.allocations) }))
+          }
+        }
+      })
+      return reply.send({
+        success: true, message: mutation.result.message,
+        data: { ...mutation.result.data, reused: mutation.reused }
       })
     } catch (error) {
-      return reply.code(409).send({ success: false, message: error.message || '材料包入库失败' })
+      return reply.code(409).send({ success: false, code: error.code, message: error.message || '材料包入库失败' })
     }
-
-    return reply.send({
-      success: true,
-      message: `✓ 已入库 ${qty} 套材料包，零件已同步扣除`,
-      data: {
-        batchNo, skuId, quantity: qty, boxCode: normalizedBoxCode,
-        requirements: allocationPlan.map(row => ({ requiredQty: row.requiredQty, ...presentAllocation(row.material, row.allocations) }))
-      }
-    })
   })
 
   // ── 退回收货与检查 ─────────────────────────────

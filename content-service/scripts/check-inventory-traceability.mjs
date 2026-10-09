@@ -47,6 +47,7 @@ async function cleanup() {
   }
   if (modelId) await prisma.machineModel.deleteMany({where:{id:modelId}})
   if (userId) {
+    await prisma.inventoryMaterialMutation.deleteMany({where:{operatorId:userId}})
     await prisma.inventoryFormOption.deleteMany({where:{createdBy:userId}})
     await prisma.operationLog.deleteMany({where:{userId}})
     await prisma.auditLog.deleteMany({where:{userId}})
@@ -101,18 +102,18 @@ try {
   const board=await createMaterial({name:`木板-${runId}`,itemType:'CONSUMABLE',unit:'块'})
 
   for (const [qty,location] of [[10,'A-01'],[20,'A-02']]) {
-    const res=await api(`/api/materials/${wire.id}/restock`,token,{method:'POST',body:JSON.stringify({actualQty:qty,acceptedQty:qty,location})})
+    const res=await api(`/api/materials/${wire.id}/restock`,token,{method:'POST',body:JSON.stringify({actualQty:qty,acceptedQty:qty,location,clientRequestId:`trace-restock-${location}-${runId}`})})
     assert(res.ok,`建立独立到货批次 ${location}`)
   }
   const wireLots=await prisma.materialReceipt.findMany({where:{materialId:wire.id},orderBy:{createdAt:'asc'}})
   const preview=await api(`/api/materials/${pack.id}/prepare-preview`,token,{method:'POST',body:JSON.stringify({outputQty:2,lossQty:2})})
   const previewJson=await preview.json()
   assert(previewJson.data.allocations.length===2 && previewJson.data.allocations[0].quantity===10, 'FIFO 推荐先用完最早10根批次，再使用下一批2根')
-  const manualPrepare=await api(`/api/materials/${pack.id}/prepare`,token,{method:'POST',body:JSON.stringify({outputQty:1,lossQty:0,location:'B-02',allocations:[{sourceBatchId:wireLots[1].id,quantity:5}]})})
+  const manualPrepare=await api(`/api/materials/${pack.id}/prepare`,token,{method:'POST',body:JSON.stringify({outputQty:1,lossQty:0,location:'B-02',allocations:[{sourceBatchId:wireLots[1].id,quantity:5}],clientRequestId:`trace-prepare-manual-${runId}`})})
   assert(manualPrepare.ok,'特殊情况可以由员工明确改选其他可用批次')
   const afterManual=await prisma.materialReceipt.findMany({where:{id:{in:wireLots.map(row=>row.id)}},orderBy:{createdAt:'asc'}})
   assert(afterManual[0].availableQty===10 && afterManual[1].availableQty===15,'人工改选不会偷偷消耗系统原推荐批次')
-  const prepare=await api(`/api/materials/${pack.id}/prepare`,token,{method:'POST',body:JSON.stringify({outputQty:2,lossQty:2,location:'B-01',allocations:previewJson.data.allocations.map(row=>({sourceBatchId:row.sourceBatchId,quantity:row.quantity}))})})
+  const prepare=await api(`/api/materials/${pack.id}/prepare`,token,{method:'POST',body:JSON.stringify({outputQty:2,lossQty:2,location:'B-01',allocations:previewJson.data.allocations.map(row=>({sourceBatchId:row.sourceBatchId,quantity:row.quantity})),clientRequestId:`trace-prepare-fifo-${runId}`})})
   assert(prepare.ok,'员工确认推荐批次后完成分装')
   const afterLots=await prisma.materialReceipt.findMany({where:{id:{in:wireLots.map(row=>row.id)}},orderBy:{createdAt:'asc'}})
   assert(afterLots[0].availableQty===0 && afterLots[1].availableQty===13, 'FIFO 分装后两个到货批次剩余量分别为0和13')
@@ -120,12 +121,12 @@ try {
   const inputs=await prisma.materialPreparationInput.findMany({where:{prepBatchId:prepBatch.id}})
   assert(inputs.length===2 && inputs.every(row=>row.sourceReceiptId), '分装批次保存了实际来源到货批次')
 
-  await api(`/api/materials/${board.id}/restock`,token,{method:'POST',body:JSON.stringify({actualQty:5,acceptedQty:5,location:'A-03'})})
+  await api(`/api/materials/${board.id}/restock`,token,{method:'POST',body:JSON.stringify({actualQty:5,acceptedQty:5,location:'A-03',clientRequestId:`trace-board-${runId}`})})
   await api(`/api/machine-models/skus/${skuId}/bom`,token,{method:'PUT',body:JSON.stringify({items:[{materialId:pack.id,qtyPerUnit:1},{materialId:board.id,qtyPerUnit:1}]})})
   const assemblePreview=await api('/api/inventory/kits/assemble-preview',token,{method:'POST',body:JSON.stringify({skuId,quantity:1})})
   const assemblyPlan=(await assemblePreview.json()).data
   assert(assemblyPlan.plan.every(row=>row.allocations.length),'材料包组装前能看到每种材料的推荐批次')
-  const assembly=await api('/api/inventory/kits/assemble',token,{method:'POST',body:JSON.stringify({skuId,quantity:1,boxCode:`BOX-${runId}`,allocations:assemblyPlan.plan.map(row=>({materialId:row.materialId,allocations:row.allocations.map(lot=>({sourceBatchId:lot.sourceBatchId,quantity:lot.quantity}))}))})})
+  const assembly=await api('/api/inventory/kits/assemble',token,{method:'POST',body:JSON.stringify({skuId,quantity:1,boxCode:`BOX-${runId}`,allocations:assemblyPlan.plan.map(row=>({materialId:row.materialId,allocations:row.allocations.map(lot=>({sourceBatchId:lot.sourceBatchId,quantity:lot.quantity}))})),clientRequestId:`trace-assemble-${runId}`})})
   assert(assembly.ok,'材料包按确认批次完成组装入库')
   const kb=await prisma.kitAssemblyBatch.findFirst({where:{skuId,batchType:'ASSEMBLED'}})
   assert((await prisma.kitAssemblyConsumption.count({where:{kitAssemblyBatchId:kb.id}}))===2,'组装批次保存分装小包和基础零件的实际来源')

@@ -53,6 +53,7 @@ async function cleanup() {
   }
   if (modelId) await prisma.machineModel.deleteMany({ where: { id: modelId } })
   if (userId) {
+    await prisma.inventoryMaterialMutation.deleteMany({ where: { operatorId: userId } })
     await prisma.inventoryFormOption.deleteMany({ where: { createdBy: userId } })
     await prisma.smsCode.deleteMany({ where: { userId } })
     await prisma.refreshToken.deleteMany({ where: { userId } })
@@ -106,31 +107,42 @@ try {
   const wirePack = await createMaterial({ name:'12根铁丝包', itemType:'PACKED', unit:'包', sourceMaterialId:wire.id, sourceQtyPerUnit:12 })
   const board = await createMaterial({ name:'5x5椴木板', itemType:'CONSUMABLE', unit:'块', specification:'5x5cm' })
 
-  const receipt = await request(`/api/materials/${wire.id}/restock`, token, {
-    method:'POST', body:JSON.stringify({ orderedSpec:'订购50米，切成5.5cm', actualQty:120, acceptedQty:118, rejectedQty:2 })
-  })
+  const receiptPayload = { orderedSpec:'订购50米，切成5.5cm', actualQty:120, acceptedQty:118, rejectedQty:2, clientRequestId:`kit-wire-${runId}` }
+  const receipt = await request(`/api/materials/${wire.id}/restock`, token, { method:'POST', body:JSON.stringify(receiptPayload) })
   assert(receipt.status === 200, '采购入库接受实际合格数和次品数')
+  const receiptReplay = await request(`/api/materials/${wire.id}/restock`, token, { method:'POST', body:JSON.stringify(receiptPayload) })
+  assert(receiptReplay.status === 200 && (await receiptReplay.json()).data.reused === true, '采购入库响应丢失重试返回原结果')
+  const receiptConflict = await request(`/api/materials/${wire.id}/restock`, token, { method:'POST', body:JSON.stringify({...receiptPayload,acceptedQty:117,actualQty:119}) })
+  assert(receiptConflict.status === 409, '同一采购入库请求标识不能改写数量')
   const receiptRow = await prisma.materialReceipt.findFirst({ where: { materialId:wire.id } })
   assert(receiptRow?.acceptedQty === 118 && receiptRow?.rejectedQty === 2, '采购记录保留合格118根和次品2根')
   assert((await prisma.materialItem.findUnique({ where:{id:wire.id} })).currentStock === 118, '可用库存只增加118根合格铁丝')
 
-  const prepare = await request(`/api/materials/${wirePack.id}/prepare`, token, {
-    method:'POST', body:JSON.stringify({ outputQty:9, lossQty:2, note:'模拟分装误差' })
-  })
+  const preparePayload = { outputQty:9, lossQty:2, note:'模拟分装误差', clientRequestId:`kit-prepare-${runId}` }
+  const prepare = await request(`/api/materials/${wirePack.id}/prepare`, token, { method:'POST', body:JSON.stringify(preparePayload) })
   assert(prepare.status === 200, '可以把散装铁丝分装成12根包并记录损耗')
+  const prepareReplay = await request(`/api/materials/${wirePack.id}/prepare`, token, { method:'POST', body:JSON.stringify(preparePayload) })
+  assert(prepareReplay.status === 200 && (await prepareReplay.json()).data.reused === true, '分装响应丢失重试不会重复扣料或增加小包')
   assert((await prisma.materialItem.findUnique({ where:{id:wire.id} })).currentStock === 8, '分装扣除108根正常用量和2根损耗')
   assert((await prisma.materialItem.findUnique({ where:{id:wirePack.id} })).currentStock === 9, '分装增加9包成品库存')
 
-  await request(`/api/materials/${board.id}/restock`, token, { method:'POST', body:JSON.stringify({ acceptedQty:10, rejectedQty:0, actualQty:10 }) })
+  const boardPayload = { acceptedQty:10, rejectedQty:0, actualQty:10, clientRequestId:`kit-board-${runId}` }
+  const boardResponses = await Promise.all([
+    request(`/api/materials/${board.id}/restock`, token, { method:'POST', body:JSON.stringify(boardPayload) }),
+    request(`/api/materials/${board.id}/restock`, token, { method:'POST', body:JSON.stringify(boardPayload) })
+  ])
+  assert(boardResponses.every(response => response.status === 200), '并发同键采购入库均恢复为成功结果')
+  assert((await prisma.materialItem.findUnique({where:{id:board.id}})).currentStock === 10, '并发同键采购入库只增加一次库存')
   const bom = await request(`/api/machine-models/skus/${skuId}/bom`, token, {
     method:'PUT', body:JSON.stringify({ items:[{materialId:wirePack.id,qtyPerUnit:1},{materialId:board.id,qtyPerUnit:1}] })
   })
   assert(bom.status === 200, 'SKU材料清单可以只引用库存页已有零件')
 
-  const assembly = await request('/api/inventory/kits/assemble', token, {
-    method:'POST', body:JSON.stringify({skuId,quantity:5,boxCode:`BX-${runId}`,location:'测试库位'})
-  })
+  const assemblyPayload = {skuId,quantity:5,boxCode:`BX-${runId}`,location:'测试库位',clientRequestId:`kit-assemble-${runId}`}
+  const assembly = await request('/api/inventory/kits/assemble', token, { method:'POST', body:JSON.stringify(assemblyPayload) })
   assert(assembly.status === 200, '材料包入库可以一次完成扣零件和加库存')
+  const assemblyReplay = await request('/api/inventory/kits/assemble', token, { method:'POST', body:JSON.stringify(assemblyPayload) })
+  assert(assemblyReplay.status === 200 && (await assemblyReplay.json()).data.reused === true, '材料包组装响应丢失重试不会重复扣零件或入库')
   assert((await prisma.materialItem.findUnique({where:{id:wirePack.id}})).currentStock === 4, '材料包入库扣除5包铁丝')
   assert((await prisma.materialItem.findUnique({where:{id:board.id}})).currentStock === 5, '材料包入库扣除5块木板')
   assert((await prisma.skuInventory.findUnique({where:{skuId}})).currentStock === 5, '材料包库存增加5套')
@@ -140,7 +152,7 @@ try {
 
   const beforeShortage = await prisma.materialItem.findUnique({where:{id:wirePack.id}})
   const shortage = await request('/api/inventory/kits/assemble', token, {
-    method:'POST', body:JSON.stringify({skuId,quantity:10,boxCode:`BX-${runId}`})
+    method:'POST', body:JSON.stringify({skuId,quantity:10,boxCode:`BX-${runId}`,clientRequestId:`kit-shortage-${runId}`})
   })
   assert(shortage.status === 400, '任一零件不足时拒绝材料包入库')
   assert((await prisma.materialItem.findUnique({where:{id:wirePack.id}})).currentStock === beforeShortage.currentStock, '入库失败时不会扣除任何零件')
