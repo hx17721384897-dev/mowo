@@ -91,7 +91,41 @@ async function mockPage(page: Page, role = 'PRODUCTION', failAdjustmentOnce = fa
         profile: { nickname: '库存测试' }
       })
     if (path === '/api/config/features') return fulfill(route, {})
+    if (path === '/api/materials/form-options' && request.method() === 'GET')
+      return fulfill(route, {
+        names: [{ id: 'name-1', category: 'NAME', scope: 'RAW', value: '测试零件' }],
+        units: [{ id: 'unit-1', category: 'UNIT', scope: 'ALL', value: '个' }]
+      })
+    if (path === '/api/materials/form-options' && request.method() === 'POST') {
+      const body = request.postDataJSON() as Record<string, unknown>
+      materialWrites.push({ path, body })
+      return fulfill(route, { id: 'option-new', ...body })
+    }
+    if (path.startsWith('/api/materials/form-options/') && request.method() === 'DELETE') {
+      materialWrites.push({ path, body: {} })
+      return fulfill(route, null)
+    }
     if (path === '/api/materials' && request.method() === 'GET') return fulfill(route, materials)
+    if (path === '/api/materials' && request.method() === 'POST') {
+      const body = request.postDataJSON() as Record<string, unknown>
+      materialWrites.push({ path, body })
+      return fulfill(route, { ...materials[0], id: 'mat-new', ...body, reused: false })
+    }
+    if (path === '/api/materials/mat-raw' && request.method() === 'PUT') {
+      const body = request.postDataJSON() as Record<string, unknown>
+      materialWrites.push({ path, body })
+      return fulfill(route, { ...materials[0], ...body })
+    }
+    if (path === '/api/materials/mat-raw/defect') {
+      const body = request.postDataJSON() as Record<string, unknown>
+      materialWrites.push({ path, body })
+      return fulfill(route, { currentStock: 119, reused: false })
+    }
+    if (path === '/api/materials/mat-raw/adjust') {
+      const body = request.postDataJSON() as Record<string, unknown>
+      materialWrites.push({ path, body })
+      return fulfill(route, { currentStock: 122, reused: false })
+    }
     if (path === '/api/materials/mat-packed/logs')
       return fulfill(route, { logs: [], total: 0, page: 1 })
     if (path === '/api/materials/mat-packed/bindings') return fulfill(route, [])
@@ -274,7 +308,7 @@ test('material domains keep FIFO preparation and receipt writes inside Vue', asy
   await page.getByRole('button', { name: '确认材料包入库' }).click()
   await expect(page.getByText(/材料包入库完成，批次 KB-001/)).toBeVisible()
 
-  await page.getByRole('button', { name: '基础零件' }).click()
+  await page.getByRole('button', { name: '基础零件', exact: true }).click()
   await expect(page.getByText('<img src=x onerror=alert(2)>散装铁丝')).toBeVisible()
   await expect(page.locator('img[src="x"]')).toHaveCount(0)
   await page.getByRole('button', { name: '采购入库' }).click()
@@ -297,4 +331,47 @@ test('material domains keep FIFO preparation and receipt writes inside Vue', asy
   ])
   expect(state.materialWrites[2].body.clientRequestId).toMatch(/^material-/)
   expect(state.materialWrites[2].body.actualQty).toBe(11)
+})
+
+test('material maintenance creates, edits, defects and adjusts through safe writes', async ({
+  page
+}) => {
+  const state = await mockPage(page)
+  await page.goto('/app/admin/inventory')
+  await page.getByRole('button', { name: '基础零件', exact: true }).click()
+
+  await page.getByRole('button', { name: '＋ 新增基础零件' }).click()
+  await page.getByLabel('零件名称', { exact: true }).selectOption('测试零件')
+  await page.getByLabel('单位', { exact: true }).selectOption('个')
+  await page.getByRole('button', { name: '保存' }).click()
+  await expect(page.getByText('零件已创建')).toBeVisible()
+
+  const card = page.locator('.material-card').filter({ hasText: '散装铁丝' })
+  await card.getByRole('button', { name: '编辑' }).click()
+  await expect(page.getByRole('heading', { name: '编辑零件' })).toBeVisible()
+  await page.getByRole('button', { name: '保存' }).click()
+  await expect(page.getByText('零件资料已保存')).toBeVisible()
+
+  await card.getByRole('button', { name: '报损' }).click()
+  await page.getByLabel('报损数量 *').fill('1')
+  await page.getByLabel('报损原因 *').fill('质检报损')
+  await page.getByRole('button', { name: '确认' }).click()
+  await expect(page.getByText('报损已登记')).toBeVisible()
+
+  await card.getByRole('button', { name: '盘点' }).click()
+  await page.getByLabel('调整量 *').fill('2')
+  await page.getByLabel('调整原因 *').fill('盘点差异')
+  await page.getByRole('button', { name: '确认' }).click()
+  await expect(page.getByText('盘点调整已保存')).toBeVisible()
+
+  const writes = state.materialWrites.slice(-4)
+  expect(writes.map((row) => row.path)).toEqual([
+    '/api/materials',
+    '/api/materials/mat-raw',
+    '/api/materials/mat-raw/defect',
+    '/api/materials/mat-raw/adjust'
+  ])
+  expect(writes[0].body.clientRequestId).toMatch(/^material-/)
+  expect(writes[2].body.clientRequestId).toMatch(/^material-/)
+  expect(writes[3].body.clientRequestId).toMatch(/^material-/)
 })

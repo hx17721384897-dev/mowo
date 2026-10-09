@@ -2,8 +2,13 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { ApiError } from '@/services/api-client'
 import {
+  addMaterialFormOption,
+  adjustMaterial,
   assembleKit,
+  createMaterial,
+  defectMaterial,
   loadMaterialBindings,
+  loadMaterialFormOptions,
   loadMaterialLot,
   loadMaterialLots,
   loadMaterialLogs,
@@ -11,10 +16,13 @@ import {
   prepareMaterial,
   previewKitAssembly,
   previewPreparation,
+  removeMaterialFormOption,
   restockMaterial,
+  updateMaterial,
   type AlertLevel,
   type InventoryRow,
   type MaterialBinding,
+  type MaterialFormOption,
   type MaterialItem,
   type MaterialLog,
   type MaterialLot,
@@ -33,7 +41,18 @@ const logs = ref<MaterialLog[]>([]),
 const lots = ref<MaterialLot[]>([]),
   lotMaterial = ref<MaterialItem | null>(null),
   lotDetail = ref<MaterialLot | null>(null)
-const modal = ref<'' | 'detail' | 'lots' | 'restock' | 'prepare' | 'assemble' | 'allocation'>('')
+const modal = ref<
+  | ''
+  | 'detail'
+  | 'lots'
+  | 'restock'
+  | 'prepare'
+  | 'assemble'
+  | 'allocation'
+  | 'definition'
+  | 'defect'
+  | 'adjust'
+>('')
 const receipt = reactive({
   acceptedQty: 0,
   rejectedQty: 0,
@@ -51,6 +70,24 @@ const assemblyPlan = ref<{ skuId: string; quantity: number; plan: MaterialPlan[]
 const assemblyOverrides = reactive<
   Record<string, Array<{ sourceBatchId: string; quantity: number }>>
 >({})
+const definition = reactive({
+  id: '',
+  name: '',
+  itemType: 'RAW' as MaterialItem['itemType'],
+  specification: '',
+  unit: '个',
+  safetyStock: 10,
+  leadTime: 7,
+  note: '',
+  sourceMaterialId: '',
+  sourceQtyPerUnit: 0
+})
+const formOptions = reactive<{ names: MaterialFormOption[]; units: MaterialFormOption[] }>({
+  names: [],
+  units: []
+})
+const newOption = reactive({ name: '', unit: '' })
+const stockChange = reactive({ quantity: 0, note: '' })
 const allocation = reactive({
   mode: 'prepare' as 'prepare' | 'kit',
   materialId: '',
@@ -367,6 +404,26 @@ async function openAllocation(mode: 'prepare' | 'kit', plan: MaterialPlan) {
 const allocationTotal = computed(() =>
   Object.values(allocation.values).reduce((sum, value) => sum + Number(value || 0), 0)
 )
+const modalTitle = computed(
+  () =>
+    (
+      ({
+        detail: selected.value?.name || '物品详情',
+        lots: `${selected.value?.name || ''} · 批次列表`,
+        restock: '零件实收入库',
+        prepare: '零件分装',
+        assemble: '材料包入库',
+        allocation: '更换来源批次',
+        definition: definition.id
+          ? '编辑零件'
+          : props.mode === 'PACKED'
+            ? '新增分装小包'
+            : '新增基础零件',
+        defect: '登记报损',
+        adjust: '盘点调整'
+      }) as Record<string, string>
+    )[modal.value] || '库存操作'
+)
 async function confirmAllocation() {
   if (allocationTotal.value !== allocation.requiredQty)
     return emit('flash', `所选批次数量合计必须为 ${allocation.requiredQty}`, true)
@@ -381,6 +438,184 @@ async function confirmAllocation() {
     assemblyOverrides[allocation.materialId] = rows
     modal.value = 'assemble'
     await updateAssemblyPreview()
+  }
+}
+
+const sourceMaterials = computed(() =>
+  items.value.filter((item) => item.itemType !== 'PACKED' && item.id !== definition.id)
+)
+async function loadOptions() {
+  const data = await loadMaterialFormOptions(definition.itemType === 'PACKED' ? 'PACKED' : 'RAW')
+  formOptions.names = data.names
+  formOptions.units = data.units
+}
+async function openDefinition(item?: MaterialItem) {
+  selected.value = item || null
+  Object.assign(
+    definition,
+    item
+      ? {
+          id: item.id,
+          name: item.name,
+          itemType: item.itemType,
+          specification: item.specification || '',
+          unit: item.unit,
+          safetyStock: item.safetyStock,
+          leadTime: item.leadTime,
+          note: item.note || '',
+          sourceMaterialId: item.sourceMaterialId || '',
+          sourceQtyPerUnit: item.sourceQtyPerUnit || 0
+        }
+      : {
+          id: '',
+          name: '',
+          itemType: props.mode === 'PACKED' ? 'PACKED' : 'RAW',
+          specification: '',
+          unit: '个',
+          safetyStock: 10,
+          leadTime: 7,
+          note: '',
+          sourceMaterialId: '',
+          sourceQtyPerUnit: 0
+        }
+  )
+  newOption.name = ''
+  newOption.unit = ''
+  modal.value = 'definition'
+  try {
+    await loadOptions()
+  } catch (cause) {
+    emit('flash', message(cause), true)
+  }
+}
+async function addOption(kind: 'name' | 'unit') {
+  const value = newOption[kind].trim()
+  if (!value) return emit('flash', kind === 'name' ? '请输入新名称' : '请输入新单位', true)
+  try {
+    await addMaterialFormOption({
+      category: kind === 'name' ? 'NAME' : 'UNIT',
+      scope: definition.itemType === 'PACKED' ? 'PACKED' : 'RAW',
+      value
+    })
+    newOption[kind] = ''
+    await loadOptions()
+    if (kind === 'name') definition.name = value
+    else definition.unit = value
+  } catch (cause) {
+    emit('flash', message(cause), true)
+  }
+}
+async function removeOption(kind: 'name' | 'unit', option: MaterialFormOption) {
+  try {
+    await removeMaterialFormOption(option.id)
+    if (kind === 'name' && definition.name === option.value) definition.name = ''
+    if (kind === 'unit' && definition.unit === option.value) definition.unit = ''
+    await loadOptions()
+    emit('flash', '选项已删除，已有零件和库存不受影响')
+  } catch (cause) {
+    emit('flash', message(cause), true)
+  }
+}
+async function submitDefinition() {
+  if (!definition.name.trim()) return emit('flash', '请选择零件名称', true)
+  if (!definition.unit.trim()) return emit('flash', '请选择单位', true)
+  if (
+    definition.safetyStock < 0 ||
+    !Number.isInteger(definition.leadTime) ||
+    definition.leadTime < 1
+  )
+    return emit('flash', '请检查安全库存线和采购周期', true)
+  if (
+    definition.itemType === 'PACKED' &&
+    (!definition.sourceMaterialId ||
+      !Number.isInteger(definition.sourceQtyPerUnit) ||
+      definition.sourceQtyPerUnit <= 0)
+  )
+    return emit('flash', '请选择分装来源并填写每包用量', true)
+  const payload = {
+    name: definition.name.trim(),
+    itemType: definition.itemType,
+    specification: definition.specification.trim() || undefined,
+    unit: definition.unit.trim(),
+    safetyStock: definition.safetyStock,
+    leadTime: definition.leadTime,
+    note: definition.note.trim() || undefined,
+    sourceMaterialId: definition.itemType === 'PACKED' ? definition.sourceMaterialId : undefined,
+    sourceQtyPerUnit: definition.itemType === 'PACKED' ? definition.sourceQtyPerUnit : undefined
+  }
+  busy.value = true
+  try {
+    if (definition.id) {
+      await updateMaterial(definition.id, payload)
+      emit('flash', '零件资料已保存')
+    } else {
+      const target = 'material-definition'
+      const clientRequestId = mutationId('MATERIAL_CREATE', target, payload)
+      const result = await createMaterial({ ...payload, clientRequestId })
+      clearMutation('MATERIAL_CREATE', target)
+      emit('flash', result.reused ? '创建结果已恢复，没有生成重复零件' : '零件已创建')
+    }
+    modal.value = ''
+    await refresh()
+  } catch (cause) {
+    if (!definition.id) clearMutation('MATERIAL_CREATE', 'material-definition', cause)
+    emit('flash', message(cause), true)
+  } finally {
+    busy.value = false
+  }
+}
+function openStockChange(item: MaterialItem, mode: 'defect' | 'adjust') {
+  selected.value = item
+  stockChange.quantity = 0
+  stockChange.note = ''
+  modal.value = mode
+}
+async function submitStockChange() {
+  if (!selected.value) return
+  const id = selected.value.id,
+    mode = modal.value
+  if (!Number.isInteger(stockChange.quantity) || stockChange.quantity === 0)
+    return emit('flash', mode === 'defect' ? '报损数量必须为正整数' : '调整量必须为非零整数', true)
+  if (mode === 'defect' && stockChange.quantity < 1)
+    return emit('flash', '报损数量必须为正整数', true)
+  if (!stockChange.note.trim())
+    return emit('flash', mode === 'defect' ? '报损原因不能为空' : '盘点调整必须填写原因', true)
+  const action = mode === 'defect' ? 'MATERIAL_DEFECT' : 'MATERIAL_ADJUST'
+  const payload =
+    mode === 'defect'
+      ? { quantity: stockChange.quantity, note: stockChange.note.trim() }
+      : { delta: stockChange.quantity, note: stockChange.note.trim() }
+  const clientRequestId = mutationId(action, id, payload)
+  busy.value = true
+  try {
+    const result =
+      mode === 'defect'
+        ? await defectMaterial(id, {
+            quantity: stockChange.quantity,
+            note: stockChange.note.trim(),
+            clientRequestId
+          })
+        : await adjustMaterial(id, {
+            delta: stockChange.quantity,
+            note: stockChange.note.trim(),
+            clientRequestId
+          })
+    clearMutation(action, id)
+    emit(
+      'flash',
+      result.reused
+        ? '操作结果已恢复，没有重复改变库存'
+        : mode === 'defect'
+          ? '报损已登记'
+          : '盘点调整已保存'
+    )
+    modal.value = ''
+    await refresh()
+  } catch (cause) {
+    clearMutation(action, id, cause)
+    emit('flash', message(cause), true)
+  } finally {
+    busy.value = false
   }
 }
 
@@ -409,9 +644,14 @@ watch(
       <p v-else class="material-help">
         采购到货先在这里清点合格数量；每个到货批次独立保存，分装时由系统优先使用最早批次。
       </p>
-      <button v-if="mode === 'PACKED'" class="btn btn-black" type="button" @click="openAssembly">
-        材料包入库
-      </button>
+      <div class="material-toolbar-actions">
+        <button class="btn btn-black" type="button" @click="openDefinition()">
+          ＋ {{ mode === 'PACKED' ? '新增分装小包' : '新增基础零件' }}
+        </button>
+        <button v-if="mode === 'PACKED'" class="btn" type="button" @click="openAssembly">
+          材料包入库
+        </button>
+      </div>
     </div>
     <div v-if="loading" class="empty">正在加载…</div>
     <div v-else-if="!shown.length" class="empty">🧩 暂无物品</div>
@@ -449,7 +689,10 @@ watch(
             分装</button
           ><button v-else class="btn btn-sm good" @click="openRestock(item)">采购入库</button
           ><button class="btn btn-sm" @click="openLots(item)">批次</button
-          ><button class="btn btn-sm" @click="openDetail(item)">详情</button>
+          ><button class="btn btn-sm" @click="openDetail(item)">详情</button
+          ><button class="btn btn-sm danger" @click="openStockChange(item, 'defect')">报损</button
+          ><button class="btn btn-sm" @click="openStockChange(item, 'adjust')">盘点</button
+          ><button class="btn btn-sm" @click="openDefinition(item)">编辑</button>
         </div>
       </article>
     </div>
@@ -462,21 +705,7 @@ watch(
     >
       <header>
         <div>
-          <h2>
-            {{
-              modal === 'detail'
-                ? selected?.name
-                : modal === 'lots'
-                  ? `${selected?.name} · 批次列表`
-                  : modal === 'restock'
-                    ? '零件实收入库'
-                    : modal === 'prepare'
-                      ? '零件分装'
-                      : modal === 'assemble'
-                        ? '材料包入库'
-                        : '更换来源批次'
-            }}
-          </h2>
+          <h2>{{ modalTitle }}</h2>
           <p v-if="modal === 'restock'">{{ selected?.name }} · 库存单位：{{ selected?.unit }}</p>
         </div>
         <button :disabled="busy" @click="modal = ''">×</button>
@@ -542,6 +771,153 @@ watch(
           </button>
         </div>
       </template>
+      <form v-else-if="modal === 'definition'" @submit.prevent="submitDefinition">
+        <label>零件名称 *</label>
+        <div class="managed-field">
+          <select v-model="definition.name" aria-label="零件名称">
+            <option value="">请选择零件名称</option>
+            <option
+              v-if="
+                definition.name &&
+                !formOptions.names.some((option) => option.value === definition.name)
+              "
+              :value="definition.name"
+            >
+              {{ definition.name }}（历史值）
+            </option>
+            <option v-for="option in formOptions.names" :key="option.id" :value="option.value">
+              {{ option.value }}
+            </option>
+          </select>
+          <div class="managed-options">
+            <span v-for="option in formOptions.names" :key="option.id"
+              >{{ option.value
+              }}<button
+                type="button"
+                :aria-label="`删除名称 ${option.value}`"
+                @click="removeOption('name', option)"
+              >
+                ×
+              </button></span
+            >
+          </div>
+          <div class="managed-add">
+            <input
+              v-model.trim="newOption.name"
+              aria-label="新增名称"
+              maxlength="100"
+              placeholder="新增名称"
+            /><button class="btn" type="button" @click="addOption('name')">＋</button>
+          </div>
+        </div>
+        <label
+          >规格<input
+            v-model.trim="definition.specification"
+            placeholder="如：长度5.5cm、椴木5×5cm"
+        /></label>
+        <div v-if="definition.itemType === 'PACKED'" class="packed-definition">
+          <div class="form-pair">
+            <label
+              >分装来源 *<select v-model="definition.sourceMaterialId" aria-label="分装来源">
+                <option value="">请选择来源零件</option>
+                <option v-for="item in sourceMaterials" :key="item.id" :value="item.id">
+                  {{ item.name }}（{{ item.currentStock }}{{ item.unit }}）
+                </option>
+              </select></label
+            ><label
+              >每包使用来源数量 *<input
+                v-model.number="definition.sourceQtyPerUnit"
+                type="number"
+                min="1"
+                step="1"
+            /></label>
+          </div>
+        </div>
+        <label>单位 *</label>
+        <div class="managed-field">
+          <select v-model="definition.unit" aria-label="单位">
+            <option value="">请选择单位</option>
+            <option
+              v-if="
+                definition.unit &&
+                !formOptions.units.some((option) => option.value === definition.unit)
+              "
+              :value="definition.unit"
+            >
+              {{ definition.unit }}（历史值）
+            </option>
+            <option v-for="option in formOptions.units" :key="option.id" :value="option.value">
+              {{ option.value }}
+            </option>
+          </select>
+          <div class="managed-options">
+            <span v-for="option in formOptions.units" :key="option.id"
+              >{{ option.value
+              }}<button
+                type="button"
+                :aria-label="`删除单位 ${option.value}`"
+                @click="removeOption('unit', option)"
+              >
+                ×
+              </button></span
+            >
+          </div>
+          <div class="managed-add">
+            <input
+              v-model.trim="newOption.unit"
+              aria-label="新增单位"
+              maxlength="100"
+              placeholder="新增单位"
+            /><button class="btn" type="button" @click="addOption('unit')">＋</button>
+          </div>
+        </div>
+        <div class="form-pair">
+          <label
+            >安全库存线<input
+              v-model.number="definition.safetyStock"
+              type="number"
+              min="0" /></label
+          ><label
+            >采购周期（天）<input
+              v-model.number="definition.leadTime"
+              type="number"
+              min="1"
+              step="1"
+          /></label>
+        </div>
+        <label
+          >备注<input v-model.trim="definition.note" placeholder="供应商名称、规格说明等"
+        /></label>
+        <footer>
+          <button class="btn" type="button" @click="modal = ''">取消</button
+          ><button class="btn btn-black" :disabled="busy">保存</button>
+        </footer>
+      </form>
+      <form
+        v-else-if="(modal === 'defect' || modal === 'adjust') && selected"
+        @submit.prevent="submitStockChange"
+      >
+        <p class="modal-note">
+          {{ selected.name }} · 当前库存 {{ selected.currentStock }} {{ selected.unit }}
+        </p>
+        <label
+          >{{ modal === 'defect' ? '报损数量 *' : '调整量 *'
+          }}<input
+            v-model.number="stockChange.quantity"
+            type="number"
+            step="1"
+            :min="modal === 'defect' ? 1 : undefined"
+            :placeholder="modal === 'adjust' ? '正数增加，负数调减' : ''"
+        /></label>
+        <label
+          >{{ modal === 'defect' ? '报损原因 *' : '调整原因 *'
+          }}<input v-model.trim="stockChange.note" maxlength="200"
+        /></label>
+        <footer>
+          <button class="btn" type="button" @click="modal = ''">取消</button
+          ><button class="btn btn-black" :disabled="busy">确认</button>
+        </footer>
+      </form>
       <form v-else-if="modal === 'restock'" @submit.prevent="submitRestock">
         <label
           >订购说明<input v-model.trim="receipt.orderedSpec" placeholder="如：50米，工厂切成5.5cm"

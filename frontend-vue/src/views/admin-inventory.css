@@ -512,10 +512,20 @@
   gap: 7px;
   flex-wrap: wrap;
 }
+.material-toolbar-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 .material-actions .good {
   background: #e8f5e9;
   border-color: #b7d7ba;
   color: #245e2a;
+}
+.material-actions .danger {
+  color: #a52a18;
+  border-color: #e4b5ad;
+  background: #fff6f4;
 }
 .material-modal-overlay {
   position: fixed;
@@ -595,6 +605,44 @@
   justify-content: flex-end;
   gap: 8px;
   margin-top: 18px;
+}
+.managed-field {
+  margin-bottom: 12px;
+}
+.managed-options {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin: 7px 0;
+}
+.managed-options span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 5px 3px 9px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.managed-options button {
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 50%;
+  background: #eee;
+  cursor: pointer;
+}
+.managed-add {
+  display: grid;
+  grid-template-columns: 1fr 42px;
+  gap: 6px;
+}
+.packed-definition {
+  padding: 12px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  background: #f5f3ef;
 }
 .plan-box {
   background: #f5f3ef;

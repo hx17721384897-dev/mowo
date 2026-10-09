@@ -117,6 +117,12 @@ export type MaterialPlan = {
   requiredQty: number
   allocations: MaterialAllocation[]
 }
+export type MaterialFormOption = {
+  id: string
+  category: 'NAME' | 'UNIT'
+  scope: 'RAW' | 'PACKED' | 'ALL'
+  value: string
+}
 
 export const loadInventory = () => apiRequest<InventoryRow[]>('/api/inventory')
 export const loadInventoryDetail = (skuId: string) =>
@@ -201,4 +207,38 @@ export const assembleKit = (input: Record<string, unknown> & { clientRequestId: 
       method: 'POST',
       body: input
     }
+  )
+export const loadMaterialFormOptions = (scope: 'RAW' | 'PACKED') =>
+  apiRequest<{ names: MaterialFormOption[]; units: MaterialFormOption[] }>(
+    `/api/materials/form-options?scope=${scope}`
+  )
+export const addMaterialFormOption = (input: {
+  category: 'NAME' | 'UNIT'
+  scope: 'RAW' | 'PACKED'
+  value: string
+}) => apiRequest<MaterialFormOption>('/api/materials/form-options', { method: 'POST', body: input })
+export const removeMaterialFormOption = (id: string) =>
+  apiRequest<unknown>(`/api/materials/form-options/${encodeURIComponent(id)}`, { method: 'DELETE' })
+export const createMaterial = (input: Record<string, unknown> & { clientRequestId: string }) =>
+  apiRequest<MaterialItem & { reused: boolean }>('/api/materials', { method: 'POST', body: input })
+export const updateMaterial = (id: string, input: Record<string, unknown>) =>
+  apiRequest<MaterialItem>(`/api/materials/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: input
+  })
+export const defectMaterial = (
+  id: string,
+  input: { quantity: number; note: string; clientRequestId: string }
+) =>
+  apiRequest<{ currentStock: number; reused: boolean }>(
+    `/api/materials/${encodeURIComponent(id)}/defect`,
+    { method: 'POST', body: input }
+  )
+export const adjustMaterial = (
+  id: string,
+  input: { delta: number; note: string; clientRequestId: string }
+) =>
+  apiRequest<{ currentStock: number; reused: boolean }>(
+    `/api/materials/${encodeURIComponent(id)}/adjust`,
+    { method: 'POST', body: input }
   )
