@@ -43,12 +43,19 @@ export type InventoryRow = {
 export type InventoryDetail = InventoryRow & { logs: InventoryLog[] }
 export type ChannelQuota = {
   skuId: string
+  skuCode: string | null
+  modelName: string
+  skuSpec: string
   available: number
   bufferPool: number
   allocatable: number
+  suggestTaobao: number
+  suggestDouyin: number
+  suggestXhs: number
   taobaoQty: number
   douyinQty: number
   xhsQty: number
+  livestreamMode: boolean
 }
 export type MaterialItem = {
   id: string
@@ -170,6 +177,21 @@ export const loadGlobalInventoryLogs = (input: { page: number; limit?: number; t
   )
 }
 export const loadChannelQuotas = () => apiRequest<ChannelQuota[]>('/api/inventory/channel-quotas')
+export const saveChannelQuota = (
+  skuId: string,
+  input: {
+    taobaoQty: number
+    douyinQty: number
+    xhsQty: number
+    bufferPool: number
+    livestreamMode: boolean
+    forceOversell?: boolean
+  }
+) =>
+  apiRequest<ChannelQuota & { assigned: number; oversold: boolean }>(
+    `/api/inventory/channel-quotas/${encodeURIComponent(skuId)}`,
+    { method: 'PUT', body: input }
+  )
 export const adjustInventory = (
   skuId: string,
   input: { quantity: number; note?: string; clientRequestId: string }

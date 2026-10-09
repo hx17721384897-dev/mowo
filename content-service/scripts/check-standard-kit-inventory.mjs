@@ -46,6 +46,7 @@ async function cleanup() {
     await prisma.customizeOrder.deleteMany({ where: { id: orderId } })
   }
   if (skuId) {
+    await prisma.channelQuota.deleteMany({ where: { skuId } })
     await prisma.kitAssemblyBatch.deleteMany({ where: { skuId } })
     await prisma.kitContainer.deleteMany({ where: { skuId } })
     await prisma.inventoryLog.deleteMany({ where: { skuId } })
@@ -223,6 +224,21 @@ try {
   assert(inspect.status === 200 && inspectReplay.status === 200 && inspectReplayJson.data.reused === true,'退回检查重放恢复原结论')
   assert((await prisma.skuInventory.findUnique({where:{skuId}})).currentStock === beforeReturnStock + 1,'退回检查只回库一次')
   assert(await prisma.inventoryReturnInspectionItem.count({where:{returnReceiptId:receiveJson.data.id}}) === 1,'退回检查只保留一份检查明细')
+
+  const invalidQuota = await request(`/api/inventory/channel-quotas/${skuId}`,token,{method:'PUT',body:JSON.stringify({taobaoQty:-1})})
+  assert(invalidQuota.status === 400,'渠道配额拒绝负数')
+  const oversoldQuota = await request(`/api/inventory/channel-quotas/${skuId}`,token,{method:'PUT',body:JSON.stringify({taobaoQty:6,douyinQty:0,xhsQty:0,bufferPool:1})})
+  assert(oversoldQuota.status === 409 && await prisma.channelQuota.count({where:{skuId}}) === 0,'渠道配额超量时服务端要求确认且不会提前写入')
+  const quotaPayload = {taobaoQty:2,douyinQty:1,xhsQty:1,bufferPool:1,livestreamMode:false}
+  const quotaSave = await request(`/api/inventory/channel-quotas/${skuId}`,token,{method:'PUT',body:JSON.stringify(quotaPayload)})
+  const quotaReplay = await request(`/api/inventory/channel-quotas/${skuId}`,token,{method:'PUT',body:JSON.stringify(quotaPayload)})
+  assert(quotaSave.status === 200 && quotaReplay.status === 200 && await prisma.channelQuota.count({where:{skuId}}) === 1,'渠道配额按绝对值保存，重复提交不会累加或新建重复记录')
+  const forcedQuota = await request(`/api/inventory/channel-quotas/${skuId}`,token,{method:'PUT',body:JSON.stringify({...quotaPayload,taobaoQty:6,forceOversell:true})})
+  const forcedQuotaJson = await forcedQuota.json()
+  assert(forcedQuota.status === 200 && forcedQuotaJson.data?.oversold === true,'明确确认后可以保存超量渠道配额并返回风险状态')
+  const quotaList = await request('/api/inventory/channel-quotas',token)
+  const quotaListJson = await quotaList.json()
+  assert(quotaList.status === 200 && quotaListJson.data.some(row => row.skuId === skuId && row.modelName === model.name),'渠道配额列表返回完整款式展示信息')
   const replacementPayload = {clientRequestId:`return-replacement-${runId}`}
   const replacement = await request(`/api/inventory/returns/${receiveJson.data.id}/replacement`,token,{method:'POST',body:JSON.stringify(replacementPayload)})
   const replacementReplay = await request(`/api/inventory/returns/${receiveJson.data.id}/replacement`,token,{method:'POST',body:JSON.stringify(replacementPayload)})

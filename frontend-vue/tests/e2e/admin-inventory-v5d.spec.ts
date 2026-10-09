@@ -96,6 +96,7 @@ async function mockPage(
   const adjustments: Record<string, unknown>[] = []
   const materialWrites: Array<{ path: string; body: Record<string, unknown> }> = []
   const returnWrites: Array<{ path: string; body: Record<string, unknown> }> = []
+  const quotaWrites: Array<Record<string, unknown>> = []
   const logQueries: string[] = []
   const writes: string[] = []
   let failed = false
@@ -259,16 +260,33 @@ async function mockPage(
       return fulfill(route, { batchNo: 'KB-001', quantity: 1, reused: false })
     }
     if (path === '/api/inventory' && request.method() === 'GET') return fulfill(route, [inventory])
-    if (path === '/api/inventory/channel-quotas')
+    if (path === '/api/inventory/channel-quotas/sku-1' && request.method() === 'PUT') {
+      const body = request.postDataJSON() as Record<string, unknown>
+      quotaWrites.push(body)
+      return fulfill(route, {
+        ...body,
+        skuId: 'sku-1',
+        assigned: 8,
+        oversold: body.forceOversell === true
+      })
+    }
+    if (path === '/api/inventory/channel-quotas' && request.method() === 'GET')
       return fulfill(route, [
         {
           skuId: 'sku-1',
+          skuCode: 'SKU-TEST-01',
+          modelName: '<img src=x onerror=alert(5)>测试款',
+          skuSpec: '5×5cm · 椴木板 · 12帧 · 原色',
           available: 15,
           bufferPool: 5,
           allocatable: 10,
+          suggestTaobao: 3,
+          suggestDouyin: 3,
+          suggestXhs: 3,
           taobaoQty: 3,
           douyinQty: 3,
-          xhsQty: 2
+          xhsQty: 2,
+          livestreamMode: false
         }
       ])
     if (path === '/api/inventory/sku-1' && request.method() === 'GET')
@@ -303,7 +321,7 @@ async function mockPage(
     }
     return fulfill(route, null, 404)
   })
-  return { adjustments, logQueries, materialWrites, returnWrites, writes }
+  return { adjustments, logQueries, materialWrites, returnWrites, quotaWrites, writes }
 }
 
 test('candidate renders SKU stock safely and keeps the seven-domain geometry', async ({ page }) => {
@@ -503,7 +521,9 @@ test('global inventory logs preserve filters, pagination and safe text rendering
   await page.getByRole('button', { name: '变动记录' }).click()
   await expect(page.getByText('<img src=x onerror=alert(4)>盘点差异')).toBeVisible()
   await expect(page.locator('img[src="x"]')).toHaveCount(0)
-  await expect(page.getByText('5×5cm · 椴木板 · 12帧 · 原色')).toBeVisible()
+  await expect(
+    page.locator('.inventory-logs-panel').getByText('5×5cm · 椴木板 · 12帧 · 原色')
+  ).toBeVisible()
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1
@@ -513,4 +533,33 @@ test('global inventory logs preserve filters, pagination and safe text rendering
   await expect.poll(() => state.logQueries.at(-1)).toContain('type=manual_adjustment')
   await page.getByRole('button', { name: '2', exact: true }).click()
   await expect.poll(() => state.logQueries.at(-1)).toContain('page=2')
+})
+
+test('channel quotas preserve safe rendering, dynamic buffer checks and explicit oversell confirmation', async ({
+  page
+}) => {
+  const state = await mockPage(page)
+  await page.goto('/app/admin/inventory')
+  await page.getByRole('button', { name: '渠道配额' }).click()
+
+  await expect(page.getByText('<img src=x onerror=alert(5)>测试款')).toBeVisible()
+  await expect(page.locator('img[src="x"]')).toHaveCount(0)
+  await page.getByRole('button', { name: '保存配额' }).click()
+  await expect(page.getByText('配额已保存')).toBeVisible()
+  expect(state.quotaWrites).toHaveLength(1)
+  expect(state.quotaWrites[0]).not.toHaveProperty('forceOversell')
+
+  await page.getByLabel('缓冲池', { exact: true }).fill('10')
+  await expect(page.getByText(/超过可分配量（5）/)).toBeVisible()
+  await page.getByRole('button', { name: '保存配额' }).click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await page.getByRole('button', { name: '了解风险，强制保存' }).click()
+  await expect(page.getByText('配额已强制保存，请持续关注超卖风险')).toBeVisible()
+  expect(state.quotaWrites).toHaveLength(2)
+  expect(state.quotaWrites[1].forceOversell).toBe(true)
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1
+    )
+  ).toBe(true)
 })

@@ -715,21 +715,47 @@ export default async function inventoryRoutes(fastify) {
   // PUT /api/inventory/channel-quotas/:skuId — 更新渠道配额
   fastify.put('/channel-quotas/:skuId', { preHandler: requireAdmin }, async (req, reply) => {
     const { skuId } = req.params
-    const { taobaoQty, douyinQty, xhsQty, bufferPool, livestreamMode } = req.body
+    const { taobaoQty, douyinQty, xhsQty, bufferPool, livestreamMode, forceOversell } = req.body || {}
 
-    const data = {}
-    if (taobaoQty     !== undefined) data.taobaoQty     = taobaoQty
-    if (douyinQty     !== undefined) data.douyinQty     = douyinQty
-    if (xhsQty        !== undefined) data.xhsQty        = xhsQty
-    if (bufferPool    !== undefined) data.bufferPool    = bufferPool
-    if (livestreamMode !== undefined) data.livestreamMode = livestreamMode
+    const inventory = await fastify.prisma.skuInventory.findUnique({ where: { skuId } })
+    if (!inventory) return reply.code(404).send({ success: false, message: '库存记录不存在' })
+    const current = await fastify.prisma.channelQuota.findUnique({ where: { skuId } })
+    const integerFields = { taobaoQty, douyinQty, xhsQty, bufferPool }
+    for (const [field, value] of Object.entries(integerFields)) {
+      if (value !== undefined && (!Number.isInteger(value) || value < 0))
+        return reply.code(400).send({ success: false, message: `${field} 必须为非负整数` })
+    }
+    if (livestreamMode !== undefined && typeof livestreamMode !== 'boolean')
+      return reply.code(400).send({ success: false, message: '直播模式参数无效' })
+
+    const next = {
+      taobaoQty: taobaoQty ?? current?.taobaoQty ?? 0,
+      douyinQty: douyinQty ?? current?.douyinQty ?? 0,
+      xhsQty: xhsQty ?? current?.xhsQty ?? 0,
+      bufferPool: bufferPool ?? current?.bufferPool ?? 10,
+      livestreamMode: livestreamMode ?? current?.livestreamMode ?? false
+    }
+    const available = calcAvailable(inventory)
+    const allocatable = Math.max(0, available - next.bufferPool)
+    const assigned = next.taobaoQty + next.douyinQty + next.xhsQty
+    if (assigned > allocatable && forceOversell !== true) {
+      return reply.code(409).send({
+        success: false,
+        code: 'QUOTA_OVERSELL_CONFIRM_REQUIRED',
+        message: `配额合计 ${assigned} 超出可分配量 ${allocatable}，请确认风险后再保存`,
+        data: { assigned, available, allocatable, exceededBy: assigned - allocatable }
+      })
+    }
 
     const updated = await fastify.prisma.channelQuota.upsert({
       where:  { skuId },
-      create: { skuId, ...data },
-      update: data
+      create: { skuId, ...next },
+      update: next
     })
-    return reply.send({ success: true, data: updated })
+    return reply.send({
+      success: true,
+      data: { ...updated, available, allocatable, assigned, oversold: assigned > allocatable }
+    })
   })
 
   // ─────────────────────────────────────────────

@@ -2124,7 +2124,7 @@ function renderQuotaGrid(list) {
         </div>
         <div class="quota-field">
           <label>缓冲池</label>
-          <input type="number" min="0" id="buf_${item.skuId}" value="${buf}">
+          <input type="number" min="0" id="buf_${item.skuId}" data-available="${avail}" value="${buf}" oninput="checkQuotaWarning('${item.skuId}',${alloc})">
         </div>
       </div>
       <div class="livestream-toggle">
@@ -2140,6 +2140,10 @@ function checkQuotaWarning(skuId, alloc) {
   const tb  = parseInt(document.getElementById(`tb_${skuId}`)?.value)  || 0
   const dy  = parseInt(document.getElementById(`dy_${skuId}`)?.value)  || 0
   const xhs = parseInt(document.getElementById(`xhs_${skuId}`)?.value) || 0
+  const bufferInput = document.getElementById(`buf_${skuId}`)
+  const buffer = parseInt(bufferInput?.value)
+  const available = Number(bufferInput?.dataset.available || 0)
+  if (Number.isInteger(buffer) && buffer >= 0) alloc = Math.max(0, available - buffer)
   const warn = document.getElementById(`qwarn_${skuId}`)
   if (warn) {
     const over = (tb + dy + xhs) > alloc
@@ -2153,10 +2157,13 @@ async function saveQuota(skuId, alloc) {
   const tb  = parseInt(document.getElementById(`tb_${skuId}`)?.value)  || 0
   const dy  = parseInt(document.getElementById(`dy_${skuId}`)?.value)  || 0
   const xhs = parseInt(document.getElementById(`xhs_${skuId}`)?.value) || 0
-  const buf = parseInt(document.getElementById(`buf_${skuId}`)?.value) || 10
+  const parsedBuffer = parseInt(document.getElementById(`buf_${skuId}`)?.value)
+  const buf = Number.isInteger(parsedBuffer) && parsedBuffer >= 0 ? parsedBuffer : 10
   const live = document.getElementById(`live_${skuId}`)?.checked ?? false
 
   const body = { taobaoQty: tb, douyinQty: dy, xhsQty: xhs, bufferPool: buf, livestreamMode: live }
+  const currentAvailable = Number(document.getElementById(`buf_${skuId}`)?.dataset.available || 0)
+  alloc = Math.max(0, currentAvailable - buf)
 
   if ((tb + dy + xhs) > alloc) {
     // 超出可分配量，弹强制确认弹窗
@@ -2164,7 +2171,7 @@ async function saveQuota(skuId, alloc) {
       `配额合计 ${tb+dy+xhs} 超出可分配量 ${alloc}，差额 ${tb+dy+xhs-alloc} 个。`
     document.getElementById('quotaConfirmModal').classList.add('show')
     _pendingQuotaSave = async () => {
-      await doSaveQuota(skuId, body)
+      await doSaveQuota(skuId, {...body,forceOversell:true})
       closeQuotaConfirm()
     }
     document.getElementById('quotaConfirmBtn').onclick = _pendingQuotaSave
