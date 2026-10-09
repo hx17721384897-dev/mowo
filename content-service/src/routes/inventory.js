@@ -294,38 +294,77 @@ export default async function inventoryRoutes(fastify) {
 
   fastify.post('/returns/receive', { preHandler: requireProduction }, async (req, reply) => {
     const { aftersaleRequestId, trackingNo, trackingCompany, note } = req.body || {}
+    const operatorId = req.user.userId
+    if (!aftersaleRequestId)
+      return reply.code(400).send({ success: false, message: '请填写售后申请 ID' })
+    let mutationRequest
+    try { mutationRequest = inventoryMutationRequest(req.body, 'RETURN_RECEIVE', aftersaleRequestId, operatorId) }
+    catch (error) { return reply.code(400).send({ success: false, code: error.code, message: error.message }) }
+    try {
+      const replay = await replayInventoryMutation(fastify.prisma, mutationRequest)
+      if (replay) return reply.send({
+        success: true, message: replay.result.message,
+        data: { ...replay.result.data, reused: true }
+      })
+    } catch (error) {
+      return reply.code(409).send({ success: false, code: error.code, message: error.message })
+    }
     const request = await fastify.prisma.aftersaleRequest.findUnique({ where: { id: aftersaleRequestId }, include: { order: true } })
     if (!request) return reply.code(404).send({ success: false, message: '售后申请不存在' })
     if (!['approved', 'completed'].includes(request.status))
       return reply.code(400).send({ success: false, message: '只有已同意的售后申请才能登记退回收货' })
-    const existing = await fastify.prisma.inventoryReturnReceipt.findFirst({
-      where: { aftersaleRequestId, status: { in: ['QUARANTINED', 'INSPECTED'] } }
-    })
+    const existing = await fastify.prisma.inventoryReturnReceipt.findUnique({ where: { aftersaleRequestId } })
     if (existing) return reply.code(409).send({ success: false, message: `该售后已登记退回：${existing.returnNo}` })
-    const row = await fastify.prisma.inventoryReturnReceipt.create({ data: {
-      returnNo: makeNo('RT'), aftersaleRequestId, orderId: request.orderId,
-      trackingNo: trackingNo?.trim() || null, trackingCompany: trackingCompany?.trim() || null,
-      receivedBy: req.user.userId, note: note?.trim() || null
-    } })
-    return reply.send({ success: true, message: `已收货并进入隔离区：${row.returnNo}`, data: row })
+    try {
+      const mutation = await runInventoryMutation(fastify.prisma, mutationRequest, async tx => {
+        const duplicate = await tx.inventoryReturnReceipt.findUnique({ where: { aftersaleRequestId } })
+        if (duplicate) throw new Error(`该售后已登记退回：${duplicate.returnNo}`)
+        const row = await tx.inventoryReturnReceipt.create({ data: {
+          returnNo: makeNo('RT'), aftersaleRequestId, orderId: request.orderId,
+          trackingNo: trackingNo?.trim() || null, trackingCompany: trackingCompany?.trim() || null,
+          receivedBy: operatorId, note: note?.trim() || null
+        } })
+        return { message: `已收货并进入隔离区：${row.returnNo}`, data: row }
+      })
+      return reply.send({
+        success: true, message: mutation.result.message,
+        data: { ...mutation.result.data, reused: mutation.reused }
+      })
+    } catch (error) {
+      return reply.code(409).send({ success: false, code: error.code, message: error.message || '登记退回收货失败' })
+    }
   })
 
   fastify.post('/returns/:id/inspect', { preHandler: requireProduction }, async (req, reply) => {
     const { id } = req.params
     const { packageCondition, receivedQty = 1, items = [], note } = req.body || {}
     const qty = Number(receivedQty)
+    const operatorId = req.user.userId
+    if (!['UNOPENED_INTACT', 'OPENED'].includes(packageCondition))
+      return reply.code(400).send({ success: false, message: '请选择有效的包装与使用情况' })
+    if (!Number.isInteger(qty) || qty <= 0) return reply.code(400).send({ success: false, message: '收回数量必须为正整数' })
+    if (packageCondition !== 'UNOPENED_INTACT' && !items.length)
+      return reply.code(400).send({ success: false, message: '已拆封退回件必须逐项登记去向' })
+    let mutationRequest
+    try { mutationRequest = inventoryMutationRequest(req.body, 'RETURN_INSPECT', id, operatorId) }
+    catch (error) { return reply.code(400).send({ success: false, code: error.code, message: error.message }) }
+    try {
+      const replay = await replayInventoryMutation(fastify.prisma, mutationRequest)
+      if (replay) return reply.send({ success: true, message: replay.result.message, data: { reused: true } })
+    } catch (error) {
+      return reply.code(409).send({ success: false, code: error.code, message: error.message })
+    }
     const receipt = await fastify.prisma.inventoryReturnReceipt.findUnique({ where: { id } })
     if (!receipt) return reply.code(404).send({ success: false, message: '退回收货记录不存在' })
     if (receipt.status !== 'QUARANTINED') return reply.code(400).send({ success: false, message: '该退回件已经检查完成' })
     const order = await fastify.prisma.customizeOrder.findUnique({ where: { id: receipt.orderId } })
     if (!order) return reply.code(404).send({ success: false, message: '原生产任务不存在' })
-    if (!Number.isInteger(qty) || qty <= 0) return reply.code(400).send({ success: false, message: '收回数量必须为正整数' })
-
-    if (packageCondition !== 'UNOPENED_INTACT' && !items.length)
-      return reply.code(400).send({ success: false, message: '已拆封退回件必须逐项登记去向' })
-
     try {
-      await fastify.prisma.$transaction(async tx => {
+      const mutation = await runInventoryMutation(fastify.prisma, mutationRequest, async tx => {
+        const claimed = await tx.inventoryReturnReceipt.updateMany({
+          where: { id, status: 'QUARANTINED' }, data: { status: 'INSPECTING' }
+        })
+        if (claimed.count !== 1) throw new Error('该退回件已经检查完成或正在检查')
         const inspectionRows = []
         if (packageCondition === 'UNOPENED_INTACT') {
           const inventory = await tx.skuInventory.findUnique({ where: { skuId: order.skuId } })
@@ -335,12 +374,12 @@ export default async function inventoryRoutes(fastify) {
             batchNo: makeNo('KR'), skuId: order.skuId, quantity: qty, availableQty: qty,
             bomVersion: latest?.bomVersion || 0, bomSnapshot: latest?.bomSnapshot || '[]',
             stockClass: 'NEW', batchType: 'RETURN_RECOVERED', sourceReturnReceiptId: receipt.id,
-            operatorId: req.user.userId, note: note?.trim() || '退回未拆封完整材料包，检查合格后回库'
+            operatorId, note: note?.trim() || '退回未拆封完整材料包，检查合格后回库'
           } })
           const after = await tx.skuInventory.update({ where: { skuId: order.skuId }, data: { currentStock: { increment: qty } } })
           await tx.inventoryLog.create({ data: {
             skuId: order.skuId, type: 'return_recovered', quantity: qty, orderId: order.id,
-            operatorId: req.user.userId, beforeQty: after.currentStock - qty, afterQty: after.currentStock,
+            operatorId, beforeQty: after.currentStock - qty, afterQty: after.currentStock,
             reason: '退回检查合格', note: `${receipt.returnNo}；新回收批次 ${batch.batchNo}`
           } })
           inspectionRows.push({ returnReceiptId: receipt.id, inventoryLevel: 'KIT', skuId: order.skuId,
@@ -359,7 +398,7 @@ export default async function inventoryRoutes(fastify) {
                 receiptNo: makeNo('SRV'), materialId: material.id, orderedSpec: '售后退回检查',
                 actualQty: itemQty, acceptedQty: itemQty, availableQty: itemQty,
                 stockClass: 'SERVICE_ONLY', sourceReturnReceiptId: receipt.id,
-                operatorId: req.user.userId, note: item.note?.trim() || '仅供维修或内部使用，不进入新订单'
+                operatorId, note: item.note?.trim() || '仅供维修或内部使用，不进入新订单'
               } })
               await tx.materialItem.update({ where: { id: material.id }, data: { serviceStock: { increment: itemQty } } })
               resultBatchId = lot.id
@@ -372,17 +411,34 @@ export default async function inventoryRoutes(fastify) {
         }
         await tx.inventoryReturnInspectionItem.createMany({ data: inspectionRows })
         await tx.inventoryReturnReceipt.update({ where: { id }, data: {
-          status: 'INSPECTED', inspectedBy: req.user.userId, inspectedAt: new Date(), note: note?.trim() || receipt.note
+          status: 'INSPECTED', inspectedBy: operatorId, inspectedAt: new Date(), note: note?.trim() || receipt.note
         } })
         await tx.aftersaleRequest.update({ where: { id: receipt.aftersaleRequestId }, data: { status: 'completed' } })
+        return { message: '退回检查已完成，库存已按检查结论处理' }
+      })
+      return reply.send({
+        success: true, message: mutation.result.message,
+        data: { reused: mutation.reused }
       })
     } catch (error) {
-      return reply.code(409).send({ success: false, message: error.message || '退回检查登记失败' })
+      return reply.code(409).send({ success: false, code: error.code, message: error.message || '退回检查登记失败' })
     }
-    return reply.send({ success: true, message: '退回检查已完成，库存已按检查结论处理' })
   })
 
   fastify.post('/returns/:id/replacement', { preHandler: requireProduction }, async (req, reply) => {
+    const operatorId = req.user.userId
+    let mutationRequest
+    try { mutationRequest = inventoryMutationRequest(req.body, 'RETURN_REPLACEMENT', req.params.id, operatorId) }
+    catch (error) { return reply.code(400).send({ success: false, code: error.code, message: error.message }) }
+    try {
+      const replay = await replayInventoryMutation(fastify.prisma, mutationRequest)
+      if (replay) return reply.send({
+        success: true, message: replay.result.message,
+        data: { ...replay.result.data, reused: true }
+      })
+    } catch (error) {
+      return reply.code(409).send({ success: false, code: error.code, message: error.message })
+    }
     const receipt = await fastify.prisma.inventoryReturnReceipt.findUnique({ where: { id: req.params.id } })
     if (!receipt) return reply.code(404).send({ success: false, message: '退回记录不存在' })
     const original = await fastify.prisma.customizeOrder.findUnique({ where: { id: receipt.orderId } })
@@ -394,20 +450,34 @@ export default async function inventoryRoutes(fastify) {
       const last = await fastify.prisma.customizeOrder.findFirst({ where: { salesOrderItemId: original.salesOrderItemId }, orderBy: { unitIndex: 'desc' } })
       nextUnitIndex = (last?.unitIndex || 0) + 1
     }
-    const replacement = await fastify.prisma.customizeOrder.create({ data: {
-      orderNo: makeNo('PU-R'), userId: original.userId, modelId: original.modelId, modelName: original.modelName,
-      frameCount: original.frameCount, size: original.size, material: original.material,
-      color: original.color, colorName: original.colorName, skuId: original.skuId,
-      ossPath: original.ossPath, frameUrls: original.frameUrls, status: 'processing',
-      sourceType: original.sourceType, collabWorkId: original.collabWorkId,
-      receiverName: original.receiverName, receiverPhone: original.receiverPhone,
-      receiverAddress: original.receiverAddress, receiverCity: original.receiverCity,
-      platform: original.platform, priorityLevel: original.priorityLevel,
-      buyerNote: `售后补发，原任务 ${original.orderNo}${req.body?.note ? `；${req.body.note}` : ''}`,
-      salesOrderItemId: original.salesOrderItemId, unitIndex: nextUnitIndex,
-      replacementForId: original.id, aftersaleRequestId: receipt.aftersaleRequestId
-    } })
-    return reply.send({ success: true, message: `已创建新的补发生产任务：${replacement.orderNo}`, data: replacement })
+    try {
+      const mutation = await runInventoryMutation(fastify.prisma, mutationRequest, async tx => {
+        const duplicate = await tx.customizeOrder.findFirst({ where: {
+          replacementForId: original.id, aftersaleRequestId: receipt.aftersaleRequestId
+        } })
+        if (duplicate) throw new Error(`补发任务已经创建：${duplicate.orderNo}`)
+        const replacement = await tx.customizeOrder.create({ data: {
+          orderNo: makeNo('PU-R'), userId: original.userId, modelId: original.modelId, modelName: original.modelName,
+          frameCount: original.frameCount, size: original.size, material: original.material,
+          color: original.color, colorName: original.colorName, skuId: original.skuId,
+          ossPath: original.ossPath, frameUrls: original.frameUrls, status: 'processing',
+          sourceType: original.sourceType, collabWorkId: original.collabWorkId,
+          receiverName: original.receiverName, receiverPhone: original.receiverPhone,
+          receiverAddress: original.receiverAddress, receiverCity: original.receiverCity,
+          platform: original.platform, priorityLevel: original.priorityLevel,
+          buyerNote: `售后补发，原任务 ${original.orderNo}${req.body?.note ? `；${req.body.note}` : ''}`,
+          salesOrderItemId: original.salesOrderItemId, unitIndex: nextUnitIndex,
+          replacementForId: original.id, aftersaleRequestId: receipt.aftersaleRequestId
+        } })
+        return { message: `已创建新的补发生产任务：${replacement.orderNo}`, data: replacement }
+      })
+      return reply.send({
+        success: true, message: mutation.result.message,
+        data: { ...mutation.result.data, reused: mutation.reused }
+      })
+    } catch (error) {
+      return reply.code(409).send({ success: false, code: error.code, message: error.message || '创建补发任务失败' })
+    }
   })
 
   // GET /api/inventory/:skuId

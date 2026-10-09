@@ -256,27 +256,27 @@ model MachineModelSku {
 
 // 帧素材共用的打印与裁切方式，不按商品款式拆分。
 model PrintCutGroup {
-  id               String   @id @default(uuid())
-  code             String   @unique @db.VarChar(40)
-  name             String   @db.VarChar(80)
-  size             String   @db.VarChar(20)
-  paperSize        String   @default("A4") @map("paper_size") @db.VarChar(20)
-  paperType        String   @default("普通打印纸") @map("paper_type") @db.VarChar(40)
-  orientation      String   @default("LANDSCAPE") @db.VarChar(20)
-  frameWidthMm     Int?     @map("frame_width_mm")
-  frameHeightMm    Int?     @map("frame_height_mm")
-  framesPerSheet   Int      @map("frames_per_sheet")
-  renderDpi        Int      @default(600) @map("render_dpi")
-  separatorMicrons Int      @default(460) @map("separator_microns")
-  cuttingTool      String?  @map("cutting_tool") @db.VarChar(80)
-  templateKey      String?  @map("template_key") @db.VarChar(120)
-  sortOrder        Int      @default(0) @map("sort_order")
-  isActive         Boolean  @default(true) @map("is_active")
-  createdBy        String   @map("created_by")
-  clientRequestId  String?  @unique @map("client_request_id") @db.VarChar(80)
-  requestFingerprint String? @map("request_fingerprint") @db.VarChar(64)
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
+  id                 String   @id @default(uuid())
+  code               String   @unique @db.VarChar(40)
+  name               String   @db.VarChar(80)
+  size               String   @db.VarChar(20)
+  paperSize          String   @default("A4") @map("paper_size") @db.VarChar(20)
+  paperType          String   @default("普通打印纸") @map("paper_type") @db.VarChar(40)
+  orientation        String   @default("LANDSCAPE") @db.VarChar(20)
+  frameWidthMm       Int?     @map("frame_width_mm")
+  frameHeightMm      Int?     @map("frame_height_mm")
+  framesPerSheet     Int      @map("frames_per_sheet")
+  renderDpi          Int      @default(600) @map("render_dpi")
+  separatorMicrons   Int      @default(460) @map("separator_microns")
+  cuttingTool        String?  @map("cutting_tool") @db.VarChar(80)
+  templateKey        String?  @map("template_key") @db.VarChar(120)
+  sortOrder          Int      @default(0) @map("sort_order")
+  isActive           Boolean  @default(true) @map("is_active")
+  createdBy          String   @map("created_by")
+  clientRequestId    String?  @unique @map("client_request_id") @db.VarChar(80)
+  requestFingerprint String?  @map("request_fingerprint") @db.VarChar(64)
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
 
   rules     PrintCutRule[]
   templates PrintTemplateVersion[]
@@ -287,19 +287,19 @@ model PrintCutGroup {
 
 // Word 排版模板不可覆盖；换模板必须新增版本，历史生产文件继续指向旧版本。
 model PrintTemplateVersion {
-  id           String   @id @default(uuid())
-  groupId      String   @map("group_id")
-  versionNo    Int      @map("version_no")
-  originalName String   @map("original_name") @db.VarChar(255)
-  objectKey    String   @unique @map("object_key") @db.VarChar(500)
-  sha256       String   @db.VarChar(64)
-  sizeBytes    Int      @map("size_bytes")
-  cellCount    Int      @map("cell_count")
-  status       String   @default("ACTIVE") @db.VarChar(20)
-  createdBy    String   @map("created_by")
-  clientRequestId String? @unique @map("client_request_id") @db.VarChar(80)
-  requestFingerprint String? @map("request_fingerprint") @db.VarChar(64)
-  createdAt    DateTime @default(now()) @map("created_at")
+  id                 String   @id @default(uuid())
+  groupId            String   @map("group_id")
+  versionNo          Int      @map("version_no")
+  originalName       String   @map("original_name") @db.VarChar(255)
+  objectKey          String   @unique @map("object_key") @db.VarChar(500)
+  sha256             String   @db.VarChar(64)
+  sizeBytes          Int      @map("size_bytes")
+  cellCount          Int      @map("cell_count")
+  status             String   @default("ACTIVE") @db.VarChar(20)
+  createdBy          String   @map("created_by")
+  clientRequestId    String?  @unique @map("client_request_id") @db.VarChar(80)
+  requestFingerprint String?  @map("request_fingerprint") @db.VarChar(64)
+  createdAt          DateTime @default(now()) @map("created_at")
 
   group PrintCutGroup         @relation(fields: [groupId], references: [id], onDelete: Restrict)
   files ProductionPrintFile[]
@@ -386,6 +386,7 @@ model CustomizeOrder {
 
   @@unique([platform, externalOrderId], name: "platform_external_order_unique")
   @@unique([salesOrderItemId, unitIndex])
+  @@unique([replacementForId, aftersaleRequestId], name: "replacement_aftersale_unique")
   @@index([salesOrderItemId])
   @@index([replacementForId])
   @@index([aftersaleRequestId])
@@ -652,11 +653,11 @@ model InventoryLog {
   note       String? @db.VarChar(200)
 
   // v2 新增
-  idempotencyKey String? @unique @map("idempotency_key") @db.VarChar(100)
+  idempotencyKey     String? @unique @map("idempotency_key") @db.VarChar(100)
   requestFingerprint String? @map("request_fingerprint") @db.VarChar(64)
-  beforeQty      Int?    @map("before_qty") // 操作前 available_qty
-  afterQty       Int?    @map("after_qty") // 操作后 available_qty
-  reason         String? @db.VarChar(200) // manual_adjustment 时必填
+  beforeQty          Int?    @map("before_qty") // 操作前 available_qty
+  afterQty           Int?    @map("after_qty") // 操作后 available_qty
+  reason             String? @db.VarChar(200) // manual_adjustment 时必填
 
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -2033,7 +2034,7 @@ model KitAssemblyConsumption {
 model InventoryReturnReceipt {
   id                 String    @id @default(uuid())
   returnNo           String    @unique @map("return_no") @db.VarChar(50)
-  aftersaleRequestId String    @map("aftersale_request_id")
+  aftersaleRequestId String    @unique @map("aftersale_request_id")
   orderId            String    @map("order_id")
   trackingNo         String?   @map("tracking_no") @db.VarChar(100)
   trackingCompany    String?   @map("tracking_company") @db.VarChar(100)

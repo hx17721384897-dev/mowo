@@ -123,6 +123,32 @@ export type MaterialFormOption = {
   scope: 'RAW' | 'PACKED' | 'ALL'
   value: string
 }
+export type InventoryReturnItem = {
+  id: string
+  inventoryLevel: string
+  materialId: string | null
+  skuId: string | null
+  receivedQty: number
+  disposition: string
+  note: string | null
+}
+export type InventoryReturnReceipt = {
+  id: string
+  returnNo: string
+  aftersaleRequestId: string
+  orderId: string
+  trackingNo: string | null
+  trackingCompany: string | null
+  status: 'QUARANTINED' | 'INSPECTING' | 'INSPECTED'
+  receivedAt: string
+  inspectedAt: string | null
+  note: string | null
+  items: InventoryReturnItem[]
+  aftersale: null | {
+    order?: { orderNo?: string | null }
+    user?: { phone?: string | null; nickname?: string | null }
+  }
+}
 
 export const loadInventory = () => apiRequest<InventoryRow[]>('/api/inventory')
 export const loadInventoryDetail = (skuId: string) =>
@@ -240,5 +266,30 @@ export const adjustMaterial = (
 ) =>
   apiRequest<{ currentStock: number; reused: boolean }>(
     `/api/materials/${encodeURIComponent(id)}/adjust`,
+    { method: 'POST', body: input }
+  )
+export const loadInventoryReturns = () =>
+  apiRequest<InventoryReturnReceipt[]>('/api/inventory/returns')
+export const receiveInventoryReturn = (
+  input: Record<string, unknown> & { aftersaleRequestId: string; clientRequestId: string }
+) =>
+  apiRequest<InventoryReturnReceipt & { reused: boolean }>('/api/inventory/returns/receive', {
+    method: 'POST',
+    body: input
+  })
+export const inspectInventoryReturn = (
+  id: string,
+  input: Record<string, unknown> & { clientRequestId: string }
+) =>
+  apiRequest<{ reused: boolean }>(`/api/inventory/returns/${encodeURIComponent(id)}/inspect`, {
+    method: 'POST',
+    body: input
+  })
+export const createReturnReplacement = (
+  id: string,
+  input: { note?: string; clientRequestId: string }
+) =>
+  apiRequest<Record<string, unknown> & { reused: boolean }>(
+    `/api/inventory/returns/${encodeURIComponent(id)}/replacement`,
     { method: 'POST', body: input }
   )

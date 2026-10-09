@@ -13,6 +13,8 @@ const runId = String(Date.now()).slice(-8)
 let userId
 let modelId
 let skuId
+let orderId
+let aftersaleId
 const materialIds = []
 let browser
 
@@ -33,6 +35,16 @@ async function request(path, token, options = {}) {
 }
 
 async function cleanup() {
+  if (aftersaleId) {
+    const receipts = await prisma.inventoryReturnReceipt.findMany({ where: { aftersaleRequestId: aftersaleId }, select: { id: true } })
+    if (receipts.length) await prisma.inventoryReturnInspectionItem.deleteMany({ where: { returnReceiptId: { in: receipts.map(row => row.id) } } })
+    await prisma.inventoryReturnReceipt.deleteMany({ where: { aftersaleRequestId: aftersaleId } })
+    await prisma.aftersaleRequest.deleteMany({ where: { id: aftersaleId } })
+  }
+  if (orderId) {
+    await prisma.customizeOrder.deleteMany({ where: { replacementForId: orderId } })
+    await prisma.customizeOrder.deleteMany({ where: { id: orderId } })
+  }
   if (skuId) {
     await prisma.kitAssemblyBatch.deleteMany({ where: { skuId } })
     await prisma.kitContainer.deleteMany({ where: { skuId } })
@@ -170,6 +182,47 @@ try {
   })
   assert(shortage.status === 400, '任一零件不足时拒绝材料包入库')
   assert((await prisma.materialItem.findUnique({where:{id:wirePack.id}})).currentStock === beforeShortage.currentStock, '入库失败时不会扣除任何零件')
+
+  const originalOrder = await prisma.customizeOrder.create({ data: {
+    orderNo:`PU-RETURN-${runId}`,userId,modelId,modelName:model.name,frameCount:12,
+    size:'5x5cm',material:'椴木板',color:'#D4B896',colorName:'原色',skuId,
+    ossPath:'test/return',frameUrls:'[]',status:'received'
+  } })
+  orderId = originalOrder.id
+  const aftersale = await prisma.aftersaleRequest.create({ data: {
+    orderId,userId,type:'quality',reason:'自动化退回检查',status:'approved'
+  } })
+  aftersaleId = aftersale.id
+  const receivePayload = {
+    aftersaleRequestId:aftersaleId,trackingCompany:'测试快递',trackingNo:`RT-${runId}`,
+    note:'自动化退回',clientRequestId:`return-receive-${runId}`
+  }
+  const receive = await request('/api/inventory/returns/receive',token,{method:'POST',body:JSON.stringify(receivePayload)})
+  const receiveJson = await receive.json()
+  const receiveReplay = await request('/api/inventory/returns/receive',token,{method:'POST',body:JSON.stringify(receivePayload)})
+  const receiveReplayJson = await receiveReplay.json()
+  assert(
+    receive.status === 200 && receiveReplay.status === 200 && receiveReplayJson.data?.reused === true,
+    `退回收货重放恢复原记录（首次 ${receive.status}，重放 ${receiveReplay.status}：${receiveReplayJson.message || ''}）`
+  )
+  assert(await prisma.inventoryReturnReceipt.count({where:{aftersaleRequestId:aftersaleId}}) === 1,'一个售后只建立一条退回收货记录')
+  const beforeReturnStock = (await prisma.skuInventory.findUnique({where:{skuId}})).currentStock
+  const inspectPayload = {
+    packageCondition:'UNOPENED_INTACT',receivedQty:1,items:[],note:'未拆封检查合格',
+    clientRequestId:`return-inspect-${runId}`
+  }
+  const inspect = await request(`/api/inventory/returns/${receiveJson.data.id}/inspect`,token,{method:'POST',body:JSON.stringify(inspectPayload)})
+  const inspectReplay = await request(`/api/inventory/returns/${receiveJson.data.id}/inspect`,token,{method:'POST',body:JSON.stringify(inspectPayload)})
+  const inspectReplayJson = await inspectReplay.json()
+  assert(inspect.status === 200 && inspectReplay.status === 200 && inspectReplayJson.data.reused === true,'退回检查重放恢复原结论')
+  assert((await prisma.skuInventory.findUnique({where:{skuId}})).currentStock === beforeReturnStock + 1,'退回检查只回库一次')
+  assert(await prisma.inventoryReturnInspectionItem.count({where:{returnReceiptId:receiveJson.data.id}}) === 1,'退回检查只保留一份检查明细')
+  const replacementPayload = {clientRequestId:`return-replacement-${runId}`}
+  const replacement = await request(`/api/inventory/returns/${receiveJson.data.id}/replacement`,token,{method:'POST',body:JSON.stringify(replacementPayload)})
+  const replacementReplay = await request(`/api/inventory/returns/${receiveJson.data.id}/replacement`,token,{method:'POST',body:JSON.stringify(replacementPayload)})
+  const replacementReplayJson = await replacementReplay.json()
+  assert(replacement.status === 200 && replacementReplay.status === 200 && replacementReplayJson.data.reused === true,'补发任务重放恢复原任务')
+  assert(await prisma.customizeOrder.count({where:{replacementForId:orderId,aftersaleRequestId:aftersaleId}}) === 1,'一个售后只建立一个补发生产任务')
 
   browser = await chromium.launch({ headless:true, executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe' })
   const context = await browser.newContext({ viewport:{width:1440,height:900} })

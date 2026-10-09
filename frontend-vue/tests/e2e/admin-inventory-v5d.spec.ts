@@ -65,6 +65,20 @@ const materials = [
     boundSkuCount: 1
   }
 ]
+const returnReceipt = {
+  id: 'return-1',
+  returnNo: '<img src=x onerror=alert(3)>RT-TEST-001',
+  aftersaleRequestId: 'aftersale-1',
+  orderId: 'order-1',
+  trackingNo: 'SF123456',
+  trackingCompany: '顺丰',
+  status: 'QUARANTINED',
+  receivedAt: '2026-10-09T08:00:00Z',
+  inspectedAt: null,
+  note: null,
+  items: [],
+  aftersale: { order: { orderNo: 'PU-TEST-001' }, user: { nickname: '测试用户' } }
+}
 
 async function fulfill(route: Route, data: unknown, status = 200) {
   await route.fulfill({
@@ -73,11 +87,18 @@ async function fulfill(route: Route, data: unknown, status = 200) {
   })
 }
 
-async function mockPage(page: Page, role = 'PRODUCTION', failAdjustmentOnce = false) {
+async function mockPage(
+  page: Page,
+  role = 'PRODUCTION',
+  failAdjustmentOnce = false,
+  failReturnInspectionOnce = false
+) {
   const adjustments: Record<string, unknown>[] = []
   const materialWrites: Array<{ path: string; body: Record<string, unknown> }> = []
+  const returnWrites: Array<{ path: string; body: Record<string, unknown> }> = []
   const writes: string[] = []
   let failed = false
+  let returnInspectionFailed = false
   await page.addInitScript(() => localStorage.setItem('mowo_token', 'inventory-test-token'))
   await page.route('**/api/**', async (route) => {
     const request = route.request()
@@ -91,6 +112,27 @@ async function mockPage(page: Page, role = 'PRODUCTION', failAdjustmentOnce = fa
         profile: { nickname: '库存测试' }
       })
     if (path === '/api/config/features') return fulfill(route, {})
+    if (path === '/api/inventory/returns' && request.method() === 'GET')
+      return fulfill(route, [returnReceipt])
+    if (path === '/api/inventory/returns/receive') {
+      const body = request.postDataJSON() as Record<string, unknown>
+      returnWrites.push({ path, body })
+      return fulfill(route, { ...returnReceipt, id: 'return-new', ...body, reused: false })
+    }
+    if (path === '/api/inventory/returns/return-1/inspect') {
+      const body = request.postDataJSON() as Record<string, unknown>
+      returnWrites.push({ path, body })
+      if (failReturnInspectionOnce && !returnInspectionFailed) {
+        returnInspectionFailed = true
+        return route.abort('connectionreset')
+      }
+      return fulfill(route, { reused: false })
+    }
+    if (path === '/api/inventory/returns/return-1/replacement') {
+      const body = request.postDataJSON() as Record<string, unknown>
+      returnWrites.push({ path, body })
+      return fulfill(route, { id: 'replacement-1', orderNo: 'PU-R-001', reused: false })
+    }
     if (path === '/api/materials/form-options' && request.method() === 'GET')
       return fulfill(route, {
         names: [{ id: 'name-1', category: 'NAME', scope: 'RAW', value: '测试零件' }],
@@ -236,7 +278,7 @@ async function mockPage(page: Page, role = 'PRODUCTION', failAdjustmentOnce = fa
     }
     return fulfill(route, null, 404)
   })
-  return { adjustments, materialWrites, writes }
+  return { adjustments, materialWrites, returnWrites, writes }
 }
 
 test('candidate renders SKU stock safely and keeps the seven-domain geometry', async ({ page }) => {
@@ -374,4 +416,56 @@ test('material maintenance creates, edits, defects and adjusts through safe writ
   expect(writes[0].body.clientRequestId).toMatch(/^material-/)
   expect(writes[2].body.clientRequestId).toMatch(/^material-/)
   expect(writes[3].body.clientRequestId).toMatch(/^material-/)
+})
+
+test('return inspection keeps receipt, disposition and replacement writes inside Vue', async ({
+  page
+}) => {
+  const state = await mockPage(page, 'PRODUCTION', false, true)
+  await page.goto('/app/admin/inventory?aftersaleId=aftersale-prefilled')
+  await page.getByRole('button', { name: '退回检查' }).click()
+  await expect(page.getByText('<img src=x onerror=alert(3)>RT-TEST-001')).toBeVisible()
+  await expect(page.locator('img[src="x"]')).toHaveCount(0)
+
+  await page.getByRole('button', { name: '＋ 登记退回收货' }).click()
+  await expect(page.getByLabel('售后申请 ID *')).toHaveValue('aftersale-prefilled')
+  await page.getByLabel('快递公司').fill('圆通')
+  await page.getByRole('button', { name: '确认收货并隔离' }).click()
+  await expect(page.getByText('已收货并进入隔离区')).toBeVisible()
+
+  await page.getByRole('button', { name: '开始检查' }).click()
+  await page.getByLabel('包装与使用情况 *').selectOption('OPENED')
+  await page.getByLabel('可复用基础零件（可选）').selectOption('mat-raw')
+  await page.getByLabel('零件数量').fill('2')
+  page.once('dialog', (dialog) => dialog.accept())
+  await page.getByRole('button', { name: '确认检查结论' }).click()
+  await expect(page.getByText('网络连接失败')).toBeVisible()
+  page.once('dialog', (dialog) => dialog.accept())
+  await page.getByRole('button', { name: '确认检查结论' }).click()
+  await expect(page.getByText('退回检查已完成')).toBeVisible()
+
+  page.once('dialog', (dialog) => dialog.accept())
+  await page.getByRole('button', { name: '创建补发任务' }).click()
+  await expect(page.getByText('补发生产任务已创建')).toBeVisible()
+
+  expect(state.returnWrites.map((row) => row.path)).toEqual([
+    '/api/inventory/returns/receive',
+    '/api/inventory/returns/return-1/inspect',
+    '/api/inventory/returns/return-1/inspect',
+    '/api/inventory/returns/return-1/replacement'
+  ])
+  expect(
+    state.returnWrites.every((row) => String(row.body.clientRequestId).startsWith('return-'))
+  ).toBe(true)
+  expect(state.returnWrites[1].body.clientRequestId).toBe(
+    state.returnWrites[2].body.clientRequestId
+  )
+  expect(state.returnWrites[1].body.items).toEqual([
+    {
+      inventoryLevel: 'BASE',
+      materialId: 'mat-raw',
+      receivedQty: 2,
+      disposition: 'SERVICE_ONLY'
+    }
+  ])
 })

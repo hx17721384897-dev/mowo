@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import AdminSidebar from '@/components/AdminSidebar.vue'
 import MaterialInventoryPanel from '@/features/admin-inventory/MaterialInventoryPanel.vue'
+import ReturnInventoryPanel from '@/features/admin-inventory/ReturnInventoryPanel.vue'
 import { ApiError } from '@/services/api-client'
 import {
   adjustInventory,
@@ -29,6 +30,7 @@ const rows = ref<InventoryRow[]>([]),
 const activeTab = ref(0)
 const packedPanel = ref<InstanceType<typeof MaterialInventoryPanel> | null>(null)
 const rawPanel = ref<InstanceType<typeof MaterialInventoryPanel> | null>(null)
+const returnPanel = ref<InstanceType<typeof ReturnInventoryPanel> | null>(null)
 const detail = ref<InventoryDetail | null>(null),
   quota = ref<ChannelQuota | null>(null),
   drawerOpen = ref(false)
@@ -116,7 +118,11 @@ async function refresh() {
   loading.value = true
   try {
     rows.value = await loadInventory()
-    await Promise.all([packedPanel.value?.refresh(), rawPanel.value?.refresh()])
+    await Promise.all([
+      packedPanel.value?.refresh(),
+      rawPanel.value?.refresh(),
+      returnPanel.value?.refresh()
+    ])
     if (page.value > pageCount.value) page.value = pageCount.value
   } catch (error) {
     flash(errorMessage(error), true)
@@ -276,8 +282,8 @@ onBeforeUnmount(() => window.clearTimeout(noticeTimer))
             class="main-tab"
             :class="{ active: index === activeTab }"
             type="button"
-            :disabled="index > 2"
-            :title="index > 2 ? '后续库存切片迁移' : ''"
+            :disabled="index > 3"
+            :title="index > 3 ? '后续库存切片迁移' : ''"
             @click="activeTab = index"
           >
             {{ tab }}
@@ -366,6 +372,12 @@ onBeforeUnmount(() => window.clearTimeout(noticeTimer))
           ref="packedPanel"
           mode="PACKED"
           :inventory="rows"
+          @flash="flash"
+          @inventory-changed="refresh"
+        />
+        <ReturnInventoryPanel
+          v-show="activeTab === 3"
+          ref="returnPanel"
           @flash="flash"
           @inventory-changed="refresh"
         />

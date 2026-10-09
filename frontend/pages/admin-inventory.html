@@ -2632,12 +2632,15 @@ function closeReturnReceiveModal(){ document.getElementById('returnReceiveModal'
 async function submitReturnReceive() {
   const aftersaleRequestId = document.getElementById('returnAftersaleId').value.trim()
   if (!aftersaleRequestId) return showToast('请填写售后申请 ID')
-  const res = await fetch(`${API}/api/inventory/returns/receive`, {method:'POST',headers:{...authHeader(),'Content-Type':'application/json'},body:JSON.stringify({
+  const targetId = aftersaleRequestId
+  const payload = withMaterialMutation('RETURN_RECEIVE', targetId, {
     aftersaleRequestId, trackingCompany:document.getElementById('returnCarrier').value.trim(),
     trackingNo:document.getElementById('returnTracking').value.trim(), note:document.getElementById('returnReceiveNote').value.trim()
-  })})
+  })
+  const res = await fetch(`${API}/api/inventory/returns/receive`, {method:'POST',headers:{...authHeader(),'Content-Type':'application/json'},body:JSON.stringify(payload)})
   const json = await res.json()
-  if (!json.success) return showToast(json.message || '登记失败')
+  if (!json.success) { if (res.status < 500) clearMaterialMutation('RETURN_RECEIVE', targetId); return showToast(json.message || '登记失败') }
+  clearMaterialMutation('RETURN_RECEIVE', targetId)
   showToast(json.message); closeReturnReceiveModal(); loadReturns()
 }
 
@@ -2684,15 +2687,20 @@ async function submitReturnInspection() {
     disposition:document.getElementById('returnDisposition').value
   }] : []
   if (!confirm(packageCondition === 'UNOPENED_INTACT' ? '确认该完整材料包未拆封且检查合格，并以新的回收批次进入新品库存？' : '确认按当前检查结论处理？')) return
-  const res = await fetch(`${API}/api/inventory/returns/${_returnInspectId}/inspect`, {method:'POST',headers:{...authHeader(),'Content-Type':'application/json'},body:JSON.stringify({packageCondition,receivedQty,items,note:document.getElementById('returnInspectNote').value.trim()})})
+  const targetId = _returnInspectId
+  const payload = withMaterialMutation('RETURN_INSPECT', targetId, {packageCondition,receivedQty,items,note:document.getElementById('returnInspectNote').value.trim()})
+  const res = await fetch(`${API}/api/inventory/returns/${targetId}/inspect`, {method:'POST',headers:{...authHeader(),'Content-Type':'application/json'},body:JSON.stringify(payload)})
   const json = await res.json()
-  if (!json.success) return showToast(json.message || '检查登记失败')
+  if (!json.success) { if (res.status < 500) clearMaterialMutation('RETURN_INSPECT', targetId); return showToast(json.message || '检查登记失败') }
+  clearMaterialMutation('RETURN_INSPECT', targetId)
   showToast(json.message); closeReturnInspectModal(); await Promise.all([loadReturns(),loadInventory(),loadMaterials()])
 }
 async function createReplacement(id) {
   if (!confirm('确认创建一个新的补发生产任务？原生产任务不会被重新打开。')) return
-  const res = await fetch(`${API}/api/inventory/returns/${id}/replacement`, {method:'POST',headers:{...authHeader(),'Content-Type':'application/json'},body:JSON.stringify({})})
+  const payload = withMaterialMutation('RETURN_REPLACEMENT', id, {})
+  const res = await fetch(`${API}/api/inventory/returns/${id}/replacement`, {method:'POST',headers:{...authHeader(),'Content-Type':'application/json'},body:JSON.stringify(payload)})
   const json = await res.json()
+  if (json.success || res.status < 500) clearMaterialMutation('RETURN_REPLACEMENT', id)
   showToast(json.success ? json.message : (json.message || '创建失败'))
 }
 </script>
