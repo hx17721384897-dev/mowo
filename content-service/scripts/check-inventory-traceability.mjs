@@ -94,7 +94,8 @@ try {
   await prisma.skuInventory.create({data:{skuId}})
 
   const createMaterial = async body => {
-    const res=await api('/api/materials',token,{method:'POST',body:JSON.stringify(body)}); const json=await res.json()
+    const payload={...body,clientRequestId:`trace-create-${body.itemType}-${body.name}-${runId}`}
+    const res=await api('/api/materials',token,{method:'POST',body:JSON.stringify(payload)}); const json=await res.json()
     assert(res.ok,json.message||`建立 ${body.name}`); materialIds.push(json.data.id); return json.data
   }
   const wire=await createMaterial({name:`铁丝-${runId}`,itemType:'RAW',unit:'根'})

@@ -97,9 +97,13 @@ try {
   await prisma.skuInventory.create({ data: { skuId } })
 
   const createMaterial = async body => {
-    const response = await request('/api/materials', token, { method:'POST', body:JSON.stringify(body) })
+    const payload = {...body,clientRequestId:`kit-create-${body.itemType}-${body.name}-${runId}`}
+    const response = await request('/api/materials', token, { method:'POST', body:JSON.stringify(payload) })
     const json = await response.json()
     assert(response.status === 200 && json.success, `建立零件：${body.name}`)
+    const replay = await request('/api/materials', token, { method:'POST', body:JSON.stringify(payload) })
+    const replayJson = await replay.json()
+    assert(replay.status === 200 && replayJson.data.id === json.data.id && replayJson.data.reused === true, `重复建立不会新增零件：${body.name}`)
     materialIds.push(json.data.id)
     return json.data
   }
@@ -133,6 +137,16 @@ try {
   ])
   assert(boardResponses.every(response => response.status === 200), '并发同键采购入库均恢复为成功结果')
   assert((await prisma.materialItem.findUnique({where:{id:board.id}})).currentStock === 10, '并发同键采购入库只增加一次库存')
+  const defectPayload = {quantity:1,note:'测试报损',clientRequestId:`kit-defect-${runId}`}
+  const defect = await request(`/api/materials/${board.id}/defect`,token,{method:'POST',body:JSON.stringify(defectPayload)})
+  const defectReplay = await request(`/api/materials/${board.id}/defect`,token,{method:'POST',body:JSON.stringify(defectPayload)})
+  assert(defect.status === 200 && defectReplay.status === 200 && (await defectReplay.json()).data.reused === true,'报损重放不会重复扣减')
+  assert((await prisma.materialItem.findUnique({where:{id:board.id}})).currentStock === 9,'报损仅扣减一次库存')
+  const adjustPayload = {delta:1,note:'测试盘点恢复',clientRequestId:`kit-adjust-${runId}`}
+  const adjust = await request(`/api/materials/${board.id}/adjust`,token,{method:'POST',body:JSON.stringify(adjustPayload)})
+  const adjustReplay = await request(`/api/materials/${board.id}/adjust`,token,{method:'POST',body:JSON.stringify(adjustPayload)})
+  assert(adjust.status === 200 && adjustReplay.status === 200 && (await adjustReplay.json()).data.reused === true,'盘点调整重放不会重复增加')
+  assert((await prisma.materialItem.findUnique({where:{id:board.id}})).currentStock === 10,'盘点调整仅增加一次库存')
   const bom = await request(`/api/machine-models/skus/${skuId}/bom`, token, {
     method:'PUT', body:JSON.stringify({ items:[{materialId:wirePack.id,qtyPerUnit:1},{materialId:board.id,qtyPerUnit:1}] })
   })

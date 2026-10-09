@@ -167,23 +167,26 @@ export default async function materialsRoutes(fastify) {
       return reply.code(400).send({ success: false, message: '零件类型无效' })
     if (itemType === 'PACKED' && (!sourceMaterialId || !Number.isInteger(Number(sourceQtyPerUnit)) || Number(sourceQtyPerUnit) <= 0))
       return reply.code(400).send({ success: false, message: '已分装零件必须选择来源零件并填写每包用量' })
-
-    const item = await fastify.prisma.materialItem.create({
-      data: {
-        name: name.trim(),
-        itemCode:      itemCode?.trim() || makeNo('MAT'),
-        itemType,
-        specification: specification?.trim() || null,
-        unit:         unit         ?? '个',
-        safetyStock:  safetyStock  ?? 10,
-        leadTime:     leadTime     ?? 7,
-        note:         note         ?? null,
-        sourceMaterialId: itemType === 'PACKED' ? sourceMaterialId : null,
-        sourceQtyPerUnit: itemType === 'PACKED' ? Number(sourceQtyPerUnit) : null,
-        createdBy:    operatorId
-      }
-    })
-    return reply.send({ success: true, data: item })
+    let request
+    try { request = inventoryMutationRequest(req.body, 'MATERIAL_CREATE', 'material-definition', operatorId) }
+    catch (error) { return reply.code(400).send({ success: false, code: error.code, message: error.message }) }
+    try {
+      const mutation = await runInventoryMutation(fastify.prisma, request, async tx => {
+        const item = await tx.materialItem.create({ data: {
+          name: name.trim(), itemCode: itemCode?.trim() || makeNo('MAT'), itemType,
+          specification: specification?.trim() || null, unit: unit ?? '个',
+          safetyStock: safetyStock ?? 10, leadTime: leadTime ?? 7, note: note ?? null,
+          sourceMaterialId: itemType === 'PACKED' ? sourceMaterialId : null,
+          sourceQtyPerUnit: itemType === 'PACKED' ? Number(sourceQtyPerUnit) : null,
+          createdBy: operatorId
+        } })
+        return { item }
+      })
+      return reply.send({ success: true, data: { ...mutation.result.item, reused: mutation.reused } })
+    } catch (error) {
+      const status = error.code === 'IDEMPOTENCY_KEY_CONFLICT' ? 409 : 400
+      return reply.code(status).send({ success: false, code: error.code, message: error.message })
+    }
   })
 
   // ─────────────────────────────────────────────
@@ -434,31 +437,29 @@ export default async function materialsRoutes(fastify) {
     const { quantity, note } = req.body
     const operatorId         = req.user.userId
 
-    if (!quantity || quantity <= 0) return reply.code(400).send({ success: false, message: '数量必须大于0' })
-
-    const item = await fastify.prisma.materialItem.findUnique({ where: { id } })
-    if (!item || !item.isActive) return reply.code(404).send({ success: false, message: '物品不存在' })
-    if (item.currentStock < quantity) return reply.code(400).send({ success: false, message: `报损数量超出库存（当前：${item.currentStock}）` })
-
-    const beforeQty = item.currentStock
-    const afterQty  = beforeQty - quantity
-    let selectedLots
-    try { selectedLots = await previewMaterialAllocation(fastify.prisma, item, Number(quantity)) }
-    catch (error) { return reply.code(400).send({ success: false, message: error.message }) }
-
-    await fastify.prisma.$transaction(async tx => {
-      await consumeMaterialAllocations(tx, item, selectedLots)
-      await tx.materialItem.update({ where: { id }, data: { currentStock: afterQty } })
-      await tx.materialLog.create({
-        data: { materialId: id, type: 'production_defect', quantity, beforeQty, afterQty, operatorId, note: note || null }
+    if (!Number.isInteger(Number(quantity)) || Number(quantity) <= 0) return reply.code(400).send({ success: false, message: '数量必须为正整数' })
+    if (!note?.trim()) return reply.code(400).send({ success: false, message: '报损原因不能为空' })
+    let request
+    try { request = inventoryMutationRequest(req.body, 'MATERIAL_DEFECT', id, operatorId) }
+    catch (error) { return reply.code(400).send({ success: false, code: error.code, message: error.message }) }
+    try {
+      const mutation = await runInventoryMutation(fastify.prisma, request, async tx => {
+        const item = await tx.materialItem.findUnique({ where: { id } })
+        if (!item || !item.isActive) { const error = new Error('物品不存在'); error.statusCode = 404; throw error }
+        if (item.currentStock < Number(quantity)) throw new Error(`报损数量超出库存（当前：${item.currentStock}）`)
+        const beforeQty = item.currentStock
+        const afterQty = beforeQty - Number(quantity)
+        const selectedLots = await previewMaterialAllocation(tx, item, Number(quantity))
+        await consumeMaterialAllocations(tx, item, selectedLots)
+        await tx.materialItem.update({ where: { id }, data: { currentStock: afterQty } })
+        await tx.materialLog.create({ data: { materialId: id, type: 'production_defect', quantity: Number(quantity), beforeQty, afterQty, operatorId, note: note.trim() } })
+        return { message: `✓ 已登记报损 ${quantity} ${item.unit}，当前库存 ${afterQty}`, data: { currentStock: afterQty } }
       })
-    })
-
-    return reply.send({
-      success: true,
-      message: `✓ 已登记报损 ${quantity} ${item.unit}，当前库存 ${afterQty}`,
-      data: { currentStock: afterQty }
-    })
+      return reply.send({ success: true, message: mutation.result.message, data: { ...mutation.result.data, reused: mutation.reused } })
+    } catch (error) {
+      const status = error.code === 'IDEMPOTENCY_KEY_CONFLICT' ? 409 : (error.statusCode || 400)
+      return reply.code(status).send({ success: false, code: error.code, message: error.message })
+    }
   })
 
   // ─────────────────────────────────────────────
@@ -471,52 +472,43 @@ export default async function materialsRoutes(fastify) {
     const { delta, note }     = req.body
     const operatorId          = req.user.userId
 
-    if (delta === undefined || delta === 0) return reply.code(400).send({ success: false, message: '调整量不能为0' })
+    if (!Number.isInteger(Number(delta)) || Number(delta) === 0) return reply.code(400).send({ success: false, message: '调整量必须为非零整数' })
     if (!note?.trim()) return reply.code(400).send({ success: false, message: '手动调整必须填写原因' })
-
-    const item = await fastify.prisma.materialItem.findUnique({ where: { id } })
-    if (!item || !item.isActive) return reply.code(404).send({ success: false, message: '物品不存在' })
-
-    const afterQty = item.currentStock + delta
-    if (afterQty < 0) return reply.code(400).send({ success: false, message: `调减数量超出库存（当前：${item.currentStock}）` })
-
-    const beforeQty = item.currentStock
-    let selectedLots = []
-    if (delta < 0) {
-      try { selectedLots = await previewMaterialAllocation(fastify.prisma, item, Math.abs(delta)) }
-      catch (error) { return reply.code(400).send({ success: false, message: error.message }) }
-    }
-
-    await fastify.prisma.$transaction(async tx => {
-      if (delta < 0) await consumeMaterialAllocations(tx, item, selectedLots)
-      if (delta > 0) {
+    let request
+    try { request = inventoryMutationRequest(req.body, 'MATERIAL_ADJUST', id, operatorId) }
+    catch (error) { return reply.code(400).send({ success: false, code: error.code, message: error.message }) }
+    try {
+      const mutation = await runInventoryMutation(fastify.prisma, request, async tx => {
+        const item = await tx.materialItem.findUnique({ where: { id } })
+        if (!item || !item.isActive) { const error = new Error('物品不存在'); error.statusCode = 404; throw error }
+        const amount = Number(delta)
+        const beforeQty = item.currentStock
+        const afterQty = beforeQty + amount
+        if (afterQty < 0) throw new Error(`调减数量超出库存（当前：${item.currentStock}）`)
+        const selectedLots = amount < 0 ? await previewMaterialAllocation(tx, item, Math.abs(amount)) : []
+        if (amount < 0) await consumeMaterialAllocations(tx, item, selectedLots)
+        if (amount > 0) {
         if (item.itemType === 'PACKED') {
           await tx.materialPreparationBatch.create({ data: {
-            batchNo: makeNo('ADJ-PREP'), outputMaterialId: id, outputQty: delta, availableQty: delta,
+            batchNo: makeNo('ADJ-PREP'), outputMaterialId: id, outputQty: amount, availableQty: amount,
             operatorId, note: `盘点增加：${note.trim()}`
           } })
         } else {
           await tx.materialReceipt.create({ data: {
-            receiptNo: makeNo('ADJ'), materialId: id, orderedSpec: '盘点增加', actualQty: delta,
-            acceptedQty: delta, availableQty: delta, operatorId, note: note.trim()
+            receiptNo: makeNo('ADJ'), materialId: id, orderedSpec: '盘点增加', actualQty: amount,
+            acceptedQty: amount, availableQty: amount, operatorId, note: note.trim()
           } })
         }
-      }
-      await tx.materialItem.update({ where: { id }, data: { currentStock: afterQty } })
-      await tx.materialLog.create({
-        data: {
-          materialId: id, type: 'manual_adjustment',
-          quantity: Math.abs(delta), beforeQty, afterQty,
-          operatorId, note: note.trim()
         }
+        await tx.materialItem.update({ where: { id }, data: { currentStock: afterQty } })
+        await tx.materialLog.create({ data: { materialId: id, type: 'manual_adjustment', quantity: Math.abs(amount), beforeQty, afterQty, operatorId, note: note.trim() } })
+        return { message: `✓ 已调整 ${amount > 0 ? '+' : ''}${amount} ${item.unit}，当前库存 ${afterQty}`, data: { currentStock: afterQty } }
       })
-    })
-
-    return reply.send({
-      success: true,
-      message: `✓ 已调整 ${delta > 0 ? '+' : ''}${delta} ${item.unit}，当前库存 ${afterQty}`,
-      data: { currentStock: afterQty }
-    })
+      return reply.send({ success: true, message: mutation.result.message, data: { ...mutation.result.data, reused: mutation.reused } })
+    } catch (error) {
+      const status = error.code === 'IDEMPOTENCY_KEY_CONFLICT' ? 409 : (error.statusCode || 400)
+      return reply.code(status).send({ success: false, code: error.code, message: error.message })
+    }
   })
 
   // ─────────────────────────────────────────────

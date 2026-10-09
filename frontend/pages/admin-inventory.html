@@ -1519,12 +1519,15 @@ function openMatDefectModal(id) {
 }
 
 async function doMatDefect(id, qty, note) {
+  const payload = { quantity:qty, note }
+  const requestPayload = withMaterialMutation('MATERIAL_DEFECT', id, payload)
   try {
     const res  = await fetch(`${API}/api/materials/${id}/defect`, {
       method: 'POST', headers: { ...authHeader(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ quantity: qty, note })
+      body: JSON.stringify(requestPayload)
     })
     const json = await res.json()
+    if (res.status < 500) clearMaterialMutation('MATERIAL_DEFECT', id)
     if (json.success) { showToast(json.message); await loadMaterials() }
     else showToast('报损失败：' + json.message)
   } catch { showToast('网络错误') }
@@ -1591,16 +1594,19 @@ async function submitMatModal() {
 
   const url    = id ? `${API}/api/materials/${id}` : `${API}/api/materials`
   const method = id ? 'PUT' : 'POST'
+  const payload = {
+    name, itemType, specification, unit, safetyStock: safety, leadTime: lead, note,
+    sourceMaterialId:itemType==='PACKED'?document.getElementById('matModalSource').value:undefined,
+    sourceQtyPerUnit:itemType==='PACKED'?Number(document.getElementById('matModalSourceQty').value):undefined
+  }
+  const requestPayload = id ? payload : withMaterialMutation('MATERIAL_CREATE', 'material-definition', payload)
   try {
     const res  = await fetch(url, {
       method, headers: { ...authHeader(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name, itemType, specification, unit, safetyStock: safety, leadTime: lead, note,
-        sourceMaterialId:itemType==='PACKED'?document.getElementById('matModalSource').value:undefined,
-        sourceQtyPerUnit:itemType==='PACKED'?Number(document.getElementById('matModalSourceQty').value):undefined
-      })
+      body: JSON.stringify(requestPayload)
     })
     const json = await res.json()
+    if (!id && res.status < 500) clearMaterialMutation('MATERIAL_CREATE', 'material-definition')
     if (json.success) {
       showToast(id ? '✓ 已保存' : '✓ 物品已创建')
       closeMatModal(); await loadMaterials()
