@@ -5,6 +5,7 @@ import MaterialInventoryPanel from '@/features/admin-inventory/MaterialInventory
 import ReturnInventoryPanel from '@/features/admin-inventory/ReturnInventoryPanel.vue'
 import InventoryLogsPanel from '@/features/admin-inventory/InventoryLogsPanel.vue'
 import ChannelQuotaPanel from '@/features/admin-inventory/ChannelQuotaPanel.vue'
+import FramePackInventoryPanel from '@/features/admin-inventory/FramePackInventoryPanel.vue'
 import { ApiError } from '@/services/api-client'
 import {
   adjustInventory,
@@ -35,6 +36,7 @@ const rawPanel = ref<InstanceType<typeof MaterialInventoryPanel> | null>(null)
 const returnPanel = ref<InstanceType<typeof ReturnInventoryPanel> | null>(null)
 const logsPanel = ref<InstanceType<typeof InventoryLogsPanel> | null>(null)
 const quotaPanel = ref<InstanceType<typeof ChannelQuotaPanel> | null>(null)
+const framePackPanel = ref<InstanceType<typeof FramePackInventoryPanel> | null>(null)
 const detail = ref<InventoryDetail | null>(null),
   quota = ref<ChannelQuota | null>(null),
   drawerOpen = ref(false)
@@ -127,7 +129,8 @@ async function refresh() {
       rawPanel.value?.refresh(),
       returnPanel.value?.refresh(),
       logsPanel.value?.refresh(),
-      quotaPanel.value?.refresh()
+      quotaPanel.value?.refresh(),
+      framePackPanel.value?.refresh()
     ])
     if (page.value > pageCount.value) page.value = pageCount.value
   } catch (error) {
@@ -295,8 +298,6 @@ onBeforeUnmount(() => window.clearTimeout(noticeTimer))
             class="main-tab"
             :class="{ active: index === activeTab }"
             type="button"
-            :disabled="index > 5"
-            :title="index > 5 ? '后续库存切片迁移' : ''"
             @click="activeTab = index"
           >
             <span aria-hidden="true">{{ tab.icon }}</span> {{ tab.label }}
@@ -408,6 +409,7 @@ onBeforeUnmount(() => window.clearTimeout(noticeTimer))
         />
         <InventoryLogsPanel v-show="activeTab === 4" ref="logsPanel" @flash="flash" />
         <ChannelQuotaPanel v-show="activeTab === 5" ref="quotaPanel" @flash="flash" />
+        <FramePackInventoryPanel v-show="activeTab === 6" ref="framePackPanel" @flash="flash" />
         <MaterialInventoryPanel
           ref="rawPanel"
           mode="RAW"

@@ -2232,6 +2232,18 @@ let _fpRestockWorkId = null
 let _fpAdjustVid   = null
 let _fpAdjustWorkId = null
 
+function framePackMutation(action, targetId, payload) {
+  const storageKey = `mowo.framePack.${action}.${targetId}`
+  const fingerprint = JSON.stringify(payload)
+  let pending = null
+  try { pending = JSON.parse(sessionStorage.getItem(storageKey) || 'null') } catch {}
+  if (!pending || pending.fingerprint !== fingerprint) {
+    pending = {fingerprint, clientRequestId:`frame-pack-${crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`}`}
+    sessionStorage.setItem(storageKey, JSON.stringify(pending))
+  }
+  return {storageKey, body:{...payload, clientRequestId:pending.clientRequestId}}
+}
+
 const FP_ALERT_DOT  = { CRITICAL:'#FF6B35', WARNING:'#F5E642', SUGGEST:'#7EC8E3', OK:'#8FD694' }
 const FP_ALERT_BADGE = {
   CRITICAL: '<span class="stock-badge badge-critical">🔴 紧急不足</span>',
@@ -2428,13 +2440,15 @@ function clearWorkSelection() {
 
 async function submitAddWork() {
   if (!_fpAddWorkId) return showToast('请先搜索并选择一个联名作品')
+  const mutation = framePackMutation('work', _fpAddWorkId, {collabWorkId:_fpAddWorkId})
   try {
     const res  = await fetch(`${API}/api/frame-packs`, {
       method: 'POST', headers: { ...authHeader(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ collabWorkId: _fpAddWorkId })
+      body: JSON.stringify(mutation.body)
     })
     const json = await res.json()
     if (!json.success) return showToast(json.message || '添加失败')
+    sessionStorage.removeItem(mutation.storageKey)
     closeFpAddWorkModal()
     showToast('✓ 已添加到帧包白名单')
     loadFramePacks()
@@ -2464,13 +2478,16 @@ async function submitAddVariant() {
 
   if (!size || !frameCount) return showToast('尺寸和帧数不能为空')
 
+  const mutation = framePackMutation('variant', `${_fpCurWorkId}-${size}-${frameCount}`, {size,frameCount,skuCode,safetyStock,leadTime,note})
+
   try {
     const res  = await fetch(`${API}/api/frame-packs/${_fpCurWorkId}/variants`, {
       method: 'POST', headers: { ...authHeader(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ size, frameCount, skuCode, safetyStock, leadTime, note })
+      body: JSON.stringify(mutation.body)
     })
     const json = await res.json()
     if (!json.success) return showToast(json.message || '添加失败')
+    sessionStorage.removeItem(mutation.storageKey)
     closeFpAddVariantModal()
     showToast('✓ 规格变体已添加')
     loadFramePacks()
@@ -2494,13 +2511,15 @@ async function submitFpRestock() {
   const qty  = parseInt(document.getElementById('fpRestockQty').value)
   const note = document.getElementById('fpRestockNote').value.trim() || null
   if (!qty || qty <= 0) return showToast('请输入有效数量')
+  const mutation = framePackMutation('restock', _fpRestockVid, {quantity:qty,note})
   try {
     const res  = await fetch(`${API}/api/frame-packs/${_fpRestockWorkId}/variants/${_fpRestockVid}/restock`, {
       method: 'POST', headers: { ...authHeader(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ quantity: qty, note })
+      body: JSON.stringify(mutation.body)
     })
     const json = await res.json()
     if (!json.success) return showToast(json.message || '入库失败')
+    sessionStorage.removeItem(mutation.storageKey)
     closeFpRestockModal()
     showToast(json.message || '✓ 入库成功')
     loadFramePacks()
@@ -2525,13 +2544,15 @@ async function submitFpAdjust() {
   const note  = document.getElementById('fpAdjustNote').value.trim()
   if (!delta) return showToast('请输入非零调整量')
   if (!note)  return showToast('请填写调整原因')
+  const mutation = framePackMutation('adjust', _fpAdjustVid, {delta,note})
   try {
     const res  = await fetch(`${API}/api/frame-packs/${_fpAdjustWorkId}/variants/${_fpAdjustVid}/adjust`, {
       method: 'POST', headers: { ...authHeader(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ delta, note })
+      body: JSON.stringify(mutation.body)
     })
     const json = await res.json()
     if (!json.success) return showToast(json.message || '调整失败')
+    sessionStorage.removeItem(mutation.storageKey)
     closeFpAdjustModal()
     showToast(json.message || '✓ 调整成功')
     loadFramePacks()

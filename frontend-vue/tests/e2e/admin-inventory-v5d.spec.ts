@@ -79,6 +79,32 @@ const returnReceipt = {
   items: [],
   aftersale: { order: { orderNo: 'PU-TEST-001' }, user: { nickname: '测试用户' } }
 }
+const framePackWorks = [
+  {
+    id: 'frame-work-1',
+    collabWorkId: 'collab-1',
+    name: '<img src=x onerror=alert(6)>联名动画',
+    thumbnailUrl: null,
+    worstAlert: 'WARNING',
+    variants: [
+      {
+        id: 'frame-variant-1',
+        workId: 'frame-work-1',
+        size: '5x5cm',
+        frameCount: 12,
+        skuCode: 'FP-TEST-01',
+        currentStock: 4,
+        safetyStock: 5,
+        leadTime: 7,
+        note: null,
+        consumed30d: 0,
+        dailyConsumption: 0,
+        availableDays: null,
+        alertLevel: 'WARNING'
+      }
+    ]
+  }
+]
 
 async function fulfill(route: Route, data: unknown, status = 200) {
   await route.fulfill({
@@ -97,6 +123,7 @@ async function mockPage(
   const materialWrites: Array<{ path: string; body: Record<string, unknown> }> = []
   const returnWrites: Array<{ path: string; body: Record<string, unknown> }> = []
   const quotaWrites: Array<Record<string, unknown>> = []
+  const framePackWrites: Array<{ path: string; body: Record<string, unknown> }> = []
   const logQueries: string[] = []
   const writes: string[] = []
   let failed = false
@@ -114,6 +141,22 @@ async function mockPage(
         profile: { nickname: '库存测试' }
       })
     if (path === '/api/config/features') return fulfill(route, {})
+    if (path === '/api/frame-packs' && request.method() === 'GET')
+      return fulfill(route, framePackWorks)
+    if (path === '/api/frame-packs/search-collab')
+      return fulfill(route, [
+        { id: 'collab-2', title: '候选联名动画', thumbnailKey: null, alreadyAdded: false }
+      ])
+    if (path === '/api/frame-packs' && request.method() === 'POST') {
+      const body = request.postDataJSON() as Record<string, unknown>
+      framePackWrites.push({ path, body })
+      return fulfill(route, { ...framePackWorks[0], id: 'frame-work-2', reused: false })
+    }
+    if (path.startsWith('/api/frame-packs/') && request.method() === 'POST') {
+      const body = request.postDataJSON() as Record<string, unknown>
+      framePackWrites.push({ path, body })
+      return fulfill(route, { currentStock: 6, reused: false })
+    }
     if (path === '/api/inventory/logs') {
       logQueries.push(new URL(request.url()).search)
       return fulfill(route, {
@@ -321,7 +364,15 @@ async function mockPage(
     }
     return fulfill(route, null, 404)
   })
-  return { adjustments, logQueries, materialWrites, returnWrites, quotaWrites, writes }
+  return {
+    adjustments,
+    logQueries,
+    materialWrites,
+    returnWrites,
+    quotaWrites,
+    framePackWrites,
+    writes
+  }
 }
 
 test('candidate renders SKU stock safely and keeps the seven-domain geometry', async ({ page }) => {
@@ -329,7 +380,7 @@ test('candidate renders SKU stock safely and keeps the seven-domain geometry', a
   await page.goto('/app/admin/inventory')
   await expect(page.getByRole('heading', { name: '库存管理' })).toBeVisible()
   await expect(page.locator('.main-tab')).toHaveCount(7)
-  await expect(page.locator('.stat-card')).toHaveCount(6)
+  await expect(page.locator('.content > .stats-grid .stat-card')).toHaveCount(6)
   await expect(page.getByText('<img src=x onerror=alert(1)>测试款')).toBeVisible()
   await expect(page.locator('img[src="x"]')).toHaveCount(0)
   await page.getByPlaceholder('搜索款式或规格…').fill('SKU-TEST-01')
@@ -593,4 +644,39 @@ test('channel quotas preserve safe rendering, dynamic buffer checks and explicit
       () => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1
     )
   ).toBe(true)
+})
+
+test('frame pack inventory preserves legacy cards and sends one safe restock write', async ({
+  page
+}) => {
+  const state = await mockPage(page, 'PRODUCTION')
+  await page.goto('/app/admin/inventory')
+  await page.getByRole('button', { name: '帧包库存' }).click()
+  await expect(page.getByText('<img src=x onerror=alert(6)>联名动画')).toBeVisible()
+  await expect(page.locator('img[src="x"]')).toHaveCount(0)
+  await expect(page.getByText('1 种规格 · 合计 4 套在库')).toBeVisible()
+  await page.locator('.fp-work-header').click()
+  await expect(page.getByText('FP-TEST-01')).toBeVisible()
+  await expect(page.getByRole('button', { name: '调整' })).toHaveCount(0)
+  await page.getByRole('button', { name: '入库', exact: true }).click()
+  await page.getByLabel('入库数量 *').fill('2')
+  await page.getByRole('button', { name: '确认入库' }).click()
+  await expect(page.getByText('帧包入库成功')).toBeVisible()
+  expect(state.framePackWrites).toHaveLength(1)
+  expect(state.framePackWrites[0]?.path).toContain('/frame-variant-1/restock')
+  expect(state.framePackWrites[0]?.body.clientRequestId).toMatch(/^frame-pack-/)
+})
+
+test('frame pack owner can add approved work without duplicate drafts', async ({ page }) => {
+  const state = await mockPage(page, 'OWNER')
+  await page.goto('/app/admin/inventory')
+  await page.getByRole('button', { name: '帧包库存' }).click()
+  await page.getByRole('button', { name: '+ 添加作品' }).click()
+  await page.getByLabel('搜索联名作品').fill('候选')
+  await expect(page.getByRole('button', { name: /候选联名动画/ })).toBeVisible()
+  await page.getByRole('button', { name: /候选联名动画/ }).click()
+  await page.getByRole('button', { name: '添加到白名单' }).click()
+  await expect(page.getByText('已添加到帧包白名单')).toBeVisible()
+  expect(state.framePackWrites).toHaveLength(1)
+  expect(state.framePackWrites[0]?.body.clientRequestId).toMatch(/^frame-pack-/)
 })

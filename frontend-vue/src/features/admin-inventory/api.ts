@@ -163,6 +163,36 @@ export type InventoryReturnReceipt = {
   }
 }
 
+export type FramePackVariant = {
+  id: string
+  workId: string
+  size: string
+  frameCount: number
+  skuCode: string | null
+  currentStock: number
+  safetyStock: number
+  leadTime: number
+  note: string | null
+  consumed30d: number
+  dailyConsumption: number
+  availableDays: number | null
+  alertLevel: AlertLevel
+}
+export type FramePackWork = {
+  id: string
+  collabWorkId: string | null
+  name: string
+  thumbnailUrl: string | null
+  worstAlert: AlertLevel
+  variants: FramePackVariant[]
+}
+export type FramePackCollabResult = {
+  id: string
+  title: string
+  thumbnailKey: string | null
+  alreadyAdded: boolean
+}
+
 export const loadInventory = () => apiRequest<InventoryRow[]>('/api/inventory')
 export const loadInventoryDetail = (skuId: string) =>
   apiRequest<InventoryDetail>(`/api/inventory/${encodeURIComponent(skuId)}`)
@@ -329,5 +359,50 @@ export const createReturnReplacement = (
 ) =>
   apiRequest<Record<string, unknown> & { reused: boolean }>(
     `/api/inventory/returns/${encodeURIComponent(id)}/replacement`,
+    { method: 'POST', body: input }
+  )
+
+export const loadFramePacks = () => apiRequest<FramePackWork[]>('/api/frame-packs')
+export const searchFramePackCollabs = (query: string) =>
+  apiRequest<FramePackCollabResult[]>(
+    `/api/frame-packs/search-collab?q=${encodeURIComponent(query)}`
+  )
+export const addFramePackWork = (input: { collabWorkId: string; clientRequestId: string }) =>
+  apiRequest<FramePackWork & { reused: boolean }>('/api/frame-packs', {
+    method: 'POST',
+    body: input
+  })
+export const addFramePackVariant = (
+  workId: string,
+  input: {
+    size: string
+    frameCount: number
+    skuCode?: string
+    safetyStock: number
+    leadTime: number
+    note?: string
+    clientRequestId: string
+  }
+) =>
+  apiRequest<FramePackVariant & { reused: boolean }>(
+    `/api/frame-packs/${encodeURIComponent(workId)}/variants`,
+    { method: 'POST', body: input }
+  )
+export const restockFramePack = (
+  workId: string,
+  variantId: string,
+  input: { quantity: number; note?: string; clientRequestId: string }
+) =>
+  apiRequest<{ currentStock: number; reused: boolean }>(
+    `/api/frame-packs/${encodeURIComponent(workId)}/variants/${encodeURIComponent(variantId)}/restock`,
+    { method: 'POST', body: input }
+  )
+export const adjustFramePack = (
+  workId: string,
+  variantId: string,
+  input: { delta: number; note: string; clientRequestId: string }
+) =>
+  apiRequest<{ currentStock: number; reused: boolean }>(
+    `/api/frame-packs/${encodeURIComponent(workId)}/variants/${encodeURIComponent(variantId)}/adjust`,
     { method: 'POST', body: input }
   )

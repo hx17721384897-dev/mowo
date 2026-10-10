@@ -1,6 +1,14 @@
 // src/routes/frame-packs.js
 // 帧包备货白名单管理
-// GET/POST/DELETE role >= 2（管理员）; restock role >= 1（生产端也可入库）
+// 管理配置 role >= 2；查看与入库 role >= 1。
+
+import { inventoryMutationRequest, runInventoryMutation } from '../lib/inventory-material-mutations.js'
+
+const text = (value, max = 200) => {
+  const normalized = String(value ?? '').trim()
+  return normalized ? normalized.slice(0, max) : null
+}
+const integer = value => Number.isInteger(Number(value)) ? Number(value) : null
 
 export default async function framePacksRoutes(fastify) {
 
@@ -131,10 +139,18 @@ export default async function framePacksRoutes(fastify) {
       }
     }
 
-    const work = await fastify.prisma.framePackWork.create({
-      data: { collabWorkId: collabWorkId || null, name: displayName, thumbnailKey: thumbKey, createdBy: operatorId }
+    const request = inventoryMutationRequest(req.body, 'FRAME_PACK_WORK_CREATE', collabWorkId || displayName, operatorId)
+    const outcome = await runInventoryMutation(fastify.prisma, request, async tx => {
+      if (!collabWorkId) return tx.framePackWork.create({
+        data: { collabWorkId: null, name: displayName, thumbnailKey: thumbKey, createdBy: operatorId }
+      })
+      const existing = await tx.framePackWork.findUnique({ where: { collabWorkId } })
+      if (existing?.isActive) throw Object.assign(new Error('该作品已在帧包库存中'), { statusCode: 409 })
+      return existing
+        ? tx.framePackWork.update({ where: { id: existing.id }, data: { isActive: true, name: displayName, thumbnailKey: thumbKey } })
+        : tx.framePackWork.create({ data: { collabWorkId, name: displayName, thumbnailKey: thumbKey, createdBy: operatorId } })
     })
-    return reply.send({ success: true, data: work })
+    return reply.send({ success: true, data: { ...outcome.result, reused: outcome.reused } })
   })
 
   // ─────────────────────────────────────────────
@@ -160,25 +176,27 @@ export default async function framePacksRoutes(fastify) {
     const { size, frameCount, skuCode, safetyStock, leadTime, note } = req.body
     const operatorId = req.user.userId
 
-    if (!size?.trim() || !frameCount)
-      return reply.code(400).send({ success: false, message: '尺寸和帧数不能为空' })
+    const normalizedSize = text(size, 20)
+    const normalizedFrames = integer(frameCount)
+    const normalizedSafety = safetyStock === undefined ? 5 : integer(safetyStock)
+    const normalizedLead = leadTime === undefined ? 7 : integer(leadTime)
+    if (!normalizedSize || !normalizedFrames || normalizedFrames <= 0 || normalizedSafety === null || normalizedSafety < 0 || !normalizedLead || normalizedLead <= 0)
+      return reply.code(400).send({ success: false, message: '请检查尺寸、帧数、安全库存和采购周期' })
 
-    const existing = await fastify.prisma.framePackVariant.findUnique({
-      where: { workId_size_frameCount: { workId, size: size.trim(), frameCount: parseInt(frameCount) } }
+    const targetId = `${workId}:${normalizedSize}:${normalizedFrames}`
+    const request = inventoryMutationRequest(req.body, 'FRAME_PACK_VARIANT_CREATE', targetId, operatorId)
+    const outcome = await runInventoryMutation(fastify.prisma, request, async tx => {
+      const work = await tx.framePackWork.findFirst({ where: { id: workId, isActive: true } })
+      if (!work) throw Object.assign(new Error('作品不存在'), { statusCode: 404 })
+      const key = { workId, size: normalizedSize, frameCount: normalizedFrames }
+      const existing = await tx.framePackVariant.findUnique({ where: { workId_size_frameCount: key } })
+      if (existing?.isActive) throw Object.assign(new Error('该尺寸/帧数组合已存在'), { statusCode: 409 })
+      const data = { skuCode: text(skuCode, 50), safetyStock: normalizedSafety, leadTime: normalizedLead, note: text(note) }
+      return existing
+        ? tx.framePackVariant.update({ where: { id: existing.id }, data: { ...data, isActive: true } })
+        : tx.framePackVariant.create({ data: { ...key, ...data, createdBy: operatorId } })
     })
-    if (existing && existing.isActive)
-      return reply.code(409).send({ success: false, message: '该尺寸/帧数组合已存在' })
-
-    const variant = await fastify.prisma.framePackVariant.upsert({
-      where: { workId_size_frameCount: { workId, size: size.trim(), frameCount: parseInt(frameCount) } },
-      create: {
-        workId, size: size.trim(), frameCount: parseInt(frameCount),
-        skuCode: skuCode || null, safetyStock: safetyStock ?? 5,
-        leadTime: leadTime ?? 7, note: note || null, createdBy: operatorId
-      },
-      update: { isActive: true, skuCode: skuCode || null, safetyStock: safetyStock ?? 5, leadTime: leadTime ?? 7, note: note || null }
-    })
-    return reply.send({ success: true, data: variant })
+    return reply.send({ success: true, data: { ...outcome.result, reused: outcome.reused } })
   })
 
   // ─────────────────────────────────────────────
@@ -186,7 +204,7 @@ export default async function framePacksRoutes(fastify) {
   // 编辑变体（编码/安全库存/采购周期/备注）
   // ─────────────────────────────────────────────
   fastify.put('/:workId/variants/:variantId', { preHandler: requireAdmin }, async (req, reply) => {
-    const { variantId } = req.params
+    const { workId, variantId } = req.params
     const { skuCode, safetyStock, leadTime, note } = req.body
 
     const data = {}
@@ -218,24 +236,24 @@ export default async function framePacksRoutes(fastify) {
     const { quantity, note } = req.body
     const operatorId = req.user.userId
 
-    if (!quantity || quantity <= 0)
+    const normalizedQuantity = integer(quantity)
+    if (!normalizedQuantity || normalizedQuantity <= 0)
       return reply.code(400).send({ success: false, message: '数量必须大于0' })
-
-    const variant = await fastify.prisma.framePackVariant.findUnique({ where: { id: variantId } })
-    if (!variant || !variant.isActive)
-      return reply.code(404).send({ success: false, message: '变体不存在' })
-
-    const beforeQty = variant.currentStock
-    const afterQty  = beforeQty + quantity
-
-    await fastify.prisma.$transaction([
-      fastify.prisma.framePackVariant.update({ where: { id: variantId }, data: { currentStock: afterQty } }),
-      fastify.prisma.framePackLog.create({
-        data: { variantId, type: 'purchase_in', quantity, beforeQty, afterQty, operatorId, note: note || null }
+    const request = inventoryMutationRequest(req.body, 'FRAME_PACK_RESTOCK', `${workId}:${variantId}`, operatorId)
+    const outcome = await runInventoryMutation(fastify.prisma, request, async tx => {
+      const variant = await tx.framePackVariant.findFirst({ where: { id: variantId, workId, isActive: true, work: { isActive: true } } })
+      if (!variant) throw Object.assign(new Error('变体不存在'), { statusCode: 404 })
+      const updated = await tx.framePackVariant.update({ where: { id: variantId }, data: { currentStock: { increment: normalizedQuantity } } })
+      await tx.framePackLog.create({
+        data: { variantId, type: 'purchase_in', quantity: normalizedQuantity, beforeQty: updated.currentStock - normalizedQuantity, afterQty: updated.currentStock, operatorId, note: text(note) }
       })
-    ])
-
-    return reply.send({ success: true, message: `✓ 已入库 ${quantity} 套，当前库存 ${afterQty}`, data: { currentStock: afterQty } })
+      return { currentStock: updated.currentStock }
+    })
+    return reply.send({
+      success: true,
+      message: outcome.reused ? '✓ 已恢复入库结果，没有重复增加' : `✓ 已入库 ${normalizedQuantity} 套，当前库存 ${outcome.result.currentStock}`,
+      data: { ...outcome.result, reused: outcome.reused }
+    })
   })
 
   // ─────────────────────────────────────────────
@@ -244,27 +262,40 @@ export default async function framePacksRoutes(fastify) {
   // Body: { delta, note }
   // ─────────────────────────────────────────────
   fastify.post('/:workId/variants/:variantId/adjust', { preHandler: requireAdmin }, async (req, reply) => {
-    const { variantId } = req.params
+    const { workId, variantId } = req.params
     const { delta, note } = req.body
     const operatorId = req.user.userId
 
-    if (!delta || delta === 0) return reply.code(400).send({ success: false, message: '调整量不能为0' })
+    const normalizedDelta = integer(delta)
+    if (!normalizedDelta) return reply.code(400).send({ success: false, message: '调整量不能为0' })
     if (!note?.trim())         return reply.code(400).send({ success: false, message: '手动调整必须填写原因' })
 
-    const variant = await fastify.prisma.framePackVariant.findUnique({ where: { id: variantId } })
-    if (!variant || !variant.isActive) return reply.code(404).send({ success: false, message: '变体不存在' })
-
-    const afterQty = variant.currentStock + delta
-    if (afterQty < 0) return reply.code(400).send({ success: false, message: `调减超出库存（当前：${variant.currentStock}）` })
-
-    await fastify.prisma.$transaction([
-      fastify.prisma.framePackVariant.update({ where: { id: variantId }, data: { currentStock: afterQty } }),
-      fastify.prisma.framePackLog.create({
-        data: { variantId, type: 'manual_adjustment', quantity: Math.abs(delta), beforeQty: variant.currentStock, afterQty, operatorId, note: note.trim() }
+    const request = inventoryMutationRequest(req.body, 'FRAME_PACK_ADJUST', `${workId}:${variantId}`, operatorId)
+    const outcome = await runInventoryMutation(fastify.prisma, request, async tx => {
+      const variant = await tx.framePackVariant.findFirst({ where: { id: variantId, workId, isActive: true, work: { isActive: true } } })
+      if (!variant) throw Object.assign(new Error('变体不存在'), { statusCode: 404 })
+      if (variant.currentStock + normalizedDelta < 0)
+        throw Object.assign(new Error(`调减超出库存（当前：${variant.currentStock}）`), { statusCode: 400 })
+      if (normalizedDelta < 0) {
+        const changed = await tx.framePackVariant.updateMany({
+          where: { id: variantId, workId, isActive: true, currentStock: { gte: Math.abs(normalizedDelta) } },
+          data: { currentStock: { increment: normalizedDelta } }
+        })
+        if (!changed.count) throw Object.assign(new Error('库存已发生变化，请刷新后重试'), { statusCode: 409 })
+      } else {
+        await tx.framePackVariant.update({ where: { id: variantId }, data: { currentStock: { increment: normalizedDelta } } })
+      }
+      const updated = await tx.framePackVariant.findUnique({ where: { id: variantId } })
+      await tx.framePackLog.create({
+        data: { variantId, type: 'manual_adjustment', quantity: Math.abs(normalizedDelta), beforeQty: updated.currentStock - normalizedDelta, afterQty: updated.currentStock, operatorId, note: note.trim().slice(0, 200) }
       })
-    ])
-
-    return reply.send({ success: true, message: `✓ 已调整 ${delta > 0 ? '+' : ''}${delta}，当前库存 ${afterQty}`, data: { currentStock: afterQty } })
+      return { currentStock: updated.currentStock }
+    })
+    return reply.send({
+      success: true,
+      message: outcome.reused ? '✓ 已恢复调整结果，没有重复增减' : `✓ 已调整 ${normalizedDelta > 0 ? '+' : ''}${normalizedDelta}，当前库存 ${outcome.result.currentStock}`,
+      data: { ...outcome.result, reused: outcome.reused }
+    })
   })
 
   // ─────────────────────────────────────────────
