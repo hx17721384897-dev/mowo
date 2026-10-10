@@ -19,7 +19,7 @@
 | `admin-frame-making.html` | `/api/admin/frame-making` | `FRAME_MAKING` | 生产制作；负责人发布 | B6 隔离专项通过 |
 | `admin-frame-imports.html` | `/api/admin/frame-imports` | `FRAME_LIBRARY` + 负责人校验 | 负责人 | B6 隔离专项通过 |
 | `admin-models.html` | `/api/machine-models`、SKU mapping | `CATALOG` | 客服/负责人；写操作按路由控制 | 页面命名岗位检查与静态回归通过 |
-| `admin-inventory.html` | `/api/inventory`、`/api/materials` | `PRODUCTION` | 生产、负责人 | 当前岗位读取已收口 |
+| Vue `/app/admin/inventory` | `/api/inventory`、`/api/materials`、`/api/frame-packs` | `PRODUCTION` | 生产、负责人；帧包配置仅负责人 | V5-D7 正式接管，旧 HTML 已删除 |
 | Vue `/app/admin/orders` | `/api/admin/production-workflow` | `PRODUCTION` | 生产、负责人 | V4-E2 正式接管；旧 HTML 已删除 |
 | Vue `/app/admin/production-batches` | `/api/admin/production-batches` | `PRODUCTION` | 生产、负责人 | V5-A 正式接管；旧 HTML 已删除 |
 | Vue `/app/admin/print-production` | `/api/admin/print-production` | `PRODUCTION_CONFIG` | 负责人 | V5-B 正式接管；旧 HTML 已删除 |

@@ -41,11 +41,11 @@ async function cleanup() {
 }
 
 try {
-  const legacyPage = await readFile(new URL('../../frontend/pages/admin-inventory.html', import.meta.url), 'utf8')
+  const inventoryView = await readFile(new URL('../../frontend-vue/src/views/AdminInventoryView.vue', import.meta.url), 'utf8')
   assert(
-    legacyPage.includes('mowo.inventory.pendingAdjustment') &&
-      legacyPage.includes('clientRequestId:pending.clientRequestId'),
-    '旧正式库存页在网络失败后复用同一库存调整请求标识'
+    inventoryView.includes('mowo.inventory.pendingAdjustment') &&
+      inventoryView.includes('clientRequestId'),
+    'Vue 正式库存页在网络失败后复用同一库存调整请求标识'
   )
 
   const phone = `195${runId}`

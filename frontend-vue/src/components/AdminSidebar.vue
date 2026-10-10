@@ -154,7 +154,7 @@ const groups: MenuGroup[] = [
     icon: '🎯',
     items: [
       { label: '款式管理', icon: '🧩', to: '/admin/models', roles: ownerService },
-      { label: '库存管理', icon: '📊', file: 'admin-inventory.html', roles: ownerProduction }
+      { label: '库存管理', icon: '📊', to: '/admin/inventory', roles: ownerProduction }
     ]
   },
   {
@@ -216,7 +216,7 @@ const activeGroup = computed(() => {
     route.path === '/admin/frame-imports'
   )
     return 'assets'
-  if (route.path === '/admin/models') return 'product'
+  if (route.path === '/admin/models' || route.path === '/admin/inventory') return 'product'
   if (route.path.startsWith('/admin/collab-')) return 'collab'
   if (route.path === '/admin/contact') return 'ops'
   if (route.path === '/admin/logs') return 'system'

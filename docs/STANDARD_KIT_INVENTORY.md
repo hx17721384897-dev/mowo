@@ -18,7 +18,7 @@
 
 ## 二、页面职责
 
-### `admin-inventory.html`
+### Vue `/app/admin/inventory`
 
 - 是零件资料的唯一新增和编辑入口。
 - 顶层明确分为“标准材料包、已分装小包、基础零件、退回检查”，三种库存并列展示。
@@ -139,7 +139,8 @@
 主要页面和接口：
 
 - `frontend/pages/admin-models.html`
-- `frontend/pages/admin-inventory.html`
+- `frontend-vue/src/views/AdminInventoryView.vue`
+- `frontend-vue/src/features/admin-inventory/`
 - `content-service/src/routes/machine-models.js`
 - `content-service/src/routes/materials.js`
 - `content-service/src/routes/inventory.js`

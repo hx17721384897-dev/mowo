@@ -154,19 +154,6 @@ export default async function framePacksRoutes(fastify) {
   })
 
   // ─────────────────────────────────────────────
-  // DELETE /api/frame-packs/:workId
-  // 软删除（连同变体一起下架）
-  // ─────────────────────────────────────────────
-  fastify.delete('/:workId', { preHandler: requireAdmin }, async (req, reply) => {
-    const { workId } = req.params
-    await fastify.prisma.$transaction([
-      fastify.prisma.framePackWork.update({ where: { id: workId }, data: { isActive: false } }),
-      fastify.prisma.framePackVariant.updateMany({ where: { workId }, data: { isActive: false } })
-    ])
-    return reply.send({ success: true })
-  })
-
-  // ─────────────────────────────────────────────
   // POST /api/frame-packs/:workId/variants
   // 添加规格变体
   // Body: { size, frameCount, skuCode?, safetyStock?, leadTime?, note? }
@@ -200,39 +187,12 @@ export default async function framePacksRoutes(fastify) {
   })
 
   // ─────────────────────────────────────────────
-  // PUT /api/frame-packs/:workId/variants/:variantId
-  // 编辑变体（编码/安全库存/采购周期/备注）
-  // ─────────────────────────────────────────────
-  fastify.put('/:workId/variants/:variantId', { preHandler: requireAdmin }, async (req, reply) => {
-    const { workId, variantId } = req.params
-    const { skuCode, safetyStock, leadTime, note } = req.body
-
-    const data = {}
-    if (skuCode      !== undefined) data.skuCode      = skuCode || null
-    if (safetyStock  !== undefined) data.safetyStock  = safetyStock
-    if (leadTime     !== undefined) data.leadTime     = leadTime
-    if (note         !== undefined) data.note         = note
-
-    const updated = await fastify.prisma.framePackVariant.update({ where: { id: variantId }, data })
-    return reply.send({ success: true, data: updated })
-  })
-
-  // ─────────────────────────────────────────────
-  // DELETE /api/frame-packs/:workId/variants/:variantId
-  // ─────────────────────────────────────────────
-  fastify.delete('/:workId/variants/:variantId', { preHandler: requireAdmin }, async (req, reply) => {
-    const { variantId } = req.params
-    await fastify.prisma.framePackVariant.update({ where: { id: variantId }, data: { isActive: false } })
-    return reply.send({ success: true })
-  })
-
-  // ─────────────────────────────────────────────
   // POST /api/frame-packs/:workId/variants/:variantId/restock
   // 入库（管理员 + 生产端 role >= 1）
   // Body: { quantity, note? }
   // ─────────────────────────────────────────────
   fastify.post('/:workId/variants/:variantId/restock', { preHandler: requireProduction }, async (req, reply) => {
-    const { variantId } = req.params
+    const { workId, variantId } = req.params
     const { quantity, note } = req.body
     const operatorId = req.user.userId
 
@@ -296,26 +256,6 @@ export default async function framePacksRoutes(fastify) {
       message: outcome.reused ? '✓ 已恢复调整结果，没有重复增减' : `✓ 已调整 ${normalizedDelta > 0 ? '+' : ''}${normalizedDelta}，当前库存 ${outcome.result.currentStock}`,
       data: { ...outcome.result, reused: outcome.reused }
     })
-  })
-
-  // ─────────────────────────────────────────────
-  // GET /api/frame-packs/:workId/variants/:variantId/logs
-  // ─────────────────────────────────────────────
-  fastify.get('/:workId/variants/:variantId/logs', { preHandler: requireAdmin }, async (req, reply) => {
-    const { variantId } = req.params
-    const { page = 1, limit = 50 } = req.query
-    const skip = (parseInt(page) - 1) * parseInt(limit)
-
-    const [logs, total] = await Promise.all([
-      fastify.prisma.framePackLog.findMany({
-        where: { variantId },
-        orderBy: { createdAt: 'desc' },
-        skip, take: parseInt(limit)
-      }),
-      fastify.prisma.framePackLog.count({ where: { variantId } })
-    ])
-
-    return reply.send({ success: true, data: { logs, total, page: parseInt(page) } })
   })
 
   // ─────────────────────────────────────────────

@@ -4,6 +4,7 @@ export class InventoryMutationConflictError extends Error {
   constructor() {
     super('本次请求标识已用于其他库存操作，请刷新后重试')
     this.code = 'IDEMPOTENCY_KEY_CONFLICT'
+    this.statusCode = 409
   }
 }
 
@@ -22,6 +23,7 @@ export function inventoryMutationRequest(body, action, targetId, operatorId) {
   if (!clientRequestId || clientRequestId.length > 80) {
     const error = new Error('缺少库存操作请求标识，请重新打开操作面板')
     error.code = 'MISSING_IDEMPOTENCY_KEY'
+    error.statusCode = 400
     throw error
   }
   const payload = { ...body }

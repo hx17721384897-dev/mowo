@@ -64,7 +64,7 @@
 | Vue `/app/admin/customization-requests` | 定制申请接收、私有素材查看与任务领取 | 客服只读；生产人员/负责人可领取 | ✅ V4-E1 正式接管，旧工作台已删除 |
 | `admin-logs.html` | 安全记录 | 仅负责人 | ✅ 已更新 |
 | `admin-models.html` | 款式管理 | 运营客服/负责人 | ✅ |
-| `admin-inventory.html` | 库存管理 | 生产人员/负责人 | ✅ |
+| Vue `/app/admin/inventory` | 七域库存管理 | 生产人员/负责人 | ✅ V5-D7 正式接管，旧 HTML 已删除 |
 | `/app/admin/contact`（Vue） | 联络留言管理 | 运营客服/负责人 | ✅ 正式入口；旧 HTML 已删除 |
 | `admin-settlement.html` | 分红结算（待打款/历史记录/确认打款） | 合作运营/负责人 | ✅ 保留 |
 | `admin-bull.html` | 牛量管理（创作者列表/参数配置） | 合作运营/负责人 | ✅ 保留 |
@@ -250,7 +250,7 @@ admin-users.html 支持：
 
 款式管理
   ├── 款式管理 → admin-models.html
-  └── 库存管理 → admin-inventory.html
+  └── 库存管理 → /app/admin/inventory
 
 联名系统
   └── 联名作品 → /app/admin/collab-works

@@ -49,7 +49,7 @@
       key: 'product', label: '商品', icon: '🎯',
       items: [
         { href: `${window.MOWO_APP_BASE || '/app'}/admin/models`, icon: '🧩', label: '款式管理' },
-        { href: 'admin-inventory.html', icon: '📊', label: '库存管理' }
+        { href: `${window.MOWO_APP_BASE || '/app'}/admin/inventory`, icon: '📊', label: '库存管理' }
       ]
     },
     {
@@ -93,7 +93,7 @@
   };
 
   const STAFF_HIDDEN_ITEMS = {
-    CUSTOMER_SERVICE: new Set(['admin-inventory.html', `${window.MOWO_APP_BASE || '/app'}/admin/print-production`]),
+    CUSTOMER_SERVICE: new Set([`${window.MOWO_APP_BASE || '/app'}/admin/inventory`, `${window.MOWO_APP_BASE || '/app'}/admin/print-production`]),
     PRODUCTION: new Set([`${window.MOWO_APP_BASE || '/app'}/admin/models`, `${window.MOWO_APP_BASE || '/app'}/admin/frame-imports`, `${window.MOWO_APP_BASE || '/app'}/admin/print-production`]),
     COLLAB_OPS: new Set([`${window.MOWO_APP_BASE || '/app'}/admin/frame-making`, `${window.MOWO_APP_BASE || '/app'}/admin/frame-imports`])
   };

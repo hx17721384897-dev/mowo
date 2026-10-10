@@ -379,6 +379,10 @@ test('candidate renders SKU stock safely and keeps the seven-domain geometry', a
   await mockPage(page)
   await page.goto('/app/admin/inventory')
   await expect(page.getByRole('heading', { name: '库存管理' })).toBeVisible()
+  await expect(page.getByRole('link', { name: '库存管理' })).toHaveAttribute(
+    'href',
+    '/app/admin/inventory'
+  )
   await expect(page.locator('.main-tab')).toHaveCount(7)
   await expect(page.locator('.content > .stats-grid .stat-card')).toHaveCount(6)
   await expect(page.getByText('<img src=x onerror=alert(1)>测试款')).toBeVisible()

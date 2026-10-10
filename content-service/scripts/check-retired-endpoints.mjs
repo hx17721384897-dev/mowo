@@ -36,7 +36,10 @@ const probes = [
   '/api/admin/collab/retired-work/frame-packs/S/restock',
   '/api/admin/collab/policy',
   '/api/admin/contracts',
-  '/api/certify/status'
+  '/api/certify/status',
+  '/api/frame-packs/retired-work',
+  '/api/frame-packs/retired-work/variants/retired-variant',
+  '/api/frame-packs/retired-work/variants/retired-variant/logs'
 ]
 const methods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
 
@@ -115,7 +118,7 @@ try {
     for (const path of probes) {
       for (const method of methods) {
         const response = await request(path, token, method)
-        const expected = path.startsWith('/api/admin/')
+        const expected = path.startsWith('/api/admin/') || path.startsWith('/api/frame-packs/')
           ? ({ anonymous: 401, user: 403, staff: 404 })[caller]
           : 404
         assert(response.status === expected, `${caller} ${method} ${path}: expected ${expected}, received ${response.status}`)

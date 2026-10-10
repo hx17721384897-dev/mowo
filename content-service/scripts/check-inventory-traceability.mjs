@@ -1,7 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import { requireIsolatedTestDatabase } from './test-db-guard.mjs'
 import { readFileSync } from 'node:fs'
-import { parse } from 'acorn'
 
 requireIsolatedTestDatabase()
 const prisma = new PrismaClient()
@@ -59,17 +58,11 @@ async function cleanup() {
 }
 
 try {
-  let html = ''
-  for (const file of ['../../frontend/pages/admin-inventory.html']) {
-    const sourceHtml = readFileSync(new URL(file, import.meta.url), 'utf8')
-    if (file.includes('admin-inventory')) html = sourceHtml
-    for (const [,source] of sourceHtml.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)) {
-      parse(source, {ecmaVersion:'latest',sourceType:'script'})
-    }
-  }
-  assert(html.includes('panelPacked') && html.includes('panelRaw') && html.includes('panelReturns'), '库存页面明确分为分装小包、基础零件和退回检查')
-  assert(!html.includes('零件只能在库存页维护；款式页只能选择使用'), '新增零件弹窗不显示内部维护说明')
-  assert(!html.includes('id="matModalCode"') && html.includes('id="matNameSelect"') && html.includes('id="matUnitSelect"'), '编码自动生成，名称和单位使用可管理的下拉列表')
+  const view = readFileSync(new URL('../../frontend-vue/src/views/AdminInventoryView.vue', import.meta.url), 'utf8')
+  const materials = readFileSync(new URL('../../frontend-vue/src/features/admin-inventory/MaterialInventoryPanel.vue', import.meta.url), 'utf8')
+  assert(view.includes('mode="PACKED"') && view.includes('mode="RAW"') && view.includes('ReturnInventoryPanel'), 'Vue 库存页面明确分为分装小包、基础零件和退回检查')
+  assert(!materials.includes('零件只能在库存页维护；款式页只能选择使用'), '新增零件弹窗不显示内部维护说明')
+  assert(!materials.includes('零件编码') && materials.includes('aria-label="零件名称"') && materials.includes('aria-label="单位"'), '编码自动生成，名称和单位使用可管理的下拉列表')
 
   const phone = `194${runId}`
   const user = await prisma.user.create({data:{phone,role:3,staffRole:'OWNER',privacyAgreedAt:new Date(),privacyPolicyVersion:'inventory-trace-test',profile:{create:{nickname:`trace-${runId}`}}}})
@@ -135,22 +128,22 @@ try {
   const original=await prisma.customizeOrder.create({data:{orderNo:`PU-${runId}`,userId,modelId,modelName:model.name,frameCount:12,size:'5x5cm',material:'椴木板',color:'#ddd',colorName:'原色',skuId,ossPath:'test',frameUrls:'[]',status:'received'}})
   originalOrderId=original.id
   const aftersale=await prisma.aftersaleRequest.create({data:{orderId:original.id,userId,type:'quality',reason:'自动测试',status:'approved'}})
-  const receive=await api('/api/inventory/returns/receive',token,{method:'POST',body:JSON.stringify({aftersaleRequestId:aftersale.id,trackingNo:`SF${runId}`})})
+  const receive=await api('/api/inventory/returns/receive',token,{method:'POST',body:JSON.stringify({aftersaleRequestId:aftersale.id,trackingNo:`SF${runId}`,clientRequestId:`trace-return-receive-${runId}`})})
   const receipt=(await receive.json()).data
   assert(receive.ok && receipt.status==='QUARANTINED','退回收货后先进入隔离状态，不直接增加库存')
   const stockBefore=(await prisma.skuInventory.findUnique({where:{skuId}})).currentStock
-  const inspect=await api(`/api/inventory/returns/${receipt.id}/inspect`,token,{method:'POST',body:JSON.stringify({packageCondition:'UNOPENED_INTACT',receivedQty:1})})
+  const inspect=await api(`/api/inventory/returns/${receipt.id}/inspect`,token,{method:'POST',body:JSON.stringify({packageCondition:'UNOPENED_INTACT',receivedQty:1,clientRequestId:`trace-return-inspect-${runId}`})})
   assert(inspect.ok && (await prisma.skuInventory.findUnique({where:{skuId}})).currentStock===stockBefore+1,'未拆封完整材料包检查合格后以新批次回到新品库存')
   assert(Boolean(await prisma.kitAssemblyBatch.findFirst({where:{sourceReturnReceiptId:receipt.id,batchType:'RETURN_RECOVERED'}})),'回库批次保留退回来源链')
-  const replacement=await api(`/api/inventory/returns/${receipt.id}/replacement`,token,{method:'POST',body:'{}'})
+  const replacement=await api(`/api/inventory/returns/${receipt.id}/replacement`,token,{method:'POST',body:JSON.stringify({clientRequestId:`trace-return-replacement-${runId}`})})
   const replacementJson=await replacement.json()
   assert(replacement.ok && replacementJson.data.replacementForId===original.id,'补发会创建新生产任务并关联原任务')
 
   const aftersale2=await prisma.aftersaleRequest.create({data:{orderId:original.id,userId,type:'quality',reason:'维修备用测试',status:'approved'}})
-  const receive2=await api('/api/inventory/returns/receive',token,{method:'POST',body:JSON.stringify({aftersaleRequestId:aftersale2.id})})
+  const receive2=await api('/api/inventory/returns/receive',token,{method:'POST',body:JSON.stringify({aftersaleRequestId:aftersale2.id,clientRequestId:`trace-return-receive-opened-${runId}`})})
   const receipt2=(await receive2.json()).data
   const normalBefore=(await prisma.materialItem.findUnique({where:{id:board.id}})).currentStock
-  const inspect2=await api(`/api/inventory/returns/${receipt2.id}/inspect`,token,{method:'POST',body:JSON.stringify({packageCondition:'OPENED',receivedQty:1,items:[{inventoryLevel:'BASE',materialId:board.id,receivedQty:1,disposition:'SERVICE_ONLY'}]})})
+  const inspect2=await api(`/api/inventory/returns/${receipt2.id}/inspect`,token,{method:'POST',body:JSON.stringify({packageCondition:'OPENED',receivedQty:1,items:[{inventoryLevel:'BASE',materialId:board.id,receivedQty:1,disposition:'SERVICE_ONLY'}],clientRequestId:`trace-return-inspect-opened-${runId}`})})
   const boardAfter=await prisma.materialItem.findUnique({where:{id:board.id}})
   assert(inspect2.ok && boardAfter.currentStock===normalBefore && boardAfter.serviceStock===1,'已拆封可复用零件只进入维修备用，不混入新品库存')
 

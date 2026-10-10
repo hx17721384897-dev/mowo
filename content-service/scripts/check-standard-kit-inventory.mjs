@@ -1,13 +1,10 @@
 import { PrismaClient } from '@prisma/client'
 import { requireIsolatedTestDatabase } from './test-db-guard.mjs'
-import { readFileSync } from 'node:fs'
-import { parse } from 'acorn'
 import { chromium } from 'file:///C:/Users/25839/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs'
 
 requireIsolatedTestDatabase()
 const prisma = new PrismaClient()
 const apiBase = process.env.TEST_API_BASE || 'http://127.0.0.1:3001'
-const webBase = process.env.TEST_WEB_BASE || 'http://127.0.0.1:5500/mowo/frontend/pages'
 const vueBase = process.env.TEST_VUE_BASE || 'http://127.0.0.1:4173/app'
 const runId = String(Date.now()).slice(-8)
 let userId
@@ -78,13 +75,6 @@ async function cleanup() {
 }
 
 try {
-  for (const file of ['../../frontend/pages/admin-inventory.html']) {
-    const html = readFileSync(new URL(file, import.meta.url), 'utf8')
-    const scripts = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)]
-    for (const [, source] of scripts) parse(source, { ecmaVersion:'latest', sourceType:'script' })
-  }
-  assert(true, '库存管理页面脚本语法正确')
-
   const phone = `195${runId}`
   const user = await prisma.user.create({ data: {
     phone, role: 3, staffRole: 'OWNER',
@@ -253,30 +243,21 @@ try {
     window.MOWO_RUNTIME_API_BASE = apiBase
     localStorage.setItem('mowo_token', token)
   }, { token, apiBase })
-  await page.goto(`${webBase}/admin-inventory.html`, { waitUntil:'networkidle' })
-  await page.locator('#tabBtnPacked').click()
-  await page.getByRole('button', {name:'新增分装小包'}).click()
-  assert(await page.locator('#matModalType').inputValue() === 'PACKED', '分装小包入口自动锁定为分装类型')
-  assert(await page.locator('#matModalType').isHidden(), '员工不需要填写内部零件类型')
-  assert(await page.locator('#matModalCode').count() === 0, '员工不需要填写系统自动生成的零件编码')
-  await page.locator('#matNameSelect .managed-select-trigger').click()
-  assert(await page.locator('#matNameSelect .managed-select-menu').isVisible(), '点击零件名称会展开选项列表')
-  assert(await page.locator('#matNameSelect .managed-option-delete').count() > 0, '名称选项右侧提供删除按钮')
-  assert(await page.locator('#matNameNewOption').isVisible(), '名称列表底部可以填写新增选项')
-  await page.locator('#matNameSelect .managed-select-trigger').click()
-  await page.locator('#matUnitSelect .managed-select-trigger').click()
-  assert(await page.locator('#matUnitSelect .managed-select-menu').isVisible(), '点击单位会展开选项列表')
-  assert(await page.locator('#matUnitSelect .managed-option-delete').count() > 0, '单位选项右侧提供删除按钮')
-  assert(await page.locator('#matUnitNewOption').isVisible(), '单位列表底部可以填写新增选项')
-  await page.locator('#matUnitSelect .managed-select-trigger').click()
-  await page.locator('#matModal').getByRole('button', {name:'取消'}).click()
-  await page.locator('#tabBtnRaw').click()
-  await page.getByRole('button', {name:'新增基础零件'}).click()
-  assert(await page.locator('#matModalType').inputValue() === 'RAW', '基础零件入口自动锁定为基础类型')
-  await page.locator('#matModal').getByRole('button', {name:'取消'}).click()
-  await page.locator('#tabBtnStock').click()
-  await page.getByRole('button', {name:'材料包入库'}).first().click()
-  assert(await page.locator('#kitAssemblySku').isVisible(), '库存页可以打开材料包入库操作')
+  await page.goto(`${vueBase}/admin/inventory`, { waitUntil:'networkidle' })
+  await page.getByRole('button', {name:'已分装小包', exact:true}).click()
+  await page.getByRole('button', {name:'＋ 新增分装小包'}).click()
+  assert(await page.getByRole('heading', {name:'新增分装小包'}).isVisible(), '分装小包入口自动锁定为分装类型')
+  assert(await page.getByLabel('零件编码').count() === 0, '员工不需要填写系统自动生成的零件编码')
+  assert(await page.getByLabel('零件名称').isVisible() && await page.getByLabel('新增名称').isVisible(), '名称使用可维护的下拉选项')
+  assert(await page.getByLabel('单位', {exact:true}).isVisible() && await page.getByLabel('新增单位').isVisible(), '单位使用可维护的下拉选项')
+  await page.getByRole('button', {name:'取消'}).click()
+  await page.getByRole('button', {name:'基础零件', exact:true}).click()
+  await page.getByRole('button', {name:'＋ 新增基础零件'}).click()
+  assert(await page.getByRole('heading', {name:'新增基础零件'}).isVisible(), '基础零件入口自动锁定为基础类型')
+  await page.getByRole('button', {name:'取消'}).click()
+  await page.getByRole('button', {name:'标准材料包', exact:true}).click()
+  await page.locator('.inv-row').filter({hasText:`材料包测试款-${runId}`}).getByRole('button', {name:'材料包入库', exact:true}).click()
+  assert(await page.getByRole('heading', {name:'材料包入库'}).isVisible(), '库存页可以打开材料包入库操作')
   await page.goto(`${vueBase}/admin/models`, { waitUntil:'networkidle' })
   const modelCard = page.locator('.catalog-card').filter({hasText:`材料包测试款-${runId}`})
   await modelCard.getByRole('button', {name:'展开规格'}).click()

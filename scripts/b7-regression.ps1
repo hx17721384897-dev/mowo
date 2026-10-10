@@ -115,6 +115,8 @@ try {
     'check:mixed-checkout-ui',
     'check:standard-kit-inventory',
     'check:inventory-traceability',
+    'check:inventory-adjustment-idempotency',
+    'check:frame-pack-inventory',
     'check:production-batches',
     'check:print-production',
     'check:frame-library',
