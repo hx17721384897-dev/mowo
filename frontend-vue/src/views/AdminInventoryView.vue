@@ -79,13 +79,13 @@ const stats = computed(() => ({
   wip: rows.value.reduce((sum, row) => sum + Number(row.wipFrameQty || 0), 0)
 }))
 const tabs = [
-  '标准材料包',
-  '已分装小包',
-  '基础零件',
-  '退回检查',
-  '变动记录',
-  '渠道配额',
-  '帧包库存'
+  { icon: '📦', label: '标准材料包' },
+  { icon: '🧺', label: '已分装小包' },
+  { icon: '🧩', label: '基础零件' },
+  { icon: '↩', label: '退回检查' },
+  { icon: '📋', label: '变动记录' },
+  { icon: '📡', label: '渠道配额' },
+  { icon: '🎞', label: '帧包库存' }
 ]
 const alertOptions: { value: AlertLevel | ''; label: string }[] = [
   { value: '', label: '全部' },
@@ -165,6 +165,9 @@ function closeDrawer() {
   drawerOpen.value = false
   detail.value = null
 }
+function openKitAssembly(skuId: string) {
+  packedPanel.value?.openAssembly(skuId)
+}
 function requestId(skuId: string, quantity: number, note: string) {
   const fingerprint = JSON.stringify({ skuId, quantity, note })
   try {
@@ -236,7 +239,6 @@ onBeforeUnmount(() => window.clearTimeout(noticeTimer))
 
 <template>
   <div class="admin-inventory-page">
-    <div class="sidebar-backdrop" :class="{ show: mobileOpen }" @click="mobileOpen = false"></div>
     <AdminSidebar
       :mobile-open="mobileOpen"
       @mobile-close="mobileOpen = false"
@@ -253,18 +255,23 @@ onBeforeUnmount(() => window.clearTimeout(noticeTimer))
       <div class="content">
         <div class="stats-grid">
           <div class="stat-card">
+            <i class="stat-dot green"></i>
             <span>SKU 总数</span><strong>{{ stats.total }}</strong>
           </div>
           <div class="stat-card critical">
+            <i class="stat-dot orange"></i>
             <span>紧急不足</span><strong>{{ stats.critical }}</strong>
           </div>
           <div class="stat-card warning">
+            <i class="stat-dot yellow"></i>
             <span>库存偏低</span><strong>{{ stats.warning }}</strong>
           </div>
           <div class="stat-card">
+            <i class="stat-dot green"></i>
             <span>总可用库存</span><strong>{{ stats.available }}</strong>
           </div>
           <div class="stat-card locked">
+            <i class="stat-dot blue-dot"></i>
             <span>总锁定量</span><strong>{{ stats.locked }}</strong
             ><small>待支付 + 待生产</small>
           </div>
@@ -284,7 +291,7 @@ onBeforeUnmount(() => window.clearTimeout(noticeTimer))
         <div class="main-tabs" aria-label="库存领域候选进度">
           <button
             v-for="(tab, index) in tabs"
-            :key="tab"
+            :key="tab.label"
             class="main-tab"
             :class="{ active: index === activeTab }"
             type="button"
@@ -292,7 +299,7 @@ onBeforeUnmount(() => window.clearTimeout(noticeTimer))
             :title="index > 5 ? '后续库存切片迁移' : ''"
             @click="activeTab = index"
           >
-            {{ tab }}
+            <span aria-hidden="true">{{ tab.icon }}</span> {{ tab.label }}
           </button>
         </div>
         <section v-if="activeTab === 0" class="stock-panel">
@@ -330,13 +337,15 @@ onBeforeUnmount(() => window.clearTimeout(noticeTimer))
             </div>
             <div v-if="loading" class="empty">正在加载…</div>
             <div v-else-if="!visibleRows.length" class="empty">📦 没有符合条件的记录</div>
-            <button
+            <div
               v-for="row in visibleRows"
               v-else
               :key="row.skuId"
               class="inv-row"
-              type="button"
+              role="button"
+              tabindex="0"
               @click="openDrawer(row)"
+              @keydown.enter.self="openDrawer(row)"
             >
               <span class="alert-dot" :class="row.alertLevel.toLowerCase()"></span>
               <strong>{{ row.modelName }}</strong>
@@ -357,8 +366,18 @@ onBeforeUnmount(() => window.clearTimeout(noticeTimer))
                   badgeText[row.alertLevel]
                 }}</small></span
               >
-              <span class="btn btn-sm">详情</span>
-            </button>
+              <span class="row-actions"
+                ><button
+                  class="btn btn-green btn-xs"
+                  type="button"
+                  @click.stop="openKitAssembly(row.skuId)"
+                >
+                  材料包入库</button
+                ><button class="btn btn-sm" type="button" @click.stop="openDrawer(row)">
+                  详情
+                </button></span
+              >
+            </div>
           </div>
           <div v-if="pageCount > 1" class="pagination">
             <span>共 {{ filtered.length }} 条 / 第 {{ page }} 页</span
@@ -374,9 +393,9 @@ onBeforeUnmount(() => window.clearTimeout(noticeTimer))
           </div>
         </section>
         <MaterialInventoryPanel
-          v-show="activeTab === 1"
           ref="packedPanel"
           mode="PACKED"
+          :visible="activeTab === 1"
           :inventory="rows"
           @flash="flash"
           @inventory-changed="refresh"
@@ -390,9 +409,9 @@ onBeforeUnmount(() => window.clearTimeout(noticeTimer))
         <InventoryLogsPanel v-show="activeTab === 4" ref="logsPanel" @flash="flash" />
         <ChannelQuotaPanel v-show="activeTab === 5" ref="quotaPanel" @flash="flash" />
         <MaterialInventoryPanel
-          v-show="activeTab === 2"
           ref="rawPanel"
           mode="RAW"
+          :visible="activeTab === 2"
           :inventory="rows"
           @flash="flash"
           @inventory-changed="refresh"

@@ -29,7 +29,11 @@ import {
   type MaterialPlan
 } from './api'
 
-const props = defineProps<{ mode: 'PACKED' | 'RAW'; inventory: InventoryRow[] }>()
+const props = defineProps<{
+  mode: 'PACKED' | 'RAW'
+  inventory: InventoryRow[]
+  visible: boolean
+}>()
 const emit = defineEmits<{ flash: [message: string, error?: boolean]; inventoryChanged: [] }>()
 const items = ref<MaterialItem[]>([]),
   loading = ref(false),
@@ -308,8 +312,8 @@ async function submitPreparation() {
     busy.value = false
   }
 }
-function openAssembly() {
-  Object.assign(assembly, { skuId: '', quantity: 0, boxCode: '', location: '', note: '' })
+function openAssembly(skuId = '') {
+  Object.assign(assembly, { skuId, quantity: 0, boxCode: '', location: '', note: '' })
   assemblyPlan.value = null
   Object.keys(assemblyOverrides).forEach((key) => delete assemblyOverrides[key])
   modal.value = 'assemble'
@@ -628,7 +632,7 @@ watch(
 </script>
 
 <template>
-  <section class="material-panel">
+  <section v-show="visible" class="material-panel">
     <div class="toolbar">
       <div v-if="mode === 'PACKED'" class="filter-tabs">
         <button
@@ -648,7 +652,7 @@ watch(
         <button class="btn btn-black" type="button" @click="openDefinition()">
           ＋ {{ mode === 'PACKED' ? '新增分装小包' : '新增基础零件' }}
         </button>
-        <button v-if="mode === 'PACKED'" class="btn" type="button" @click="openAssembly">
+        <button v-if="mode === 'PACKED'" class="btn" type="button" @click="openAssembly()">
           材料包入库
         </button>
       </div>

@@ -336,6 +336,37 @@ test('candidate renders SKU stock safely and keeps the seven-domain geometry', a
   await expect(page.locator('.inv-row')).toHaveCount(1)
 })
 
+test('inventory keeps legacy tablet geometry and isolates inactive material domains', async ({
+  page
+}) => {
+  await page.setViewportSize({ width: 900, height: 900 })
+  await mockPage(page)
+  await page.goto('/app/admin/inventory')
+
+  await expect(page.getByRole('button', { name: '☰' })).toBeVisible()
+  const mainBox = await page.locator('.admin-inventory-page .main').boundingBox()
+  expect(mainBox?.x).toBeLessThanOrEqual(1)
+  await expect(page.getByRole('button', { name: '＋ 新增分装小包' })).toBeHidden()
+  await expect(page.getByRole('button', { name: '＋ 新增基础零件' })).toBeHidden()
+
+  await page
+    .locator('.inv-row')
+    .first()
+    .getByRole('button', { name: '材料包入库', exact: true })
+    .click()
+  await expect(page.getByLabel('材料包 SKU *')).toHaveValue('sku-1')
+  await page.getByRole('button', { name: '取消' }).click()
+
+  await page.getByRole('button', { name: '已分装小包', exact: true }).click()
+  await expect(page.getByRole('button', { name: '＋ 新增分装小包' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '＋ 新增基础零件' })).toBeHidden()
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1
+    )
+  ).toBe(true)
+})
+
 test('candidate reuses one adjustment key after a lost response and saves settings', async ({
   page
 }) => {
