@@ -20,6 +20,7 @@
     "test-db:rebuild": "node scripts/test-database.mjs rebuild",
     "test-db:status": "node scripts/test-database.mjs status",
     "check:backup-restore": "node scripts/check-backup-restore.mjs",
+    "audit:daily-db": "node scripts/audit-daily-database.mjs",
     "check:b7": "pwsh -File ../scripts/b7-regression.ps1",
     "check:private-files": "node scripts/check-private-files.mjs",
     "check:account-deletion": "node scripts/check-account-deletion.mjs",

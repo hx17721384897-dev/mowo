@@ -27,6 +27,7 @@
 | `V1A_PUBLIC_SITE_MIGRATION.md` | 当前迁移记录 | V1a 公共页面、旧 URL 302、交接边界、自动验收与人工复验范围 |
 | `V3_TRANSACTION_MIGRATION.md` | 当前交易迁移记录 | V3-0～V3-E 工程完成；Vue 正式入口、旧 URL 302、旧页物理删除、隔离回归和待人工视觉复查 |
 | `V6_FRONTEND_RETIREMENT_AND_ACCEPTANCE.md` | 当前 V6 验收台账 | 旧前端删除证据、正式功能矩阵、唯一保留页和 V6-B～D 未完成边界 |
+| `V6_DATABASE_BASELINE.md` | 当前数据库安全基线 | V6-B 只读审计、备份证据、日常库结构差异和禁止直接补迁移边界 |
 | `PROJECT_INDEX.md` | 当前总索引 | 本轮更新；负责阅读顺序、代码版图和文档规则 |
 | `RELEASE_SCOPE.md` | 当前产品边界 | 需在后续批次复核“当前发布事实”和上线阻断项 |
 | `REMEDIATION_ROADMAP.md` | 当前整改路线 | Web 核心流程已更新；历史定制段落仍需在本轮分批收口 |

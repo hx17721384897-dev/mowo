@@ -1,6 +1,6 @@
 # 数据库 Schema 与迁移事实
 
-> 调查基准：2026-08-13；结构数量更新：2026-09-04。应用层事实来自当前 `content-service/prisma/schema.prisma`；实际库来自对本机 `mowo_db` 的检查；迁移事实来自 `prisma/migrations/` 和 `_prisma_migrations` 状态。
+> 历史调查基准：2026-08-13；结构数量更新：2026-09-04。以下数量不再代表当前状态。2026-10-11 的 73 迁移基线、日常库只读差异、备份证据和安全处理顺序以 `../V6_DATABASE_BASELINE.md` 为准。
 
 ## 调查范围与结论
 

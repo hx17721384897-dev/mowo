@@ -4,7 +4,9 @@
 >
 > 调查基准：2026-08-13，进度更新：2026-09-11。本文档区分“已核对代码事实”“原规划”“待确认”，不把规划自动视为已实现。
 
-> 当前进度（2026-10-11）：L0、R0/R1、V0～V5 已完成，V5 空库迁移与全回归已关闭；V6-A 已完成全仓旧前端消费者审计和首轮物理删除。正式 Web 官网、用户端、交易、后台与生产页面均使用 `frontend-vue/`，旧 URL 仅由部署层临时 302；唯一旧页面是后台人工筛帧专用 `customize-editor.html`。V6 数据库安全基线、最终人工矩阵和 CI 长期门禁仍待完成，不能据此邀请真实用户。当前执行入口为 `VUE_FRONTEND_REFACTOR_PLAN.md`，V6 证据见 `V6_FRONTEND_RETIREMENT_AND_ACCEPTANCE.md`。
+> 当前进度（2026-10-11）：L0、R0/R1、V0～V5、V6-A 和 V6-B 已完成。正式 Web 页面均使用 `frontend-vue/`，旧 URL 仅由部署层临时 302；唯一旧页面是后台人工筛帧专用 `customize-editor.html`。日常 `mowo_db` 已完成只读审计和本地备份，但结构不能直接承载当前服务；API/回归继续使用 `mowo_b1_test`。V6-C 最终人工矩阵和 V6-D CI 长期门禁仍待完成，不能据此邀请真实用户。当前执行入口为 `VUE_FRONTEND_REFACTOR_PLAN.md`，V6 证据见 `V6_FRONTEND_RETIREMENT_AND_ACCEPTANCE.md` 和 `V6_DATABASE_BASELINE.md`。
+
+> 下列 V4 阶段段落是实施时的历史进度快照，不覆盖上述当前状态。
 
 > V4-0 已启动：Vue 后台入口加服务器确认的命名岗位门禁，业务后台仍使用旧页面；范围、权限差异和分段见 `V4_ADMIN_MIGRATION.md`。V3 订单实单人工验收因暂无订单延后。
 
@@ -17,6 +19,7 @@
 1. `README.md`：产品定位、启动方式和最短项目简介。
 2. `docs/PROJECT_ENGINEERING_AND_ARCHITECTURE_PLAN.md`：已封版 L0 的证据、边界和历史批次。
 3. `docs/VUE_FRONTEND_REFACTOR_PLAN.md`：当前接续计划、H0/R0/R1/V0-V6 顺序和验收门槛。
+   V6 旧前端退役与最终验收见 `docs/V6_FRONTEND_RETIREMENT_AND_ACCEPTANCE.md`；日常库安全基线见 `docs/V6_DATABASE_BASELINE.md`。
    交易页正式入口、旧 URL 和隔离验收见 `docs/V3_TRANSACTION_MIGRATION.md`。
 4. `docs/PROJECT_INDEX.md`：项目地图、文档分层和调查进度。
 5. `docs/R0_BACKEND_DATABASE_BASELINE.md`：Vue 可消费的后端/数据库证据、隔离边界和失败处置。
@@ -58,8 +61,8 @@
 
 ### 主仓库 `mowo/`
 
-- `frontend-vue/`：当前正式 Web 公共页、用户定制、混合购物车、结算和订单页；V6 前保留独立工程目录。
-- `frontend/`：尚未迁移的管理后台、生产和共享编辑器内部模式等旧 HTML/JS；用户交易四页已物理删除。
+- `frontend-vue/`：当前正式 Web 官网、用户定制、交易、管理后台与生产端实现。
+- `frontend/`：只暂留后台人工筛帧专用 `customize-editor.html` 及其依赖；其余旧正式页面已物理删除。
 - `content-service/`：Node.js ESM + Fastify 5 API 服务，Prisma 5 访问 PostgreSQL；本地开发使用私有目录保存测试文件，正式环境计划使用私有阿里云 OSS。
 - `crmeb/`：当前只有 `.gitkeep` 占位文件，没有外部商城代码；早期规划曾拟接 CRMEB，首发已决定不接入。
 - `docs/`：架构、接口、数据库、前端清单、用户场景和专项计划。
