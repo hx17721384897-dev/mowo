@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import AdminSidebar from '@/components/AdminSidebar.vue'
-import { runtimeConfig } from '@/config/runtime'
 import {
   contactStatuses,
   contactTypes,
@@ -322,8 +321,8 @@ function extraLink(key: string): string | null {
 function attachmentLink(url: string): string | null {
   return safeExternalLink(url)
 }
-function userLink(id: string): string {
-  return `${runtimeConfig.legacyWebBase}/admin-users.html?highlight=${encodeURIComponent(id)}`
+function userLink(id: string) {
+  return { name: 'admin-users', query: { highlight: id } }
 }
 
 onMounted(() => {
@@ -671,12 +670,12 @@ onBeforeUnmount(() => {
               <div class="dfield">
                 <div class="dlabel">提交账号</div>
                 <div class="dvalue">
-                  <a
+                  <RouterLink
                     v-if="detail.submitterUserId"
-                    :href="userLink(detail.submitterUserId)"
+                    :to="userLink(detail.submitterUserId)"
                     target="_blank"
                     rel="noopener noreferrer"
-                    >查看用户主页 →</a
+                    >查看用户主页 →</RouterLink
                   ><span v-else>未登录提交</span>
                 </div>
               </div>

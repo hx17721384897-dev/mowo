@@ -1,14 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { runtimeConfig } from '@/config/runtime'
 import { useSessionStore } from '@/stores/session'
 import type { StaffRole } from '@/services/auth-session'
 
 type MenuItem = {
   label: string
   icon: string
-  file?: string
   to?: string
   key?: string
   children?: MenuItem[]
@@ -174,7 +172,7 @@ const groups: MenuGroup[] = [
     key: 'collab',
     label: '联名',
     icon: '🤝',
-    items: [{ label: '联名作品', icon: '🎨', file: 'admin-collab-works.html', roles: ownerCollab }]
+    items: [{ label: '联名作品', icon: '🎨', to: '/admin/collab-works', roles: ownerCollab }]
   },
   {
     key: 'ops',
@@ -187,15 +185,15 @@ const groups: MenuGroup[] = [
     label: '用户',
     icon: '👥',
     items: [
-      { label: '用户列表', icon: '👤', file: 'admin-users.html', roles: ownerService },
-      { label: '注销任务', icon: '⚠', file: 'admin-account-deletions.html', roles: ownerService }
+      { label: '用户列表', icon: '👤', to: '/admin/users', roles: ownerService },
+      { label: '注销任务', icon: '⚠', to: '/admin/account-deletions', roles: ownerService }
     ]
   },
   {
     key: 'system',
     label: '系统',
     icon: '⚙️',
-    items: [{ label: '审计日志', icon: '📋', file: 'admin-logs.html', roles: ['OWNER'] }]
+    items: [{ label: '审计日志', icon: '📋', to: '/admin/logs', roles: ['OWNER'] }]
   }
 ]
 
@@ -258,22 +256,6 @@ const roleLabel = computed(
       COLLAB_OPS: '合作运营'
     })[session.staffRole ?? 'OWNER']
 )
-const legacyUrl = (file: string): string => `${runtimeConfig.legacyWebBase}/${file}`
-function isActiveLegacy(file: string): boolean {
-  const routes: Record<string, string> = {
-    'admin-collab-works.html': '/admin/collab-works',
-    'admin-users.html': '/admin/users',
-    'admin-account-deletions.html': '/admin/account-deletions',
-    'admin-logs.html': '/admin/logs'
-  }
-  return routes[file] === route.path
-}
-function isActiveScanChild(file: string): boolean {
-  if (route.path !== '/admin/production-scan') return false
-  const station = file.split('#')[1] || 'overview'
-  return (route.hash.slice(1) || 'overview') === station
-}
-
 function toggleGroup(key: string): void {
   openGroups.value = openGroups.value.includes(key)
     ? openGroups.value.filter((item) => item !== key)
@@ -320,7 +302,7 @@ function toggleNested(key: string): void {
           ><span class="nav-group-arrow">▾</span>
         </button>
         <div class="nav-sub" :class="{ open: openGroups.includes(group.key) }">
-          <template v-for="item in group.items" :key="item.file || item.key || item.to">
+          <template v-for="item in group.items" :key="item.key || item.to">
             <div v-if="item.children && item.key" class="nav-nested">
               <button
                 class="nav-sub-parent"
@@ -333,7 +315,7 @@ function toggleNested(key: string): void {
                 ><span class="nav-third-arrow">▾</span>
               </button>
               <div class="nav-third" :class="{ open: openNested.includes(item.key) }">
-                <template v-for="child in item.children" :key="child.to || child.file">
+                <template v-for="child in item.children" :key="child.to">
                   <RouterLink
                     v-if="child.to"
                     class="nav-third-item"
@@ -348,14 +330,6 @@ function toggleNested(key: string): void {
                     ><span class="nav-icon">{{ child.icon }}</span
                     ><span class="nav-label">{{ child.label }}</span></RouterLink
                   >
-                  <a
-                    v-else
-                    class="nav-third-item"
-                    :class="{ active: isActiveScanChild(child.file!) }"
-                    :href="legacyUrl(child.file!)"
-                    ><span class="nav-icon">{{ child.icon }}</span
-                    ><span class="nav-label">{{ child.label }}</span></a
-                  >
                 </template>
               </div>
             </div>
@@ -367,14 +341,6 @@ function toggleNested(key: string): void {
               @click="mobileOpen = false"
               ><span class="nav-icon">{{ item.icon }}</span
               ><span class="nav-label">{{ item.label }}</span></RouterLink
-            >
-            <a
-              v-else-if="item.file"
-              class="nav-sub-item"
-              :class="{ active: isActiveLegacy(item.file) }"
-              :href="legacyUrl(item.file)"
-              ><span class="nav-icon">{{ item.icon }}</span
-              ><span class="nav-label">{{ item.label }}</span></a
             >
           </template>
         </div>

@@ -13,6 +13,12 @@ const port = Number(args.port || 5500)
 const host = args.host || '127.0.0.1'
 const appBase = String(args['app-base'] || `http://${host}:4173/app`).replace(/\/+$/, '')
 const legacyVueRedirects = new Map([
+  ['pages/index.html', { pathname: `${appBase}/`, hash: '' }],
+  ['pages/about.html', { pathname: `${appBase}/about`, hash: '' }],
+  ['pages/products.html', { pathname: `${appBase}/products`, hash: '' }],
+  ['pages/faq.html', { pathname: `${appBase}/faq`, hash: '' }],
+  ['pages/user-agreement.html', { pathname: `${appBase}/legal/terms`, hash: '' }],
+  ['pages/privacy-policy.html', { pathname: `${appBase}/legal/privacy`, hash: '' }],
   ['pages/settings.html', { pathname: `${appBase}/account/settings`, hash: '' }],
   ['pages/my-addresses.html', { pathname: `${appBase}/account/settings`, hash: '#addresses' }],
   ['pages/customize-confirm.html', { pathname: `${appBase}/customize/confirm`, hash: '' }],
@@ -21,6 +27,9 @@ const legacyVueRedirects = new Map([
   ['pages/orders.html', { pathname: `${appBase}/orders`, hash: '' }],
   ['pages/order-detail.html', { pathname: `${appBase}/order-detail`, hash: '' }],
   ['pages/admin-contact.html', { pathname: `${appBase}/admin/contact`, hash: '' }],
+  ['pages/admin-users.html', { pathname: `${appBase}/admin/users`, hash: '' }],
+  ['pages/admin-account-deletions.html', { pathname: `${appBase}/admin/account-deletions`, hash: '' }],
+  ['pages/admin-logs.html', { pathname: `${appBase}/admin/logs`, hash: '' }],
   ['pages/admin-models.html', { pathname: `${appBase}/admin/models`, hash: '' }],
   ['pages/admin-frame-library.html', { pathname: `${appBase}/admin/frame-library`, hash: '' }],
   ['pages/admin-frame-making.html', { pathname: `${appBase}/admin/frame-making`, hash: '' }],
@@ -35,7 +44,8 @@ const legacyVueRedirects = new Map([
   ['pages/production-scan-pairing.html', { pathname: `${appBase}/admin/production-scan`, hash: '#pairing' }],
   ['pages/production-scan-packing.html', { pathname: `${appBase}/admin/production-scan`, hash: '#packing' }],
   ['pages/admin-import.html', { pathname: `${appBase}/admin/import`, hash: '' }],
-  ['pages/admin-collab-works.html', { pathname: `${appBase}/admin/collab-works`, hash: '' }]
+  ['pages/admin-collab-works.html', { pathname: `${appBase}/admin/collab-works`, hash: '' }],
+  ['pages/production-inventory.html', { pathname: `${appBase}/admin/inventory`, hash: '' }]
 ])
 
 const mime = {

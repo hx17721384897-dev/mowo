@@ -601,6 +601,8 @@ R1 分为 A、B 两段，是为了关闭一个真实的迁移期暴露窗口：�
 
 **验收：** 每条已迁移正式流程只有 Vue 入口；旧页面只保留明确兼容跳转或已审计删除；新开发不再新增大段页面内 JavaScript。
 
+**V6-A 消费者审计与首轮退役（2026-10-11）：** 已完成剩余旧页面、脚本、样式、部署跳转、后台导航和浏览器检查的运行消费者审计。官网六页、用户/注销/审计后台三页、旧库存页和 `_legacy/admin-production` 已物理删除；旧 `address-utils.js`、`admin-sidebar.js`、`feature-flags.js`、`design-system.css` 及只依赖旧页的临时对照脚本同时删除。Vue 后台侧栏和联络留言的用户深链接已改为单一 Vue 路由；本地兼容服务、Nginx 和部署门禁补齐旧 URL 交接及反回流检查。仓库旧页面现在只允许保留 `customize-editor.html` 的 `adminRequestId` 后台人工筛帧模式。完整证据、正式功能矩阵和 V6-B～D 边界见 `V6_FRONTEND_RETIREMENT_AND_ACCEPTANCE.md`。下一步执行 V6-B 日常库结构只读比对与安全基线登记，不重建现有素材库。
+
 ## 8. API、身份与数据规则
 
 ### 8.1 统一请求客户端

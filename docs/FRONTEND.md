@@ -1,8 +1,8 @@
-# FRONTEND.md — 前端页面清单与规范
+# FRONTEND.md — 旧静态前端历史快照（已归档）
 
-> **文档状态（2026-09-08）：历史页面规划，禁止作为当前页面清单。** 当前 `frontend/pages/` 有 58 个 HTML 页面，公共脚本、联名唯一详情、定制、后台和生产导航均已变化。社区页面已退出正式路线，但部分旧 API/页面仍待删除；准确事实见 `modules/web-frontend.md` 和 `DOCUMENTATION_STATUS.md`。本文件将在逐页专项重新生成正式入口清单后压缩或删除。
+> **文档状态（2026-10-11）：已归档，以下清单全部是历史快照，禁止作为当前入口或功能状态。** V6-A 后正式 Web 页面均在 `frontend-vue/`；`frontend/pages/` 只暂留后台人工筛帧专用 `customize-editor.html`。当前入口、删除证据和验收矩阵见 `V6_FRONTEND_RETIREMENT_AND_ACCEPTANCE.md`，退役产品边界见 `RELEASE_SCOPE.md`。
 >
-> **V1c 当前事实（2026-09-17）：** 联络正式入口已迁移到 Vue `/app/contact`，六类均允许匿名提交；旧 `frontend/pages/contact.html` 已物理删除。作品集只允许 JPG/PNG/PDF（单文件 20MB、最多 6 个），简历只允许一份 PDF（10MB）。
+> 本文件保留的旧文件名、角色说明和“保留/待开发”标记只用于追溯当时设计，不得据此恢复页面或退役能力。
 
 ---
 

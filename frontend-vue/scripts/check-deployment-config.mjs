@@ -51,8 +51,12 @@ const requiredRedirects = [
   ['orders.html', '/app/orders'],
   ['order-detail.html', '/app/order-detail'],
   ['admin-contact.html', '/app/admin/contact'],
+  ['admin-users.html', '/app/admin/users'],
+  ['admin-account-deletions.html', '/app/admin/account-deletions'],
+  ['admin-logs.html', '/app/admin/logs'],
   ['admin-models.html', '/app/admin/models'],
   ['admin-inventory.html', '/app/admin/inventory'],
+  ['production-inventory.html', '/app/admin/inventory'],
   ['admin-frame-library.html', '/app/admin/frame-library'],
   ['admin-frame-making.html', '/app/admin/frame-making'],
   ['admin-frame-imports.html', '/app/admin/frame-imports'],
@@ -91,6 +95,12 @@ if (
 }
 
 for (const retired of [
+  'index.html',
+  'about.html',
+  'products.html',
+  'faq.html',
+  'user-agreement.html',
+  'privacy-policy.html',
   'customize-start.html',
   'customize-confirm.html',
   'settings.html',
@@ -102,8 +112,12 @@ for (const retired of [
   'orders.html',
   'order-detail.html',
   'admin-contact.html',
+  'admin-users.html',
+  'admin-account-deletions.html',
+  'admin-logs.html',
   'admin-models.html',
   'admin-inventory.html',
+  'production-inventory.html',
   'admin-frame-library.html',
   'admin-frame-making.html',
   'admin-frame-imports.html',
@@ -128,6 +142,9 @@ for (const retired of [
   }
 }
 for (const retired of [
+  'address-utils.js',
+  'admin-sidebar.js',
+  'feature-flags.js',
   'admin-frame-imports.js',
   'admin-customization-workbench.js',
   'production-scan-common.js',
@@ -136,6 +153,21 @@ for (const retired of [
   if (fs.existsSync(path.join(root, '..', 'frontend', 'js', retired))) {
     throw new Error(`已由 Vue 接管的旧脚本不得继续存在：frontend/js/${retired}`)
   }
+}
+if (fs.existsSync(path.join(root, '..', 'frontend', 'pages', '_legacy', 'admin-production.html'))) {
+  throw new Error('已退役的旧生产总页不得继续存在：frontend/pages/_legacy/admin-production.html')
+}
+const remainingLegacyPages = fs
+  .readdirSync(path.join(root, '..', 'frontend', 'pages'), { withFileTypes: true })
+  .filter((entry) => entry.isFile() && entry.name.endsWith('.html'))
+  .map((entry) => entry.name)
+if (remainingLegacyPages.join(',') !== 'customize-editor.html') {
+  throw new Error(
+    `V6 只允许保留后台人工筛帧旧页，当前仍有：${remainingLegacyPages.join(',') || '无'}`
+  )
+}
+if (fs.existsSync(path.join(root, '..', 'frontend', 'css', 'design-system.css'))) {
+  throw new Error('无运行消费者的旧 design-system.css 不得继续存在')
 }
 if (fs.existsSync(path.join(root, '..', 'frontend', 'css', 'production-scan.css'))) {
   throw new Error('已由 Vue 接管的旧样式不得继续存在：frontend/css/production-scan.css')

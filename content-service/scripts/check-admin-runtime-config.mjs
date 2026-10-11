@@ -25,7 +25,6 @@ for (const name of names) {
 }
 
 for (const name of [
-  'admin-sidebar.js',
   'customization-review-editor.js',
   'private-upload.js'
 ]) {
