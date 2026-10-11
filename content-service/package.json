@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "node --watch src/index.js",
     "start": "node src/index.js",
-    "check": "npm run check:env && npm run check:syntax && npm run check:prisma",
+    "check": "npm run check:env && npm run check:syntax && npm run check:prisma && npm run check:audit-safety",
     "check:env": "node scripts/check-env.mjs",
     "check:syntax": "node scripts/check-syntax.mjs",
     "check:prisma": "prisma validate",
@@ -16,6 +16,7 @@
     "check:legacy-production-boundary": "node scripts/check-legacy-production-boundary.mjs",
     "check:admin-runtime-config": "node scripts/check-admin-runtime-config.mjs",
     "check:admin-role-browser": "node scripts/check-admin-role-browser.mjs",
+    "check:audit-safety": "node scripts/check-audit-safety.mjs",
     "check:user-shell-browser": "node scripts/check-user-shell-browser.mjs",
     "test-db:rebuild": "node scripts/test-database.mjs rebuild",
     "test-db:status": "node scripts/test-database.mjs status",

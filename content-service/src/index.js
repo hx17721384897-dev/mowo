@@ -43,7 +43,23 @@ import { publicFeatureFlags, requiredFeatureForRequest } from './lib/features.js
 import { isClosedLegacyProductionEndpoint } from './lib/legacy-production-endpoints.js'
 
 const config = loadConfig()
-const fastify = Fastify({ logger: true, bodyLimit: 10 * 1024 * 1024 })
+const fastify = Fastify({
+  logger: {
+    // Keep runtime diagnostics useful without relying on Pino/Fastify defaults
+    // to protect session credentials when serializers change in the future.
+    redact: {
+      paths: [
+        'req.headers.authorization',
+        'req.headers.cookie',
+        'res.headers.set-cookie',
+        'err.headers.authorization',
+        'err.headers.cookie'
+      ],
+      censor: '[REDACTED]'
+    }
+  },
+  bodyLimit: 10 * 1024 * 1024
+})
 fastify.decorate('config', config)
 fastify.setErrorHandler((error, request, reply) => {
   const statusCode = Number(error.statusCode || 500)

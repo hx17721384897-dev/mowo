@@ -4,7 +4,7 @@
 >
 > 调查基准：2026-08-13，进度更新：2026-09-11。本文档区分“已核对代码事实”“原规划”“待确认”，不把规划自动视为已实现。
 
-> 当前进度（2026-10-11）：L0、R0/R1、V0～V5、V6-A 和 V6-B 已完成。正式 Web 页面均使用 `frontend-vue/`，旧 URL 仅由部署层临时 302；唯一旧页面是后台人工筛帧专用 `customize-editor.html`。日常 `mowo_db` 已完成只读审计和本地备份，但结构不能直接承载当前服务；API/回归继续使用 `mowo_b1_test`。V6-C 最终人工矩阵和 V6-D CI 长期门禁仍待完成，不能据此邀请真实用户。当前执行入口为 `VUE_FRONTEND_REFACTOR_PLAN.md`，V6 证据见 `V6_FRONTEND_RETIREMENT_AND_ACCEPTANCE.md` 和 `V6_DATABASE_BASELINE.md`。
+> 当前进度（2026-10-11）：L0、R0/R1、V0～V5、V6-A、V6-B 和 V6-C1 已完成。正式 Web 页面均使用 `frontend-vue/`，旧 URL 仅由部署层临时 302；唯一旧页面是后台人工筛帧专用 `customize-editor.html`。日常 `mowo_db` 已完成只读审计和本地备份，但结构不能直接承载当前服务；API/回归继续使用 `mowo_b1_test`。V6-C1 已固定最终合成数据、逐页步骤和后台证据门槛，C2～C6 实际验收及 V6-D CI 长期门禁仍待完成，不能据此邀请真实用户。当前执行入口为 `VUE_FRONTEND_REFACTOR_PLAN.md`，V6 证据见 `V6_FRONTEND_RETIREMENT_AND_ACCEPTANCE.md`、`V6_FINAL_ACCEPTANCE_PLAN.md` 和 `V6_DATABASE_BASELINE.md`。
 
 > 下列 V4 阶段段落是实施时的历史进度快照，不覆盖上述当前状态。
 
@@ -19,7 +19,7 @@
 1. `README.md`：产品定位、启动方式和最短项目简介。
 2. `docs/PROJECT_ENGINEERING_AND_ARCHITECTURE_PLAN.md`：已封版 L0 的证据、边界和历史批次。
 3. `docs/VUE_FRONTEND_REFACTOR_PLAN.md`：当前接续计划、H0/R0/R1/V0-V6 顺序和验收门槛。
-   V6 旧前端退役与最终验收见 `docs/V6_FRONTEND_RETIREMENT_AND_ACCEPTANCE.md`；日常库安全基线见 `docs/V6_DATABASE_BASELINE.md`。
+   V6 旧前端退役见 `docs/V6_FRONTEND_RETIREMENT_AND_ACCEPTANCE.md`；最终逐页验收见 `docs/V6_FINAL_ACCEPTANCE_PLAN.md`；日常库安全基线见 `docs/V6_DATABASE_BASELINE.md`。
    交易页正式入口、旧 URL 和隔离验收见 `docs/V3_TRANSACTION_MIGRATION.md`。
 4. `docs/PROJECT_INDEX.md`：项目地图、文档分层和调查进度。
 5. `docs/R0_BACKEND_DATABASE_BASELINE.md`：Vue 可消费的后端/数据库证据、隔离边界和失败处置。
