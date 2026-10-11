@@ -4,7 +4,7 @@
 >
 > 调查基准：2026-08-13，进度更新：2026-09-11。本文档区分“已核对代码事实”“原规划”“待确认”，不把规划自动视为已实现。
 
-> 当前进度（2026-10-11）：L0、R0/R1、V0～V5、V6-A、V6-B 和 V6-C1 已完成。正式 Web 页面均使用 `frontend-vue/`，旧 URL 仅由部署层临时 302；唯一旧页面是后台人工筛帧专用 `customize-editor.html`。日常 `mowo_db` 已完成只读审计和本地备份，但结构不能直接承载当前服务；API/回归继续使用 `mowo_b1_test`。V6-C1 已固定最终合成数据、逐页步骤和后台证据门槛，C2～C6 实际验收及 V6-D CI 长期门禁仍待完成，不能据此邀请真实用户。当前执行入口为 `VUE_FRONTEND_REFACTOR_PLAN.md`，V6 证据见 `V6_FRONTEND_RETIREMENT_AND_ACCEPTANCE.md`、`V6_FINAL_ACCEPTANCE_PLAN.md` 和 `V6_DATABASE_BASELINE.md`。
+> 当前进度（2026-10-11）：L0、R0/R1、V0～V5、V6-A、V6-B 和 V6-C1 已完成，V6-C2 自动证据通过、负责人视觉验收待执行。正式 Web 页面均使用 `frontend-vue/`，旧 URL 仅由部署层临时 302；唯一旧页面是后台人工筛帧专用 `customize-editor.html`。日常 `mowo_db` 已完成只读审计和本地备份，但结构不能直接承载当前服务；API/回归继续使用 `mowo_b1_test`。C2 人工验收以及 C3～C6 实际验收、V6-D CI 长期门禁仍待完成，不能据此邀请真实用户。当前执行入口为 `VUE_FRONTEND_REFACTOR_PLAN.md`，V6 证据见 `V6_FRONTEND_RETIREMENT_AND_ACCEPTANCE.md`、`V6_FINAL_ACCEPTANCE_PLAN.md`、`V6_C2_ACCEPTANCE_RESULTS.md` 和 `V6_DATABASE_BASELINE.md`。
 
 > 下列 V4 阶段段落是实施时的历史进度快照，不覆盖上述当前状态。
 

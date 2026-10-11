@@ -17,6 +17,7 @@
     "check:admin-runtime-config": "node scripts/check-admin-runtime-config.mjs",
     "check:admin-role-browser": "node scripts/check-admin-role-browser.mjs",
     "check:audit-safety": "node scripts/check-audit-safety.mjs",
+    "audit:v6c2-state": "node scripts/audit-v6c2-state.mjs",
     "check:user-shell-browser": "node scripts/check-user-shell-browser.mjs",
     "test-db:rebuild": "node scripts/test-database.mjs rebuild",
     "test-db:status": "node scripts/test-database.mjs status",

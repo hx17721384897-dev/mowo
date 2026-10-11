@@ -82,6 +82,8 @@ async function cleanup() {
   if (animationVersionId) await prisma.animationAssetVersion.deleteMany({ where: { id: animationVersionId } })
   if (animationAssetId) await prisma.animationAsset.deleteMany({ where: { id: animationAssetId } })
   if (userId) {
+    await prisma.operationLog.deleteMany({ where: { userId } })
+    await prisma.auditLog.deleteMany({ where: { userId } })
     await prisma.refreshToken.deleteMany({ where: { userId } })
     await prisma.smsCode.deleteMany({ where: { OR: [{ userId }, { phone }] } })
     await prisma.userProfile.deleteMany({ where: { userId } })
