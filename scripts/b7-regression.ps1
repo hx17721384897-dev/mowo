@@ -139,10 +139,18 @@ try {
 
 Push-Location (Join-Path $RepoRoot 'frontend-vue')
 try {
+  # The Vue browser suite also verifies retired legacy URLs on port 5500.
+  # The workflow phase above owns and stops its static server in `finally`, so
+  # start a fresh read-only compatibility server for the complete frontend gate.
+  $node = (Get-Command node).Source
+  $webArgs = @((Join-Path $RepoRoot 'scripts/static-server.mjs'), '--root=frontend', '--mount=mowo/frontend', '--port=5500')
+  $WebProcess = Start-Process -FilePath $node -ArgumentList $webArgs -WorkingDirectory $RepoRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $RunDir 'b7-web-frontend.out.log') -RedirectStandardError (Join-Path $RunDir 'b7-web-frontend.err.log')
+  Wait-Url 'http://127.0.0.1:5500/mowo/frontend/pages/index.html'
   & npm.cmd run check
   if ($LASTEXITCODE -ne 0) { throw 'Vue full quality gate failed.' }
 } finally {
   Pop-Location
+  if ($WebProcess -and -not $WebProcess.HasExited) { Stop-Process -Id $WebProcess.Id -Force }
 }
 
 Push-Location $ServiceRoot

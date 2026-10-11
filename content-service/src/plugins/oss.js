@@ -125,6 +125,10 @@ export default fp(async function storagePlugin(fastify) {
       const file = await fastify.prisma.privateFile.findUnique({ where: { objectKey: key } })
       const target = safeObjectPath(root, key)
       if (file && file.status !== 'READY') return reply.code(404).send({ success: false, message: '文件不可用' })
+      // Validate the file before fixing the response content type and handing the
+      // stream to Fastify. A missing file must be a normal JSON 404, not a late
+      // stream error that can terminate the API process.
+      await fs.promises.access(target, fs.constants.R_OK)
       if (file?.detectedMimeType) reply.type(file.detectedMimeType)
       reply.header('Cache-Control', 'private, max-age=60')
       return reply.send(fs.createReadStream(target))

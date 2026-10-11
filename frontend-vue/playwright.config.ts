@@ -3,6 +3,10 @@ import { defineConfig, devices } from '@playwright/test'
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: true,
+  // Keep the full desktop/mobile gate stable on the Windows development host.
+  // Eight browser workers can starve the compatibility redirect server and turn
+  // simple 404 assertions into infrastructure timeouts.
+  workers: 4,
   retries: 0,
   reporter: 'list',
   use: {

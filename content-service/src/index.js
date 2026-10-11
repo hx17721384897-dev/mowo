@@ -47,6 +47,10 @@ const fastify = Fastify({ logger: true, bodyLimit: 10 * 1024 * 1024 })
 fastify.decorate('config', config)
 fastify.setErrorHandler((error, request, reply) => {
   const statusCode = Number(error.statusCode || 500)
+  // A file route may already have selected an image/document content type before
+  // an asynchronous storage failure reaches this handler. Always restore JSON so
+  // the controlled error body is serialised correctly instead of crashing Fastify.
+  reply.type('application/json; charset=utf-8')
   if (statusCode >= 500) {
     request.log.error({ err: error }, 'Unhandled request error')
     return reply.code(500).send({
