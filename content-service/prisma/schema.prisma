@@ -348,7 +348,6 @@ model CustomizeOrder {
   inventoryStatus    String    @default("normal") @map("inventory_status") @db.VarChar(20)
   sourceType         String    @default("custom") @map("source_type")
   collabWorkId       String?   @map("collab_work_id")
-  crmebOrderId       String?   @map("crmeb_order_id")
   assignedTo         String?   @map("assigned_to")
   receiverName       String?   @map("receiver_name")
   receiverPhone      String?   @map("receiver_phone")

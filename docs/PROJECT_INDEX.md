@@ -64,8 +64,7 @@
 - `frontend-vue/`：当前正式 Web 官网、用户定制、交易、管理后台与生产端实现。
 - `frontend/`：只暂留后台人工筛帧专用 `customize-editor.html` 及其依赖；其余旧正式页面已物理删除。
 - `content-service/`：Node.js ESM + Fastify 5 API 服务，Prisma 5 访问 PostgreSQL；本地开发使用私有目录保存测试文件，正式环境计划使用私有阿里云 OSS。
-- `crmeb/`：当前只有 `.gitkeep` 占位文件，没有外部商城代码；早期规划曾拟接 CRMEB，首发已决定不接入。
-- `docs/`：架构、接口、数据库、前端清单、用户场景和专项计划。
+- `docs/`：当前架构、订单设计、接口、数据库、前端清单、用户场景和专项计划。
 
 ### 主仓库外的同级目录 `xiaochengxu/`
 

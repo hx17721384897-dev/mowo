@@ -51,7 +51,7 @@
 
 ## 部署与扩容
 
-`docs/ARCHITECTURE.md` 规划 Nginx + ECS + PM2 + PostgreSQL，但仓库没有 Nginx 完整配置、Dockerfile、进程管理配置、IaC、部署脚本、CI/CD、回滚步骤或发布检查表。`crmeb/` 实际只有 `.gitkeep`，不能按架构图视为已接入商城。
+当前规划涉及 Nginx、ECS、PM2 和 PostgreSQL，但仓库尚无完整的 Nginx 配置、Dockerfile、进程管理配置、IaC、部署脚本、CI/CD、回滚步骤或发布检查表。
 
 后端固定监听 `0.0.0.0:3001`，根路径只返回静态成功消息，不检查数据库、OSS 或 Scheduler，因此它只是存活响应，不是 readiness。代码没有 SIGTERM/SIGINT 优雅停机处理；Prisma 的 `onClose` 只有在 Fastify 被正确关闭时才执行。
 

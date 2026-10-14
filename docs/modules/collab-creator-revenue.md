@@ -265,7 +265,7 @@
 
 1. `REVENUE.md` 写订单发货后按周结算；代码是确认收货后冷却 15 天，再由管理员任意时间操作内部余额入账。
 2. `REVENUE.md` 写结算后写 `earnings`；当前没有任何 `Earning` 写入，实际更新 `Balance` 和 `SettlementRecord`。
-3. 文档规划 CRMEB 支付回调为联名主链路；当前 Web 已有自己的购物车/预订单支付链路，但联名记录创建失败。
+3. 当前 Web 已有购物车和预订单支付链路，但联名收益记录的成交闭环仍需核对。
 4. `REVENUE.md` 仍把展示页、结算、数据面板和牛量列为待开发，当前页面和路由已存在，但不代表闭环可用。
 5. `REVENUE.md` 的旧字段是 `bullEnergy/bullEnergyScore`，当前 Schema 使用 `bullLevel/bullScore/bullCoefficient`。
 6. 文档的新手期和活动期有结束时间；审核时永久快照使到期逻辑不生效。

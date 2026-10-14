@@ -20,7 +20,7 @@
 | [docs/LAUNCH_READINESS.md](./docs/LAUNCH_READINESS.md) | 邀请测试、真实交易和公开上线所需的工程与运营门槛 |
 | [PRODUCTION.md](./PRODUCTION.md) | 历史生产规划；不能作为当前生产流程操作说明 |
 | [REVENUE.md](./REVENUE.md) | 未来联名分红/牛量思想；首发不启用线上收益功能 |
-| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | 早期目标架构；CRMEB 等内容已经失效 |
+| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | 当前系统架构与业务数据归属 |
 | [docs/FRONTEND.md](./docs/FRONTEND.md) | 前端页面清单、跳转关系、API对接状态 |
 | [docs/DATABASE.md](./docs/DATABASE.md) | 数据库表设计说明 |
 | [docs/API.md](./docs/API.md) | 接口定义文档 |
@@ -41,9 +41,8 @@ mowo/
 │   └── js/
 │       └── auth.js      # 尚未迁移页面的旧会话脚本
 ├── frontend-vue/        # 当前正式 Web 公共页、用户定制与交易入口
-├── content-service/     # Node.js + Fastify 内容后端
+└── content-service/     # Node.js + Fastify 内容后端
 │   └── src/templates/   # 对照清单/条形码清单 docx 模板
-└── crmeb/               # 仅有历史占位文件；当前方案不接入 CRMEB
 ```
 
 ---
@@ -93,4 +92,4 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\local.ps1 star
 3. 补齐真实退款、售后、联名成品库存优先和异常补偿。
 4. 完成正式 OSS、恶意文件扫描、备份恢复、监控、压测和法律文本审查。
 
-社区、点赞、关注、创作者线上分红、牛量和提现不是首发功能。CRMEB 已经退出当前方案。
+社区、点赞、关注、创作者线上分红、牛量和提现不是首发功能。

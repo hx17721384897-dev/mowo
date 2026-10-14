@@ -262,11 +262,11 @@ model CollabActivity {
 ## 七、SKU 串联逻辑
 
 ```
-联名作品 → 在 CRMEB 创建对应商品（带SKU）
+联名作品 → 在 mowo 后台配置可售 SKU 与价格
   ↓
-小程序端用 CRMEB 商品页展示价格和支付
+顾客在商品页确认规格与价格并进入结算
   ↓
-支付成功 → CRMEB 回调我们的 API
+支付结果经服务端核实后创建客户订单
   ↓
 我们 API：
   1. 创建 customize_orders 记录
@@ -349,4 +349,4 @@ PUT  /api/creator/collab/:id/markup   保存加价 Body: { markups: { skuId: amo
 - 结算系统（按周自动汇总）
 - 创作者数据面板
 - 牛能升降级逻辑
-- CRMEB回调处理
+- 联名订单成交与收益记录对账
