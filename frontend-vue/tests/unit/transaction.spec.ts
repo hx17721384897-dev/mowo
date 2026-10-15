@@ -111,17 +111,7 @@ function orderFixture() {
         lineTotal: 39.8,
         animationAssetId: 'asset-1',
         animationVersionId: 'version-1',
-        skuId: 'sku-1',
-        productionTasks: [
-          {
-            id: 'task-1',
-            productionNo: 'PU-1',
-            unitIndex: 1,
-            status: 'shipped',
-            trackingNo: 'SF1',
-            trackingCompany: '顺丰'
-          }
-        ]
+        skuId: 'sku-1'
       }
     ],
     actions: {

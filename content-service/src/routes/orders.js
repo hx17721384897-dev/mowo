@@ -25,12 +25,12 @@ function ossSign(fastify, value) {
 // 后端状态 → 前端展示映射
 const STATUS_MAP = {
   pending:    { label: '待付款', group: 'pending',   step: 0 },
-  paid:       { label: '制作中', group: 'making',    step: 1 },
-  locked:     { label: '制作中', group: 'making',    step: 1 },
-  processing: { label: '制作中', group: 'making',    step: 1 },
-  producing:  { label: '制作中', group: 'making',    step: 1 },
-  shipped:    { label: '运输中', group: 'shipped',   step: 2 },
-  received:   { label: '已完成', group: 'done',      step: 3 },
+  paid:       { label: '已付款', group: 'paid',      step: 1 },
+  locked:     { label: '制作中', group: 'making',    step: 2 },
+  processing: { label: '制作中', group: 'making',    step: 2 },
+  producing:  { label: '制作中', group: 'making',    step: 2 },
+  shipped:    { label: '运输中', group: 'shipped',   step: 3 },
+  received:   { label: '已完成', group: 'done',      step: 4 },
   aftersale:  { label: '售后中', group: 'aftersale', step: -1 },
   cancelled:  { label: '已取消', group: 'cancelled', step: -1 },
 }
@@ -53,7 +53,7 @@ function orderActions(tasks) {
   const statuses = tasks.map(task => task.status)
   const allIn = allowed => statuses.length > 0 && statuses.every(status => allowed.includes(status))
   return {
-    canCancel: allIn(['pending', 'paid']),
+    canCancel: allIn(['pending', 'paid']) && tasks.every(task => !task.batchId),
     canConfirmReceipt: statuses.some(status => status === 'shipped') && allIn(['shipped', 'received']),
     canRequestRefund: allIn(['paid', 'locked', 'processing', 'producing', 'shipped', 'received']),
     canRequestQuality: allIn(['received']),
@@ -62,7 +62,9 @@ function orderActions(tasks) {
 
 function serializeSalesOrder(fastify, order, includeAddress = false) {
   const tasks = order.items.flatMap(item => item.productionTasks)
-  const status = summarizeProductionStatus(tasks)
+  const productionStatus = summarizeProductionStatus(tasks)
+  // 创建 PB 时任务仍是 paid；批次归属才是顾客看到“制作中”的起点。
+  const status = productionStatus === 'paid' && tasks.some(task => task.batchId) ? 'producing' : productionStatus
   const display = STATUS_MAP[status] || { label: status, group: 'unknown', step: -1 }
   const actions = orderActions(tasks)
   const items = order.items.map(item => {
@@ -88,11 +90,7 @@ function serializeSalesOrder(fastify, order, includeAddress = false) {
       lineTotal: Number(item.lineTotal),
       animationAssetId: item.animationAssetId,
       animationVersionId: item.animationVersionId,
-      skuId: item.skuId,
-      productionTasks: item.productionTasks.map(task => ({
-        id: task.id, productionNo: task.orderNo, unitIndex: task.unitIndex,
-        status: task.status, trackingNo: task.trackingNo, trackingCompany: task.trackingCompany
-      }))
+      skuId: item.skuId
     }
   })
   const firstItem = items[0] || {}
@@ -221,17 +219,26 @@ async function orderRoutes(fastify, opts) {
     })
     if (salesOrder) {
       const tasks = salesOrder.items.flatMap(item => item.productionTasks)
-      if (tasks.some(task => !['pending', 'paid'].includes(task.status))) {
+      if (!tasks.length || tasks.some(task => !['pending', 'paid'].includes(task.status) || task.batchId)) {
         return reply.code(400).send({ success: false, message: '订单中已有商品进入生产，如需取消请联系客服' })
       }
-      await prisma.$transaction(async tx => {
-        await tx.customizeOrder.updateMany({ where: { id: { in: tasks.map(task => task.id) } }, data: { status: 'cancelled' } })
-        await tx.salesOrderItem.updateMany({ where: { salesOrderId: id }, data: { status: 'cancelled' } })
-        await tx.salesOrder.update({ where: { id }, data: { status: 'cancelled', cancelledAt: new Date() } })
-        for (const item of salesOrder.items) {
-          await unlockInventoryInTransaction(tx, item.skuId, item.quantity, id, `sales_order_cancel_${id}_${item.id}`)
-        }
-      })
+      try {
+        await prisma.$transaction(async tx => {
+          const cancelled = await tx.customizeOrder.updateMany({
+            where: { id: { in: tasks.map(task => task.id) }, status: { in: ['pending', 'paid'] }, batchId: null },
+            data: { status: 'cancelled' }
+          })
+          if (cancelled.count !== tasks.length) throw Object.assign(new Error('订单状态已改变'), { code: 'ORDER_STATE_CHANGED' })
+          await tx.salesOrderItem.updateMany({ where: { salesOrderId: id }, data: { status: 'cancelled' } })
+          await tx.salesOrder.update({ where: { id }, data: { status: 'cancelled', cancelledAt: new Date() } })
+          for (const item of salesOrder.items) {
+            await unlockInventoryInTransaction(tx, item.skuId, item.quantity, id, `sales_order_cancel_${id}_${item.id}`)
+          }
+        })
+      } catch (error) {
+        if (error.code === 'ORDER_STATE_CHANGED') return reply.code(409).send({ success: false, message: '订单状态已改变，请刷新后重试' })
+        throw error
+      }
       return reply.send({ success: true, data: { status: 'cancelled' } })
     }
 

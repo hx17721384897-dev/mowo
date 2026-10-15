@@ -106,15 +106,6 @@ export interface OrderActionsDto {
   canRequestQuality: boolean
 }
 
-export interface ProductionTaskDto {
-  id: string
-  productionNo: string
-  unitIndex: number
-  status: OrderStatus
-  trackingNo: string | null
-  trackingCompany: string | null
-}
-
 export interface OrderItemDto {
   id: string
   itemNo: string
@@ -132,7 +123,6 @@ export interface OrderItemDto {
   animationAssetId: string | null
   animationVersionId: string | null
   skuId: string
-  productionTasks: ProductionTaskDto[]
 }
 
 export interface OrderDto {

@@ -1,21 +1,13 @@
 import { expect, test, type Page } from '@playwright/test'
 
 function orderFixture(status: 'shipped' | 'received' | 'paid' = 'shipped') {
-  const task = {
-    id: 'task-1',
-    productionNo: 'PROD-1',
-    unitIndex: 1,
-    status,
-    trackingNo: 'YT123456',
-    trackingCompany: '圆通'
-  }
   return {
     id: 'order-1',
     orderNo: 'MOWO-001',
     status,
-    displayStatus: status === 'shipped' ? '运输中' : status === 'received' ? '已完成' : '制作中',
-    statusGroup: status === 'shipped' ? 'shipped' : status === 'received' ? 'done' : 'making',
-    statusStep: status === 'shipped' ? 2 : status === 'received' ? 3 : 1,
+    displayStatus: status === 'shipped' ? '运输中' : status === 'received' ? '已完成' : '已付款',
+    statusGroup: status === 'shipped' ? 'shipped' : status === 'received' ? 'done' : 'paid',
+    statusStep: status === 'shipped' ? 3 : status === 'received' ? 4 : 1,
     sourceType: 'custom',
     platform: 'mowo',
     productTitle: '混合订单',
@@ -45,8 +37,7 @@ function orderFixture(status: 'shipped' | 'received' | 'paid' = 'shipped') {
         lineTotal: 129,
         animationAssetId: null,
         animationVersionId: null,
-        skuId: 'sku-1',
-        productionTasks: [task]
+        skuId: 'sku-1'
       },
       {
         id: 'item-2',
@@ -64,11 +55,7 @@ function orderFixture(status: 'shipped' | 'received' | 'paid' = 'shipped') {
         lineTotal: 198,
         animationAssetId: null,
         animationVersionId: null,
-        skuId: 'sku-2',
-        productionTasks: [
-          { ...task, id: 'task-2', unitIndex: 1 },
-          { ...task, id: 'task-3', unitIndex: 2 }
-        ]
+        skuId: 'sku-2'
       }
     ],
     actions: {
@@ -166,12 +153,13 @@ test('列表保留混合商品、文本安全和确认收货，且不写草稿',
   expect(state.draftWrites()).toBe(0)
 })
 
-test('详情展示地址、生产件和售后能力，移动端无横向溢出', async ({ page }) => {
+test('详情展示地址、商品数量和售后能力，移动端无横向溢出', async ({ page }) => {
   const state = await setup(page)
   await page.goto('/app/orders/order-1')
   await expect(page.getByText('张三')).toBeVisible()
   await expect(page.getByText(/138.*8000/)).toBeVisible()
-  await expect(page.getByText(/已生成 2 个生产任务/)).toBeVisible()
+  await expect(page.getByText('数量：2')).toBeVisible()
+  await expect(page.getByText(/生产任务|生产批次|PU-|PB-/)).toHaveCount(0)
   await expect(page.getByRole('button', { name: '申请售后' })).toBeVisible()
   await page.getByRole('button', { name: '申请售后' }).click()
   await expect(page.getByRole('dialog').getByRole('button', { name: '质量售后' })).toBeDisabled()

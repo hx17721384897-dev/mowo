@@ -263,12 +263,7 @@ onBeforeUnmount(() => {
           <div class="oi-info">
             <div class="oi-title">{{ item.productTitle }}</div>
             <div class="oi-machine">⚙ {{ item.specificationText }}</div>
-            <div class="oi-qty">
-              数量：{{ item.quantity
-              }}<template v-if="item.productionTasks.length">
-                · 已生成 {{ item.productionTasks.length }} 个生产任务</template
-              >
-            </div>
+            <div class="oi-qty">数量：{{ item.quantity }}</div>
           </div>
           <div class="oi-price">{{ item.lineTotalText }}</div>
         </div>

@@ -17,8 +17,7 @@ import type {
   OrderStatus,
   PaymentStatusDto,
   PreOrderDto,
-  PreOrderStatus,
-  ProductionTaskDto
+  PreOrderStatus
 } from './types'
 
 const CART_ITEM_TYPES = new Set<CartItemType>(['CUSTOM', 'MARKET'])
@@ -236,21 +235,8 @@ function actions(value: unknown): OrderActionsDto {
   }
 }
 
-function productionTask(value: unknown): ProductionTaskDto {
-  const row = record(value, '生产任务')
-  return {
-    id: requiredString(row.id, '生产任务 ID'),
-    productionNo: requiredString(row.productionNo, '生产任务编号'),
-    unitIndex: integer(row.unitIndex, '生产任务序号', 1),
-    status: enumValue(row.status, ORDER_STATUSES, '生产任务状态'),
-    trackingNo: nullableString(row.trackingNo, '物流单号'),
-    trackingCompany: nullableString(row.trackingCompany, '物流公司')
-  }
-}
-
 function orderItem(value: unknown): OrderItemDto {
   const row = record(value, '订单商品')
-  if (!Array.isArray(row.productionTasks)) return invalid('订单生产任务列表')
   return {
     id: requiredString(row.id, '订单商品 ID'),
     itemNo: requiredString(row.itemNo, '订单商品编号'),
@@ -267,8 +253,7 @@ function orderItem(value: unknown): OrderItemDto {
     lineTotal: parseMoney(row.lineTotal, '订单商品小计'),
     animationAssetId: nullableString(row.animationAssetId, '动画资产 ID'),
     animationVersionId: nullableString(row.animationVersionId, '动画版本 ID'),
-    skuId: requiredString(row.skuId, '订单 SKU ID'),
-    productionTasks: row.productionTasks.map(productionTask)
+    skuId: requiredString(row.skuId, '订单 SKU ID')
   }
 }
 

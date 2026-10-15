@@ -296,7 +296,14 @@ try {
   assert(Boolean(listed) && listed.items.length === 3 && listed.totalQuantity === 4, '订单列表以一张卡片返回混合商品和四件数量')
   const detailResponse = await request(`/api/orders/${order.id}`, token)
   const detail = (await detailResponse.json()).data
-  assert(detail.items.length === 3 && detail.items.flatMap(item => item.productionTasks).length === 4, '订单详情返回完整混合商品和单件任务关系')
+  assert(detail.items.length === 3 && detail.totalQuantity === 4, '订单详情返回完整混合商品与购买数量')
+  assert(detail.displayStatus === '已付款' && detail.statusStep === 1, '未进入生产批次的订单对顾客显示已付款')
+  assert(detail.items.every(item => !Object.hasOwn(item, 'productionTasks')), '顾客订单接口不返回生产任务列表')
+  await prisma.customizeOrder.updateMany({ where: { id: { in: tasks.map(task => task.id) } }, data: { batchId: 'PB-TEST-CLAIMED' } })
+  const claimedDetail = (await (await request(`/api/orders/${order.id}`, token)).json()).data
+  assert(claimedDetail.displayStatus === '制作中' && claimedDetail.actions.canCancel === false, '生产任务写入批次归属后顾客看到制作中且无法直接取消')
+  assert((await request(`/api/orders/${order.id}/cancel`, token, { method: 'POST' })).status === 400, '入批订单即使任务仍为 paid 也不能取消')
+  await prisma.customizeOrder.updateMany({ where: { id: { in: tasks.map(task => task.id) } }, data: { batchId: null } })
   assert(detail.actions?.canCancel === true && detail.actions?.canRequestRefund === true && detail.actions?.canRequestQuality === false, '订单接口按服务端状态返回可取消和售后能力')
   assert(detail.receivedAt === null, '未收货订单明确返回空收货时间')
   assert((await request(`/api/orders/${order.id}`, outsiderToken)).status === 404, '其他用户不能读取订单详情')

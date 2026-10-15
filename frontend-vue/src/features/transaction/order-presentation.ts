@@ -1,10 +1,10 @@
 import type { AftersaleStatus, OrderStatus, OrderViewModel } from './types'
 
-export const ORDER_STEPS = ['待付款', '制作中', '运输中', '已完成'] as const
+export const ORDER_STEPS = ['待付款', '已付款', '制作中', '运输中', '已完成'] as const
 
 export const ORDER_STATUS_ICON: Record<OrderStatus, string> = {
   pending: '⏳',
-  paid: '🎨',
+  paid: '✓',
   locked: '🎨',
   processing: '🎨',
   producing: '🎨',
@@ -28,11 +28,11 @@ export const AFTERSALE_REASONS = {
 } as const
 
 export function orderProgressVisible(order: OrderViewModel): boolean {
-  return order.statusStep >= 0 && order.statusStep <= 3
+  return order.statusStep >= 0 && order.statusStep < ORDER_STEPS.length
 }
 
 export function orderProgressWidth(order: OrderViewModel): string {
-  return `${(Math.min(3, Math.max(0, order.statusStep)) * 100) / 3}%`
+  return `${(Math.min(ORDER_STEPS.length - 1, Math.max(0, order.statusStep)) * 100) / (ORDER_STEPS.length - 1)}%`
 }
 
 export function orderStatusClass(order: OrderViewModel): string {
@@ -45,7 +45,5 @@ export function orderStatusClass(order: OrderViewModel): string {
 
 export function orderEta(order: OrderViewModel): string | null {
   if (order.status === 'shipped') return order.trackingNo ? null : '已发货，请留意快递通知'
-  if (['paid', 'locked', 'processing', 'producing'].includes(order.status))
-    return '生产周期约 7–14 个工作日'
   return null
 }

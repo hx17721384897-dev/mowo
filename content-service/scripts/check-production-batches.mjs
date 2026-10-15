@@ -116,6 +116,10 @@ try {
     profile: { create: { nickname: `production-batch-test-${runId}` } }
   } })
   customerId = customer.id
+  await prisma.smsCode.create({ data: { userId: customerId, phone: customerPhone, code: '123456', purpose: 'LOGIN', expiresAt: new Date(Date.now() + 300000) } })
+  const customerLogin = await request('/api/v1/auth/sms/verify', null, { method: 'POST', body: JSON.stringify({ phone: customerPhone, code: '123456', mode: 'LOGIN' }) })
+  assert(customerLogin.status === 200, '生产批次测试顾客可以登录')
+  const customerToken = (await customerLogin.json()).data.accessToken
   const preOrder = await prisma.preOrder.create({ data: {
     userId: customerId, cartItemIds: '[]', checkoutIdempotencyKey: `production-batch-test-${runId}`,
     status: 'paid', totalAmount: '20.00', receiverName: '批次测试收件人', receiverPhone: customerPhone,
@@ -163,6 +167,9 @@ try {
   assert(printUnits.every((unit, index) => unit.printGroupId === printGroupId && unit.printSequence === index + 1 && unit.printPageCount === 1), '批次冻结打印裁切组、页数和生产顺序')
   const claimed = await prisma.customizeOrder.findMany({ where: { id: { in: tasks.map(task => task.id) } } })
   assert(claimed.every(task => task.batchId === batchId && task.lockStatus === 'LOCKED'), '所有 PU 原子写入同一批次并锁定')
+  const customerDetail = (await (await request(`/api/orders/${salesOrderId}`, customerToken)).json()).data
+  assert(customerDetail.displayStatus === '制作中' && customerDetail.actions.canCancel === false, '入批后顾客看到制作中且不能直接取消')
+  assert(customerDetail.items.every(item => !Object.hasOwn(item, 'productionTasks')), '顾客订单不暴露生产任务明细')
 
   const replay = await request('/api/admin/production-batches', token, {
     method: 'POST', body: JSON.stringify({ salesOrderIds: [salesOrderId], acknowledgeWarnings: true, clientRequestId: batchRequestId })
