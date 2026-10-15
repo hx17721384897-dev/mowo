@@ -96,6 +96,37 @@ body:has(.orders-page) {
   background: #ff6b35;
   color: var(--white);
 }
+.orders-page .order-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: -12px 0 24px;
+}
+.orders-page .filter-label {
+  font-size: 13px;
+  font-weight: 800;
+}
+.orders-page .order-filters select,
+.orders-page .order-filters input,
+.orders-page .order-filters button {
+  min-height: 42px;
+  border: 1px solid var(--gray2);
+  border-radius: 10px;
+  padding: 8px 12px;
+  background: var(--white);
+  color: var(--black);
+  font: inherit;
+}
+.orders-page .order-filters input {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+.orders-page .order-filters button {
+  background: var(--black);
+  color: var(--white);
+  cursor: pointer;
+}
 .orders-page .order-list {
   display: flex;
   flex-direction: column;

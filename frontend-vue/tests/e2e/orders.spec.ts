@@ -149,6 +149,74 @@ test('已付款订单展示最早可开始制作时间', async ({ page }) => {
   await expect(page.getByText(/最早可开始制作：/)).toBeVisible()
 })
 
+test('待付款订单可搜索并从详情返回原付款页', async ({ page }) => {
+  await setup(page)
+  const pending = {
+    ...orderFixture('paid'),
+    id: 'pre-test-preorder',
+    kind: 'pre_order',
+    orderNo: 'PO-TEST',
+    status: 'pending',
+    displayStatus: '待付款',
+    statusGroup: 'pending',
+    statusStep: 0,
+    paidAt: null,
+    earliestProductionAt: null,
+    expiresAt: new Date(Date.now() + 600000).toISOString(),
+    actions: {
+      canCancel: true,
+      canConfirmReceipt: false,
+      canRequestRefund: false,
+      canRequestQuality: false
+    }
+  }
+  await page.route('**/api/orders/mine?**', (route) =>
+    route.fulfill({
+      json: {
+        success: true,
+        data: {
+          orders: [pending],
+          activeCount: 1,
+          totalCount: 1,
+          page: 1,
+          limit: 30,
+          hasMore: false
+        }
+      }
+    })
+  )
+  await page.route('**/api/orders/pre-test-preorder', (route) =>
+    route.fulfill({ json: { success: true, data: pending } })
+  )
+  await page.route('**/api/config/features', (route) =>
+    route.fulfill({ json: { success: true, data: { onlineCheckout: true, mockPayment: false } } })
+  )
+  await page.route('**/api/payment/status/test-preorder', (route) =>
+    route.fulfill({
+      json: {
+        success: true,
+        data: {
+          id: 'test-preorder',
+          status: 'pending_payment',
+          totalAmount: 327,
+          expiresAt: pending.expiresAt,
+          expired: false
+        }
+      }
+    })
+  )
+  await page.goto('/app/orders')
+  await expect(page.getByText('付款前编号 PO-TEST')).toBeVisible()
+  await page.getByLabel('搜索订单').fill('联名商品')
+  await page.getByRole('button', { name: '搜索' }).click()
+  await expect(page.getByText('付款前编号 PO-TEST')).toBeVisible()
+  await page.getByRole('link', { name: '查看详情' }).click()
+  await expect(page.getByText('待付金额')).toBeVisible()
+  await page.getByRole('link', { name: '继续付款' }).click()
+  await expect(page).toHaveURL(/\/app\/checkout\?preOrderId=test-preorder/)
+  await expect(page.getByText('订单已生成')).toBeVisible()
+})
+
 test('列表保留混合商品、文本安全和确认收货，且不写草稿', async ({ page }) => {
   const state = await setup(page)
   await page.goto('/app/orders')
@@ -158,7 +226,7 @@ test('列表保留混合商品、文本安全和确认收货，且不写草稿',
   await expect(page.locator('.order-card img')).toHaveCount(0)
   await page.getByRole('button', { name: '确认收货' }).first().click()
   await page.getByRole('dialog').getByRole('button', { name: '确认收货' }).click()
-  await expect(page.getByText('已完成').first()).toBeVisible()
+  await expect(page.locator('.order-card .status-pill')).toHaveText('已完成')
   expect(state.draftWrites()).toBe(0)
 })
 

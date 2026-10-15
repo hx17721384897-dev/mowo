@@ -279,6 +279,36 @@ try {
   assert(duplicateCheckout.ok && duplicateBody.data.id === preOrder.id, '同一提交编号重试返回原付款前订单')
   assert((await prisma.skuInventory.findUnique({ where: { skuId } })).reservedStock === 4, '网络重试不会重复锁定库存')
 
+  const pendingList = (
+    await (
+      await request(
+        `/api/orders/mine?tab=active&status=pending&q=${encodeURIComponent("混合订单联名商品")}`,
+        token,
+      )
+    ).json()
+  ).data;
+  assert(
+    pendingList.orders.some(
+      (item) =>
+        item.id === `pre-${preOrder.id}` && item.displayStatus === "待付款",
+    ),
+    "待付款订单可按商品名在我的订单搜索到",
+  );
+  const pendingDetail = (
+    await (await request(`/api/orders/pre-${preOrder.id}`, token)).json()
+  ).data;
+  assert(
+    pendingDetail.kind === "pre_order" &&
+      pendingDetail.items.length === 3 &&
+      pendingDetail.actions.canCancel,
+    "待付款详情保留三条成交快照并可取消",
+  );
+  assert(
+    (await request(`/api/orders/pre-${preOrder.id}`, outsiderToken)).status ===
+      404,
+    "其他账号不能查看待付款订单详情",
+  );
+
   await prisma.cartItem.update({
     where: { id: cartItems[2].id }, data: { snapshotTitle: '被篡改的购物车标题', snapshotPrice: '1.00' },
   })
@@ -306,6 +336,100 @@ try {
   const retry = await request(`/api/payment/mock-pay/${preOrder.id}`, token, { method: 'POST' })
   assert(retry.status === 200, '重复支付通知安全返回')
   assert(await prisma.salesOrder.count({ where: { preOrderId: preOrder.id } }) === 1, '重复支付不会创建第二个用户订单')
+  const paidList = (
+    await (await request("/api/orders/mine?tab=all", token)).json()
+  ).data;
+  assert(
+    paidList.orders.some((item) => item.id === order.id) &&
+      !paidList.orders.some((item) => item.id === `pre-${preOrder.id}`),
+    "付款后列表只显示正式订单，不重复显示付款前订单",
+  );
+
+  const preOnlyProduct = await prisma.customProduct.create({
+    data: {
+      userId,
+      animationFrames: JSON.stringify(["private/test/frame.png"]),
+      configJson: JSON.stringify({
+        modelId: sku.modelId,
+        modelName: model.name,
+        frameCount: 1,
+      }),
+      frameCount: 1,
+      animationAssetId: assetId,
+      animationVersionId: versionId,
+      status: "in_cart",
+    },
+  });
+  productIds.push(preOnlyProduct.id);
+  await createConfirmedSelection(preOnlyProduct.id);
+  const preOnlyItem = await prisma.cartItem.create({
+    data: {
+      cartId,
+      itemType: "CUSTOM",
+      contentId: preOnlyProduct.id,
+      customProductId: preOnlyProduct.id,
+      hardwareSkuId: sku.id,
+      snapshotTitle: "只待付款的商品",
+      snapshotPrice: "100.00",
+      quantity: 1,
+    },
+  });
+  const preOnlyResponse = await request("/api/cart/checkout", token, {
+    method: "POST",
+    body: JSON.stringify({
+      cartItemIds: [preOnlyItem.id],
+      receiverName: "订单测试",
+      receiverPhone: phone,
+      receiverAddress: "测试地址 1 号",
+      receiverCity: "测试市",
+      idempotencyKey: `pre-only-${runId}`,
+    }),
+  });
+  assert(preOnlyResponse.ok, "第二张待付款订单可创建");
+  const preOnly = (await preOnlyResponse.json()).data;
+  const firstPage = (
+    await (
+      await request("/api/orders/mine?tab=all&page=1&limit=1", token)
+    ).json()
+  ).data;
+  const secondPage = (
+    await (
+      await request("/api/orders/mine?tab=all&page=2&limit=1", token)
+    ).json()
+  ).data;
+  assert(
+    firstPage.orders.length === 1 &&
+      secondPage.orders.length === 1 &&
+      firstPage.orders[0].id !== secondPage.orders[0].id &&
+      firstPage.hasMore,
+    "待付款与正式订单按时间分页且不重复",
+  );
+  assert(
+    (
+      await request(`/api/orders/pre-${preOnly.id}/cancel`, outsiderToken, {
+        method: "POST",
+      })
+    ).status === 404,
+    "其他账号不能取消待付款订单",
+  );
+  assert(
+    (
+      await request(`/api/orders/pre-${preOnly.id}/cancel`, token, {
+        method: "POST",
+      })
+    ).ok,
+    "本人可取消待付款订单",
+  );
+  assert(
+    (await prisma.preOrder.findUnique({ where: { id: preOnly.id } })).status ===
+      "cancelled",
+    "待付款取消后状态入库",
+  );
+  assert(
+    (await prisma.skuInventory.findUnique({ where: { skuId } }))
+      .reservedStock === 4,
+    "待付款取消仅释放本单一份预留库存",
+  );
   assert(await prisma.customizeOrder.count({ where: { salesOrderItem: { salesOrderId: order.id } } }) === 4, '重复支付不会创建额外生产任务')
 
   const brokenPreOrder = await prisma.preOrder.create({ data: {

@@ -127,6 +127,7 @@ export interface OrderItemDto {
 
 export interface OrderDto {
   id: string
+  kind: 'pre_order' | 'sales_order'
   orderNo: string
   status: OrderStatus
   displayStatus: string
@@ -152,6 +153,7 @@ export interface OrderDto {
   receivedAt: string | null
   paidAt: string | null
   earliestProductionAt: string | null
+  expiresAt: string | null
   receiverName: string | null
   receiverPhone: string | null
   receiverAddress: string | null

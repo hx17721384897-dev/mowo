@@ -264,6 +264,7 @@ export function parseOrderDto(value: unknown): OrderDto {
   if (sourceType !== 'custom' && sourceType !== 'collab') return invalid('订单来源类型')
   return {
     id: requiredString(row.id, '订单 ID'),
+    kind: row.kind === 'pre_order' ? 'pre_order' : 'sales_order',
     orderNo: requiredString(row.orderNo, '订单编号'),
     status: enumValue(row.status, ORDER_STATUSES, '订单状态'),
     displayStatus: requiredString(row.displayStatus, '订单展示状态'),
@@ -289,6 +290,7 @@ export function parseOrderDto(value: unknown): OrderDto {
     receivedAt: nullableTimestamp(row.receivedAt, '订单收货时间'),
     paidAt: nullableTimestamp(row.paidAt, '订单付款时间'),
     earliestProductionAt: nullableTimestamp(row.earliestProductionAt, '最早可开始制作时间'),
+    expiresAt: nullableTimestamp(row.expiresAt, '待付款截止时间'),
     receiverName: nullableString(row.receiverName, '订单收件人'),
     receiverPhone: nullableString(row.receiverPhone, '订单收件电话'),
     receiverAddress: nullableString(row.receiverAddress, '订单收件地址'),

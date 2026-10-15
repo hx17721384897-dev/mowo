@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import AddressBook from '@/features/address/AddressBook.vue'
 import type { Address } from '@/features/address/types'
 import {
@@ -8,6 +8,7 @@ import {
   checkoutProblemsFromError,
   getCart,
   getCheckoutCapabilities,
+  getOrder,
   getPaymentStatus,
   mockPay
 } from '@/features/transaction/api'
@@ -29,6 +30,7 @@ import '@/features/transaction/checkout.css'
 type CheckoutPhase = 'form' | 'pending' | 'success' | 'expired'
 
 const router = useRouter()
+const route = useRoute()
 const loading = ref(true)
 const error = ref('')
 const items = ref<CartItemViewModel[]>([])
@@ -78,7 +80,7 @@ async function refreshPaymentStatus(): Promise<void> {
   try {
     const status = await getPaymentStatus(preOrder.value.id)
     if (status.status === 'paid') finishPayment()
-    else if (status.status === 'expired' || status.expired) {
+    else if (status.status === 'expired' || status.status === 'cancelled' || status.expired) {
       phase.value = 'expired'
       stopTimers()
     }
@@ -96,7 +98,7 @@ function startPending(value: PreOrderDto): void {
     finishPayment()
     return
   }
-  phase.value = value.status === 'expired' ? 'expired' : 'pending'
+  phase.value = value.status === 'expired' || value.status === 'cancelled' ? 'expired' : 'pending'
   if (phase.value !== 'pending') return
   now.value = Date.now()
   clockTimer = setInterval(() => {
@@ -119,6 +121,40 @@ function finishPayment(): void {
 async function load(): Promise<void> {
   loading.value = true
   error.value = ''
+  const resumeId = typeof route.query.preOrderId === 'string' ? route.query.preOrderId : ''
+  if (resumeId) {
+    try {
+      const [result, featureDto] = await Promise.all([
+        getOrder(`pre-${resumeId}`),
+        getCheckoutCapabilities()
+      ])
+      capabilities.value = featureDto
+      if (result.kind !== 'pre_order') {
+        await router.replace({ name: 'order-detail', params: { id: result.id } })
+        return
+      }
+      if (result.status === 'pending' && !result.actions.canCancel) {
+        throw new Error('订单资料异常，请联系客服处理')
+      }
+      startPending({
+        id: resumeId,
+        status:
+          result.status === 'pending'
+            ? 'pending_payment'
+            : result.displayStatus === '已超时'
+              ? 'expired'
+              : 'cancelled',
+        totalAmount: result.totalAmount,
+        expiresAt: result.expiresAt || result.createdAt,
+        createdAt: result.createdAt
+      })
+    } catch (cause) {
+      error.value = cause instanceof Error ? cause.message : '订单恢复失败'
+    } finally {
+      loading.value = false
+    }
+    return
+  }
   const itemIds = readCheckoutItemIds()
   if (!itemIds.length) {
     error.value = '没有可结算的商品，请返回购物车重新选择'

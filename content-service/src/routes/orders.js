@@ -4,6 +4,7 @@
 import { unlockInventoryInTransaction } from '../lib/inventory.js'
 import { FILE_PURPOSE, findOwnedReadyFiles, linkFiles } from '../lib/private-files.js'
 import { summarizeProductionStatus } from '../lib/sales-orders.js'
+import { closePreOrderAndRelease, readCheckoutSnapshot } from '../lib/checkout-snapshot.js'
 
 // 安全签名辅助：仅对 OSS key（相对路径）生成预签名 URL
 // data URL（base64）和完整 http(s) URL 直接返回 null（不适合做缩略图）
@@ -37,6 +38,7 @@ const STATUS_MAP = {
 
 // 进行中的状态（active tab）
 const ACTIVE_STATUSES = ['pending', 'paid', 'locked', 'processing', 'producing', 'shipped']
+const ORDER_FILTERS = new Set(['all', 'pending', 'paid', 'producing', 'shipped', 'received', 'aftersale', 'cancelled'])
 
 const SALES_ORDER_INCLUDE = {
   items: {
@@ -60,11 +62,118 @@ function orderActions(tasks) {
   }
 }
 
+function salesOrderStatus(order) {
+  const tasks = order.items.flatMap((item) => item.productionTasks);
+  const status = summarizeProductionStatus(tasks);
+  return status === "paid" && tasks.some((task) => task.batchId)
+    ? "producing"
+    : status;
+}
+
+function preOrderStatus(order, now = new Date()) {
+  return order.status === "pending_payment" && order.expiresAt <= now
+    ? "expired"
+    : order.status;
+}
+
+function preOrderSnapshot(order) {
+  try {
+    return readCheckoutSnapshot(order.checkoutSnapshot);
+  } catch {
+    return null;
+  }
+}
+
+function serializePreOrder(fastify, order, includeAddress = false) {
+  const snapshot = preOrderSnapshot(order);
+  const state = preOrderStatus(order);
+  const pending = state === "pending_payment";
+  const snapshotItems = snapshot?.items || [
+    {
+      itemType: "CUSTOM",
+      title: "历史订单商品明细缺失",
+      sku: { id: "unknown" },
+      quantity: 1,
+      unitPrice: Number(order.totalAmount),
+      lineTotal: Number(order.totalAmount),
+    },
+  ];
+  const items = snapshotItems.map((item, index) => ({
+    id: `${order.id}-${index}`,
+    itemNo: `PO-${index + 1}`,
+    itemType: item.itemType,
+    productTitle: item.title || "商品",
+    coverUrl: ossSign(fastify, item.previewUrl),
+    modelName: item.sku?.modelName || null,
+    size: item.sku?.size || null,
+    material: item.sku?.material || null,
+    frameCount: item.sku?.frameCount || null,
+    colorName: item.sku?.colorName || null,
+    quantity: Number(item.quantity),
+    unitPrice: Number(item.unitPrice),
+    lineTotal: Number(item.lineTotal),
+    animationAssetId: item.animationAssetId || null,
+    animationVersionId: item.animationVersionId || null,
+    skuId: item.sku.id,
+  }));
+  const first = items[0];
+  return {
+    id: `pre-${order.id}`,
+    kind: "pre_order",
+    orderNo: `PO-${order.id.slice(0, 8).toUpperCase()}`,
+    status: pending ? "pending" : "cancelled",
+    displayStatus: pending
+      ? snapshot
+        ? "待付款"
+        : "待付款（资料异常）"
+      : state === "expired"
+        ? "已超时"
+        : "已取消",
+    statusGroup: pending ? "pending" : "cancelled",
+    statusStep: pending ? 0 : -1,
+    sourceType: items.every((item) => item.itemType === "MARKET")
+      ? "collab"
+      : "custom",
+    platform: "SELF",
+    productTitle:
+      items.length > 1
+        ? `${items.length} 种商品 · 共 ${items.reduce((sum, item) => sum + item.quantity, 0)} 件`
+        : first.productTitle,
+    coverUrl: first.coverUrl,
+    modelName: first.modelName,
+    size: first.size,
+    material: first.material,
+    frameCount: first.frameCount,
+    colorName: first.colorName,
+    totalAmount: Number(order.totalAmount),
+    itemCount: items.length,
+    totalQuantity: items.reduce((sum, item) => sum + item.quantity, 0),
+    items,
+    actions: {
+      canCancel: pending && !!snapshot,
+      canConfirmReceipt: false,
+      canRequestRefund: false,
+      canRequestQuality: false,
+    },
+    trackingNo: null,
+    trackingCompany: null,
+    shippedAt: null,
+    receivedAt: null,
+    paidAt: null,
+    earliestProductionAt: null,
+    expiresAt: order.expiresAt,
+    receiverName: order.receiverName || null,
+    receiverCity: order.receiverCity || null,
+    receiverPhone: includeAddress ? order.receiverPhone || null : null,
+    receiverAddress: includeAddress ? order.receiverAddress || null : null,
+    createdAt: order.createdAt,
+    updatedAt: order.createdAt,
+  };
+}
+
 function serializeSalesOrder(fastify, order, includeAddress = false) {
   const tasks = order.items.flatMap(item => item.productionTasks)
-  const productionStatus = summarizeProductionStatus(tasks)
-  // 创建 PB 时任务仍是 paid；批次归属才是顾客看到“制作中”的起点。
-  const status = productionStatus === 'paid' && tasks.some(task => task.batchId) ? 'producing' : productionStatus
+  const status = salesOrderStatus(order)
   const display = STATUS_MAP[status] || { label: status, group: 'unknown', step: -1 }
   const actions = orderActions(tasks)
   const items = order.items.map(item => {
@@ -97,6 +206,7 @@ function serializeSalesOrder(fastify, order, includeAddress = false) {
   const trackingTasks = tasks.filter(task => task.trackingNo)
   return {
     id: order.id,
+    kind: 'sales_order',
     orderNo: order.orderNo,
     status,
     displayStatus: display.label,
@@ -124,6 +234,7 @@ function serializeSalesOrder(fastify, order, includeAddress = false) {
     receivedAt: order.receivedAt || null,
     paidAt: order.paidAt || null,
     earliestProductionAt: order.earliestProductionAt || null,
+    expiresAt: null,
     receiverName: order.receiverName || null,
     receiverCity: order.receiverCity || null,
     ...(includeAddress ? {
@@ -147,34 +258,143 @@ async function orderRoutes(fastify, opts) {
   // GET /api/orders/mine?tab=active&page=1&limit=30
   // 获取当前用户订单列表
   // ──────────────────────────────────────────────
-  fastify.get('/mine', async (req, reply) => {
-    const userId = req.user.userId
-    const tab    = req.query.tab    || 'active'   // active | all
-    const page   = Math.max(1, Number(req.query.page  || 1))
-    const limit  = Math.min(50, Math.max(1, Number(req.query.limit || 30)))
-    const skip   = (page - 1) * limit
+  fastify.get("/mine", async (req, reply) => {
+    const userId = req.user.userId;
+    const tab = req.query.tab === "all" ? "all" : "active";
+    const page = Math.max(
+      1,
+      Math.min(100000, Number.parseInt(req.query.page, 10) || 1),
+    );
+    const limit = Math.max(
+      1,
+      Math.min(50, Number.parseInt(req.query.limit, 10) || 30),
+    );
+    const filter = ORDER_FILTERS.has(req.query.status)
+      ? req.query.status
+      : "all";
+    const search =
+      typeof req.query.q === "string"
+        ? req.query.q.trim().slice(0, 80).toLocaleLowerCase()
+        : "";
+    const now = new Date();
 
-    const salesOrders = await prisma.salesOrder.findMany({
-      where: { userId }, include: SALES_ORDER_INCLUDE, orderBy: { createdAt: 'desc' }
-    })
-    const all = salesOrders.map(order => serializeSalesOrder(fastify, order))
-    const visible = tab === 'active' ? all.filter(order => ACTIVE_STATUSES.includes(order.status)) : all
-    const activeCount = all.filter(order => ACTIVE_STATUSES.includes(order.status)).length
-    const totalCount = all.length
-    const result = visible.slice(skip, skip + limit)
+    // 展示前处理本用户到期的预订单，确保待付款按钮和库存状态一致。
+    const overdue = await prisma.preOrder.findMany({
+      where: { userId, status: "pending_payment", expiresAt: { lte: now } },
+    });
+    for (const order of overdue) {
+      try {
+        await closePreOrderAndRelease(prisma, order, 'expired')
+      } catch (error) {
+        fastify.log.error({ err: error, preOrderId: order.id }, '预订单到期处理失败')
+      }
+    }
+
+    // 先取轻量索引来跨两张表排序，只读取当前页的完整订单和商品快照。
+    const [salesIndex, preIndex] = await Promise.all([
+      prisma.salesOrder.findMany({
+        where: { userId },
+        select: {
+          id: true,
+          orderNo: true,
+          createdAt: true,
+          items: {
+            select: {
+              snapshotTitle: true,
+              productionTasks: { select: { status: true, batchId: true } },
+            },
+          },
+        },
+      }),
+      prisma.preOrder.findMany({
+        where: {
+          userId,
+          status: { in: ["pending_payment", "expired", "cancelled"] },
+        },
+        select: {
+          id: true,
+          status: true,
+          expiresAt: true,
+          createdAt: true,
+          checkoutSnapshot: true,
+        },
+      }),
+    ]);
+    const indexed = [
+      ...salesIndex.map((order) => ({
+        id: order.id,
+        kind: "sales_order",
+        createdAt: order.createdAt,
+        status: salesOrderStatus(order),
+        searchText:
+          `${order.orderNo} ${order.items.map((item) => item.snapshotTitle).join(" ")}`.toLocaleLowerCase(),
+      })),
+      ...preIndex.map((order) => ({
+        id: order.id,
+        kind: "pre_order",
+        createdAt: order.createdAt,
+        status:
+          preOrderStatus(order, now) === "pending_payment"
+            ? "pending"
+            : "cancelled",
+        searchText:
+          `PO-${order.id.slice(0, 8)} ${order.id} ${(preOrderSnapshot(order)?.items || []).map((item) => item.title || "").join(" ")}`.toLocaleLowerCase(),
+      })),
+    ];
+    const activeCount = indexed.filter((order) =>
+      ACTIVE_STATUSES.includes(order.status),
+    ).length;
+    const totalCount = indexed.length;
+    const filtered = indexed
+      .filter(
+        (order) =>
+          (tab === "all" || ACTIVE_STATUSES.includes(order.status)) &&
+          (filter === "all" ||
+            (filter === "producing"
+              ? ["locked", "processing", "producing"].includes(order.status)
+              : order.status === filter)) &&
+          (!search || order.searchText.includes(search)),
+      )
+      .sort((a, b) => b.createdAt - a.createdAt || a.id.localeCompare(b.id));
+    const skip = (page - 1) * limit;
+    const selected = filtered.slice(skip, skip + limit);
+    const salesIds = selected
+      .filter((row) => row.kind === "sales_order")
+      .map((row) => row.id);
+    const preIds = selected
+      .filter((row) => row.kind === "pre_order")
+      .map((row) => row.id);
+    const [salesOrders, preOrders] = await Promise.all([
+      salesIds.length
+        ? prisma.salesOrder.findMany({
+            where: { id: { in: salesIds }, userId },
+            include: SALES_ORDER_INCLUDE,
+          })
+        : [],
+      preIds.length
+        ? prisma.preOrder.findMany({ where: { id: { in: preIds }, userId } })
+        : [],
+    ]);
+    const salesById = new Map(salesOrders.map((order) => [order.id, order]));
+    const preById = new Map(preOrders.map((order) => [order.id, order]));
+    const result = selected.map((row) =>
+      row.kind === "sales_order"
+        ? serializeSalesOrder(fastify, salesById.get(row.id))
+        : serializePreOrder(fastify, preById.get(row.id)),
+    );
 
     return reply.send({
       success: true,
       data: {
-        orders:      result,
+        orders: result,
         activeCount,
         totalCount,
         page,
         limit,
-        hasMore: skip + result.length < visible.length,
+        hasMore: skip + result.length < filtered.length,
       },
-    })
-  })
+    });
+  });
 
   // ──────────────────────────────────────────────
   // POST /api/orders/:id/confirm-receipt
@@ -216,6 +436,37 @@ async function orderRoutes(fastify, opts) {
     const userId = req.user.userId
     const { id } = req.params
 
+    if (id.startsWith("pre-")) {
+      const preOrder = await prisma.preOrder.findFirst({
+        where: { id: id.slice(4), userId },
+      });
+      if (!preOrder)
+        return reply.code(404).send({ success: false, message: "订单不存在" });
+      if (preOrder.status !== "pending_payment")
+        return reply
+          .code(409)
+          .send({ success: false, message: "订单状态已改变，请刷新后重试" });
+      if (preOrder.expiresAt <= new Date()) {
+        await closePreOrderAndRelease(prisma, preOrder, "expired");
+        return reply
+          .code(409)
+          .send({
+            success: false,
+            message: "付款时间已结束，请返回购物车重新结算",
+          });
+      }
+      const cancelled = await closePreOrderAndRelease(
+        prisma,
+        preOrder,
+        "cancelled",
+      );
+      if (!cancelled)
+        return reply
+          .code(409)
+          .send({ success: false, message: "订单状态已改变，请刷新后重试" });
+      return reply.send({ success: true, data: { status: "cancelled" } });
+    }
+
     const salesOrder = await prisma.salesOrder.findFirst({
       where: { id, userId }, include: SALES_ORDER_INCLUDE
     })
@@ -254,6 +505,43 @@ async function orderRoutes(fastify, opts) {
   fastify.get('/:id', async (req, reply) => {
     const userId = req.user.userId
     const { id } = req.params
+
+    if (id.startsWith("pre-")) {
+      let preOrder = await prisma.preOrder.findFirst({
+        where: { id: id.slice(4), userId },
+      });
+      if (!preOrder)
+        return reply.code(404).send({ success: false, message: "订单不存在" });
+      if (preOrder.status === "paid") {
+        const paidOrder = await prisma.salesOrder.findFirst({
+          where: { preOrderId: preOrder.id, userId },
+          include: SALES_ORDER_INCLUDE,
+        });
+        return paidOrder
+          ? reply.send({
+              success: true,
+              data: serializeSalesOrder(fastify, paidOrder, true),
+            })
+          : reply
+              .code(409)
+              .send({ success: false, message: "支付结果处理中，请稍后刷新" });
+      }
+      if (
+        preOrderStatus(preOrder) === "expired" &&
+        preOrder.status === "pending_payment"
+      ) {
+        try {
+          await closePreOrderAndRelease(prisma, preOrder, 'expired')
+          preOrder = await prisma.preOrder.findUnique({ where: { id: preOrder.id } })
+        } catch (error) {
+          fastify.log.error({ err: error, preOrderId: preOrder.id }, '预订单到期处理失败')
+        }
+      }
+      return reply.send({
+        success: true,
+        data: serializePreOrder(fastify, preOrder, true),
+      });
+    }
 
     const salesOrder = await prisma.salesOrder.findFirst({
       where: { id, userId }, include: SALES_ORDER_INCLUDE

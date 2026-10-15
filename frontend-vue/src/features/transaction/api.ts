@@ -93,9 +93,17 @@ export async function mockPay(preOrderId: string): Promise<MockPaymentResultDto>
 export async function getMyOrders(
   tab: 'active' | 'all',
   page = 1,
-  limit = 30
+  limit = 30,
+  status = 'all',
+  search = ''
 ): Promise<OrderPageDto> {
-  const query = new URLSearchParams({ tab, page: String(page), limit: String(limit) })
+  const query = new URLSearchParams({
+    tab,
+    page: String(page),
+    limit: String(limit),
+    status,
+    q: search
+  })
   return parseOrderPageDto(await apiRequest<unknown>(`/api/orders/mine?${query.toString()}`))
 }
 

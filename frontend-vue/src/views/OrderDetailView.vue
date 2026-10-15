@@ -233,7 +233,9 @@ onBeforeUnmount(() => {
           <div>
             <div class="hero-status-label">订单状态</div>
             <h1 class="hero-status-val">{{ order.displayStatus }}</h1>
-            <div class="hero-order-no">NO. {{ order.orderNo }}</div>
+            <div class="hero-order-no">
+              {{ order.kind === 'pre_order' ? '付款前编号' : 'NO.' }} {{ order.orderNo }}
+            </div>
           </div>
           <div class="hero-icon">{{ ORDER_STATUS_ICON[order.status] }}</div>
         </div>
@@ -248,7 +250,13 @@ onBeforeUnmount(() => {
             }}<small>点击复制快递单号</small></span
           >
         </button>
-        <div v-else-if="orderEta(order)" class="hero-eta">🔧 {{ orderEta(order) }}</div></template
+        <div v-else-if="orderEta(order)" class="hero-eta">🔧 {{ orderEta(order) }}</div>
+        <div
+          v-else-if="order.kind === 'pre_order' && order.status === 'pending' && order.expiresAt"
+          class="hero-eta"
+        >
+          ⏳ 付款截止：{{ new Date(order.expiresAt).toLocaleString('zh-CN', { hour12: false }) }}
+        </div></template
       >
     </section>
     <template v-if="order">
@@ -287,12 +295,21 @@ onBeforeUnmount(() => {
           <span>下单时间</span><strong>{{ order.createdAtText }}</strong>
         </div>
         <div class="info-row">
-          <span>实付金额</span><strong class="total">{{ order.totalAmountText }}</strong>
+          <span>{{ order.kind === 'pre_order' ? '待付金额' : '实付金额' }}</span
+          ><strong class="total">{{ order.totalAmountText }}</strong>
         </div>
       </section>
       <section class="action-bar">
         <h2>操作</h2>
         <div class="action-btns">
+          <RouterLink
+            v-if="
+              order.kind === 'pre_order' && order.status === 'pending' && order.actions.canCancel
+            "
+            class="btn-action yellow"
+            :to="{ name: 'checkout', query: { preOrderId: order.id.slice(4) } }"
+            >继续付款</RouterLink
+          >
           <button
             v-if="order.actions.canConfirmReceipt"
             class="btn-action yellow"
@@ -339,7 +356,9 @@ onBeforeUnmount(() => {
           <p>
             {{
               dialog === 'cancel'
-                ? '取消后不可恢复，如有疑问请先联系客服。'
+                ? order?.kind === 'pre_order'
+                  ? '取消后已预留的库存会释放；这笔订单尚未付款。'
+                  : '取消后不可恢复，如有疑问请先联系客服。'
                 : '确认后订单将进入已完成状态。'
             }}
           </p>

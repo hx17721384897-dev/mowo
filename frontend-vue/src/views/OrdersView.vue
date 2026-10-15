@@ -13,6 +13,9 @@ import { toOrderViewModel } from '@/features/transaction/view-model'
 import '@/features/transaction/orders.css'
 
 const tab = ref<'active' | 'all'>('active')
+const status = ref('all')
+const searchInput = ref('')
+const search = ref('')
 const orders = ref<OrderViewModel[]>([])
 const activeCount = ref(0)
 const totalCount = ref(0)
@@ -39,13 +42,21 @@ async function load(nextPage = 1): Promise<void> {
   if (nextPage > 1 && (loadingMore.value || !hasMore.value)) return
   const sequence = ++loadSequence
   const selectedTab = tab.value
+  const selectedStatus = status.value
+  const selectedSearch = search.value
   if (nextPage === 1) {
     loading.value = true
     error.value = ''
   } else loadingMore.value = true
   try {
-    const result = await getMyOrders(selectedTab, nextPage)
-    if (sequence !== loadSequence || selectedTab !== tab.value) return
+    const result = await getMyOrders(selectedTab, nextPage, 30, selectedStatus, selectedSearch)
+    if (
+      sequence !== loadSequence ||
+      selectedTab !== tab.value ||
+      selectedStatus !== status.value ||
+      selectedSearch !== search.value
+    )
+      return
     const incoming = result.orders.map(toOrderViewModel)
     error.value = ''
     orders.value = nextPage === 1 ? incoming : [...orders.value, ...incoming]
@@ -69,6 +80,18 @@ function selectTab(value: 'active' | 'all'): void {
   tab.value = value
   orders.value = []
   load()
+}
+
+function applyFilters(): void {
+  search.value = searchInput.value.trim()
+  orders.value = []
+  void load()
+}
+
+function selectStatus(event: Event): void {
+  status.value = (event.target as HTMLSelectElement).value
+  if (['received', 'aftersale', 'cancelled'].includes(status.value)) tab.value = 'all'
+  applyFilters()
 }
 
 async function copyTracking(value: string): Promise<void> {
@@ -127,6 +150,27 @@ onBeforeUnmount(() => {
         全部订单 <span class="tab-badge">{{ totalCount }}</span>
       </button>
     </div>
+    <form class="order-filters" role="search" @submit.prevent="applyFilters">
+      <label class="filter-label" for="order-status">订单状态</label>
+      <select id="order-status" :value="status" @change="selectStatus">
+        <option value="all">全部状态</option>
+        <option value="pending">待付款</option>
+        <option value="paid">已付款</option>
+        <option value="producing">制作中</option>
+        <option value="shipped">运输中</option>
+        <option value="received">已完成</option>
+        <option value="aftersale">售后中</option>
+        <option value="cancelled">已取消／已超时</option>
+      </select>
+      <label class="filter-label" for="order-search">搜索订单</label>
+      <input
+        id="order-search"
+        v-model="searchInput"
+        maxlength="80"
+        placeholder="订单编号或商品名称"
+      />
+      <button type="submit">搜索</button>
+    </form>
     <div v-if="loading" class="order-list" aria-live="polite">
       <div v-for="i in 3" :key="i" class="skeleton-card">
         <div class="sk" style="height: 42px"></div>
@@ -142,14 +186,19 @@ onBeforeUnmount(() => {
     <div v-else-if="!orders.length" class="empty">
       <div class="empty-icon">📭</div>
       <div class="empty-title">这里还没有订单</div>
-      <p class="empty-desc">去联名作品看看喜欢的动画<br />选好款式后即可加入购物车</p>
-      <RouterLink to="/showcase" class="btn-go">浏览联名作品 →</RouterLink>
+      <p class="empty-desc">
+        {{ search || status !== 'all' ? '请试试其他搜索词或状态' : '下单后可在这里查看订单' }}
+      </p>
+      <RouterLink v-if="!search && status === 'all'" to="/showcase" class="btn-go"
+        >浏览商品 →</RouterLink
+      >
     </div>
     <template v-else>
       <div class="order-list">
         <article v-for="order in orders" :key="order.id" class="order-card">
           <div class="card-head">
-            <span class="order-no">NO. {{ order.orderNo }}</span
+            <span class="order-no"
+              >{{ order.kind === 'pre_order' ? '付款前编号' : 'NO.' }} {{ order.orderNo }}</span
             ><span class="order-date">{{
               new Date(order.createdAt).toLocaleDateString('zh-CN', {
                 year: 'numeric',
@@ -177,6 +226,17 @@ onBeforeUnmount(() => {
               <span class="eta-icon">{{ order.status === 'shipped' ? '🚚' : '🔧' }}</span
               ><span class="eta-text">{{ orderEta(order) }}</span>
             </div>
+            <div
+              v-if="order.kind === 'pre_order' && order.status === 'pending' && order.expiresAt"
+              class="eta-row"
+            >
+              <span class="eta-icon">⏳</span
+              ><span class="eta-text"
+                >付款截止：{{
+                  new Date(order.expiresAt).toLocaleString('zh-CN', { hour12: false })
+                }}</span
+              >
+            </div>
             <div v-for="item in order.items" :key="item.id" class="items-row">
               <div class="item-thumb">
                 <img v-if="item.coverUrl" :src="item.coverUrl" alt="" loading="lazy" /><span
@@ -196,6 +256,16 @@ onBeforeUnmount(() => {
               订单合计 {{ order.totalAmountText }}
             </div>
             <div class="card-actions">
+              <RouterLink
+                v-if="
+                  order.kind === 'pre_order' &&
+                  order.status === 'pending' &&
+                  order.actions.canCancel
+                "
+                class="btn-action yellow"
+                :to="{ name: 'checkout', query: { preOrderId: order.id.slice(4) } }"
+                >继续付款</RouterLink
+              >
               <button
                 v-if="order.actions.canConfirmReceipt"
                 class="btn-action yellow"
