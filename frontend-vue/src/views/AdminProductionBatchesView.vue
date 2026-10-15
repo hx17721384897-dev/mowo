@@ -5,14 +5,17 @@ import AdminSidebar from '@/components/AdminSidebar.vue'
 import { ApiError } from '@/services/api-client'
 import {
   createProductionBatch,
+  getFulfillmentHoldSetting,
   getProductionBatch,
   listBatchCandidates,
   listProductionBatches,
+  updateFulfillmentHoldSetting,
   type BatchDetail,
   type BatchSummary,
   type Candidate,
   type CandidateFilters,
-  type CandidateMeta
+  type CandidateMeta,
+  type FulfillmentHoldSetting
 } from '@/features/admin-production-batches/api'
 import './admin-production-batches.css'
 
@@ -42,6 +45,10 @@ const emptyMeta: CandidateMeta = {
   printGroups: []
 }
 const candidateMeta = ref<CandidateMeta>(emptyMeta)
+const holdSetting = ref<FulfillmentHoldSetting | null>(null)
+const holdInput = ref('60')
+const holdError = ref('')
+const holdSaving = ref(false)
 const filters = reactive<CandidateFilters>({
   paidFrom: '',
   paidTo: '',
@@ -191,6 +198,35 @@ async function loadBatches() {
     if (seq === listSequence) loading.value = false
   }
 }
+async function loadHoldSetting() {
+  try {
+    const setting = await getFulfillmentHoldSetting()
+    holdSetting.value = setting
+    holdInput.value = String(setting.minutes)
+    holdError.value = ''
+  } catch (cause) {
+    holdError.value = messageOf(cause)
+  }
+}
+async function saveHoldSetting() {
+  if (!holdSetting.value?.canEdit || holdSaving.value) return
+  const minutes = Number(holdInput.value)
+  if (!/^\d+$/.test(holdInput.value) || !Number.isInteger(minutes) || minutes > 10080) {
+    holdError.value = '请输入 0 到 10080 的整数分钟'
+    return
+  }
+  holdSaving.value = true
+  holdError.value = ''
+  try {
+    await updateFulfillmentHoldSetting(minutes)
+    await loadHoldSetting()
+    flash('暂缓履约时长已保存，仅影响之后付款的订单')
+  } catch (cause) {
+    holdError.value = messageOf(cause)
+  } finally {
+    holdSaving.value = false
+  }
+}
 async function selectBatch(id: string) {
   activeBatchId.value = id
   void router.replace({ query: { ...route.query, batchId: id } })
@@ -313,7 +349,10 @@ async function submitBatch(ack = false) {
   }
 }
 
-onMounted(() => void loadBatches())
+onMounted(() => {
+  void loadBatches()
+  void loadHoldSetting()
+})
 onBeforeUnmount(() => {
   listSequence++
   detailSequence++
@@ -359,6 +398,40 @@ onBeforeUnmount(() => {
           <div class="stat">
             <div class="stat-label">异常生产件</div>
             <div class="stat-value">{{ stats.exceptions }}</div>
+          </div>
+        </section>
+        <section class="hold-setting panel" aria-label="暂缓履约设置">
+          <div>
+            <h2 class="panel-title">暂缓履约时长</h2>
+            <p class="panel-sub">
+              付款后至少等待所设时长才能进入生产批次；修改只影响之后付款的订单。到时间不会自动开始制作。
+            </p>
+            <p v-if="holdSetting?.updatedAt" class="panel-sub">
+              最近修改：{{ holdSetting.updatedByName || '管理员' }} ·
+              {{ formatTime(holdSetting.updatedAt) }}
+            </p>
+            <p v-if="holdError" class="hold-error" role="alert">{{ holdError }}</p>
+          </div>
+          <div class="hold-controls">
+            <label for="fulfillment-hold-minutes">分钟</label>
+            <input
+              id="fulfillment-hold-minutes"
+              v-model="holdInput"
+              type="number"
+              min="0"
+              max="10080"
+              step="1"
+              :disabled="!holdSetting?.canEdit || holdSaving"
+            />
+            <button
+              v-if="holdSetting?.canEdit"
+              class="btn btn-black"
+              type="button"
+              :disabled="holdSaving || Number(holdInput) === holdSetting.minutes"
+              @click="saveHoldSetting"
+            >
+              {{ holdSaving ? '保存中...' : '保存' }}
+            </button>
           </div>
         </section>
         <div v-if="error" class="empty error-state">
@@ -727,7 +800,7 @@ onBeforeUnmount(() => {
           </select>
           <div class="filter-actions">
             <div class="filter-checks">
-              <label><input v-model="filters.readyOnly" type="checkbox" /> 只看资料完整</label
+              <label><input v-model="filters.readyOnly" type="checkbox" /> 只看可入批订单</label
               ><label
                 ><input v-model="filters.kitAvailableOnly" type="checkbox" /> 只看材料充足</label
               >

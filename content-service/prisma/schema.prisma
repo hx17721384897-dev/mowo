@@ -1577,6 +1577,8 @@ model SalesOrder {
   receiverCity        String?   @map("receiver_city")
   platform            String    @default("SELF") @db.VarChar(20)
   paidAt              DateTime? @map("paid_at")
+  fulfillmentHoldMinutes Int?    @map("fulfillment_hold_minutes")
+  earliestProductionAt DateTime? @map("earliest_production_at")
   cancelledAt         DateTime? @map("cancelled_at")
   receivedAt          DateTime? @map("received_at")
   fulfillmentStatus   String    @default("PAID") @map("fulfillment_status") @db.VarChar(30)

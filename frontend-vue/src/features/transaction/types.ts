@@ -150,6 +150,8 @@ export interface OrderDto {
   trackingCompany: string | null
   shippedAt: string | null
   receivedAt: string | null
+  paidAt: string | null
+  earliestProductionAt: string | null
   receiverName: string | null
   receiverPhone: string | null
   receiverAddress: string | null

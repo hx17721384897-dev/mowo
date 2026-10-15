@@ -124,6 +124,8 @@ function orderFixture() {
     trackingCompany: '顺丰',
     shippedAt: now,
     receivedAt: null,
+    paidAt: now,
+    earliestProductionAt: '2026-09-21T09:00:00.000Z',
     receiverName: '张三',
     receiverPhone: '13800138000',
     receiverAddress: '科技园南路88号',

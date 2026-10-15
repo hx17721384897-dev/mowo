@@ -8,6 +8,7 @@ import {
   createSalesOrderNo
 } from '../lib/sales-orders.js'
 import { closePreOrderAndRelease, readCheckoutSnapshot } from '../lib/checkout-snapshot.js'
+import { earliestProductionAt, readFulfillmentHoldMinutes } from '../lib/fulfillment-hold.js'
 
 export default async function paymentRoutes(fastify) {
   const { prisma } = fastify
@@ -70,6 +71,8 @@ export default async function paymentRoutes(fastify) {
       }
 
       const orderNo = createSalesOrderNo()
+      const paidAt = new Date()
+      const fulfillmentHoldMinutes = await readFulfillmentHoldMinutes(tx)
       const order = await tx.salesOrder.create({
         data: {
           orderNo,
@@ -82,7 +85,9 @@ export default async function paymentRoutes(fastify) {
           receiverAddress: preOrder.receiverAddress,
           receiverCity: preOrder.receiverCity,
           platform: 'SELF',
-          paidAt: new Date()
+          paidAt,
+          fulfillmentHoldMinutes,
+          earliestProductionAt: earliestProductionAt(paidAt, fulfillmentHoldMinutes)
         }
       })
 

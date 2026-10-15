@@ -3,6 +3,8 @@
 > 最近复核：2026-10-11（V6-A 旧前端消费者审计与首轮退役）
 
 > 2026-10-15 订单展示批次 A：`MOWO_ORDER_SYSTEM_REDESIGN.md`、`order-page-design/03-页面流程与实施建议.md` 与 `modules/commerce-orders-inventory.md` 已同步客户状态、接口边界和后续实施批次；其他模块仍按原复核状态。
+
+> 2026-10-15 暂缓履约批次 B：同一订单设计稿、商品订单模块、`PRODUCTION_BATCH_WORKFLOW.md` 和 `SALES_ORDER_ACCEPTANCE.md` 已同步冻结时间、设置权限、PB 双重检查及仅测试库迁移的边界。
 >
 > 用途：说明每份项目 Markdown 的身份、可信范围和下一次核对动作。后续开发者或 AI 不应把“历史规划”直接当成当前代码事实。
 

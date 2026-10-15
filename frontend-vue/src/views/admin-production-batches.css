@@ -99,6 +99,32 @@
   font-weight: 900;
   margin-top: 6px;
 }
+.admin-production-batches-page .hold-setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 18px;
+  margin-bottom: 18px;
+}
+.admin-production-batches-page .hold-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.admin-production-batches-page .hold-controls input {
+  width: 90px;
+  height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 0 8px;
+  font: inherit;
+}
+.admin-production-batches-page .hold-error {
+  color: #a32222;
+  font-size: 12px;
+}
 .admin-production-batches-page .layout {
   display: grid;
   grid-template-columns: minmax(430px, 0.9fr) minmax(540px, 1.25fr);
@@ -549,6 +575,12 @@
   }
 }
 @media (max-width: 760px) {
+  .admin-production-batches-page .hold-setting {
+    display: block;
+  }
+  .admin-production-batches-page .hold-controls {
+    margin-top: 12px;
+  }
   .admin-production-batches-page .main,
   .admin-production-batches-page .main.expanded {
     margin-left: 0;

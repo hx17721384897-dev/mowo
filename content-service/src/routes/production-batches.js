@@ -4,6 +4,8 @@ import crypto from 'node:crypto'
 import { createProductionBatchNo } from '../lib/sales-orders.js'
 import { buildPrintRuleMap, loadPrintCutConfig, snapshotPrintRule, snapshotUnconfiguredSku } from '../lib/print-production.js'
 import { generateProductionFile } from '../lib/production-artifacts.js'
+import { DEFAULT_FULFILLMENT_HOLD_MINUTES, FULFILLMENT_HOLD_KEY, isFulfillmentHoldActive, parseFulfillmentHoldMinutes } from '../lib/fulfillment-hold.js'
+import { hasPermission, PERMISSION } from '../lib/permissions.js'
 
 const ORDER_INCLUDE = {
   items: {
@@ -93,6 +95,9 @@ async function assessOrders(prisma, orders, printGroups = null) {
     const expectedQty = order.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
 
     if (order.status !== 'paid') hardBlocks.push({ code: 'ORDER_NOT_PAID', message: '总订单不是已付款状态' })
+    if (isFulfillmentHoldActive(order)) {
+      hardBlocks.push({ code: 'FULFILLMENT_HOLD', message: `暂缓履约中，最早可于 ${order.earliestProductionAt.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false })} 开始制作` })
+    }
     if (!order.receiverName || !order.receiverPhone || !order.receiverAddress) {
       hardBlocks.push({ code: 'ADDRESS_INCOMPLETE', message: '收货信息不完整' })
     }
@@ -147,6 +152,7 @@ async function assessOrders(prisma, orders, printGroups = null) {
       orderNo: order.orderNo,
       createdAt: order.createdAt,
       paidAt: order.paidAt,
+      earliestProductionAt: order.earliestProductionAt,
       platform: order.platform,
       receiverName: order.receiverName,
       itemCount: order.items.length,
@@ -233,6 +239,49 @@ function summarizeUnits(units) {
 
 export default async function productionBatchRoutes(fastify) {
   const requireAdmin = fastify.requireRole(2)
+
+  fastify.get('/hold-setting', { preHandler: requireAdmin }, async (req, reply) => {
+    const config = await fastify.prisma.platformConfig.findUnique({
+      where: { configKey: FULFILLMENT_HOLD_KEY },
+      include: { updater: { select: { profile: { select: { nickname: true } } } } }
+    })
+    return reply.send({ success: true, data: {
+      minutes: parseFulfillmentHoldMinutes(config?.configValue) ?? DEFAULT_FULFILLMENT_HOLD_MINUTES,
+      updatedAt: config?.updatedBy ? config.updatedAt : null,
+      updatedByName: config?.updater?.profile?.nickname || null,
+      canEdit: hasPermission(req.user, PERMISSION.PRODUCTION_CONFIG)
+    } })
+  })
+
+  fastify.put('/hold-setting', { preHandler: fastify.requirePermission(PERMISSION.PRODUCTION_CONFIG) }, async (req, reply) => {
+    const minutes = parseFulfillmentHoldMinutes(req.body?.minutes)
+    if (minutes === null) return reply.code(400).send({ success: false, message: '暂缓时长须为 0 到 10080 的整数分钟' })
+    try {
+      await fastify.prisma.$transaction(async tx => {
+        const current = await tx.platformConfig.findUnique({ where: { configKey: FULFILLMENT_HOLD_KEY } })
+        if (!current) throw Object.assign(new Error('暂缓履约设置不存在，请先应用数据库迁移'), { code: 'HOLD_SETTING_MISSING' })
+        const previous = parseFulfillmentHoldMinutes(current.configValue)
+        if (previous === minutes) return
+        const updated = await tx.platformConfig.updateMany({
+          where: { configKey: FULFILLMENT_HOLD_KEY, configValue: current.configValue, updatedAt: current.updatedAt },
+          data: { configValue: String(minutes), updatedBy: req.user.userId }
+        })
+        if (updated.count !== 1) throw Object.assign(new Error('设置已被其他管理员修改，请刷新后重试'), { code: 'HOLD_SETTING_CHANGED' })
+        await tx.operationLog.create({ data: {
+          userId: req.user.userId, userRole: req.user.role ?? 0,
+          method: 'PUT', path: req.url, target: 'PlatformConfig', targetId: FULFILLMENT_HOLD_KEY,
+          action: '修改暂缓履约时长', before: JSON.stringify({ minutes: previous }), after: JSON.stringify({ minutes }),
+          ip: req.ip || null
+        } })
+      })
+    } catch (error) {
+      if (['HOLD_SETTING_MISSING', 'HOLD_SETTING_CHANGED'].includes(error.code)) {
+        return reply.code(409).send({ success: false, code: error.code, message: error.message })
+      }
+      throw error
+    }
+    return reply.send({ success: true, data: { minutes } })
+  })
 
   fastify.get('/candidates', { preHandler: requireAdmin }, async (req, reply) => {
     const filters = candidateFilters(req.query)
@@ -569,13 +618,17 @@ export default async function productionBatchRoutes(fastify) {
         if (claimed.count !== taskIds.length) {
           throw Object.assign(new Error('部分生产任务刚刚被其他批次领取，请刷新后重试'), { code: 'BATCH_RACE' })
         }
-        await tx.salesOrder.updateMany({
-          where: { id: { in: salesOrderIds } },
+        const eligible = await tx.salesOrder.updateMany({
+          where: { id: { in: salesOrderIds }, status: 'paid',
+            OR: [{ earliestProductionAt: null }, { earliestProductionAt: { lte: new Date() } }] },
           data: { fulfillmentStatus: 'PENDING_ADDRESS_EXPORT' }
         })
+        if (eligible.count !== salesOrderIds.length) {
+          throw Object.assign(new Error('订单仍在暂缓履约时间内或状态已改变，请刷新后重试'), { code: 'FULFILLMENT_HOLD' })
+        }
       })
     } catch (error) {
-      if (['ACTIVE_BATCH_EXISTS', 'BATCH_RACE'].includes(error.code)) {
+      if (['ACTIVE_BATCH_EXISTS', 'BATCH_RACE', 'FULFILLMENT_HOLD'].includes(error.code)) {
         return reply.code(409).send({ success: false, code: error.code, message: error.message })
       }
       if (error.code === 'P2002') {

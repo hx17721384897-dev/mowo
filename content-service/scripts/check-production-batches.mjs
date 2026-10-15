@@ -64,6 +64,10 @@ async function cleanup() {
     await prisma.printCutRule.deleteMany({ where: { groupId: printGroupId } })
     await prisma.printCutGroup.deleteMany({ where: { id: printGroupId } })
   }
+  if (adminId) await prisma.platformConfig.updateMany({
+    where: { configKey: 'fulfillment_hold_minutes', updatedBy: adminId },
+    data: { configValue: '60', updatedBy: null }
+  })
   await deleteUser(customerId)
   await deleteUser(adminId)
 }
@@ -94,6 +98,9 @@ try {
   const login = await request('/api/v1/auth/sms/verify', null, { method: 'POST', body: JSON.stringify({ phone: adminPhone, code: '123456', mode: 'LOGIN' }) })
   assert(login.status === 200, '生产批次测试管理员可以登录')
   const token = (await login.json()).data.accessToken
+  const settingResponse = await request('/api/admin/production-batches/hold-setting', token)
+  const setting = (await settingResponse.json()).data
+  assert(settingResponse.ok && setting.minutes === 60 && setting.canEdit === true, '负责人可查看默认 60 分钟暂缓履约设置')
 
   const printGroup = await prisma.printCutGroup.create({ data: {
     code: `PCG-TEST-${runId}`, name: `批次测试版式-${runId}`, size: testSize,
@@ -128,7 +135,8 @@ try {
   preOrderId = preOrder.id
   const order = await prisma.salesOrder.create({ data: {
     orderNo: `SO-20990101-${runId}`, userId: customerId, preOrderId, status: 'paid', totalAmount: '20.00',
-    receiverName: '批次测试收件人', receiverPhone: customerPhone, receiverAddress: '测试路 23 号', receiverCity: '测试市', paidAt: new Date()
+    receiverName: '批次测试收件人', receiverPhone: customerPhone, receiverAddress: '测试路 23 号', receiverCity: '测试市',
+    paidAt: new Date(), fulfillmentHoldMinutes: 60, earliestProductionAt: new Date(Date.now() + 3600000)
   } })
   salesOrderId = order.id
   const item = await prisma.salesOrderItem.create({ data: {
@@ -142,6 +150,30 @@ try {
     receiverName: order.receiverName, receiverPhone: order.receiverPhone, receiverAddress: order.receiverAddress,
     receiverCity: order.receiverCity, salesOrderItemId: item.id, unitIndex
   } })))
+
+  const blockedResponse = await request('/api/admin/production-batches/candidates', token)
+  const blockedOrder = (await blockedResponse.json()).data.find(row => row.id === salesOrderId)
+  assert(blockedOrder?.ready === false && blockedOrder.hardBlocks.some(row => row.code === 'FULFILLMENT_HOLD'), '付款后暂缓期在候选列表阻止入批并说明原因')
+  const earlyBatch = await request('/api/admin/production-batches', token, {
+    method: 'POST', body: JSON.stringify({ salesOrderIds: [salesOrderId], clientRequestId: `${batchRequestId}-hold` })
+  })
+  assert(earlyBatch.status === 409 && (await earlyBatch.json()).code === 'BATCH_NOT_READY', '暂缓期内服务端拒绝创建正式生产批次')
+  assert((await request('/api/admin/production-batches/hold-setting', token, {
+    method: 'PUT', body: JSON.stringify({ minutes: true })
+  })).status === 400, '暂缓履约设置拒绝布尔值等无效时长')
+  const updateSetting = await request('/api/admin/production-batches/hold-setting', token, {
+    method: 'PUT', body: JSON.stringify({ minutes: 30 })
+  })
+  assert(updateSetting.ok, '负责人可修改未来付款订单的暂缓分钟数')
+  const frozenOrder = await prisma.salesOrder.findUnique({ where: { id: salesOrderId } })
+  assert(frozenOrder.fulfillmentHoldMinutes === 60 && frozenOrder.earliestProductionAt.getTime() === order.earliestProductionAt.getTime(), '修改设置不影响已付款订单的冻结时间')
+  assert((await request('/api/admin/production-batches/hold-setting', customerToken, {
+    method: 'PUT', body: JSON.stringify({ minutes: 0 })
+  })).status === 403, '普通顾客不能修改暂缓履约设置')
+  await request('/api/admin/production-batches/hold-setting', token, {
+    method: 'PUT', body: JSON.stringify({ minutes: 60 })
+  })
+  await prisma.salesOrder.update({ where: { id: salesOrderId }, data: { earliestProductionAt: new Date(Date.now() - 1000) } })
 
   const candidatesResponse = await request('/api/admin/production-batches/candidates', token)
   assert(candidatesResponse.status === 200, '可以读取生产批次候选总订单')
@@ -192,6 +224,7 @@ try {
   assert(detail.materialDemand[0].required === 2 && detail.progress.total === 2, '批次详情正确汇总领料需求和并行进度')
   assert(detail.printQueue.length === 2 && detail.printQueue[0].groupName === printGroup.name, '批次详情返回冻结的帧素材打印队列')
 
+  if (process.env.MOWO_PRODUCTION_BATCH_API_ONLY !== '1') {
   browser = await chromium.launch({ headless: true, executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe' })
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
   const page = await context.newPage()
@@ -224,6 +257,7 @@ try {
     .filter({ has: page.locator('.nav-sub-parent').getByText('全部订单', { exact: true }) })
   assert(await ordersMenu.locator('.nav-third.open').count() === 1, '当前订单阶段会自动展开全部订单菜单')
   await context.close()
+  }
 
   console.log('Production batch checks passed')
 } finally {

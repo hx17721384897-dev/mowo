@@ -24,6 +24,7 @@ export type BatchSummary = {
 export type Candidate = {
   id: string
   orderNo: string
+  earliestProductionAt: string | null
   receiverName: string
   itemCount: number
   productionUnitCount: number
@@ -35,6 +36,23 @@ export type Candidate = {
   matchedUnitCount: number
   extraUnitCount: number
   includesUnmatchedItems: boolean
+}
+export type FulfillmentHoldSetting = {
+  minutes: number
+  updatedAt: string | null
+  updatedByName: string | null
+  canEdit: boolean
+}
+
+export async function getFulfillmentHoldSetting(): Promise<FulfillmentHoldSetting> {
+  return apiRequest<FulfillmentHoldSetting>('/api/admin/production-batches/hold-setting')
+}
+
+export async function updateFulfillmentHoldSetting(minutes: number): Promise<{ minutes: number }> {
+  return apiRequest<{ minutes: number }>('/api/admin/production-batches/hold-setting', {
+    method: 'PUT',
+    body: { minutes }
+  })
 }
 export type CandidateMeta = {
   totalOrders: number

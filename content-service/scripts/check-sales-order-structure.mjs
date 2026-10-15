@@ -7,6 +7,7 @@ const apiBase = process.env.TEST_API_BASE || 'http://127.0.0.1:3001'
 const runId = String(Date.now()).slice(-8)
 let userId
 let outsiderId
+let adminId
 let assetId
 let versionId
 let cartId
@@ -47,6 +48,10 @@ async function createConfirmedSelection(customProductId) {
 
 async function cleanup() {
   if (!userId) return
+  if (adminId) await prisma.platformConfig.updateMany({
+    where: { configKey: 'fulfillment_hold_minutes', updatedBy: adminId },
+    data: { configValue: '60', updatedBy: null }
+  })
   await prisma.aftersaleRequest.deleteMany({ where: { userId } })
   await prisma.customizeOrder.deleteMany({ where: { userId } })
   await prisma.salesOrderItem.deleteMany({ where: { salesOrder: { userId } } })
@@ -74,6 +79,15 @@ async function cleanup() {
     await prisma.auditLog.deleteMany({ where: { userId: outsiderId } })
     await prisma.userProfile.deleteMany({ where: { userId: outsiderId } })
     await prisma.user.deleteMany({ where: { id: outsiderId } })
+  }
+  if (adminId) {
+    await prisma.smsCode.deleteMany({ where: { userId: adminId } })
+    await prisma.refreshToken.deleteMany({ where: { userId: adminId } })
+    await prisma.operationLog.deleteMany({ where: { userId: adminId } })
+    await prisma.auditLog.deleteMany({ where: { userId: adminId } })
+    await prisma.userProfile.deleteMany({ where: { userId: adminId } })
+    await prisma.user.deleteMany({ where: { id: adminId } })
+    adminId = null
   }
   if (skuId) await prisma.inventoryLog.deleteMany({ where: { skuId } })
   if (skuId) await prisma.skuInventory.deleteMany({ where: { skuId } })
@@ -139,6 +153,18 @@ try {
   })
   assert(outsiderLogin.ok, '第二测试账号可以登录以验证订单所有权')
   const outsiderToken = (await outsiderLogin.json()).data.accessToken
+  const adminPhone = `194${runId}`
+  const admin = await prisma.user.create({ data: {
+    phone: adminPhone, role: 3, staffRole: 'OWNER', privacyAgreedAt: new Date(), privacyPolicyVersion: 'sales-order-test',
+    profile: { create: { nickname: `hold-setting-check-admin-${runId}` } }
+  } })
+  adminId = admin.id
+  await prisma.smsCode.create({ data: { userId: adminId, phone: adminPhone, code: '123456', purpose: 'LOGIN', expiresAt: new Date(Date.now() + 300000) } })
+  const adminLogin = await request('/api/v1/auth/sms/verify', null, {
+    method: 'POST', body: JSON.stringify({ phone: adminPhone, code: '123456', mode: 'LOGIN' })
+  })
+  assert(adminLogin.ok, '负责人测试账号可以登录并修改暂缓时长')
+  const adminToken = (await adminLogin.json()).data.accessToken
 
   const asset = await prisma.animationAsset.create({ data: {
     assetNo: `ANM-20990101-${runId.slice(-6)}`,
@@ -266,6 +292,7 @@ try {
     include: { items: { include: { productionTasks: true } } }
   })
   assert(Boolean(order) && /^SO-\d{8}-[A-Z2-9]{8}$/.test(order.orderNo), '一次支付只生成一个 SO 用户订单')
+  assert(order.fulfillmentHoldMinutes === 60 && Math.abs(order.earliestProductionAt - order.paidAt - 3600000) < 1000, '付款时冻结 60 分钟暂缓时长和最早制作时间')
   assert(order.items.length === 3, '三个购物车条目生成三条订单商品')
   assert(order.items.reduce((sum, item) => sum + item.quantity, 0) === 4, '订单商品完整保存购买数量')
   const tasks = order.items.flatMap(item => item.productionTasks)
@@ -298,6 +325,7 @@ try {
   const detail = (await detailResponse.json()).data
   assert(detail.items.length === 3 && detail.totalQuantity === 4, '订单详情返回完整混合商品与购买数量')
   assert(detail.displayStatus === '已付款' && detail.statusStep === 1, '未进入生产批次的订单对顾客显示已付款')
+  assert(detail.earliestProductionAt === order.earliestProductionAt.toISOString(), '顾客订单详情显示冻结的最早制作时间')
   assert(detail.items.every(item => !Object.hasOwn(item, 'productionTasks')), '顾客订单接口不返回生产任务列表')
   await prisma.customizeOrder.updateMany({ where: { id: { in: tasks.map(task => task.id) } }, data: { batchId: 'PB-TEST-CLAIMED' } })
   const claimedDetail = (await (await request(`/api/orders/${order.id}`, token)).json()).data
@@ -332,9 +360,18 @@ try {
   })
   const cancellablePreOrder = (await cancellableCheckout.json()).data
   assert(cancellableCheckout.ok && (await prisma.skuInventory.findUnique({ where: { skuId } })).reservedStock === 6, '新待付款订单继续准确预锁库存')
+  const holdChange = await request('/api/admin/production-batches/hold-setting', adminToken, {
+    method: 'PUT', body: JSON.stringify({ minutes: 30 })
+  })
+  assert(holdChange.ok, '负责人可把后续新付款订单的暂缓时长改为 30 分钟')
   const cancellablePay = await request(`/api/payment/mock-pay/${cancellablePreOrder.id}`, token, { method: 'POST' })
   assert(cancellablePay.ok, '待取消订单可从付款前订单进入正式订单')
   const cancellableSalesOrder = await prisma.salesOrder.findUnique({ where: { preOrderId: cancellablePreOrder.id } })
+  assert(cancellableSalesOrder.fulfillmentHoldMinutes === 30 && Math.abs(cancellableSalesOrder.earliestProductionAt - cancellableSalesOrder.paidAt - 1800000) < 1000, '修改后新付款订单冻结 30 分钟')
+  assert((await prisma.salesOrder.findUnique({ where: { id: order.id } })).fulfillmentHoldMinutes === 60, '旧已付款订单保持原先 60 分钟')
+  await request('/api/admin/production-batches/hold-setting', adminToken, {
+    method: 'PUT', body: JSON.stringify({ minutes: 60 })
+  })
   const cancelResponse = await request(`/api/orders/${cancellableSalesOrder.id}/cancel`, token, { method: 'POST' })
   assert(cancelResponse.ok, '用户可以取消尚未进入生产的正式订单')
   assert((await prisma.salesOrder.findUnique({ where: { id: cancellableSalesOrder.id } })).status === 'cancelled', '取消后聚合订单状态已更新')

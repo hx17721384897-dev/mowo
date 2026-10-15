@@ -44,6 +44,11 @@ export function orderStatusClass(order: OrderViewModel): string {
 }
 
 export function orderEta(order: OrderViewModel): string | null {
+  if (order.status === 'paid' && order.earliestProductionAt) {
+    const time = new Date(order.earliestProductionAt)
+    if (!Number.isNaN(time.getTime()))
+      return `最早可开始制作：${time.toLocaleString('zh-CN', { hour12: false })}`
+  }
   if (order.status === 'shipped') return order.trackingNo ? null : '已发货，请留意快递通知'
   return null
 }

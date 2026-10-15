@@ -287,6 +287,8 @@ export function parseOrderDto(value: unknown): OrderDto {
     trackingCompany: nullableString(row.trackingCompany, '订单物流公司'),
     shippedAt: nullableTimestamp(row.shippedAt, '订单发货时间'),
     receivedAt: nullableTimestamp(row.receivedAt, '订单收货时间'),
+    paidAt: nullableTimestamp(row.paidAt, '订单付款时间'),
+    earliestProductionAt: nullableTimestamp(row.earliestProductionAt, '最早可开始制作时间'),
     receiverName: nullableString(row.receiverName, '订单收件人'),
     receiverPhone: nullableString(row.receiverPhone, '订单收件电话'),
     receiverAddress: nullableString(row.receiverAddress, '订单收件地址'),

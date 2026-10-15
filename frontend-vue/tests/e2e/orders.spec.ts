@@ -68,6 +68,8 @@ function orderFixture(status: 'shipped' | 'received' | 'paid' = 'shipped') {
     trackingCompany: '圆通',
     shippedAt: '2026-09-20T10:00:00.000Z',
     receivedAt: status === 'received' ? '2026-09-21T10:00:00.000Z' : null,
+    paidAt: '2026-09-20T10:00:00.000Z',
+    earliestProductionAt: '2026-09-20T11:00:00.000Z',
     receiverName: '张三',
     receiverPhone: '13800138000',
     receiverAddress: '科技园南路88号',
@@ -78,9 +80,9 @@ function orderFixture(status: 'shipped' | 'received' | 'paid' = 'shipped') {
   }
 }
 
-async function setup(page: Page) {
+async function setup(page: Page, initialStatus: 'shipped' | 'received' | 'paid' = 'shipped') {
   let draftWrites = 0
-  let status: 'shipped' | 'received' | 'paid' = 'shipped'
+  let status: 'shipped' | 'received' | 'paid' = initialStatus
   await page.addInitScript(() => localStorage.setItem('mowo_token', 'orders-token'))
   await page.route('**/api/v1/account/me', (route) =>
     route.fulfill({
@@ -139,6 +141,13 @@ async function setup(page: Page) {
   })
   return { draftWrites: () => draftWrites }
 }
+
+test('已付款订单展示最早可开始制作时间', async ({ page }) => {
+  await setup(page, 'paid')
+  await page.goto('/app/orders/order-1')
+  await expect(page.getByRole('heading', { name: '已付款' })).toBeVisible()
+  await expect(page.getByText(/最早可开始制作：/)).toBeVisible()
+})
 
 test('列表保留混合商品、文本安全和确认收货，且不写草稿', async ({ page }) => {
   const state = await setup(page)

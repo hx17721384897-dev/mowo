@@ -122,6 +122,8 @@ function serializeSalesOrder(fastify, order, includeAddress = false) {
       ? tasks.reduce((latest, task) => !latest || task.shippedAt > latest ? task.shippedAt : latest, null)
       : null,
     receivedAt: order.receivedAt || null,
+    paidAt: order.paidAt || null,
+    earliestProductionAt: order.earliestProductionAt || null,
     receiverName: order.receiverName || null,
     receiverCity: order.receiverCity || null,
     ...(includeAddress ? {

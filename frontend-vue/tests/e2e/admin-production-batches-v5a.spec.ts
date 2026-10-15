@@ -168,6 +168,7 @@ async function fulfill(route: Route, data: unknown, extra: Record<string, unknow
 async function mockPage(page: Page, role = 'PRODUCTION') {
   const writes: Array<{ path: string; body: Record<string, unknown> }> = []
   const draftWrites: string[] = []
+  let holdMinutes = 60
   await page.addInitScript(() => localStorage.setItem('mowo_token', 'test-token'))
   await page.route('**/api/v1/account/me', (route) =>
     fulfill(route, {
@@ -193,6 +194,19 @@ async function mockPage(page: Page, role = 'PRODUCTION') {
     if (path === '/api/config/features') return fulfill(route, {})
     if (/draft|customization-requests/.test(path) && request.method() !== 'GET')
       draftWrites.push(path)
+    if (path === '/api/admin/production-batches/hold-setting') {
+      if (request.method() === 'GET')
+        return fulfill(route, {
+          minutes: holdMinutes,
+          updatedAt: null,
+          updatedByName: null,
+          canEdit: role === 'OWNER'
+        })
+      const body = request.postDataJSON() as Record<string, unknown>
+      writes.push({ path, body })
+      holdMinutes = Number(body.minutes)
+      return fulfill(route, { minutes: holdMinutes })
+    }
     if (path === '/api/admin/production-batches' && request.method() === 'GET')
       return fulfill(route, [summary])
     if (path === `/api/admin/production-batches/${summary.id}` && request.method() === 'GET')
@@ -223,6 +237,20 @@ async function mockPage(page: Page, role = 'PRODUCTION') {
   })
   return { writes, draftWrites }
 }
+
+test('负责人可调整未来订单暂缓时长，生产人员只能查看', async ({ page }) => {
+  const tracked = await mockPage(page, 'OWNER')
+  await page.goto('/app/admin/production-batches')
+  const input = page.getByLabel('分钟')
+  await expect(input).toHaveValue('60')
+  await input.fill('30')
+  await page.getByRole('button', { name: '保存' }).click()
+  await expect(page.getByText('暂缓履约时长已保存，仅影响之后付款的订单')).toBeVisible()
+  expect(tracked.writes).toEqual([
+    { path: '/api/admin/production-batches/hold-setting', body: { minutes: 30 } }
+  ])
+  expect(tracked.draftWrites).toHaveLength(0)
+})
 
 test('production batch page preserves summary, detail, files, materials and safe text', async ({
   page
