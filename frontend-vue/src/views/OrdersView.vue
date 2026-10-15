@@ -105,8 +105,7 @@ onBeforeUnmount(() => {
 <template>
   <main class="orders-page">
     <header class="page-header">
-      <h1 class="page-title">我的<em>订单</em> 📦</h1>
-      <p class="page-sub">每一份创意，都在认真制作中</p>
+      <h1 class="page-title">我的<em>订单</em></h1>
     </header>
     <div class="tab-bar" role="tablist" aria-label="订单筛选">
       <button

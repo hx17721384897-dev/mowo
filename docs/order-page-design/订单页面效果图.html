@@ -19,6 +19,7 @@
     html[data-view="detail"] .list-view{display:none}html[data-view="detail"] .detail-view{display:block}
     @media(max-width:900px){#mowo-nav{height:56px;grid-template-columns:auto 1fr auto;padding:0 16px}.mowo-nav-mid{display:none}.mowo-menu-btn{display:flex}.mowo-logo-sub{display:none}.mowo-logo{font-size:16px}.mowo-logo-mark{width:30px;height:30px;font-size:13px}.mowo-nav-left{gap:8px}.nav-uname{display:none}.workspace,.detail-layout{grid-template-columns:1fr}.aside-card{display:none}}
     @media(max-width:600px){.page,.detail-view .page{width:calc(100% - 30px);padding-top:28px}.page-title{font-size:31px}.page-top{margin-bottom:23px}.page-count{display:none}.toolbar{display:block}.tabs{overflow:auto;width:100%;margin-bottom:13px}.tab{padding:9px 12px;font-size:11px}.search{width:100%;height:43px}.card-top{flex-wrap:wrap;gap:6px;min-height:56px;padding:10px 15px}.card-number{font-size:10px}.card-date{font-size:10px}.card-content{padding:15px}.stage{margin-bottom:15px;padding:10px}.product-row{gap:11px}.art{width:72px;height:72px}.mini-box{transform:scale(.78) rotate(-9deg)}.product-name{font-size:12px}.product-spec,.product-more{font-size:10px}.product-price{font-size:12px}.product-price small{font-size:9px}.card-bottom{flex-wrap:wrap;gap:7px}.amount{flex-basis:100%;margin-bottom:5px}.btn{padding:0 11px;font-size:10px}.mowo-nav-right{gap:0}.demo-label{right:8px;bottom:8px;font-size:9px}.detail-header h1{font-size:24px}.hero{padding:19px}.hero h2{font-size:25px}.detail-card{padding:17px}.progress-item{font-size:9px}}
+    .list-view .page{max-width:930px}.list-view .workspace{display:block}
   </style>
 </head>
 <body>
@@ -29,7 +30,7 @@
   </nav>
   <div class="list-view">
     <main class="page">
-      <div class="page-top"><div><div class="eyebrow"><span class="dash"></span>MY ORDERS / 我的账户</div><h1 class="page-title">我的<mark>订单</mark></h1><p class="page-desc">从下单到制作，每一步都有迹可循。</p></div><p class="page-count">共 4 笔订单 · 最近更新于今天 14:26</p></div>
+      <div class="page-top"><div><h1 class="page-title">我的<mark>订单</mark></h1></div><p class="page-count">共 4 笔订单</p></div>
       <div class="toolbar"><div class="tabs"><button class="tab active">全部 <span class="count">4</span></button><button class="tab">待付款 <span class="count">1</span></button><button class="tab">进行中 <span class="count">3</span></button><button class="tab">已完成</button><button class="tab">售后中</button></div><div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>搜索订单号或商品</div></div>
       <div class="workspace">
         <div class="order-list">
@@ -38,17 +39,16 @@
           <article class="order-card"><div class="card-top"><span class="card-number">订单号 SO202610120006</span><span class="card-date">10月12日 18:42</span><span class="card-spacer"></span><span class="pill green">运输中</span></div><div class="card-content"><div class="stage green"><span class="stage-icon">↗</span><div><strong>作品已交给快递</strong><span>顺丰速运 · 运单号 SF1234567890 · 点击详情查看物流</span></div></div><div class="product-row"><div class="art c"><div class="mini-box"></div></div><div class="product-main"><div class="source">私人定制 · 动画版本 V1</div><div class="product-name">午后花园 · 小小旋转盒</div><div class="product-spec">5 × 5 cm / 薄荷绿 / 标准机芯 / SKU MW-503 · 数量 1</div></div><div class="product-price">¥ 269.00<small>实付金额</small></div></div><div class="card-bottom"><div class="amount">订单实付 <strong>¥ 269.00</strong></div><button class="btn">复制运单号</button><button class="btn dark">查看详情 →</button></div></div></article>
           <article class="order-card"><div class="card-top"><span class="card-number">待付款单 PO202610150004</span><span class="card-date">今天 14:31</span><span class="card-spacer"></span><span class="pill orange">待付款</span></div><div class="card-content"><div class="product-row"><div class="art b"><div class="mini-box"></div></div><div class="product-main"><div class="source">私人定制 · 动画版本 V3</div><div class="product-name">海风来信 · 光影旋转盒</div><div class="product-spec">8 × 8 cm / 雾蓝色 / 长续航机芯 · 数量 1</div><div class="product-more">请在 14:41 前完成付款；超时需重新结算</div></div><div class="product-price">¥ 399.00<small>待付款</small></div></div><div class="card-bottom"><div class="amount">应付金额 <strong>¥ 399.00</strong></div><button class="btn yellow">继续付款 →</button></div></div></article>
         </div>
-        <aside class="aside-card"><span class="aside-eyebrow">ORDER JOURNEY</span><h3>每一份创意，<br>我们认真对待。</h3><p>订单页面只展示实际发生的付款、制作与物流进度，让你随时知道作品到了哪一步。</p><hr><div class="aside-steps"><div class="aside-step"><span class="step-dot">1</span><span>付款成功后，订单先显示“已付款”</span></div><div class="aside-step"><span class="step-dot">2</span><span>真正进入生产批次，才显示“制作中”</span></div><div class="aside-step"><span class="step-dot">3</span><span>快递发出后，提供真实运单信息</span></div></div><div class="aside-foot">遇到问题？打开订单详情，带着订单号联系我们即可。</div></aside>
       </div>
     </main>
   </div>
   <div class="detail-view">
     <main class="page">
       <a class="back" href="?view=list">← 返回我的订单</a>
-      <div class="detail-header"><div><div class="eyebrow"><span class="dash"></span>ORDER DETAIL / 订单详情</div><h1>一份创意，正在等待启程。</h1><p>订单号 SO202610150001 · 下单时间 2026年10月15日 14:18</p></div><span class="pill yellow">已付款</span></div>
+      <div class="detail-header"><div><h1>订单详情</h1><p>订单号 SO202610150001 · 下单时间 2026年10月15日 14:18</p></div><span class="pill yellow">已付款</span></div>
       <div class="detail-layout">
         <div class="main-col">
-          <section class="hero"><div class="hero-top"><div><div class="hero-kicker">CURRENT STATUS / 当前进度</div><h2>已付款，等待排产</h2><p>付款于今天 14:20 确认；最早今天 15:20 可进入生产批次。<br>这个时间是最早排产时间，并非预计发货时间。</p></div><span class="pill yellow">可整单取消</span></div><div class="hero-action"><button class="btn dark">查看订单帮助 →</button><button class="btn">取消订单</button></div><div class="progress"><div class="progress-item done">付款成功</div><div class="progress-item active">等待排产</div><div class="progress-item">制作中</div><div class="progress-item">已发货</div><div class="progress-item">已完成</div></div></section>
+          <section class="hero"><div class="hero-top"><div><h2>已付款，等待排产</h2><p>付款于今天 14:20 确认；最早今天 15:20 可进入生产批次。<br>这个时间是最早排产时间，并非预计发货时间。</p></div><span class="pill yellow">可整单取消</span></div><div class="hero-action"><button class="btn dark">查看订单帮助 →</button><button class="btn">取消订单</button></div><div class="progress"><div class="progress-item done">付款成功</div><div class="progress-item active">等待排产</div><div class="progress-item">制作中</div><div class="progress-item">已发货</div><div class="progress-item">已完成</div></div></section>
           <section class="detail-card"><div class="section-head"><h3>购买的作品 <span class="fine">· 共 3 件</span></h3><a>成交时商品快照</a></div><div class="line-item"><div class="art"><div class="mini-box"></div></div><div class="product-main"><div class="source">私人定制 · 动画版本 V2</div><div class="product-name">星光晚安 · 小小旋转盒</div><div class="product-spec">5 × 5 cm / 奶油白 / 标准机芯 / SKU MW-501<br>数量 2 × ¥ 149.50</div></div><div class="product-price">¥ 299.00</div></div><div class="line-item"><div class="art b"><div class="mini-box"></div></div><div class="product-main"><div class="source">私人定制 · 动画版本 V1</div><div class="product-name">月光森林 · 小小旋转盒</div><div class="product-spec">5 × 5 cm / 雾紫色 / 标准机芯 / SKU MW-507<br>数量 1 × ¥ 149.00</div></div><div class="product-price">¥ 149.00</div></div></section>
           <section class="detail-card"><div class="section-head"><h3>订单进度</h3><a>所有时间均来自真实记录</a></div><div class="record current"><div><strong>付款成功，暂缓进入生产</strong><span>今天 14:20 · 最早 15:20 可排产</span></div></div><div class="record"><div><strong>订单提交成功</strong><span>今天 14:18 · 商品、动画版本与收件信息已保存</span></div></div></section>
           <section class="detail-card"><div class="section-head"><h3>生产与物流</h3></div><div class="fine">目前尚未进入生产批次，因此没有制作进度或运单。进入批次及发货后，这里会展示对应的真实记录。</div></section>
@@ -57,7 +57,7 @@
           <section class="detail-card"><div class="section-head"><h3>费用明细</h3></div><div class="row"><span>商品合计</span><strong>¥ 448.00</strong></div><div class="row"><span>运费</span><strong>¥ 0.00</strong></div><div class="row"><span>优惠调整</span><strong>¥ 0.00</strong></div><div class="row total"><span>实付金额</span><strong>¥ 448.00</strong></div><div class="fine">支付状态：已确认 · 支付时间：今天 14:20</div></section>
           <section class="detail-card"><div class="section-head"><h3>收货信息</h3></div><div style="font-size:13px;font-weight:900;margin-bottom:6px">林同学 <span style="color:#89877e;font-weight:700">138****2108</span></div><div class="fine">上海市徐汇区 ××路 ××号<br>这里显示下单时保存的地址</div></section>
           <section class="detail-card"><div class="section-head"><h3>取消与售后</h3></div><div class="fine">作品尚未入批，可以整单取消。实际支付的款项将按原支付渠道申请退款；退款结果会单独显示。</div><div style="margin-top:13px"><button class="btn">了解取消规则 →</button></div></section>
-          <section class="help-box"><strong>需要帮忙吗？</strong><p>联系客服时带上订单号，我们会更快找到这笔订单。</p><a>联络我们 →</a></section>
+          <section class="help-box"><strong>订单帮助</strong><p>联系客服时请提供订单号 SO202610150001。</p><a>联络我们 →</a></section>
         </aside>
       </div>
     </main>
