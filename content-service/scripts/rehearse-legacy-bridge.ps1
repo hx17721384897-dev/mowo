@@ -92,6 +92,11 @@ END $$;
 SELECT 'Historical rows, order relationships, batch backfill and hold configuration verified';
 '@
   Invoke-Pg 'psql' @('-X', '-v', 'ON_ERROR_STOP=1', '-At', '-d', $cloneName, '-c', $verification)
+  $cloneUri = [UriBuilder]::new($dbUri)
+  $cloneUri.Path = '/' + $cloneName
+  $env:DATABASE_URL = $cloneUri.Uri.AbsoluteUri
+  & node (Join-Path $PSScriptRoot 'check-legacy-prisma-read.mjs')
+  if ($LASTEXITCODE -ne 0) { throw 'Current Prisma models cannot fully read the temporary restored database.' }
   Write-Output 'Additive bridge rehearsal succeeded; source mowo_db was not changed.'
 } finally {
   if ($cloneCreated) {
@@ -99,4 +104,5 @@ SELECT 'Historical rows, order relationships, batch backfill and hold configurat
     Write-Output "Temporary restore removed: $cloneName"
   }
   Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
+  Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
 }
