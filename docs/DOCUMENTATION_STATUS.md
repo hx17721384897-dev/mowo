@@ -29,6 +29,7 @@
 | `PROJECT_ENGINEERING_REVIEW_DECISIONS.md` | 当前决策台账 | 复盘新发现的产品/架构决定唯一写入位置 |
 | `ENGINEERING_REVIEW_BASELINE.md` | 当前复盘基线 | RP0 的 commit、环境、范围、易变数量、订单保护和未知非功能目标 |
 | `RP1A_CUSTOMIZATION_ANIMATION_FACTS.md` | 当前专项证据 | RP1-A 定制请求、动画草稿、正式资产、文件与清理任务的代码事实和待确认规则 |
+| `RP1B_RUNTIME_JOBS_FACTS.md` | 当前专项证据 | RP1-B API 运行拓扑、后台任务并发/重试/恢复、健康检查与停止边界 |
 | `ENGINEERING_REVIEW_FINDINGS.md` | 当前问题台账 | 统一追踪发现、决定、整改、验证和风险接受 |
 | `VUE_FRONTEND_REFACTOR_PLAN.md` | 已执行迁移计划 | L0 之后的 H0/R0/R1/V0-V6；保留未完成验收边界 |
 | `R0_BACKEND_DATABASE_BASELINE.md` | 当前接续基线 | R0 复核结果、隔离命令、正式 API 边界和失败处置 |
