@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import { spawnSync } from 'node:child_process'
 import { createReadStream, mkdirSync, readdirSync, statSync, writeFileSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
+import { dirname, isAbsolute, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { Client } from 'pg'
 import dotenv from 'dotenv'
@@ -184,8 +184,26 @@ async function snapshot(url, label) {
       rowCounts[table] = count
     }
 
+    // 仅在进程内比较身份键；报告只写计数，不写手机号、文件 Key 或业务 ID。
+    const identityQueries = {
+      userIds: 'SELECT id AS value FROM users',
+      userPhones: 'SELECT phone AS value FROM users WHERE phone IS NOT NULL',
+      customProductIds: 'SELECT id AS value FROM custom_products',
+      animationAssetIds: 'SELECT id AS value FROM animation_assets',
+      privateFileIds: 'SELECT id AS value FROM private_files',
+      privateFileKeys: 'SELECT object_key AS value FROM private_files',
+      preOrderIds: 'SELECT id AS value FROM pre_orders',
+      salesOrderIds: 'SELECT id AS value FROM sales_orders'
+    }
+    const identityValues = {}
+    for (const [name, sql] of Object.entries(identityQueries)) {
+      identityValues[name] = (await queryRows(client, sql)).map((row) => row.value)
+    }
+    const readyLocalFiles = await queryRows(client,
+      "SELECT object_key, purpose FROM private_files WHERE storage_provider = 'local' AND status = 'READY' AND deleted_at IS NULL")
+
     await client.query('COMMIT')
-    return { database, tables, columns, constraints, indexes, enums, migrations, rowCounts }
+    return { database, tables, columns, constraints, indexes, enums, migrations, rowCounts, identityValues, readyLocalFiles }
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {})
     throw error
@@ -218,9 +236,15 @@ const [daily, reference] = await Promise.all([
   snapshot(dailyUrl, 'daily'),
   snapshot(referenceUrl, 'reference')
 ])
-if (reference.migrations.filter((item) => item.finished && !item.rolled_back).length !== expectedMigrations.length) {
+const finishedReference = new Set(reference.migrations
+  .filter((item) => item.finished && !item.rolled_back)
+  .map((item) => item.migration_name))
+const missingReferenceMigrations = expectedMigrations.filter((name) => !finishedReference.has(name))
+const extraReferenceMigrations = [...finishedReference].filter((name) => !expectedMigrations.includes(name))
+const failedReferenceMigrations = reference.migrations.filter((item) => !item.finished && !item.rolled_back)
+if (missingReferenceMigrations.length || failedReferenceMigrations.length) {
   throw new Error(
-    `Reference mowo_b1_test migration ledger is not at the ${expectedMigrations.length}-migration repository baseline`
+    `Reference mowo_b1_test is missing ${missingReferenceMigrations.length} repository migrations or has ${failedReferenceMigrations.length} failed migrations`
   )
 }
 
@@ -237,6 +261,30 @@ const differences = Object.fromEntries(
     compare(daily[section], reference[section], keyOf)
   ])
 )
+const identityOverlaps = Object.fromEntries(
+  Object.keys(daily.identityValues).map((key) => {
+    const source = new Set(daily.identityValues[key])
+    return [key, reference.identityValues[key].filter((value) => source.has(value)).length]
+  })
+)
+const localStorageRoot = resolve(serviceRoot, process.env.LOCAL_STORAGE_DIR?.trim() || 'storage/private')
+const localFiles = { readyRegistered: daily.readyLocalFiles.length, found: 0, missing: 0, unsafeKey: 0, missingByPurpose: {} }
+for (const file of daily.readyLocalFiles) {
+  const key = String(file.object_key || '').replace(/\\/g, '/')
+  const target = resolve(localStorageRoot, ...key.split('/'))
+  const relativeTarget = relative(localStorageRoot, target)
+  if (!key || key.startsWith('/') || key.split('/').includes('..') || !relativeTarget || relativeTarget.startsWith('..') || isAbsolute(relativeTarget)) {
+    localFiles.unsafeKey += 1
+    continue
+  }
+  try {
+    if (!statSync(target).isFile()) throw new Error('not a file')
+    localFiles.found += 1
+  } catch {
+    localFiles.missing += 1
+    localFiles.missingByPurpose[file.purpose] = (localFiles.missingByPurpose[file.purpose] || 0) + 1
+  }
+}
 const finishedDaily = new Set(
   daily.migrations
     .filter((item) => item.finished && !item.rolled_back)
@@ -257,10 +305,12 @@ const report = {
     referenceDatabase: reference.database,
     readOnlyTransactions: true,
     databaseMutations: 0,
-    containsBusinessRows: false
+    containsBusinessRows: false,
+    referenceMatchesRepositoryExactly: extraReferenceMigrations.length === 0
   },
   backup,
   migrationLedger,
+  referenceExtraMigrations: extraReferenceMigrations,
   objectCounts: {
     daily: Object.fromEntries(
       ['tables', 'columns', 'constraints', 'indexes', 'enums'].map((key) => [key, daily[key].length])
@@ -270,6 +320,9 @@ const report = {
     )
   },
   preservedDataCounts: daily.rowCounts,
+  referenceDataCounts: reference.rowCounts,
+  identityOverlaps,
+  localFiles,
   differences
 }
 writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8')
@@ -278,11 +331,16 @@ console.log(`V6-B read-only database audit completed: ${daily.database} -> ${ref
 console.log(
   `Migration ledger: daily ${migrationLedger.dailyFinished}/${migrationLedger.expected}, reference ${migrationLedger.referenceFinished}/${migrationLedger.expected}`
 )
+if (extraReferenceMigrations.length) {
+  console.log(`Reference warning: ${extraReferenceMigrations.length} extra completed migrations; schema differences are advisory until checked against a clean repository baseline`)
+}
 for (const [section, value] of Object.entries(differences)) {
   console.log(
     `${section}: daily-only ${value.onlyDaily.length}, reference-only ${value.onlyReference.length}, changed ${value.changed.length}`
   )
 }
 console.log(`Preserved data counts: ${JSON.stringify(daily.rowCounts)}`)
+console.log(`Identity overlaps: ${JSON.stringify(identityOverlaps)}`)
+console.log(`Old ready local files: ${localFiles.found}/${localFiles.readyRegistered} found, ${localFiles.missing} missing, ${localFiles.unsafeKey} unsafe keys`)
 if (backup) console.log(`Backup: ${backup.path} (${backup.bytes} bytes, sha256 ${backup.sha256})`)
 console.log(`Audit report: ${reportPath}`)
