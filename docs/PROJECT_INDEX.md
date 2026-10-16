@@ -6,6 +6,8 @@
 
 > 当前进度（2026-10-11）：L0、R0/R1、V0～V5、V6-A、V6-B 和 V6-C1 已完成，V6-C2 自动证据通过、负责人视觉验收待执行。正式 Web 页面均使用 `frontend-vue/`，旧 URL 仅由部署层临时 302；唯一旧页面是后台人工筛帧专用 `customize-editor.html`。日常 `mowo_db` 已完成只读审计和本地备份，但结构不能直接承载当前服务；API/回归继续使用 `mowo_b1_test`。C2 人工验收以及 C3～C6 实际验收、V6-D CI 长期门禁仍待完成，不能据此邀请真实用户。当前执行入口为 `VUE_FRONTEND_REFACTOR_PLAN.md`，V6 证据见 `V6_FRONTEND_RETIREMENT_AND_ACCEPTANCE.md`、`V6_FINAL_ACCEPTANCE_PLAN.md`、`V6_C2_ACCEPTANCE_RESULTS.md` 和 `V6_DATABASE_BASELINE.md`。
 
+> 工程复盘（2026-10-16）：Vue 迁移后的全栈复盘已完成规划，尚未开始修改业务代码。执行入口为 `PROJECT_ENGINEERING_REVIEW_PLAN.md`，产品与架构确认统一记录在 `PROJECT_ENGINEERING_REVIEW_DECISIONS.md`。用户正在单独调整的订单代码与当前工作区在途文件不纳入复盘修改范围；先完成首轮定制/动画语义确认，再进入 RP0 基线冻结。
+
 > 下列 V4 阶段段落是实施时的历史进度快照，不覆盖上述当前状态。
 
 > V4-0 已启动：Vue 后台入口加服务器确认的命名岗位门禁，业务后台仍使用旧页面；范围、权限差异和分段见 `V4_ADMIN_MIGRATION.md`。V3 订单实单人工验收因暂无订单延后。
@@ -21,6 +23,7 @@
 3. `docs/VUE_FRONTEND_REFACTOR_PLAN.md`：当前接续计划、H0/R0/R1/V0-V6 顺序和验收门槛。
    V6 旧前端退役见 `docs/V6_FRONTEND_RETIREMENT_AND_ACCEPTANCE.md`；最终逐页验收见 `docs/V6_FINAL_ACCEPTANCE_PLAN.md`；日常库安全基线见 `docs/V6_DATABASE_BASELINE.md`。
    交易页正式入口、旧 URL 和隔离验收见 `docs/V3_TRANSACTION_MIGRATION.md`。
+   Vue 迁移完成后的工程复盘见 `docs/PROJECT_ENGINEERING_REVIEW_PLAN.md`；待确认和已确认规则见 `docs/PROJECT_ENGINEERING_REVIEW_DECISIONS.md`。
 4. `docs/PROJECT_INDEX.md`：项目地图、文档分层和调查进度。
 5. `docs/R0_BACKEND_DATABASE_BASELINE.md`：Vue 可消费的后端/数据库证据、隔离边界和失败处置。
 6. `docs/R1_RETIREMENT_AUDIT.md`：退役接口硬隔离、负向矩阵、保留责任和 R1-B 删除清单。
