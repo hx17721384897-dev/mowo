@@ -6,7 +6,7 @@
 
 > 当前进度（2026-10-16）：L0、R0/R1、V0～V5、V6-A、V6-B 和 V6-C1 已完成，V6-C2 自动证据通过、负责人视觉验收待执行；C3～C6 实际验收和 V6-D 全栈长期门禁仍待完成。正式 Web 页面使用 `frontend-vue/`；唯一旧 HTML 是后台人工筛帧专用 `customize-editor.html`，它是待最终处置的受控例外，不预设必须保留或迁移。日常 `mowo_db` 只读审计与备份已完成，API/回归继续使用 `mowo_b1_test`。当前执行入口为 `PROJECT_ENGINEERING_REVIEW_PLAN.md`，Vue 迁移计划和 V6 文档作为迁移证据与未完成验收清单保留。
 
-> 工程复盘（2026-10-16）：RP0 基线冻结已完成，证据见 `ENGINEERING_REVIEW_BASELINE.md`；产品与架构确认统一记录在 `PROJECT_ENGINEERING_REVIEW_DECISIONS.md`，问题统一进入 `ENGINEERING_REVIEW_FINDINGS.md`。用户正在单独调整的订单代码不纳入复盘修改或最终结论；下一步为 RP1-A 定制/动画事实调查。
+> 工程复盘（2026-10-16）：RP0 基线冻结和 RP1-A 定制/动画事实调查已完成，证据见 `ENGINEERING_REVIEW_BASELINE.md` 与 `RP1A_CUSTOMIZATION_ANIMATION_FACTS.md`；产品与架构确认统一记录在 `PROJECT_ENGINEERING_REVIEW_DECISIONS.md`，问题统一进入 `ENGINEERING_REVIEW_FINDINGS.md`。用户正在单独调整的订单代码不纳入复盘修改或最终结论；当前等待确认 RQ-001～RQ-004，随后继续完整 RP1。
 
 > 下列 V4 阶段段落是实施时的历史进度快照，不覆盖上述当前状态。
 
