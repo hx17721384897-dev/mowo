@@ -1,6 +1,6 @@
 # CLAUDE.md - 项目协作规则
 
-> 最近复核：2026-09-08。
+> 最近复核：2026-10-16（RP0 工程复盘基线）。
 >
 > 本文件只保存稳定的协作与工程规则，不维护页面清单和开发进度。当前业务状态先读 `docs/PROJECT_INDEX.md`、`docs/RELEASE_SCOPE.md` 和 `docs/REMEDIATION_ROADMAP.md`。
 
@@ -37,15 +37,15 @@
 
 | 范围 | 当前技术 |
 |---|---|
-| Web | 静态 HTML、CSS、原生 JavaScript，无主站构建链 |
+| Web | Vue 3、TypeScript、Vite、Vue Router、Pinia；`frontend/` 仅暂留后台人工筛帧旧编辑器 |
 | API | Node.js ESM、Fastify 5 |
-| 数据 | Prisma 5、PostgreSQL；当前 Schema 为 111 个模型、4 个枚举 |
+| 数据 | Prisma 5、PostgreSQL；易变数量以 `docs/ENGINEERING_REVIEW_BASELINE.md` 的 commit 快照为准 |
 | 登录 | JWT Access/Refresh 与数据库设备会话 |
 | 文件 | 本地私有存储/阿里云 OSS 适配层、`PrivateFile` 登记和短期签名读取 |
 | 文档与图像 | DOCX 模板、`canvas`、GIF、条码和压缩包工具 |
 | 小程序 | 仓库外同级 `xiaochengxu/`，uni-app、Vue 3、TypeScript、Pinia、Vite |
 
-主站前端继续沿用原生技术和现有视觉体系。新增依赖、改变框架、数据库结构或生产状态含义前，必须说明理由和迁移影响。
+主站前端继续使用 Vue 技术栈并保持既有视觉和业务行为。新增依赖、改变框架、数据库结构或生产状态含义前，必须说明理由和迁移影响。
 
 ## 安全与数据规则
 

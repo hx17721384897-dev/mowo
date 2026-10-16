@@ -8,12 +8,14 @@
 
 > 新加入的开发者或 AI 请先阅读 [`docs/PROJECT_INDEX.md`](docs/PROJECT_INDEX.md)。该索引区分当前代码事实、历史规划、文档差异与待确认问题。
 >
-> **当前产品口径以 `docs/RELEASE_SCOPE.md` 和 `docs/REMEDIATION_ROADMAP.md` 为准。** `docs/OPEN_QUESTIONS.md` 只保存仍待确认或已经形成的决策记录。历史规划不能覆盖当前代码事实。
+> **当前产品口径以 `docs/RELEASE_SCOPE.md` 和工程复盘决策台账为准。** 新发现的产品/架构决定统一进入 `docs/PROJECT_ENGINEERING_REVIEW_DECISIONS.md`；`docs/OPEN_QUESTIONS.md` 作为历史问题台账保留，迁移完成前不得与新台账双向新增。历史规划不能覆盖当前代码事实。
 
 | 文档 | 内容 |
 |------|------|
 | [CLAUDE.md](./CLAUDE.md) | AI 工作守则、技术栈约束、开发规范、当前进度 |
 | [docs/RELEASE_SCOPE.md](./docs/RELEASE_SCOPE.md) | 当前发布阶段、首发功能边界和延后讨论事项 |
+| [docs/PROJECT_ENGINEERING_REVIEW_PLAN.md](./docs/PROJECT_ENGINEERING_REVIEW_PLAN.md) | 当前 RP0～RP9 全栈工程复盘执行计划 |
+| [docs/PROJECT_ENGINEERING_REVIEW_DECISIONS.md](./docs/PROJECT_ENGINEERING_REVIEW_DECISIONS.md) | 复盘期间统一的产品与架构决策台账 |
 | [docs/REMEDIATION_ROADMAP.md](./docs/REMEDIATION_ROADMAP.md) | 按功能区划分的代码整改顺序、边界和完成标准 |
 | [docs/WEB_COMMERCE_END_TO_END.md](./docs/WEB_COMMERCE_END_TO_END.md) | Web 联名、私人定制、混合购物车、小程序交接和生产的统一主流程 |
 | [docs/DOCUMENTATION_STATUS.md](./docs/DOCUMENTATION_STATUS.md) | 全部项目文档的有效性、历史身份和复核进度 |
@@ -37,9 +39,9 @@ mowo/
 ├── README.md
 ├── docs/                # 项目文档
 ├── frontend/
-│   ├── pages/           # 尚未迁移的后台/生产 HTML 页面
+│   ├── pages/           # 唯一受控旧页：后台人工筛帧编辑器
 │   └── js/
-│       └── auth.js      # 尚未迁移页面的旧会话脚本
+│       └── auth.js      # 仅服务该旧编辑器交接的会话脚本
 ├── frontend-vue/        # 当前正式 Web 公共页、用户定制与交易入口
 └── content-service/     # Node.js + Fastify 内容后端
 │   └── src/templates/   # 对照清单/条形码清单 docx 模板
@@ -70,7 +72,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\local.ps1 star
 
 该参数只允许 `mowo_b1_test` 且生产环境会拒绝；普通启动仍关闭在线结算与模拟付款。
 
-本地启动会先构建 Vue，再同时启动 API 3001、Vue 预览 4173 和尚未迁移页面的静态服务 5500。正式首页为 `http://127.0.0.1:4173/app/`；购物车、结算、订单分别在 `/app/cart`、`/app/checkout`、`/app/orders`。完整的空库、全量回归、备份恢复和人工验收流程见 [`docs/BATCH_7_LOCAL_ACCEPTANCE_AND_RECOVERY.md`](docs/BATCH_7_LOCAL_ACCEPTANCE_AND_RECOVERY.md)。
+本地启动会先构建 Vue，再同时启动 API 3001、Vue 预览 4173 和后台人工筛帧受控旧页所需的静态服务 5500。正式首页为 `http://127.0.0.1:4173/app/`；购物车、结算、订单分别在 `/app/cart`、`/app/checkout`、`/app/orders`。完整的空库、全量回归、备份恢复和人工验收流程见 [`docs/BATCH_7_LOCAL_ACCEPTANCE_AND_RECOVERY.md`](docs/BATCH_7_LOCAL_ACCEPTANCE_AND_RECOVERY.md)。
 
 ---
 

@@ -1,6 +1,6 @@
 # 项目文档有效性总表
 
-> 最近复核：2026-10-11（V6-A 旧前端消费者审计与首轮退役）
+> 最近复核：2026-10-16（RP0 工程复盘基线；易变数量以 `ENGINEERING_REVIEW_BASELINE.md` 为准）
 
 > 2026-10-15 订单展示批次 A：`MOWO_ORDER_SYSTEM_REDESIGN.md`、`order-page-design/03-页面流程与实施建议.md` 与 `modules/commerce-orders-inventory.md` 已同步客户状态、接口边界和后续实施批次；其他模块仍按原复核状态。
 
@@ -11,7 +11,7 @@
 ## 使用规则
 
 1. 当前代码事实以代码、Prisma Schema 和已执行迁移为准；文档负责解释，不反过来替代代码。
-2. 产品规则以 `RELEASE_SCOPE.md`、`REMEDIATION_ROADMAP.md`、对应业务专题和已确认讨论为准。
+2. 产品规则以 `RELEASE_SCOPE.md`、`PROJECT_ENGINEERING_REVIEW_DECISIONS.md` 和对应业务专题为准；`OPEN_QUESTIONS.md` 逐步转为历史只读台账。
 3. 历史规划可以保留用于追溯，但必须在文件开头醒目标注“历史”，并指向当前文档。
 4. 旧代码和新代码同时存在时，记录在 `DOC_CODE_DIFFERENCES.md`，说明正式入口、旧入口和删除条件。
 5. 完全重复、没有独立事实且已经被新版覆盖的文档可以删除；删除前要先修复所有引用。
@@ -25,7 +25,11 @@
 |---|---|---|
 | `../README.md` | 当前入口 | 本轮已收口为项目简介、启动方式和真实进度，不再维护旧功能长清单 |
 | `PROJECT_ENGINEERING_AND_ARCHITECTURE_PLAN.md` | 已完成计划/当前 L0 基线 | B0-B7 的 L0 范围、证据、未上线边界和封版 tag |
-| `VUE_FRONTEND_REFACTOR_PLAN.md` | 当前执行计划 | L0 之后的 H0/R0/R1/V0-V6；计划项不等于已实现 |
+| `PROJECT_ENGINEERING_REVIEW_PLAN.md` | 当前执行计划 | Vue 迁移后的 RP0～RP9 全栈复盘，默认只读审计后再整改 |
+| `PROJECT_ENGINEERING_REVIEW_DECISIONS.md` | 当前决策台账 | 复盘新发现的产品/架构决定唯一写入位置 |
+| `ENGINEERING_REVIEW_BASELINE.md` | 当前复盘基线 | RP0 的 commit、环境、范围、易变数量、订单保护和未知非功能目标 |
+| `ENGINEERING_REVIEW_FINDINGS.md` | 当前问题台账 | 统一追踪发现、决定、整改、验证和风险接受 |
+| `VUE_FRONTEND_REFACTOR_PLAN.md` | 已执行迁移计划 | L0 之后的 H0/R0/R1/V0-V6；保留未完成验收边界 |
 | `R0_BACKEND_DATABASE_BASELINE.md` | 当前接续基线 | R0 复核结果、隔离命令、正式 API 边界和失败处置 |
 | `R1_RETIREMENT_AUDIT.md` | 当前退役台账 | R1-A/R1-B 完成记录、物理删除范围、保留边界和回归证据 |
 | `V1A_PUBLIC_SITE_MIGRATION.md` | 当前迁移记录 | V1a 公共页面、旧 URL 302、交接边界、自动验收与人工复验范围 |
@@ -36,7 +40,7 @@
 | `RELEASE_SCOPE.md` | 当前产品边界 | 需在后续批次复核“当前发布事实”和上线阻断项 |
 | `REMEDIATION_ROADMAP.md` | 当前整改路线 | Web 核心流程已更新；历史定制段落仍需在本轮分批收口 |
 | `WEB_COMMERCE_END_TO_END.md` | 当前端到端主流程 | 当前最完整的 Web 商品、定制、交易、支付边界和生产衔接说明 |
-| `OPEN_QUESTIONS.md` | 待确认与决策台账 | 需逐项区分“已回答”“仍待确认”“已被新方案替代” |
+| `OPEN_QUESTIONS.md` | 历史问题台账 | 与新决策编号建立映射后转为只读，不再新增复盘问题 |
 | `DOC_CODE_DIFFERENCES.md` | 差异台账 | 需持续登记旧代码、旧页面、旧字段和删除条件 |
 | `DOCUMENTATION_STATUS.md` | 文档治理台账 | 本文件；记录文档身份和复核进度 |
 
@@ -75,9 +79,9 @@
 | `collab-creator-revenue.md` | 2026-08 历史调查；顶部 2026-09-28 注记优先，当前只保留联名货架、商品运营、权利来源、库存与订单履约 |
 | `content-users-contact.md` | 2026-08 历史调查；顶部 R1-B 注记优先，当前只保留用户基础能力与联络模块 |
 | `admin-production.md` | 2026-09-08 已按正式 `SO/PU/PB/FP`、统一扫码工作台、返工和发货代码重写；旧入口单独列为待删除 |
-| `web-frontend.md` | 历史前端消费者地图；R1-B 后当前扫描为 46 个 HTML 文件，Vue 正式迁移以 V0 矩阵为准 |
+| `web-frontend.md` | 历史前端消费者地图；RP0 当前旧目录仅 1 个 HTML，Vue 正式入口由 RP1/RP3 重建地图 |
 | `mini-program.md` | 骨架与主后端契约断点 |
-| `database-schema.md` | 历史数据库调查；R1-B 后当前为 81 个模型、4 个枚举和 60 份迁移，已完整重放 |
+| `database-schema.md` | 历史数据库调查；当前 Schema/迁移数量只引用 RP0 commit 快照，待 RP5 重建领域索引 |
 | `operations-quality.md` | 部署、监控、备份、压测和多实例任务 |
 | `../BATCH_7_LOCAL_ACCEPTANCE_AND_RECOVERY.md` | L0 本地启动、隔离空库、综合回归、测试库恢复、人工验收和未来邀请暂停流程 |
 
@@ -100,8 +104,8 @@
 |---|---|---|
 | `../PRODUCTION.md` | 早期生产规划，部分状态和页面已调整 | 生产操作以当前生产专题为准 |
 | `API.md` | 手工长清单易与 44 个路由文件漂移 | 后续按当前路由重建，只保留稳定契约和索引 |
-| `DATABASE.md` | 旧表数和早期结构与 111 个模型并存 | 后续以 Schema 重建领域索引，不手工复制全部字段 |
-| `FRONTEND.md` | 页面数量和跳转关系已经变化 | 后续按 58 个现行 HTML 重新生成清单 |
+| `DATABASE.md` | 旧表数和早期结构与当前 Schema 并存 | 后续以带 commit/hash 的 Schema 快照重建领域索引，不手工复制全部字段 |
+| `FRONTEND.md` | 静态页面数量和跳转关系已被 Vue 迁移取代 | RP3 按 Vue Router 和唯一旧编辑器重建消费者清单 |
 | `admin-inventory-plan.md` | 库存重构过程稿，大量内容已落地到正式专题 | 核对独有决策后合并进 `STANDARD_KIT_INVENTORY.md`，再删除 |
 | `PRODUCTION_MANUAL_TEST_PLAN.md` | 被六规格新版测试计划完整替代 | 2026-09-08 已删除，所有引用改到现行六规格方案 |
 | `frontend/pages/RENAME_GUIDE.md` | 无引用的早期文件搬迁对照，包含已退役页面 | 2026-09-08 已删除 |
@@ -109,8 +113,8 @@
 ## 当前已确认的文档与代码差异
 
 1. `showcase-confirm.html` 和 `showcase-confirm-v2.html` 已从正式代码删除，但多个旧文档仍有引用。
-3. R1-B 后当前 Schema 是 81 个模型、4 个枚举；其他数字均为对应日期的历史快照。
-4. 当前 `frontend/pages/` 递归扫描有 46 个 HTML 页面；旧清单与数量是历史快照，正式迁移以 V0 功能矩阵为准。
+3. RP0 commit `3845931` 的 Schema 是 83 个模型、4 个枚举和 75 个迁移目录；其他数字均为历史快照。
+4. RP0 当前 `frontend/` 递归扫描只有 1 个 HTML，即后台人工筛帧受控例外；Vue Router 承担正式 Web 页面。
 5. Web 混合结算、冻结快照、两类商品共同预留库存和付款后生产资料已经完成；旧模块索引仍写成待整改。
 6. 材料包款生产状态、批次、打印、四岗位扫码、返工和发货已经形成首轮闭环；旧模块索引仍写成待设计。
 7. 私人定制自行筛帧首版不经过工作人员内容审核；旧路线图仍保留“全部定制先审核”的历史表述。
