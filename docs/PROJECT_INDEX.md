@@ -6,7 +6,7 @@
 
 > 当前进度（2026-10-16）：L0、R0/R1、V0～V5、V6-A、V6-B 和 V6-C1 已完成，V6-C2 自动证据通过、负责人视觉验收待执行；C3～C6 实际验收和 V6-D 全栈长期门禁仍待完成。正式 Web 页面使用 `frontend-vue/`；唯一旧 HTML 是后台人工筛帧专用 `customize-editor.html`，它是待最终处置的受控例外，不预设必须保留或迁移。日常 `mowo_db` 只读审计与备份已完成，API/回归继续使用 `mowo_b1_test`。当前执行入口为 `PROJECT_ENGINEERING_REVIEW_PLAN.md`，Vue 迁移计划和 V6 文档作为迁移证据与未完成验收清单保留。
 
-> 工程复盘（2026-10-19）：RP0 与 RP1 已完成。当前架构、消费者/数据/日志矩阵和依赖热点分别见 `ARCHITECTURE_CURRENT_STATE.md`、`RP1_CONSUMER_DATA_LOG_MATRIX.md`、`RP1_DEPENDENCY_HOTSPOTS.md`；专项证据见 `RP1A_CUSTOMIZATION_ANIMATION_FACTS.md`、`RP1B_RUNTIME_JOBS_FACTS.md`，问题统一进入 `ENGINEERING_REVIEW_FINDINGS.md`。用户正在单独调整的订单代码只完成入口和依赖定位，不纳入最终正确性结论；下一步进入 RP2 产品语义与状态机复盘。
+> 工程复盘（2026-10-19）：RP0 与 RP1 已完成；RP2-A 已完成定制请求、动画草稿、正式动画资产和文件生命周期的事实建模，见 `DOMAIN_STATE_MACHINES.md`，RQ-005 等待负责人确认。当前架构、消费者/数据/日志矩阵和依赖热点分别见 `ARCHITECTURE_CURRENT_STATE.md`、`RP1_CONSUMER_DATA_LOG_MATRIX.md`、`RP1_DEPENDENCY_HOTSPOTS.md`；问题统一进入 `ENGINEERING_REVIEW_FINDINGS.md`。用户正在单独调整的订单代码只完成入口和依赖定位，不纳入最终正确性结论。
 
 > 下列 V4 阶段段落是实施时的历史进度快照，不覆盖上述当前状态。
 
@@ -20,7 +20,7 @@
 
 1. `README.md`：产品定位、启动方式和最短项目简介。
 2. `docs/PROJECT_ENGINEERING_AND_ARCHITECTURE_PLAN.md`：已封版 L0 的证据、边界和历史批次。
-3. `docs/PROJECT_ENGINEERING_REVIEW_PLAN.md`：当前 RP0～RP9 全栈复盘计划；RP0 证据见 `ENGINEERING_REVIEW_BASELINE.md`，RP1 总图见 `ARCHITECTURE_CURRENT_STATE.md`、`RP1_CONSUMER_DATA_LOG_MATRIX.md` 与 `RP1_DEPENDENCY_HOTSPOTS.md`，决策见 `PROJECT_ENGINEERING_REVIEW_DECISIONS.md`，问题见 `ENGINEERING_REVIEW_FINDINGS.md`。
+3. `docs/PROJECT_ENGINEERING_REVIEW_PLAN.md`：当前 RP0～RP9 全栈复盘计划；RP0 证据见 `ENGINEERING_REVIEW_BASELINE.md`，RP1 总图见 `ARCHITECTURE_CURRENT_STATE.md`、`RP1_CONSUMER_DATA_LOG_MATRIX.md` 与 `RP1_DEPENDENCY_HOTSPOTS.md`，RP2 状态机见 `DOMAIN_STATE_MACHINES.md`，决策见 `PROJECT_ENGINEERING_REVIEW_DECISIONS.md`，问题见 `ENGINEERING_REVIEW_FINDINGS.md`。
    `docs/VUE_FRONTEND_REFACTOR_PLAN.md`：已执行的 H0/R0/R1/V0-V6 迁移计划和验收门槛。
    V6 旧前端退役见 `docs/V6_FRONTEND_RETIREMENT_AND_ACCEPTANCE.md`；最终逐页验收见 `docs/V6_FINAL_ACCEPTANCE_PLAN.md`；日常库安全基线见 `docs/V6_DATABASE_BASELINE.md`。
    交易页正式入口、旧 URL 和隔离验收见 `docs/V3_TRANSACTION_MIGRATION.md`。
