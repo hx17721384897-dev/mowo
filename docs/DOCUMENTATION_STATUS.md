@@ -1,6 +1,6 @@
 # 项目文档有效性总表
 
-> 最近复核：2026-10-16（RP0 工程复盘基线；易变数量以 `ENGINEERING_REVIEW_BASELINE.md` 为准）
+> 最近复核：2026-10-19（RP1 当前架构与依赖图；易变数量以 `ENGINEERING_REVIEW_BASELINE.md` 为准）
 
 > 2026-10-15 订单展示批次 A：`MOWO_ORDER_SYSTEM_REDESIGN.md`、`order-page-design/03-页面流程与实施建议.md` 与 `modules/commerce-orders-inventory.md` 已同步客户状态、接口边界和后续实施批次；其他模块仍按原复核状态。
 
@@ -28,6 +28,9 @@
 | `PROJECT_ENGINEERING_REVIEW_PLAN.md` | 当前执行计划 | Vue 迁移后的 RP0～RP9 全栈复盘，默认只读审计后再整改 |
 | `PROJECT_ENGINEERING_REVIEW_DECISIONS.md` | 当前决策台账 | 复盘新发现的产品/架构决定唯一写入位置 |
 | `ENGINEERING_REVIEW_BASELINE.md` | 当前复盘基线 | RP0 的 commit、环境、范围、易变数量、订单保护和未知非功能目标 |
+| `ARCHITECTURE_CURRENT_STATE.md` | 当前架构事实 | RP1 两仓库、Web/小程序/旧编辑器、API、数据库、存储、外部依赖与当前/未来边界 |
+| `RP1_CONSUMER_DATA_LOG_MATRIX.md` | 当前依赖矩阵 | RP1 各领域的客户端、API、数据、文件、日志、正式/过渡/占位/退役入口 |
+| `RP1_DEPENDENCY_HOTSPOTS.md` | 当前热点清单 | RP1 会话、跨仓库契约、新旧实现、领域耦合与后续处理顺序 |
 | `RP1A_CUSTOMIZATION_ANIMATION_FACTS.md` | 当前专项证据 | RP1-A 定制请求、动画草稿、正式资产、文件与清理任务的代码事实和待确认规则 |
 | `RP1B_RUNTIME_JOBS_FACTS.md` | 当前专项证据 | RP1-B API 运行拓扑、后台任务并发/重试/恢复、健康检查与停止边界 |
 | `ENGINEERING_REVIEW_FINDINGS.md` | 当前问题台账 | 统一追踪发现、决定、整改、验证和风险接受 |
@@ -82,7 +85,7 @@
 | `content-users-contact.md` | 2026-08 历史调查；顶部 R1-B 注记优先，当前只保留用户基础能力与联络模块 |
 | `admin-production.md` | 2026-09-08 已按正式 `SO/PU/PB/FP`、统一扫码工作台、返工和发货代码重写；旧入口单独列为待删除 |
 | `web-frontend.md` | 历史前端消费者地图；RP0 当前旧目录仅 1 个 HTML，Vue 正式入口由 RP1/RP3 重建地图 |
-| `mini-program.md` | 骨架与主后端契约断点 |
+| `mini-program.md` | 2026-08 历史详细调查；顶部 RP1 注记优先，当前实现与发布边界汇总到 `ARCHITECTURE_CURRENT_STATE.md` |
 | `database-schema.md` | 历史数据库调查；当前 Schema/迁移数量只引用 RP0 commit 快照，待 RP5 重建领域索引 |
 | `operations-quality.md` | 部署、监控、备份、压测和多实例任务 |
 | `../BATCH_7_LOCAL_ACCEPTANCE_AND_RECOVERY.md` | L0 本地启动、隔离空库、综合回归、测试库恢复、人工验收和未来邀请暂停流程 |
