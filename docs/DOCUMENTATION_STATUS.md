@@ -1,6 +1,6 @@
 # 项目文档有效性总表
 
-> 最近复核：2026-10-20（RP2-B 联名货架状态机；易变数量以 `ENGINEERING_REVIEW_BASELINE.md` 为准）
+> 最近复核：2026-10-20（RP2-C 在售商品编辑与发布；易变数量以 `ENGINEERING_REVIEW_BASELINE.md` 为准）
 
 > 2026-10-15 订单展示批次 A：`MOWO_ORDER_SYSTEM_REDESIGN.md`、`order-page-design/03-页面流程与实施建议.md` 与 `modules/commerce-orders-inventory.md` 已同步客户状态、接口边界和后续实施批次；其他模块仍按原复核状态。
 
@@ -31,7 +31,7 @@
 | `ARCHITECTURE_CURRENT_STATE.md` | 当前架构事实 | RP1 两仓库、Web/小程序/旧编辑器、API、数据库、存储、外部依赖与当前/未来边界 |
 | `RP1_CONSUMER_DATA_LOG_MATRIX.md` | 当前依赖矩阵 | RP1 各领域的客户端、API、数据、文件、日志、正式/过渡/占位/退役入口 |
 | `RP1_DEPENDENCY_HOTSPOTS.md` | 当前热点清单 | RP1 会话、跨仓库契约、新旧实现、领域耦合与后续处理顺序 |
-| `DOMAIN_STATE_MACHINES.md` | 当前状态机总目录 | RP2 分域记录当前可达、确认目标、待确认与仅声明状态；RP2-A 已确认，RP2-B 联名货架等待 RQ-006 |
+| `DOMAIN_STATE_MACHINES.md` | 当前状态机总目录 | RP2 分域记录当前可达、确认目标、待确认与仅声明状态；RP2-A/RP2-B 已确认，RP2-C 等待 RQ-007 |
 | `RP1A_CUSTOMIZATION_ANIMATION_FACTS.md` | 当前专项证据 | RP1-A 定制请求、动画草稿、正式资产、文件与清理任务的代码事实和待确认规则 |
 | `RP1B_RUNTIME_JOBS_FACTS.md` | 当前专项证据 | RP1-B API 运行拓扑、后台任务并发/重试/恢复、健康检查与停止边界 |
 | `ENGINEERING_REVIEW_FINDINGS.md` | 当前问题台账 | 统一追踪发现、决定、整改、验证和风险接受 |
