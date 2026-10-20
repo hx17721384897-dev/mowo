@@ -6,7 +6,7 @@
 
 > 当前进度（2026-10-16）：L0、R0/R1、V0～V5、V6-A、V6-B 和 V6-C1 已完成，V6-C2 自动证据通过、负责人视觉验收待执行；C3～C6 实际验收和 V6-D 全栈长期门禁仍待完成。正式 Web 页面使用 `frontend-vue/`；唯一旧 HTML 是后台人工筛帧专用 `customize-editor.html`，它是待最终处置的受控例外，不预设必须保留或迁移。日常 `mowo_db` 只读审计与备份已完成，API/回归继续使用 `mowo_b1_test`。当前执行入口为 `PROJECT_ENGINEERING_REVIEW_PLAN.md`，Vue 迁移计划和 V6 文档作为迁移证据与未完成验收清单保留。
 
-> 工程复盘（2026-10-19）：RP0 与 RP1 已完成；RP2-A 已完成定制请求、动画草稿、正式动画资产和文件生命周期的事实建模，见 `DOMAIN_STATE_MACHINES.md`，RQ-005 等待负责人确认。当前架构、消费者/数据/日志矩阵和依赖热点分别见 `ARCHITECTURE_CURRENT_STATE.md`、`RP1_CONSUMER_DATA_LOG_MATRIX.md`、`RP1_DEPENDENCY_HOTSPOTS.md`；问题统一进入 `ENGINEERING_REVIEW_FINDINGS.md`。用户正在单独调整的订单代码只完成入口和依赖定位，不纳入最终正确性结论。
+> 工程复盘（2026-10-20）：RP0 与 RP1 已完成；RP2-A 定制/动画规则已经确认，RP2-B 已完成联名商品上架、暂停、下架和历史责任的事实建模，见 `DOMAIN_STATE_MACHINES.md`，RQ-006 等待负责人确认。当前架构、消费者/数据/日志矩阵和依赖热点分别见 `ARCHITECTURE_CURRENT_STATE.md`、`RP1_CONSUMER_DATA_LOG_MATRIX.md`、`RP1_DEPENDENCY_HOTSPOTS.md`；问题统一进入 `ENGINEERING_REVIEW_FINDINGS.md`。用户正在单独调整的订单代码只完成入口和依赖定位，不纳入最终正确性结论。
 
 > 下列 V4 阶段段落是实施时的历史进度快照，不覆盖上述当前状态。
 

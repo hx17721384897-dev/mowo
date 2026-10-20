@@ -1,7 +1,7 @@
 # ENGINEERING_REVIEW_FINDINGS.md - 工程复盘问题总台账
 
 > 建立日期：2026-10-16
-> 当前状态：RP1 完成；RP2-A 定制/动画状态机已完成事实建模，RQ-005 等待确认
+> 当前状态：RP1 完成；RP2-A 已确认，RP2-B 联名货架状态机已完成事实建模，RQ-006 等待确认
 > 作用：统一接收 RP0～RP7C 的发现，并追踪到决定、整改和验证关闭。
 
 ## 状态定义
@@ -31,8 +31,8 @@
 | 级别 | OPEN | DECISION_REQUIRED | PLANNED | FIXING | FIXED | VERIFIED | ACCEPTED_RISK |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | P0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| P1 | 8 | 0 | 0 | 0 | 0 | 0 | 0 |
-| P2 | 5 | 0 | 2 | 0 | 0 | 0 | 0 |
+| P1 | 9 | 1 | 0 | 0 | 0 | 0 | 0 |
+| P2 | 6 | 0 | 2 | 0 | 0 | 0 | 0 |
 | P3 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 
 ## 问题记录
@@ -363,13 +363,13 @@
 
 - 状态：`OPEN`
 - 级别：`P2`
-- 负责人：产品语义等待 RQ-005；工程整改待 RP8 指派
+- 负责人：产品语义已由 RQ-005 确认；工程整改待 RP8 指派
 - 发现阶段：RP2-A
 - 代码/配置/文档位置：`content-service/src/lib/customization-request.js`、`content-service/src/routes/admin-customization-requests.js`、`content-service/src/routes/customization-requests.js`、`content-service/prisma/schema.prisma`、`frontend-vue/src/features/customization`、`frontend-vue/src/features/animation/api.ts`
 - 客观事实：后端和 Vue 声明 `NEEDS_SUPPLEMENT`、`STYLE_SELECTED`、`UNAVAILABLE`，但当前没有写入这些状态的接口；选择 SKU 会直接进入 `CONFIRMED`。人工筛帧同时写入 Schema 注释和 Vue 草稿契约均未声明的 `CustomProduct.status=reviewing`，在用户接受前会触发已登记的动画列表解析失败。
 - 复现条件：静态追踪所有状态写入与接口；或人工提交筛帧结果后打开“我的动画”，并尝试从页面/API进入上述三个请求状态。
 - 业务影响：状态名称看似完整但实际不可操作；客户端、服务端和数据库可形成彼此不认识的记录，异常流程只能停滞或依赖人工改数据。
-- 产品确认：部分需要（关联 `RQ-005`）；共享契约和非法状态拒绝不需要产品确认。
+- 产品确认：已完成（关联 `RQ-005`）；共享契约和非法状态拒绝不需要额外产品确认。
 - 关联整改：RQ-005 确认首发词表；RP3/RP4 建立共享 DTO 与唯一转换函数；RP5 决定数据库约束和存量扫描；RP8 删除未采用状态或完整实现转换。
 - 建议改动或删除：区分请求、商品、资产和筛帧结果的独立状态；每个状态必须有进入者、退出者、前置条件、事件和终态规则；不保留仅用于“以后可能需要”的字符串。
 - 验证方式：状态转换表逐项有正向、越权、非法转换和并发测试；全库扫描不存在词表外状态；UI 不因未知单条记录使整页失败。
@@ -378,6 +378,75 @@
 - 风险接受人及原因：
 - 风险有效期与复核日：RQ-005 与 RP5 完成时复核
 - 临时缓解与监控：人工定制仅在本地测试；不得手工写入不可达状态修复流程。
+- 修复 commit：
+- 验证证据：`DOMAIN_STATE_MACHINES.md`
+- 关闭日期：
+
+### ERF-016：联名货架由两个字段表达且转换入口不闭合
+
+- 状态：`OPEN`
+- 级别：`P1`
+- 负责人：待 RP8 指派
+- 发现阶段：RP2-B
+- 代码/配置/文档位置：`content-service/prisma/schema.prisma` 的 `CollabWork.isOnShelf/shelfStatus`；`content-service/src/routes/admin-collab.js` 的 suspend/resume/force-delist/relist；`frontend-vue/src/features/admin-collab-product/api.ts`
+- 客观事实：公开销售同时要求 `isOnShelf=true` 和 `shelfStatus=on_sale`，数据库却允许任意组合且默认是 `false + on_sale`。暂停接口除“已暂停”外不限制来源，可把已下架作品转为暂停；产品工作区的首次上架按钮实际调用只接受 `off_shelf` 的 relist，`false + on_sale` 记录会既不公开又无法通过该入口上架。
+- 复现条件：创建或找到 `status=approved,isOnShelf=false,shelfStatus=on_sale` 的作品，完成销售配置后点击上架；或对 `off_shelf` 作品直接调用 suspend。
+- 业务影响：后台状态、公开可售状态和允许操作可能互相矛盾，核心商品无法上架或发生非法状态跳转。
+- 产品确认：不需要；单一状态事实和合法转换属于工程正确性。
+- 关联整改：RP4 设计唯一货架领域服务与条件更新，RP5 扫描/归一化存量组合并增加约束，RP8 删除双事实或严格派生字段。
+- 建议改动或删除：以 `shelfStatus` 为唯一事实，`isOnShelf` 改为派生或受约束兼容字段；提供明确初次上架命令；转换校验来源状态、销售准备条件和幂等键。
+- 验证方式：覆盖所有合法转换、重复请求和六种非法字段组合；公开列表、详情、购物车和后台显示始终一致。
+- 数据库/文件影响：需在隔离库扫描并归一化 `collab_works` 后才能增加约束；不删除商品和文件。
+- 阻塞关系：阻塞联名商品邀请测试和 RP9 关闭。
+- 风险接受人及原因：不适用
+- 风险有效期与复核日：RP5 完成时复核
+- 临时缓解与监控：上架前人工确认记录为 `off_shelf + false`，操作后确认 `on_sale + true`；不得直接改数据库字段。
+- 修复 commit：
+- 验证证据：`DOMAIN_STATE_MACHINES.md`
+- 关闭日期：
+
+### ERF-017：强制下架对待付款预订单没有已确认处置规则
+
+- 状态：`DECISION_REQUIRED`
+- 级别：`P1`
+- 负责人：等待 RQ-006；订单稳定后由 RP8 指派
+- 发现阶段：RP2-B
+- 代码/配置/文档位置：`content-service/src/routes/admin-collab.js` 的货架操作；`content-service/src/routes/cart.js`；`content-service/src/lib/checkout-snapshot.js`；`content-service/src/routes/payment.js`
+- 客观事实：下架会阻止新加购和新结算，但不会查询或取消已创建的 `pending_payment` 预订单。支付路径只校验预订单状态、期限和冻结快照，不重新校验当前货架，因此下架前创建的预订单仍可在有效期内成交。
+- 复现条件：创建含联名商品的待付款预订单并预留库存，随后强制下架作品，再在预订单过期前调用当前测试支付路径。
+- 业务影响：权利、合规或安全原因的紧急下架仍可能产生新成交；若后续粗暴改成取消全部订单，又可能错误影响普通运营暂停和已付款履约。
+- 产品确认：需要（关联 `RQ-006`）。
+- 关联整改：确认暂停/强制下架语义；订单稳定后补做 RP1/RP2 交易状态与 RP4 事务审计，RP8 实现取消、库存释放、通知和审计。
+- 建议改动或删除：普通暂停可尊重已创建预订单的原 10 分钟窗口；强制下架原子地关闭未付款预订单并释放预留，已付款订单另走显式处置流程。
+- 验证方式：暂停与强制下架分别覆盖下架前后加购、结算、付款、过期、重复操作和并发支付；库存流水只释放或成交一次。
+- 数据库/文件影响：涉及预订单、SKU 预留和库存流水；只允许隔离测试库造数。
+- 阻塞关系：受 RQ-006 和订单稳定 commit 阻塞实施；阻塞真实交易和 RP9 关闭。
+- 风险接受人及原因：不适用
+- 风险有效期与复核日：RQ-006 确认、订单重新纳入时复核
+- 临时缓解与监控：当前不进行真实收款；紧急下架测试后人工核对并取消测试预订单，不直接改库存。
+- 修复 commit：
+- 验证证据：`DOMAIN_STATE_MACHINES.md`
+- 关闭日期：
+
+### ERF-018：联名货架状态变化没有进入商品领域历史
+
+- 状态：`OPEN`
+- 级别：`P2`
+- 负责人：待 RP7B/RP8 指派
+- 发现阶段：RP2-B
+- 代码/配置/文档位置：`content-service/src/routes/admin-collab.js` 的 suspend/resume/force-delist/relist 与 product-history；`content-service/src/index.js` 的全局操作日志 Hook
+- 客观事实：商品资料保存会设置 `operationAudit` 并记录目标和前后值；四个货架状态操作没有设置该领域元数据。全局 Hook 仍记录操作者、路径和结果，但 `target/targetId/before` 为空，商品历史查询不会返回这些状态变化，也不记录受影响交易数量。
+- 复现条件：暂停、恢复、下架或重新上架一个作品，再查询 `/api/admin/collab/:id/product-history` 和对应 OperationLog。
+- 业务影响：运营人员无法从商品自身历史回答谁在何时从什么状态执行了什么、为什么以及影响多少在途交易，事故复盘依赖拼接通用请求日志。
+- 产品确认：不需要；保留原因/通知的业务字段已存在，审计完整性属于工程要求。
+- 关联整改：RP7B 定义货架审计字段和保留期限，RP8 在同一领域操作中写前后状态、原因、受影响数量与请求 ID。
+- 建议改动或删除：四类转换统一经过货架领域服务，写 `COLLAB_PRODUCT` 或专用 `COLLAB_SHELF` 事件；商品历史展示状态、操作者、原因和结果，内部备注不得进入公开 DTO。
+- 验证方式：每种成功、拒绝和重复操作均有可关联记录；商品历史可完整还原状态序列，普通用户接口看不到内部原因。
+- 数据库/文件影响：主要是 OperationLog/领域事件，不改商品文件；是否新增事件表在 RP7B/RP8 决定。
+- 阻塞关系：不阻塞继续只读复盘；阻塞联名运营验收和 RP9 关闭。
+- 风险接受人及原因：
+- 风险有效期与复核日：RP7B 完成时复核
+- 临时缓解与监控：执行下架时另行记录工单/备注，并保留通用 OperationLog；不把商品历史页视为完整审计。
 - 修复 commit：
 - 验证证据：`DOMAIN_STATE_MACHINES.md`
 - 关闭日期：
